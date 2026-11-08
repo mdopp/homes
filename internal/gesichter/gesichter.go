@@ -70,6 +70,36 @@ type Gesichter struct {
 	geladen    bool
 	stand      stand
 	umfeldLauf time.Time // the last run of Umfelder that went through; zero: none since Homes started
+	// The owner's answers win over a background run that read before them:
+	// zug counts them, beantwortet is each contact key's last, weg the
+	// persons merged away since Homes started.
+	zug         uint64
+	beantwortet map[string]uint64
+	weg         map[string]bool
+}
+
+// beantworten notes an answer about the contact keys and the persons
+// gone; g.mu is held.
+func (g *Gesichter) beantworten(keys, gone []string) {
+	g.zug++
+	for _, k := range keys {
+		g.beantwortet[k] = g.zug
+	}
+	for _, id := range gone {
+		g.weg[id] = true
+	}
+}
+
+// nachziehen takes into neu, made from what stood at zug seit, the keys
+// answered since as jetzt has them; g.mu is held.
+func nachziehen[V any](g *Gesichter, neu, jetzt map[string]V, seit uint64) {
+	for k, z := range g.beantwortet {
+		if v, da := jetzt[k]; z > seit && da {
+			neu[k] = v
+		} else if z > seit {
+			delete(neu, k)
+		}
+	}
 }
 
 // stand is what Homes keeps of Immich.
@@ -135,7 +165,7 @@ func (g *Gesichter) laden() {
 	if g.geladen {
 		return
 	}
-	g.geladen = true
+	g.geladen, g.beantwortet, g.weg = true, map[string]uint64{}, map[string]bool{}
 	if b, err := os.ReadFile(filepath.Join(g.Dir, cacheDatei)); err == nil {
 		json.Unmarshal(b, &g.stand)
 	}
@@ -318,7 +348,7 @@ func (g *Gesichter) Auffrischen(ctx context.Context) error {
 			neu[id] = b
 		}
 	}
-	g.stand.Personen, g.stand.Bilder = people, neu
+	g.stand.Personen, g.stand.Bilder = slices.DeleteFunc(people, func(p immich.Person) bool { return g.weg[p.ID] }), neu
 	return g.save()
 }
 

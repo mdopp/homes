@@ -141,7 +141,7 @@ func (g *Gesichter) Kontaktbilder(ctx context.Context) error {
 		return err
 	}
 	g.mu.Lock()
-	alt, zu := maps.Clone(g.stand.Kontaktbilder), maps.Clone(g.stand.Zuordnung)
+	alt, zu, seit := maps.Clone(g.stand.Kontaktbilder), maps.Clone(g.stand.Zuordnung), g.zug
 	mitGesicht := map[string]bool{}
 	for _, p := range g.stand.Personen {
 		mitGesicht[p.ID] = true
@@ -170,6 +170,7 @@ func (g *Gesichter) Kontaktbilder(ctx context.Context) error {
 	}
 	g.mu.Lock()
 	defer g.mu.Unlock()
+	nachziehen(g, neu, g.stand.Kontaktbilder, seit)
 	g.stand.Kontaktbilder = neu
 	return errors.Join(err, g.save())
 }
@@ -345,5 +346,6 @@ func (g *Gesichter) Bestaetigen(ctx context.Context, key, person, antwort string
 		return "", err
 	}
 	g.stand.Kontaktbilder[key] = b
+	g.beantworten([]string{key}, nil)
 	return cmp.Or(b.Name, z.Name), errors.Join(err, g.save())
 }

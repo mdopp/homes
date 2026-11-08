@@ -194,11 +194,13 @@ func (g *Gesichter) verschmelzen(ctx context.Context, ziel string, quellen []str
 	defer g.mu.Unlock()
 	g.laden()
 	st := &g.stand
+	var keys []string
 	for k, z := range st.Zuordnung {
 		if slices.Contains(weg, z.ID) {
-			st.Zuordnung[k] = zuordnung{ID: ziel, Name: z.Name}
+			st.Zuordnung[k], keys = zuordnung{ID: ziel, Name: z.Name}, append(keys, k)
 		}
 	}
+	g.beantworten(keys, weg)
 	gegangen := func(id string) bool { return slices.Contains(weg, id) }
 	st.Personen = slices.DeleteFunc(st.Personen, func(p immich.Person) bool { return gegangen(p.ID) })
 	for _, id := range append(weg, ziel) {
@@ -257,6 +259,12 @@ func (g *Gesichter) Vorschlagen(ctx context.Context) error {
 	}
 	g.mu.Lock()
 	st := &g.stand
+	for id, n := range neu { // a person merged away meanwhile is no pair
+		n.Kandidaten = slices.DeleteFunc(n.Kandidaten, func(k string) bool { return g.weg[k] })
+		if neu[id] = n; g.weg[id] {
+			delete(neu, id)
+		}
+	}
 	maps.Copy(st.Naehe, neu)
 	maps.Copy(st.Andere, andere)
 	named := map[string]bool{}

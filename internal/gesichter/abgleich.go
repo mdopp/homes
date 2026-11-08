@@ -78,7 +78,7 @@ func (g *Gesichter) Abgleichen(ctx context.Context) error {
 	}
 	g.mu.Lock()
 	g.laden()
-	alt := g.stand.Zuordnung
+	alt, seit := g.stand.Zuordnung, g.zug
 	g.mu.Unlock()
 	neu, aufrufe := map[string]zuordnung{}, 0
 	for _, k := range ks {
@@ -101,6 +101,7 @@ func (g *Gesichter) Abgleichen(ctx context.Context) error {
 	}
 	var fehlt immich.FehltRecht
 	errors.As(err, &fehlt)
+	nachziehen(g, neu, g.stand.Zuordnung, seit)
 	g.stand.Zuordnung, g.stand.Fehlt = neu, fehlt.Recht
 	if serr := g.save(); err == nil {
 		err = serr
