@@ -49,6 +49,7 @@ import (
 	"github.com/mdopp/homes/internal/schalter"
 	"github.com/mdopp/homes/internal/usage"
 	"github.com/mdopp/homes/internal/werkstatt"
+	"github.com/mdopp/homes/internal/zugang"
 )
 
 var Version = "dev"
@@ -96,6 +97,10 @@ type site struct {
 	gesichter                 *gesichter.Gesichter         // Immich for the contacts (HOMES_IMMICH_*): Fotos, faces, a person per contact; nil, none
 	antworten                 *kontaktantwort.Store        // Kontakt prüfen lassen (owner 2026-11-07): the links and answers, in HOMES_DATA
 	kontaktURL                string                       // the public page's host (HOMES_KONTAKT_URL, https://kontakt.<domain>); "", no links
+	// the teaser on the domain itself (owner 2026-11-08): its Host on the public listener (HOMES_TEASER_HOST; "", none),
+	// whom Laib tells of a request (HOMES_TEASER_PERSON, box.yml notify.person) and the requests, in HOMES_DATA
+	teaserHost, teaserPerson string
+	zugang                   *zugang.Store
 }
 
 // routes is Homes' whole surface: /napi for the app, /mcp/haushalt for the
@@ -123,10 +128,11 @@ func routes(s site) http.Handler {
 // another Homes route. Unset (or no HOMES_KONTAKT_URL): no listener.
 func kontaktServer(ctx context.Context, st site) {
 	addr := os.Getenv("HOMES_KONTAKT_LISTEN")
-	if addr == "" || st.kontaktURL == "" {
+	if addr == "" || st.kontaktURL == "" && st.teaserHost == "" {
 		return
 	}
-	cfg := pages.StartConfig{Antworten: st.antworten, DNS: net.DefaultResolver, PhoneCountry: st.hh.PhoneCountry}
+	cfg := pages.StartConfig{Antworten: st.antworten, DNS: net.DefaultResolver, PhoneCountry: st.hh.PhoneCountry, KontaktURL: st.kontaktURL,
+		TeaserHost: st.teaserHost, TeaserPerson: st.teaserPerson, Zugang: st.zugang, Laib: st.ops, PublicURL: st.publicURL}
 	srv := &http.Server{Addr: addr, Handler: pages.KontaktServer(cfg), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 20 * time.Second,
 		WriteTimeout: 20 * time.Second, MaxHeaderBytes: 8 << 10}
 	go func() {
@@ -155,6 +161,7 @@ func familyOf(s site) pages.StartConfig {
 		Reitti: s.napi.Reitti, Module: s.napi.Module, Einrichtung: s.napi.Einrichtung, PhoneCountry: s.hh.PhoneCountry, Gesichter: s.gesichter}
 	family.Archive, family.ArchivURL = archivOf(s)
 	family.Antworten, family.DNS, family.KontaktURL = s.antworten, net.DefaultResolver, s.kontaktURL
+	family.Zugang = s.zugang // the teaser's access requests, for the admins' Start and /zugang (owner 2026-11-08)
 	// the lists, the music wish list and the shelf, before any page takes its copy of family
 	family.Einkauf, family.Wuensche = s.hh.Einkauf, s.hh.Wuensche
 	if s.hh.Wuensche != nil {
@@ -217,6 +224,7 @@ func familyMux(s site) *http.ServeMux {
 	pagesMux.HandleFunc(pages.ModulPages, pages.ModulSeite(family))               // a module, admins: where a wish leads
 	pagesMux.HandleFunc(pages.ZusammenPath, pages.Zusammen(family))               // „So hängt alles zusammen“, under Mehr
 	pagesMux.HandleFunc("/aufgaben", pages.DeineAufgaben(family))                 // haus#188: Deine Aufgaben // the bar's fourth entry, with Abmelden (haus#67)
+	pagesMux.HandleFunc(pages.ZugangPath, pages.Zugang(family))                   // the teaser's access requests, admins (owner 2026-11-08)
 	pagesMux.HandleFunc("/willkommen", pages.Willkommen(family))                  // hello and the next steps (haus#56)
 	pagesMux.HandleFunc(pages.EinrichtenPages, pages.Einrichten(family))          // a module's setup, ticked by hand (owner 2026-11-04)
 	pagesMux.HandleFunc("/adresse", pages.Adresse(family))                        // the household's address, admins only (laib#561)
@@ -492,7 +500,8 @@ func main() {
 		radicale: radicalePublic, views: ansicht.Open(dataDir, os.Getenv("HOMES_RADICALE_USER")), dataDir: dataDir,
 		docsMail: docsMail, paperlessPublic: paperlessPublic, paperlessLAN: paperlessLAN, musik: musicInbox(), boteSignal: strings.TrimSpace(os.Getenv("HOMES_BOTE_SIGNAL")),
 		domain: einrichten.Domain(os.Getenv("HOMES_PUBLIC_URL")), archive: archive, gesichter: gesichter.FromEnv(dataDir),
-		antworten: &kontaktantwort.Store{Path: filepath.Join(dataDir, kontaktantwort.Datei)}, kontaktURL: os.Getenv("HOMES_KONTAKT_URL")}
+		antworten: &kontaktantwort.Store{Path: filepath.Join(dataDir, kontaktantwort.Datei)}, kontaktURL: os.Getenv("HOMES_KONTAKT_URL"),
+		teaserHost: os.Getenv("HOMES_TEASER_HOST"), teaserPerson: os.Getenv("HOMES_TEASER_PERSON"), zugang: &zugang.Store{Path: filepath.Join(dataDir, zugang.Datei)}}
 	st.napi.Antworten = st.antworten // the phone's accepted corrections of its own contacts
 	start := st                      // what the list is built from again once Laib says what runs (dienstePflegen)
 	st.napi.Module = logModule(&st)  // HOMES_MODULE_AUS takes what it switches off out of st

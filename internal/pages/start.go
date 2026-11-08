@@ -40,6 +40,7 @@ import (
 	"github.com/mdopp/homes/internal/schalter"
 	"github.com/mdopp/homes/internal/texte"
 	"github.com/mdopp/homes/internal/usage"
+	"github.com/mdopp/homes/internal/zugang"
 )
 
 // StartConfig is what the family's pages read (Start, Räume, Kalender,
@@ -121,6 +122,13 @@ type StartConfig struct {
 	Antworten  *kontaktantwort.Store
 	DNS        kontaktantwort.Resolver
 	KontaktURL string // the page's own host, https://kontakt.<domain> (HOMES_KONTAKT_URL)
+	// The teaser on the domain itself (owner 2026-11-08): the Host the
+	// public listener answers it on (HOMES_TEASER_HOST; "": no teaser, and
+	// no Host check), the requests, and whom Laib tells of a new one
+	// (HOMES_TEASER_PERSON, box.yml notify.person; "": nobody)
+	TeaserHost   string
+	TeaserPerson string
+	Zugang       *zugang.Store
 }
 
 // backendWait is how long a page waits for any one backend: a slow one

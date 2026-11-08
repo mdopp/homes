@@ -1,0 +1,277 @@
+<title>Die Box</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&display=swap">
+<style>
+/* Layout: one narrow column, five short stops top to bottom; the picture is the page, the words frame it. */
+:root {
+  --bg: #F3F5F1;
+  --fg: #1B2823;
+  --muted: #5B6A63;
+  --card: #FFFFFF;
+  --edge: #C9D3CD;
+  --accent: #1E6B55;
+  --accent-ink: #FFFFFF;
+  --tint: #E3EEE8;
+  --line: #7B8B83;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", "Helvetica Neue", Arial, system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101814; --fg: #E7ECE8; --muted: #9CAEA5; --card: #1A2420; --edge: #2F3D36;
+    --accent: #4FB893; --accent-ink: #0B1A13; --tint: #172620; --line: #83958C;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101814; --fg: #E7ECE8; --muted: #9CAEA5; --card: #1A2420; --edge: #2F3D36;
+  --accent: #4FB893; --accent-ink: #0B1A13; --tint: #172620; --line: #83958C;
+  color-scheme: dark;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--body);
+  font-size: 1.0625rem;
+  line-height: 1.5;
+  padding-block: clamp(28px, 7vh, 72px) 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  -webkit-text-size-adjust: 100%;
+}
+main {
+  max-width: 34rem;
+  margin: 0 auto;
+  display: grid;
+  gap: clamp(40px, 8vh, 72px);
+}
+h1, h2 { font-family: var(--display); text-wrap: balance; margin: 0; }
+h1 {
+  font-size: clamp(2.6rem, 11vw, 3.6rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variation-settings: "opsz" 96;
+}
+h2 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+.lead {
+  margin: 16px 0 0;
+  font-size: 1.25rem;
+  line-height: 1.4;
+  max-width: 26em;
+}
+.lead b { color: var(--accent); font-weight: 700; }
+
+figure { margin: 0; display: grid; gap: 12px; }
+figure svg { display: block; width: 100%; max-width: 480px; height: auto; margin: 0 auto; }
+figcaption { color: var(--muted); font-size: 0.95rem; text-align: center; text-wrap: balance; margin: 0 auto; max-width: 28em; }
+
+/* the picture */
+.bild text { font-family: var(--body); }
+.bild .t { font-size: 12.5px; font-weight: 700; fill: var(--fg); text-anchor: middle; }
+.bild .n { font-size: 12px; fill: var(--muted); text-anchor: middle; }
+.bild .u { font-size: 9.5px; fill: var(--muted); text-anchor: middle; }
+.bild .la { text-anchor: start; }
+.bild .l { font-size: 10.5px; fill: var(--muted); text-anchor: middle; paint-order: stroke; stroke: var(--tint); stroke-width: 5px; stroke-linejoin: round; }
+.bild .hub-t { font-size: 13.5px; font-weight: 700; fill: var(--accent-ink); text-anchor: middle; }
+.bild .tag { font-size: 11px; font-weight: 700; fill: var(--accent); text-anchor: middle; letter-spacing: 0.08em; text-transform: uppercase; }
+.bild .box { fill: var(--tint); stroke: var(--accent); stroke-opacity: 0.55; stroke-width: 1.5; }
+.bild .tile { fill: var(--card); stroke: var(--edge); stroke-width: 1; }
+.bild .hub { fill: var(--accent); }
+.bild .in { stroke: var(--line); stroke-width: 1.6; fill: none; }
+.bild .link { stroke: var(--accent); stroke-width: 1.6; fill: none; stroke-opacity: 0.8; }
+.bild .ico { stroke: var(--fg); stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.bild .mk { fill: var(--line); }
+.bild .mk2 { fill: var(--accent); }
+
+ul.heisst { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 10px; }
+ul.heisst li {
+  display: grid; grid-template-columns: 10px 1fr; gap: 14px; align-items: baseline;
+  padding: 14px 16px; background: var(--card); border: 1px solid var(--edge); border-radius: 14px;
+  min-width: 0;
+}
+ul.heisst li::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); transform: translateY(2px); }
+
+.sicher {
+  display: grid; grid-template-columns: 22px 1fr; gap: 14px; align-items: start;
+  padding-top: 20px; border-top: 1px solid var(--edge); margin: 0;
+  color: var(--fg);
+}
+.sicher svg { width: 22px; height: 22px; stroke: var(--accent); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; margin-top: 3px; }
+
+footer { display: grid; gap: 22px; justify-items: start; padding-top: 8px; }
+footer .frage { font-size: 1.1rem; margin: 0; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+footer .btn {
+  display: inline-block; padding: 12px 20px; border-radius: 999px;
+  background: var(--accent); color: var(--accent-ink); font-weight: 700; text-decoration: none;
+  font-family: var(--display); font-size: 1.05rem;
+}
+footer .btn:hover { filter: brightness(1.08); }
+footer .btn:focus-visible, footer .laib:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+footer .laib { color: var(--muted); font-size: 0.8rem; text-decoration: none; border-bottom: 1px solid var(--edge); }
+footer .laib:hover { color: var(--fg); }
+
+/* Zugang anfragen: quiet, one column, the same card tone as the list */
+.zugang { width: 100%; max-width: 24rem; display: grid; gap: 6px; padding-top: 20px; border-top: 1px solid var(--edge); }
+.zugang h2 { font-size: 1.15rem; }
+.zugang .hinweis { margin: 0 0 8px; color: var(--muted); font-size: 0.95rem; }
+.zugang form { display: grid; gap: 6px; }
+.zugang label { font-size: 0.9rem; font-weight: 700; margin-top: 8px; }
+.zugang label small { font-weight: 400; color: var(--muted); }
+.zugang input, .zugang textarea {
+  width: 100%; min-width: 0; box-sizing: border-box; font: inherit; font-size: 1rem; line-height: 1.4;
+  padding: 10px 12px; border: 1px solid var(--edge); border-radius: 10px;
+  background: var(--card); color: var(--fg);
+}
+.zugang textarea { resize: vertical; }
+.zugang input::placeholder, .zugang textarea::placeholder { color: var(--muted); opacity: 0.8; }
+.zugang input:focus-visible, .zugang textarea:focus-visible, .zugang button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.zugang button {
+  margin-top: 12px; justify-self: start; font: inherit; font-weight: 700; font-size: 1rem;
+  padding: 11px 18px; border-radius: 999px; border: 1.5px solid var(--accent);
+  background: transparent; color: var(--accent); cursor: pointer;
+}
+.zugang button:hover { background: var(--tint); }
+.zugang .klein { margin: 4px 0 0; color: var(--muted); font-size: 0.8rem; }
+.zugang .fehler { margin: 6px 0 0; color: #B42318; font-weight: 700; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .zugang .fehler { color: #FDA29B; } }
+.hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.danke {
+  display: grid; grid-template-columns: 22px 1fr; gap: 12px; align-items: center; margin: 0;
+  padding: 14px 16px; border-radius: 14px; background: var(--tint); color: var(--fg); font-weight: 700;
+}
+.danke svg { width: 22px; height: 22px; stroke: var(--accent); fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+</style>
+
+<main>
+
+<header>
+  <h1>Die Box</h1>
+  <p class="lead">Der eigene Server deiner Familie, <b>zuhause</b>: alles an einem Ort, nichts bei einer Firma.</p>
+</header>
+
+<figure>
+<svg class="bild" viewBox="0 0 360 610" role="img" aria-label="Oben kommen Handy, Papier und Post in die Box. In der Box liegen Fotos, Standort, Dokumente, Musik, Medien, Nachrichten, Dateien und Kalender um den Kontakt, darunter das Zuhause mit seinen Geräten. Unten geht alles auf Handy, Computer und Lautsprecher.">
+  <defs>
+    <marker id="pf" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5 0 10z"/></marker>
+    <marker id="pf2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="mk2" d="M0 0L10 5 0 10z"/></marker>
+    <g id="i-handy" class="ico"><rect x="-9" y="-16" width="18" height="32" rx="4"/><line x1="-3" y1="11" x2="3" y2="11"/></g>
+    <g id="i-papier" class="ico"><path d="M-10 -15h13l7 7v23h-20z"/><path d="M3 -15v7h7"/><line x1="-5" y1="0" x2="5" y2="0"/><line x1="-5" y1="6" x2="5" y2="6"/></g>
+    <g id="i-post" class="ico"><rect x="-15" y="-10" width="30" height="20" rx="3"/><path d="M-15 -8l15 11 15-11"/></g>
+    <g id="i-computer" class="ico"><rect x="-17" y="-13" width="34" height="22" rx="3"/><line x1="0" y1="9" x2="0" y2="15"/><line x1="-9" y1="15" x2="9" y2="15"/></g>
+    <g id="i-laut" class="ico"><rect x="-9" y="-16" width="18" height="32" rx="4"/><circle cx="0" cy="5" r="5.5"/><circle cx="0" cy="-8" r="2"/></g>
+  </defs>
+
+  <!-- rein -->
+  <use href="#i-handy" transform="translate(72 48)"/>
+  <use href="#i-papier" transform="translate(180 48)"/>
+  <use href="#i-post" transform="translate(288 48)"/>
+  <text class="n" x="72" y="86">Handy</text>
+  <text class="n" x="180" y="86">Papier</text>
+  <text class="n" x="288" y="86">Post</text>
+  <line class="in" x1="72" y1="96" x2="72" y2="127" marker-end="url(#pf)"/>
+  <line class="in" x1="180" y1="96" x2="180" y2="127" marker-end="url(#pf)"/>
+  <line class="in" x1="288" y1="96" x2="288" y2="127" marker-end="url(#pf)"/>
+
+  <!-- die Box -->
+  <rect class="box" x="16" y="132" width="328" height="358" rx="22"/>
+  <text class="tag" x="180" y="160">Die Box</text>
+
+  <!-- was zusammenhaengt -->
+  <line class="link" x1="180" y1="290" x2="72" y2="200"/>
+  <line class="link" x1="180" y1="290" x2="288" y2="200"/>
+  <line class="link" x1="180" y1="290" x2="72" y2="380"/>
+  <line class="link" x1="180" y1="290" x2="288" y2="380"/>
+  <line class="link" x1="72" y1="433" x2="72" y2="402" marker-end="url(#pf2)"/>
+
+  <!-- Reihe 1 -->
+  <rect class="tile" x="24" y="181" width="96" height="38" rx="11"/><text class="t" x="72" y="204.5">Fotos</text>
+  <rect class="tile" x="132" y="181" width="96" height="38" rx="11"/><text class="t" x="180" y="199">Standort</text><text class="u" x="180" y="211">wo du warst</text>
+  <rect class="tile" x="240" y="181" width="96" height="38" rx="11"/><text class="t" x="288" y="204.5">Dokumente</text>
+  <!-- Reihe 2 -->
+  <rect class="tile" x="24" y="271" width="96" height="38" rx="11"/><text class="t" x="72" y="294.5">Musik</text>
+  <rect class="tile" x="240" y="271" width="96" height="38" rx="11"/><text class="t" x="288" y="289">Medien</text><text class="u" x="288" y="301">Filme &amp; Hörbücher</text>
+  <!-- Reihe 3 -->
+  <rect class="tile" x="24" y="361" width="96" height="38" rx="11"/><text class="t" x="72" y="379">Nachrichten</text><text class="u" x="72" y="391">&amp; Mail, über Jahre</text>
+  <rect class="tile" x="132" y="361" width="96" height="38" rx="11"/><text class="t" x="180" y="384.5">Dateien</text>
+  <rect class="tile" x="240" y="361" width="96" height="38" rx="11"/><text class="t" x="288" y="384.5">Kalender</text>
+  <!-- Reihe 4: das Haus -->
+  <rect class="tile" x="24" y="433" width="312" height="38" rx="11"/><text class="t" x="180" y="451">Zuhause</text><text class="u" x="180" y="463">Geräte &amp; Energie</text>
+
+  <text class="l" x="118" y="248">Gesicht</text>
+  <text class="l" x="242" y="248">Absender</text>
+  <text class="l" x="118" y="340">mit wem</text>
+  <text class="l" x="242" y="340">Geburtstag</text>
+  <text class="l la" x="82" y="421">sagt Bescheid</text>
+
+  <circle class="hub" cx="180" cy="290" r="36"/>
+  <text class="hub-t" x="180" y="295">Kontakt</text>
+
+  <!-- raus -->
+  <line class="in" x1="72" y1="492" x2="72" y2="523" marker-end="url(#pf)"/>
+  <line class="in" x1="180" y1="492" x2="180" y2="523" marker-end="url(#pf)"/>
+  <line class="in" x1="288" y1="492" x2="288" y2="523" marker-end="url(#pf)"/>
+  <use href="#i-handy" transform="translate(72 552)"/>
+  <use href="#i-computer" transform="translate(180 552)"/>
+  <use href="#i-laut" transform="translate(288 552)"/>
+  <text class="n" x="72" y="592">Handy</text>
+  <text class="n" x="180" y="592">Computer</text>
+  <text class="n" x="288" y="592">Lautsprecher</text>
+</svg>
+<figcaption>Was reinkommt, kennt einander. Und ist auf jedem Gerät da.</figcaption>
+</figure>
+
+<section>
+  <h2>Das heißt für dich</h2>
+  <ul class="heisst">
+    <li>Ein Foto von Oma findet ihre Briefe und Nachrichten.</li>
+    <li>Eine Rechnung landet beim richtigen Vertrag.</li>
+    <li>Nachrichten aus allen Messengern, über Jahre auffindbar.</li>
+    <li>Wo du warst, siehst nur du.</li>
+    <li>Ein Lied geteilt, auf jedem Lautsprecher da.</li>
+    <li>Die Waschmaschine ist fertig, die Box sagt Bescheid.</li>
+  </ul>
+</section>
+
+<p class="sicher">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10.5" width="16" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>
+  <span>Sie steht bei euch zuhause, jeder hat sein eigenes Login, und niemand sonst liest mit.</span>
+</p>
+
+<footer>
+  <p class="frage">Du bist Familie? <a class="btn" href="{{ANMELDEN}}">Anmelden</a></p>
+
+  <section class="zugang" aria-labelledby="zugang-h">
+    <h2 id="zugang-h">Zugang anfragen</h2>
+    <p class="hinweis">Ein Mensch aus der Familie liest das und meldet sich.</p>
+    <!-- Homes (internal/pages/teaser.go) fills {{ANMELDEN}}, puts a .fehler line before the button, and on success renders template#zugang-danke in place of this form. -->
+    <form method="post" action="/zugang">
+      <label for="z-name">Name</label>
+      <input id="z-name" name="name" type="text" required autocomplete="name" maxlength="80">
+      <label for="z-kontakt">Wie erreichen wir dich?</label>
+      <input id="z-kontakt" name="kontakt" type="text" required autocomplete="off" inputmode="email" maxlength="120" placeholder="Telefon oder E-Mail">
+      <label for="z-nachricht">Nachricht <small>(optional)</small></label>
+      <textarea id="z-nachricht" name="nachricht" rows="3" maxlength="300"></textarea>
+      <div class="hp" aria-hidden="true"><label for="z-website">Website</label><input id="z-website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+      <button type="submit">Anfrage schicken</button>
+      <p class="klein">Höchstens eine Anfrage pro Stunde.</p>
+    </form>
+  </section>
+
+  <!-- Result state: the server swaps the form for this block after a successful post. -->
+  <template id="zugang-danke">
+    <p class="danke" role="status">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+      <span>Danke, deine Anfrage ist angekommen.</span>
+    </p>
+  </template>
+
+  <a class="laib" href="https://github.com/mdopp/laib">Diese Box läuft mit Laib</a>
+</footer>
+
+</main>

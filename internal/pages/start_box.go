@@ -191,6 +191,9 @@ func brauchtDich(r *http.Request, cfg StartConfig, l laibTeil) string {
 	if n := len(l.wartet); n > 0 { // deciding is Laib's page's (ADR 0012, haus#157)
 		c.AddLink(texte.Anzahl(n, texte.T("box.wartet"), texte.T("box.wartet.n")), "", strings.TrimRight(cfg.LaibURL, "/")+"/inbox")
 	}
+	for _, row := range zugangRows(cfg) { // a visitor asking for access (owner 2026-11-08)
+		c.AddLink(row[0], row[1], ZugangPath)
+	}
 	return c.HTML()
 }
 

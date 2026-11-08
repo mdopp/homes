@@ -7,6 +7,7 @@ LAIB_URL=http://host.containers.internal:5900 LAIB_TOKEN=<the homes hand's token
 HOMES_PROXY_SECRET=<what Caddy sends as X-Homes-Proxy> LAIB_PUBLIC_URL=https://laib.<domain> \
 HOMES_LISTEN=0.0.0.0:8650 HOMES_ASSISTANT=Homes \
 HOMES_KONTAKT_LISTEN=0.0.0.0:8652 HOMES_KONTAKT_URL=https://kontakt.<domain> \
+HOMES_TEASER_HOST=<domain> HOMES_TEASER_PERSON=<box.yml notify.person> \
 HOMES_HA_URL=http://host.containers.internal:8123 HOMES_HA_TOKEN=<a long-lived HA token> \
 HOMES_ENERGY_FLOW=pv=sensor.…,house=sensor.…,grid=sensor.…,battery=sensor.… HOMES_ENERGY_TOTALS=PV-Erzeugung=sensor.…,… \
 HOMES_ENERGY_STATS=bezug=sensor.…,einspeisung=sensor.…,solar=sensor.… \
@@ -31,7 +32,12 @@ HOMES_USAGE_URL=http://host.containers.internal:8094 HOMES_USAGE_TOKEN=<usage-me
 without a login (module `kontakte`): a second listener on which Homes serves
 that one page and nothing else, behind Laib's route `kontakt.<domain>` (auth
 none, rate and body limited in Caddy); either unset, no listener and no
-links. `HOMES_DATA` (default `/data`) holds `devices.json`, `favoriten.json`
+links. `HOMES_TEASER_HOST` puts the teaser for visitors without an account
+on the same listener for that Host (Laib's route on the domain itself,
+auth none); unset, the listener is Kontakt prüfen lassen's alone, on any
+Host. `HOMES_TEASER_PERSON` is whom Laib tells of a *Zugang anfragen*
+request (box.yml `notify.person`); unset, nobody, the request still waits
+on the admins' Start. `HOMES_DATA` (default `/data`) holds `devices.json`, `favoriten.json`
 and `kontakt-antworten.json` (the links' hashes and the answers, 0600); `HOMES_PUBLIC_URL` is the
 origin the setup link carries (default `https://<Host>`). Homes' Laib token is the `homes` hand: status, inbox, journal, restart —
 nothing else (no exec, no write). There are no static device tokens. Image: `ghcr.io/mdopp/homes`. Laib template: `homes` (route `www.<domain>`, the domain itself redirects
