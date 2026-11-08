@@ -788,7 +788,16 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   2026-11-07) is `true` for the modules the app lists under „Öffnen“, in
   the answer's order (today `dokumente`, `musik`, `standort`, each while
   on and with a `web`); it replaces the app's own list, and an app that
-  does not read it keeps its list. An entry that is no module comes after
+  does not read it keeps its list. `ziel` and `stand` (owner 2026-11-08:
+  „direkter bauen“) are per person and only where Homes has something to
+  say: `ziel` is what the app's row opens instead of `web` — for
+  `standort`, once the person connected Reitti, Reitti itself
+  (`HOMES_REITTI_PUBLIC_URL`), so a tap lands in the timeline, not on the
+  page with the token form —, `stand` the one line under the title, the
+  same line Mehr shows for that page (*Zuletzt aufgezeichnet heute 08:40*,
+  *Noch nicht verbunden*; for `musik` *2 Dateien nicht übernommen*, *1
+  Datei wird einsortiert*, *Alles einsortiert*). Both absent elsewhere; an
+  older app ignores them. An entry that is no module comes after
   the modules: `immich-pruefen`, the Immich key owner's open questions
   („Dieselbe Person?“ and „Ist das …?“, owner 2026-11-07) as one open
   task with the count as it is now, `web` and `einrichten` on
@@ -1183,7 +1192,10 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   not count). Once connected the page leads with *Zeitleiste öffnen* (into
   Reitti), then one line of state (*Verbunden · zuletzt aufgezeichnet
   heute 17:40*, or *Verbunden seit …* with the step in the app while no
-  point has come), and ends with a quiet, asked *Trennen*.
+  point has come), and ends with a quiet, asked *Trennen*. No intro
+  sentence on either state (owner 2026-11-08: state and one action); the
+  app's „Öffnen“ row opens Reitti itself and carries the state line
+  (`/napi/einrichtung` `ziel`, `stand`), *Trennen* stays here.
 - An old location history, shared to the app (owner 2026-11-03,
   *In den Standortverlauf übernehmen*): Google Maps' on-device export
   (`Timeline.json`, Android `{semanticSegments}` and the iPhone's array),

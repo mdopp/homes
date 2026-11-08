@@ -54,11 +54,15 @@ func TestStandortConnectsWithATokenReittiTakes(t *testing.T) {
 	cfg, _ := standortCfg(t)
 	h := Standort(cfg)
 
-	// idle: what it is, how to get a token, the field, a way to Reitti
+	// idle: how to get a token, the field, a way to Reitti; no intro (owner 2026-11-08)
 	rec := getStandort(cfg, "anna", "")
 	page := rec.Body.String()
 	mustContain(t, page, "<h1>Standortverlauf</h1>", "Einstellungen → API-Token", "Mit Gerät verbinden", `name=token type=password`,
-		`data-laeuft="Prüft bei Reitti …"`, `href="https://reitti.box.test"`, "Homes-App")
+		`data-laeuft="Prüft bei Reitti …"`, `href="https://reitti.box.test"`)
+	mustNotContain(t, page, "class=lead", "Homes-App")
+	if ziel, stand := Zeile(cfg, "anna", StandortPath); ziel != "" || stand != "Noch nicht verbunden" {
+		t.Fatalf("the app's row before connecting: %q %q", ziel, stand)
+	}
 	if rec.Code != 200 || rec.Header().Get("Cache-Control") != "no-store" || strings.Contains(page, "Verbunden seit") {
 		t.Fatalf("%d %q", rec.Code, rec.Header().Get("Cache-Control"))
 	}
@@ -151,7 +155,9 @@ func TestStandortOnlyWhereTheBoxHasReitti(t *testing.T) {
 // Once connected the page leads with what the person came for (owner
 // 2026-11-04: „Ab dem Moment der Koppelung ist es aber das wichtigste“):
 // the timeline first and big, then the state; the step in the app only
-// while no point has come; Trennen last, quiet and asked.
+// while no point has come; Trennen last, quiet and asked. No intro (owner
+// 2026-11-08). The app's row (Zeile) opens the timeline itself and says
+// what Mehr says.
 func TestStandortConnectedLeadsWithTheTimeline(t *testing.T) {
 	cfg, _ := standortCfg(t)
 	if err := cfg.Reitti.Verbinden(t.Context(), "anna", "gut-0123"); err != nil {
@@ -163,8 +169,14 @@ func TestStandortConnectedLeadsWithTheTimeline(t *testing.T) {
 
 	// connected, no point yet: the button, the state, the step, Trennen
 	page := getStandort(cfg, "anna", "").Body.String()
-	mustContain(t, page, html.EscapeString(texte.T(texte.StandortKurz)), `<span class="punkt gelb"></span>Verbunden seit 2. November 2026`, `data-frage=`)
-	mustNotContain(t, page, html.EscapeString(saysStandortWas), html.EscapeString(saysStandortApp), "Reitti öffnen")
+	mustContain(t, page, `<span class="punkt gelb"></span>Verbunden seit 2. November 2026`, `data-frage=`)
+	mustNotContain(t, page, "class=lead", "Reitti öffnen")
+	if ziel, stand := Zeile(cfg, "anna", StandortPath); ziel != "https://reitti.box.test" || stand != "Verbunden, noch kein Punkt angekommen" {
+		t.Fatalf("the app's row: %q %q", ziel, stand)
+	}
+	if ziel, stand := Zeile(cfg, "ben", StandortPath); ziel != "" || stand != "Noch nicht verbunden" {
+		t.Fatalf("ben's row from anna's connection: %q %q", ziel, stand)
+	}
 	before(t, page, "<h1>Standortverlauf</h1>", open)
 	before(t, page, open, "class=zustand")
 	before(t, page, "class=zustand", step)
@@ -180,12 +192,27 @@ func TestStandortConnectedLeadsWithTheTimeline(t *testing.T) {
 	mustNotContain(t, page, step, "Verbunden seit")
 	before(t, page, open, "zuletzt aufgezeichnet")
 	trennenLast(t, page)
+	if ziel, stand := Zeile(cfg, "anna", StandortPath); ziel != "https://reitti.box.test" || stand != "Zuletzt aufgezeichnet heute 08:40" {
+		t.Fatalf("the app's row: %q %q", ziel, stand)
+	}
 
-	// without Reitti's own address there is no button; the state leads
+	// without Reitti's own address there is no button; the state leads; the app's row has no target
 	cfg.Reitti.PublicURL = ""
 	page = getStandort(cfg, "anna", "").Body.String()
 	mustNotContain(t, page, "class=vorne")
 	before(t, page, "zuletzt aufgezeichnet", "class=leise-weg")
+	if ziel, stand := Zeile(cfg, "anna", StandortPath); ziel != "" || stand == "" {
+		t.Fatalf("the app's row without Reitti's address: %q %q", ziel, stand)
+	}
+	// Musik's row: the inbox's state, as Mehr says it; no target of its own
+	if ziel, stand := Zeile(cfg, "anna", MusikPath); ziel != "" || stand != "" {
+		t.Fatalf("Musik's row without an inbox: %q %q", ziel, stand)
+	}
+	cfg.MusicInbox = t.TempDir()
+	os.WriteFile(cfg.MusicInbox+"/Sommer.zip", []byte("x"), 0o644)
+	if ziel, stand := Zeile(cfg, "anna", MusikPath); ziel != "" || stand != "1 Datei wird einsortiert" {
+		t.Fatalf("Musik's row with one upload: %q %q", ziel, stand)
+	}
 }
 
 // trennenLast says the quiet Trennen ends the page: nothing to do after it.

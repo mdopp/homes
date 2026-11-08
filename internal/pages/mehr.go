@@ -91,6 +91,15 @@ func mehrStand(r *http.Request, cfg StartConfig, pfad string) string {
 	return ""
 }
 
+// Zeile is a module's row in the app (owner 2026-11-08: „direkter bauen“): where its tap goes
+// when not to its page (the timeline itself once Reitti is connected) and the line Mehr says of it.
+func Zeile(cfg StartConfig, user, pfad string) (ziel, stand string) {
+	if _, ok := cfg.Reitti.Konto(user); ok && pfad == StandortPath {
+		ziel = AppURL(OnDomain(cfg.Reitti.PublicURL, cfg.PublicURL))
+	}
+	return ziel, mehrStand(&http.Request{Header: http.Header{"Remote-User": {user}}}, cfg, pfad)
+}
+
 // Mehr is the bar's last entry on the phone (haus#67): the pages that
 // have no entry of their own — Dokumente (owner 2026-10-27: Dokumente
 // unter Mehr), the music, Aufgaben, Netzlaufwerk, Box for admins,

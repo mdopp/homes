@@ -20,13 +20,12 @@ import (
 // token once: pasted here, checked with Reitti, kept for them alone and
 // never shown back. Once connected the page leads with the timeline, says
 // when the newest point came (or the step while none has), and ends with a
-// quiet Trennen (owner 2026-11-04).
+// quiet Trennen (owner 2026-11-04). No intro (owner 2026-11-08: state and
+// one action; the app's row opens the timeline itself, Zeile in mehr.go).
 const (
 	StandortPath = "/standort"
 
-	saysStandortWas       = "Die Homes-App kann aufzeichnen, wo du unterwegs warst, und schickt es in deine eigene Zeitleiste in Reitti. Der Verlauf bleibt auf eurer Box, in deinem Reitti-Konto."
 	saysStandortHow       = "Dafür braucht Homes einmal einen Schlüssel aus deinem Reitti-Konto: In Reitti unter Einstellungen → API-Token einen neuen Token erstellen, ihn mit einem Gerät verbinden („Mit Gerät verbinden“), dann den Token hier einfügen."
-	saysStandortApp       = "Danach in der Homes-App unter „Standortverlauf“ die Aufzeichnung einschalten."
 	saysStandortVerbunden = "Verbunden: die Homes-App schickt deine Punkte jetzt an Reitti."
 	saysStandortGetrennt  = "Getrennt: Homes schickt nichts mehr an Reitti. Die Homes-App behält neue Punkte, bis du wieder verbindest; in Reitti kannst du den Token unter Einstellungen → API-Token ganz löschen."
 	saysStandortLeer      = "Füge den Token aus Reitti ein; das Feld war leer."
@@ -126,7 +125,7 @@ func writeStandort(w http.ResponseWriter, r *http.Request, cfg StartConfig, code
 	b := familyHead(r, cfg, "Standortverlauf", "Standortverlauf")
 	b.WriteString(netzStyle + keyHintStyle + gekoppeltStyle + "<h1>Standortverlauf</h1>")
 	if verbunden { // connected: the timeline first, the step only while no point came, Trennen last and quiet
-		b.WriteString("<p class=lead>" + html.EscapeString(texte.T(texte.StandortKurz)) + "</p>" + gesagt(said, problem))
+		b.WriteString(gesagt(said, problem))
 		if reittiURL != "" {
 			b.WriteString(vorne(reittiURL, texte.T(texte.StandortOeffnen)))
 		}
@@ -140,13 +139,13 @@ func writeStandort(w http.ResponseWriter, r *http.Request, cfg StartConfig, code
 		writePage(w, code, b)
 		return
 	}
-	b.WriteString("<p class=lead>" + html.EscapeString(saysStandortWas) + "</p>" + gesagt(said, problem) +
+	b.WriteString(gesagt(said, problem) +
 		"<form class=passwort method=post action=" + StandortPath + "><h2>Mit Reitti verbinden</h2><input type=hidden name=tun value=verbinden><p class=k>" + html.EscapeString(saysStandortHow) + "</p>")
 	if reittiURL != "" {
 		b.WriteString(`<p class=wege><a class=knopf href="` + html.EscapeString(reittiURL) + `">Reitti öffnen</a></p>`)
 	}
 	// type=password: the token is not shown while it is pasted, and never written back
 	b.WriteString(`<div class=feld><label for=reitti-token>Token aus Reitti</label><input id=reitti-token name=token type=password autocomplete=off spellcheck=false required></div>` +
-		`<button data-laeuft="Prüft bei Reitti …">Verbinden</button></form><p class=k>` + html.EscapeString(saysStandortApp) + "</p>")
+		`<button data-laeuft="Prüft bei Reitti …">Verbinden</button></form>`)
 	writePage(w, code, b)
 }
