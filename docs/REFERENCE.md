@@ -253,11 +253,21 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     from 16 contacts on. Each row leads to the contact's page and carries
     its first number (`tel:`), else its first e-mail (`mailto:`), as a tap
     of its own. The search (`?q=`, and live while typing) finds name,
-    number and e-mail, compared as `namen.Plain`. The same quiet line as
-    Kalender says where to edit; Radicale not answering is *Die Kontakte
+    number and e-mail, compared as `namen.Plain`; under it the page's one
+    action, *Kontakt prüfen lassen*. Where to edit is folded away at the
+    end (*Wie das funktioniert*); Radicale not answering is *Die Kontakte
     lassen sich gerade nicht lesen.*, once. Immich's people are never
-    offered as contacts (owner 2026-11-06). For the Immich key's owner one
-    quiet line under the list leads to *Meine Kontakte*.
+    offered as contacts (owner 2026-11-06).
+  - *The Kontakte area's selection* (owner 2026-11-08, `kontakte_nav.go`):
+    under the Haushalt pills on every Kontakte page (the list, Meine
+    Kontakte, Fragen, Kontakt prüfen lassen, Kontakt-Antworten, a
+    contact), the segments *Haushalt · Meine · Fragen n · Antworten n*,
+    the current marked: *Meine* and *Fragen* (pairs and „Ist das …?“
+    questions) for the Immich key's owner, *Antworten* while answers wait
+    (and on its own pages); no row when *Haushalt* would stand alone.
+    On a page below the list, a path back: *Kontakte › Antworten › Oma Hilde*. A
+    contact's page has its links (*Dokumente*, *Nachrichten*, *Fotos*,
+    *Kontakt prüfen lassen*) right under its name, before its fields.
   - *Meine Kontakte* (`/kontakte/privat`, kontakte module, with `fotos` and
     `HOMES_IMMICH_KEY`; owner 2026-11-06): the key owner's own Handy-Kontakte
     (`/<login>/handy-kontakte/`, read only, never mixed with the household's
@@ -367,9 +377,8 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     alone and said so); a Handy-Kontakt's wait for the phone
     (`/napi/kontakte/korrekturen`). Decided answers go after 30 days,
     unanswered links after their 14.
-  - *Dieselbe Person?* (`/kontakte/dieselbe`, the key's owner only, as
-    Meine Kontakte; a quiet line on Kontakte and Meine Kontakte while
-    there are pairs): pairs of persons whose faces Immich holds close, ten
+  - *Dieselbe Person?* (`/kontakte/dieselbe`, the segment *Fragen*, titled
+    *Fragen von Immich*; the key's owner only, as Meine Kontakte): pairs of persons whose faces Immich holds close, ten
     a page (`?seite=`). The hourly run asks, for at most 40 named persons
     not asked for a day, `GET /api/people?closestPersonId=<id>` (Immich
     gives an order, no distance, and puts favourites first: they are read

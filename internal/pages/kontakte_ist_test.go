@@ -49,7 +49,7 @@ func istConfig(t *testing.T) (StartConfig, *immichfake.Server) {
 // anyone else neither sees nor answers.
 func TestIstDas(t *testing.T) {
 	cfg, fake := istConfig(t)
-	mustContain(t, as(Kontakte, cfg, KontaktePath, "anna", "anna@box.test").Body.String(), `Dieselbe Person?</a> · 2 Vorschläge`)
+	mustContain(t, as(Kontakte, cfg, KontaktePath, "anna", "anna@box.test").Body.String(), `<a href=/kontakte/dieselbe>Fragen <span class=anzahl aria-label="2 offen">2</span></a>`)
 	body := as(Dieselbe, cfg, DieselbePath, "anna", "anna@box.test").Body.String()
 	mustContain(t, body, "<h2>Ist das …?</h2>", "<b>Ist das Mama?</b>", "<b>Mama</b><span>Bild im Kontakt</span>", "<i>ohne Namen</i>", "<b>Ist das Tina?</b>", "<b>Ben</b>",
 		`name=kontakt value="privat/m"`, `name=b value="u1"`, `value=ja data-laeuft="Führt zusammen …">Ja, das ist Mama</button>`, `>Nein</button>`, `value=keinfoto class=leise data-laeuft="Nimmt das Bild heraus …">Kein Foto von Mama</button>`)

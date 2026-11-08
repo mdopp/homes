@@ -23,7 +23,7 @@ func istFragen(cfg StartConfig, seite int) string {
 	}
 	t := func(id texte.ID) string { return html.EscapeString(texte.T(id)) }
 	var b strings.Builder
-	b.WriteString("<h2>" + t(texte.IstDas) + "</h2><p class=k>" + t(texte.IstDasHinweis) + "</p>")
+	b.WriteString("<h2>" + t(texte.IstDas) + "</h2>")
 	for _, f := range fragen {
 		bild := `<span class=ohne aria-hidden=true></span>`
 		if f.Bild != nil {

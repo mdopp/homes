@@ -46,8 +46,8 @@ func Kontakt(cfg StartConfig) http.HandlerFunc {
 				kontaktSprung(w, r, cfg, ct, name, was)
 				return
 			}
-			b := familyHead(r, cfg, name, "")
-			b.WriteString("<h1>" + html.EscapeString(name) + "</h1>")
+			b := kontakteHead(r, cfg, name, KontaktePath, name)
+			b.WriteString(kontakteStyle + "<h1>" + html.EscapeString(name) + "</h1><div class=oben>" + kontaktSpruenge(cfg, ct.UID) + pruefenKnopf(r, cfg, ct.UID) + "</div>")
 			c := cards.Card{Title: "Kontakt"}
 			if org := trimRunes(oneLine(ct.Org), 120); org != "" && org != name {
 				c.Add(org, "")
@@ -70,8 +70,7 @@ func Kontakt(cfg StartConfig) http.HandlerFunc {
 					c.Add(a, "Adresse")
 				}
 			}
-			b.WriteString(c.HTML() + kontaktSpruenge(cfg, ct.UID))
-			b.WriteString(pruefenKnopf(r, cfg, ct.UID))
+			b.WriteString(c.HTML())
 			writePage(w, http.StatusOK, b)
 			return
 		}
