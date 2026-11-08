@@ -42,10 +42,27 @@ import (
 // an address book. No secret and no Remote-User is read here.
 
 // KontaktServer is everything the public listener serves: the page at
-// /<token>, and a robots.txt and a favicon that say nothing.
+// /<token>, and a robots.txt and a favicon that say nothing. With a
+// TeaserHost (owner 2026-11-08) the listener tells its two hosts apart:
+// that Host gets the teaser, the kontakt host these pages, any other 404.
 func KontaktServer(cfg StartConfig) http.Handler {
 	page := KontaktFrage(cfg)
+	teaser := Teaser(cfg)
+	kontakt := ""
+	if u, err := url.Parse(cfg.KontaktURL); err == nil {
+		kontakt = u.Hostname()
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if cfg.TeaserHost != "" {
+			switch host := hostOf(r); {
+			case strings.EqualFold(host, cfg.TeaserHost):
+				teaser(w, r)
+				return
+			case !strings.EqualFold(host, kontakt):
+				http.Error(w, saysNoSuchPage, http.StatusNotFound)
+				return
+			}
+		}
 		switch r.URL.Path {
 		case "/robots.txt":
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -110,6 +127,14 @@ func (d *drossel) darf(ip string) bool {
 		d.je[ip] = e
 	}
 	return e.nimm(now, fragePro, frageTakt) && d.alle.nimm(now, frageAlle, time.Second)
+}
+
+// hostOf is the request's Host without a port.
+func hostOf(r *http.Request) string {
+	if h, _, err := net.SplitHostPort(r.Host); err == nil {
+		return h
+	}
+	return r.Host
 }
 
 // clientIP is the address Caddy saw (it sets X-Forwarded-For to it, the

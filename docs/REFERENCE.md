@@ -34,7 +34,9 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   at most three and *N weitere Aufgaben* to Deine Aufgaben; for an admin
   *Box: 1 rot · 2 gelb · 1 Box-Aufgabe fällig* (the services not green and
   laib diag's red and yellow findings beyond them, the Übersicht's rule) to
-  /box and *1 Entscheidung wartet* to Laib's inbox. Never an optional app.
+  /box and *1 Entscheidung wartet* to Laib's inbox, and one row per open
+  *Zugangsanfrage von <Name>* (its contact as the detail) to /zugang.
+  Never an optional app.
   For the family a service they use down or the data not backed up is a
   banner above it (*Gerade nicht erreichbar: Immich (Fotos).*, *Eure Daten
   sind seit 3 Tagen nicht gesichert.*, who is on it): amber when the box
@@ -398,6 +400,30 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     alone and said so); a Handy-Kontakt's wait for the phone
     (`/napi/kontakte/korrekturen`). Decided answers go after 30 days,
     unanswered links after their 14.
+  - *Die Box*, the teaser on the domain itself (owner 2026-11-08: a
+    visitor without an account sees what the box is; `www.<domain>` stays
+    behind Authelia). The same public listener, told apart by Host
+    (`HOMES_TEASER_HOST`, `pages.Teaser`; unset: no teaser and no Host
+    check; any other Host there is 404): `GET /` the page
+    (`internal/pages/teaser.html`, a file of its own so a word is changed
+    without code; no script, inline SVG, Google Fonts; wrapped by Homes,
+    *Anmelden* to `HOMES_PUBLIC_URL`; may be indexed), `GET /robots.txt`
+    allows it and not `/zugang`, `POST /zugang` the request (`name` ≤ 80,
+    `kontakt` ≤ 120, `nachricht` ≤ 300, the hidden `website` a bot fills:
+    thanked and dropped; same-origin only, else 403; a wrong field said
+    before the button with the words kept, 422), everything else 404.
+    Accepted: one per address an hour, twenty a day for all, else 429 and
+    *Gerade geht es nicht, versuch es später noch einmal.* in the form.
+    A request is kept in `HOMES_DATA/zugang.json` (`internal/zugang`:
+    time, name, contact, message and a salted SHA-256 of the address,
+    never the address; the file is the throttle's memory too), told to
+    `HOMES_TEASER_PERSON` (box.yml `notify.person`) through Laib's `tell`
+    as *Zugangsanfrage von <Name> (<Kontakt>): <Nachricht>*, and the form
+    gives way to *Danke, deine Anfrage ist angekommen.* Admins see the
+    open ones on Start's *Braucht dich* and on `GET /zugang`
+    (*Zugangsanfragen*: name, contact, time, message, *Erledigt*; `POST
+    id` ticks one off and comes back). Never a registration: a login is
+    made at the box.
   - *Dieselbe Person?* (on the contact of either person, see above; what
     belongs to no contact at `/kontakte/dieselbe`; the key's owner only):
     pairs of persons whose faces Immich holds close. The hourly run asks, for at most 40 named persons

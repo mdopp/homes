@@ -26,7 +26,7 @@ bad=0
 p() { for x in "$@"; do printf 'internal/%s ' "$x"; done; }
 connectors=$(p abs bote caldav discogs ha immich jellyfin judge laib musicbrainz paperless qmd reitti samba werkstatt)
 shared=$(p abruf app assistent cards code128 jsonfile markdown mcpserver modul namen texte)
-household=$(p ansicht devices dokumente einkauf einrichten energie favoriten gesehen gesichter haushalt kontaktantwort library merken musik notes papierkorb podcasts schalter takeout usage)
+household=$(p ansicht devices dokumente einkauf einrichten energie favoriten gesehen gesichter haushalt kontaktantwort library merken musik notes papierkorb podcasts schalter takeout usage zugang)
 
 budget() { # budget <name> <cap> <dir…>
   name=$1 cap=$2; shift 2

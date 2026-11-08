@@ -272,6 +272,19 @@ const (
 	FrageZuGross          ID = "frage.zu-gross"
 	FrageDatum            ID = "frage.datum"
 	FrageNicht            ID = "frage.nicht"
+	// Zugang anfragen (owner 2026-11-08): the public teaser's form on the domain itself
+	ZugangOhneName    ID = "zugang.ohne-name"
+	ZugangOhneKontakt ID = "zugang.ohne-kontakt"
+	ZugangZuLang      ID = "zugang.zu-lang"
+	ZugangSpaeter     ID = "zugang.spaeter" // over the limit, or the store did not take it
+	ZugangFremd       ID = "zugang.fremd"   // a POST another site sent
+	ZugangNichtDa     ID = "zugang.nicht-da"
+	ZugangMeldung     ID = "zugang.meldung" // the Signal message to the admin: name, contact, message
+	ZugangAnfragen    ID = "zugang.anfragen"
+	ZugangAnfrage     ID = "zugang.anfrage" // „Zugangsanfrage von %s“
+	ZugangKeine       ID = "zugang.keine"
+	ZugangErledigt    ID = "zugang.erledigt"
+	ZugangHinweis     ID = "zugang.hinweis"
 )
 
 var de = map[ID]string{
@@ -674,6 +687,18 @@ var de = map[ID]string{
 	"frage.zu-gross":             "Das waren zu viele Angaben auf einmal. Lass ein paar leere Felder weg und schick es noch einmal.",
 	"frage.datum":                "Der Geburtstag ist so kein Tag im Kalender: Tag und Monat als Zahl, das Jahr mit vier Ziffern oder leer.",
 	"frage.nicht":                "Das ließ sich gerade nicht speichern. Versuch es in ein paar Minuten noch einmal.",
+	"zugang.ohne-name":           "Sag uns bitte, wie du heißt (höchstens 80 Zeichen).",
+	"zugang.ohne-kontakt":        "Wie erreichen wir dich? Eine Telefonnummer oder E-Mail-Adresse (höchstens 120 Zeichen).",
+	"zugang.zu-lang":             "Die Nachricht ist zu lang, höchstens 300 Zeichen.",
+	"zugang.spaeter":             "Gerade geht es nicht, versuch es später noch einmal.",
+	"zugang.fremd":               "Bitte schick die Anfrage von dieser Seite aus.",
+	"zugang.nicht-da":            "Diese Seite gibt es nicht.",
+	"zugang.meldung":             "Zugangsanfrage von %s (%s)%s",
+	"zugang.anfragen":            "Zugangsanfragen",
+	"zugang.anfrage":             "Zugangsanfrage von %s",
+	"zugang.keine":               "Gerade fragt niemand nach Zugang.",
+	"zugang.erledigt":            "Erledigt",
+	"zugang.hinweis":             "Wer die Box ohne Anmeldung aufruft, kann hier um Zugang bitten. Melde dich bei der Person; ein Login legst du direkt an der Box an. „Erledigt“ nimmt die Anfrage von der Startseite.",
 	"art.vorname":                "Vorname",
 	"art.nachname":               "Nachname",
 	"art.firma":                  "Firma",
