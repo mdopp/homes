@@ -357,5 +357,14 @@ func einrichtung(s site, gekoppelt func(string) bool, jf *jellyfin.Client) *einr
 	if s.napi.UploadDir != "" {
 		q.Ziele["scannen"] = s.publicURL + "/napi/upload"
 	}
+	// the app's rows of Standortverlauf and Musik say where they stand, as Mehr does, and
+	// Standortverlauf's tap opens the timeline itself once connected (owner 2026-11-08: „direkter“)
+	seiten := pages.StartConfig{Reitti: s.napi.Reitti, PublicURL: s.publicURL, MusicInbox: s.musik, Loc: s.hh.Loc}
+	q.Zeile = func(person string, m modul.Modul) (ziel, stand string) {
+		if pfad := map[string]string{"standort": pages.StandortPath, "musik": pages.MusikPath}[m.Name]; pfad != "" {
+			ziel, stand = pages.Zeile(seiten, person, pfad)
+		}
+		return ziel, stand
+	}
 	return q
 }

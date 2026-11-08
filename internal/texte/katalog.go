@@ -63,7 +63,6 @@ const (
 	TorOeffnen          ID = "tor.frage"        // „%s öffnen?“, asked before a garage opens
 	TorJa               ID = "tor.ja"
 	TorNein             ID = "tor.nein"
-	StandortKurz        ID = "standort.kurz"        // Standortverlauf once connected (owner 2026-11-04): the one-line intro
 	StandortOeffnen     ID = "standort.oeffnen"     // the main button, into Reitti
 	StandortZuletzt     ID = "standort.zuletzt"     // „… %s“: when the newest point came
 	StandortEinschalten ID = "standort.einschalten" // the step while no point has come
@@ -353,7 +352,6 @@ var de = map[ID]string{
 	TorOeffnen:          "%s öffnen?",
 	TorJa:               "Öffnen",
 	TorNein:             "Abbrechen",
-	StandortKurz:        "Wo du warst – nur für dich, auf eurer Box.",
 	StandortOeffnen:     "Zeitleiste öffnen",
 	StandortZuletzt:     "Verbunden · zuletzt aufgezeichnet %s",
 	StandortEinschalten: "Noch ist kein Punkt angekommen. Schalte in der Homes-App unter „Standortverlauf“ die Aufzeichnung ein.",
@@ -385,7 +383,7 @@ var de = map[ID]string{
 	"schritt.homes":             "Öffne die App, trag {adresse} ein und melde dich an. Die App richtet sich dann selbst ein.",
 	"schritt.homes-iphone":      "iPhone: Öffne {adresse} in Safari, tippe auf „Teilen“ und dann auf „Zum Home-Bildschirm“.",
 	"musik.dazu":                "Hinzufügen",
-	"musik.handy":               "Auf dem Handy: Lieder oder ein ganzes Album als ZIP teilen und Homes wählen. Die Box sortiert sie selbst ein.",
+	"musik.handy":               "Auf dem Handy: Lieder oder ein ganzes Album als ZIP teilen und Homes wählen.",
 	"musik.computer":            "Am Computer, zu Hause: in den Ordner „musik-eingang“ auf dem Netzlaufwerk legen.",
 	"musik.wird-einsortiert":    "wird einsortiert …",
 	"musik.dauert":              "Das dauert länger als sonst; sobald es fertig ist, bekommst du eine Nachricht.",

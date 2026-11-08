@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -145,6 +146,13 @@ func TestNapiAnswer(t *testing.T) {
 	zuOeffnen.Oeffnen, zuOeffnen.Icon = true, "notiz"
 	q := box(t, fotos, filme, zuOeffnen, ort, aus, modul.Modul{Name: "werkstatt", Admins: true, Nav: []modul.Eintrag{{Pfad: "/box"}}}, modul.Modul{Name: "konto"})
 	q.Ziele = map[string]string{"einkauf": "https://homes.box.test/einkauf"}
+	// the row's target and state per person (owner 2026-11-08): only where the hook says something
+	q.Zeile = func(person string, m modul.Modul) (string, string) {
+		if m.Name == "standort" && person == "anna" {
+			return "https://reitti.box.test/timeline", "Zuletzt aufgezeichnet heute 08:40"
+		}
+		return "", ""
+	}
 	q.Installiert("anna", []string{"org.jellyfin.mobile"})
 	got := q.Napi("anna")
 	b, _ := json.Marshal(got)
@@ -154,10 +162,13 @@ func TestNapiAnswer(t *testing.T) {
 		`{"name":"filme","titel":"Filme und Musik","icon":"filme","oeffnen":false,"web":"https://media.box.test","app":{"name":"Jellyfin","paket":"org.jellyfin.mobile","store":"https://play.google.com/store/apps/details?id=org.jellyfin.mobile"},"nur_web":false,` +
 		`"aufgabe":{"titel":"Filme und Musik auf dem Handy einrichten","erledigt":true,"am":"` + time.Now().Format("2006-01-02") + `","wie":"app","einrichten":"https://homes.box.test/einrichten/filme"}},` +
 		`{"name":"notizen","titel":"Notizen","icon":"notiz","oeffnen":true,"web":"https://homes.box.test/notizen","nur_web":true},` +
-		`{"name":"standort","titel":"Standort","icon":"standort","oeffnen":false,"web":"https://reitti.box.test","nur_web":true}],` +
+		`{"name":"standort","titel":"Standort","icon":"standort","oeffnen":false,"web":"https://reitti.box.test","ziel":"https://reitti.box.test/timeline","stand":"Zuletzt aufgezeichnet heute 08:40","nur_web":true}],` +
 		`"ziele":{"einkauf":"https://homes.box.test/einkauf"}}`
 	if string(b) != want {
 		t.Errorf("got\n%s\nwant\n%s", b, want)
+	}
+	if b, _ := json.Marshal(q.Napi("ben")); strings.Contains(string(b), `"ziel"`) || strings.Contains(string(b), `"stand"`) {
+		t.Errorf("ben's rows carry a target or state the hook did not give:\n%s", b)
 	}
 }
 

@@ -115,7 +115,9 @@ type Quellen struct {
 	Erkennen map[string]func(ctx context.Context, person string) (bool, error)
 	Adresse  string            // Homes' public address, https://www.<domain>
 	Ziele    map[string]string // the app's launcher shortcuts that this box has (Antwort.Ziele)
-	Now      func() time.Time  // nil: time.Now
+	// Zeile is a module's row in the app for the person (owner 2026-11-08): the tap's target when not its page, one line of state; nil: plain rows
+	Zeile func(person string, m modul.Modul) (ziel, stand string)
+	Now   func() time.Time // nil: time.Now
 	// Immich is how many of the Immich key owner's questions are open
 	// („Dieselbe Person?“, „Ist das …?“) for person: 0 for anyone else; nil none
 	Immich func(person string) int
@@ -143,11 +145,10 @@ func (q *Quellen) Fragen(person string) []Aufgabe {
 	if q == nil || q.Immich == nil || person == "" || !q.Module.An("fotos") {
 		return nil
 	}
-	n := q.Immich(person)
-	if n <= 0 {
-		return nil
+	if n := q.Immich(person); n > 0 {
+		return []Aufgabe{{Modul: ImmichPruefen, Titel: fmt.Sprintf(texte.T(texte.DieselbeAufgabe), texte.Anzahl(n, "Person", "Personen")), Warum: texte.T(texte.DieselbeAufgabeWarum)}}
 	}
-	return []Aufgabe{{Modul: ImmichPruefen, Titel: fmt.Sprintf(texte.T(texte.DieselbeAufgabe), texte.Anzahl(n, "Person", "Personen")), Warum: texte.T(texte.DieselbeAufgabeWarum)}}
+	return nil
 }
 
 // Seite is where a task is done when its module has no page of its own.
@@ -244,6 +245,8 @@ type NapiModul struct {
 	Icon    string       `json:"icon"`    // the app's key for its picture (docs/REFERENCE.md); the module's name unless it has its own
 	Oeffnen bool         `json:"oeffnen"` // the app lists it under „Öffnen“, in this list's order
 	Web     string       `json:"web,omitempty"`
+	Ziel    string       `json:"ziel,omitempty"`  // what the tap opens instead of Web: the timeline itself (owner 2026-11-08)
+	Stand   string       `json:"stand,omitempty"` // one line under the title: „Zuletzt aufgezeichnet heute 08:40“
 	App     *NapiApp     `json:"app,omitempty"`
 	NurWeb  bool         `json:"nur_web"`
 	Aufgabe *NapiAufgabe `json:"aufgabe,omitempty"`
@@ -271,10 +274,7 @@ func (q *Quellen) Napi(person string) Antwort {
 	maps.Copy(out.Ziele, q.Ziele)
 	tasks := q.Fuer(person)
 	for _, m := range q.Module.Module() {
-		e := m.Einrichtung
-		if e == nil {
-			e = &modul.Einrichtung{}
-		}
+		e := cmp.Or(m.Einrichtung, &modul.Einrichtung{})
 		n := NapiModul{Name: m.Name, Titel: m.Titel, Icon: cmp.Or(m.Icon, m.Name), Oeffnen: m.Oeffnen, Web: e.Web, NurWeb: e.App == ""}
 		if len(m.Nav) > 0 { // its page in Homes before its service's own
 			n.Web = q.Adresse + m.Nav[0].Pfad
@@ -284,6 +284,9 @@ func (q *Quellen) Napi(person string) Antwort {
 		}
 		if !n.NurWeb {
 			n.App = &NapiApp{e.App, e.Paket, e.Store}
+		}
+		if q.Zeile != nil {
+			n.Ziel, n.Stand = q.Zeile(person, m)
 		}
 		if i := slices.IndexFunc(tasks, func(a Aufgabe) bool { return a.Modul == m.Name }); i >= 0 {
 			a := tasks[i]
@@ -308,12 +311,11 @@ func (q *Quellen) Napi(person string) Antwort {
 // Domain is the box's domain in Homes' address: example.org of
 // https://homes.example.org; "" without one.
 func Domain(publicURL string) string {
-	u, err := url.Parse(publicURL)
-	if err != nil {
-		return ""
+	if u, err := url.Parse(publicURL); err == nil {
+		_, dom, _ := strings.Cut(u.Hostname(), ".")
+		return dom
 	}
-	_, dom, _ := strings.Cut(u.Hostname(), ".")
-	return dom
+	return ""
 }
 
 // Dienste are the services Laib runs, asked once within wait: the link
