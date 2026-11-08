@@ -1146,7 +1146,14 @@ test('Kontakt prüfen lassen: formats, address, removal, photo, message', async 
   await k.locator('input[name=tel]').nth(1).fill('0711 2345678');
   await k.locator('select[name=tel-art]').nth(1).selectOption('geschaeftlich');
   await k.locator('input[name=tel-haupt]').nth(1).check();
-  await k.locator('input[name=weg][value="tel.0"]').check();
+  // the trash can greys the row and offers Rückgängig; undone and done again (owner 2026-11-08)
+  await k.getByRole('button', { name: 'Nummer löschen' }).click();
+  await expect(k.locator('.eintrag.geloescht')).toHaveCount(1);
+  await k.getByRole('button', { name: 'Rückgängig' }).click();
+  await expect(k.locator('.eintrag.geloescht')).toHaveCount(0);
+  await k.getByRole('button', { name: 'Nummer löschen' }).click();
+  await expect(k.getByRole('button', { name: 'Rückgängig' })).toBeVisible();
+  await expect(k.locator('input[name=weg][value="tel.0"]')).toHaveCount(1);
   await k.locator('input[name=mail]').nth(1).fill('ben@arbeit.example');
   await k.locator('select[name=mail-art]').nth(1).selectOption('geschaeftlich');
   await k.locator('input[name=adr-plz]').first().fill('70372');

@@ -53,7 +53,8 @@ func TestKontaktFormularV2(t *testing.T) {
 		`autocomplete="section-adr0 address-line1"`, `autocomplete="section-adr0 postal-code"`, `autocomplete="section-adr0 address-level2"`,
 		`autocomplete="section-adr0 country-name"`, `autocomplete=bday-day`, `autocomplete=bday-month`, `autocomplete=bday-year`, `autocomplete=organization`,
 		`autocomplete=organization-title`, `type=tel inputmode=tel`, `type=email inputmode=email`, `pattern="[0-9]{5}"`, `inputmode=numeric`,
-		`<option value=3>März</option>`, `name=tel-haupt value=0>`, `name=weg value=tel.0`, `name=weg value=mail.0`, `Haupt-Nummer`, `Haupt-Adresse`, `entfernen`,
+		`<option value=3>März</option>`, `name=tel-haupt value=0>`, `name=loeschen value=tel.0 class=papierkorb formnovalidate aria-label="Nummer löschen"`,
+		`name=loeschen value=mail.0 class=papierkorb formnovalidate aria-label="E-Mail löschen"`, `name=zurueck value=tel.0 class=zurueck formnovalidate hidden>Rückgängig`, `Haupt-Nummer`, `Haupt-Adresse`,
 		`<option value=andere>andere</option>`, `type=file accept="image/jpeg,image/png,image/heic,image/heif,image/webp"`, `Nachricht an`, `maxlength=1000`,
 		`data-fehler="Ein Name hat nur Buchstaben`)
 	mustNotContain(t, body, "autocomplete=off", "TT.MM.JJJJ")
@@ -75,7 +76,7 @@ func TestKontaktFormularV2(t *testing.T) {
 	falsch[2][1] = "Anna2"
 	rec := mehrteilig(pub, "/"+token, falsch, testPNG(40, 40))
 	mustContain(t, rec.Body.String(), "Ein paar Angaben passen so noch nicht", `aria-invalid=true aria-describedby=f-tel.0><span class=fehler id=f-tel.0>`,
-		"Ein Name hat nur Buchstaben", "Wähle das Foto bitte noch einmal", `name=weg value=mail.0 checked`, `>Grüße &lt;b&gt;aus&lt;/b&gt; Stuttgart</textarea>`)
+		"Ein Name hat nur Buchstaben", "Wähle das Foto bitte noch einmal", `<input type=hidden name=weg value=mail.0>`, `<div class="eintrag geloescht">`, `>Grüße &lt;b&gt;aus&lt;/b&gt; Stuttgart</textarea>`)
 	if _, err := cfg.Antworten.Zum(token); err != nil {
 		t.Fatalf("a refused form used the link up: %v", err)
 	}
@@ -128,4 +129,30 @@ func TestKontaktFormularTickedOnly(t *testing.T) {
 	card := dav.Objects()["/homes/haushalt-kontakte/h1.vcf"]
 	mustContain(t, card, "NOTE:Bin umgezogen.")
 	mustNotContain(t, card, "23456789")
+}
+
+// owner 2026-11-08: the trash can works without the script too: the form
+// comes back with the row greyed and marked, the link unused; Rückgängig
+// takes the mark back. A card's own value that has not the form gets no
+// pattern, so the browser does not stop the contact over it.
+func TestKontaktPapierkorbOhneSkript(t *testing.T) {
+	cfg, _ := pruefenCfg(t)
+	token := startLink(t, cfg, "haushalt", "h1", "family,admins")
+	pub := KontaktServer(cfg)
+	felder := [][2]string{{"vorname", "Anna"}, {"nachname", "Beispiel"}, {"tel", "+49 151 23456789"}, {"tel-art", "mobil"}, {"mail", "anna@example.org"}, {"loeschen", "tel.0"}}
+	body := mehrteilig(pub, "/"+token, felder, nil).Body.String()
+	mustContain(t, body, `<div class="eintrag geloescht">`, `<input type=hidden name=weg value=tel.0>`, `name=tel value="+49 151 23456789" readonly `,
+		`name=zurueck value=tel.0 class=zurueck formnovalidate>Rückgängig`)
+	mustNotContain(t, body, "Danke!", "passen so noch nicht")
+	if _, err := cfg.Antworten.Zum(token); err != nil {
+		t.Fatalf("a trash can used the link up: %v", err)
+	}
+	body = mehrteilig(pub, "/"+token, append(felder[:5], [2]string{"weg", "tel.0"}, [2]string{"zurueck", "tel.0"}), nil).Body.String()
+	mustNotContain(t, body, `class="eintrag geloescht"`, "name=weg value")
+	form := frageForm(token, kontaktantwort.Frage{Vorher: kontaktantwort.Felder{Telefone: []kontaktantwort.Telefon{{Nummer: "123"}}}},
+		frageStand{f: kontaktantwort.Felder{Telefone: []kontaktantwort.Telefon{{Nummer: "123"}}}}, "")
+	mustContain(t, form, `name=tel value="123" type=tel`)
+	if strings.Contains(form, `value="123" type=tel inputmode=tel maxlength=40 autocomplete="mobile tel" pattern`) {
+		t.Error("the card's own number without its form has a pattern")
+	}
 }
