@@ -31,7 +31,7 @@ The owner, 2026-11-07: „Rigoros einfach. Wir haben so viele Funktionen, dass d
 | **Firma** (Kontakt) | A Haushalts-Kontakt Homes made for a sender of documents. Only these cards are completed from documents. | `CATEGORIES:Firma`; Bote tool `kontakt_ergaenzen` | Radicale |
 | **Handy-Kontakte** | A person's own phone contacts, mirrored for their Archiv. Never shared, never sent to another phone. Homes reads the Immich key owner's, for their persons in Immich, their pictures („Ist das …?“) and Meine Kontakte. | address book `/<person>/handy-kontakte/`; `POST /napi/kontakte` | the phone (Radicale holds the mirror) |
 | **Kontakt prüfen lassen** | A link a person sends one of their contacts: on a page without a login the contact confirms, corrects or adds their own fields. Nothing reaches an address book without the person's review. | `internal/kontaktantwort`; `/kontakte/pruefen`; `kontakt.<domain>/<token>` | Homes (the answers); the card stays Radicale's or the phone's |
-| **Kontakt-Antwort** | What came back from such a link, field by field before → after, waiting for the review; a task while it waits. | `/kontakte/antworten`; `/napi/kontakte/korrekturen` | Homes |
+| **Kontakt-Antwort** | What came back from such a link, field by field before → after (a removal as „entfernen“, their photo, their message), waiting for the review; a task while it waits. | `/kontakte/antworten`; `/napi/kontakte/korrekturen` | Homes |
 | **Homes-Konto** | The Android account „Homes“: it carries the Haushalts-Kontakte, Termine and Erinnerungen into the phone's dialer, messengers and calendar. | app `konto/` (two sync adapters); module `konto`; `/napi/gemeinsam/…` | Homes app (the data: Radicale) |
 | **Termin** | An appointment in a Haushalts-Kalender. | VEVENT; Bote tool `termin_anlegen` | Radicale |
 | **Erinnerung** | Something due, which rings on the phones. Read-only on the phone. | VTODO with an alarm; `erinnerung_anlegen` | Radicale |
@@ -315,7 +315,11 @@ flowchart TD
 - **The page** shows that contact's own fields and nothing else of the
   house, on a host of its own, from a listener that serves nothing else.
 - **Nothing by itself:** the answer waits apart from every address book.
-  The checks flag what looks wrong; the person takes each field or not.
+  A field's form is checked as it is typed and again by Homes; the
+  checks flag what looks wrong (an e-mail domain without mail, a PLZ and
+  Ort that do not belong together, offline); the person takes each field
+  or not. A removal (*entfernen*) and the contact's message for the note
+  are taken only when ticked, never by *Alle übernehmen*.
 - **The phone writes its own contacts:** a Handy-Kontakt lives on the
   phone (Google), so the Homes app writes the taken changes into the
   phone's contact of that lookup key, and only those, and says which.

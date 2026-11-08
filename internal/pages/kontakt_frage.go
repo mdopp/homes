@@ -1,16 +1,21 @@
 package pages
 
 import (
+	"cmp"
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html"
+	"io"
 	"log"
+	"maps"
 	"net"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -148,7 +153,7 @@ func KontaktFrage(cfg StartConfig) http.HandlerFunc {
 		h.Set("X-Robots-Tag", "noindex, nofollow")
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("X-Frame-Options", "DENY")
-		h.Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-"+nonce+"'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
+		h.Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-"+nonce+"'; img-src blob:; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
 		if r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodPost {
 			h.Set("Allow", "GET, HEAD, POST")
 			frageSeite(w, http.StatusMethodNotAllowed, nonce, wort(texte.FrageUngueltig), "<p>"+wort(texte.FrageUngueltigText)+"</p>")
@@ -172,22 +177,18 @@ func KontaktFrage(cfg StartConfig) http.HandlerFunc {
 			ungueltig()
 			return
 		}
+		form := func(st frageStand, problem string) string { return frageForm(token, f, st, problem) }
 		if r.Method != http.MethodPost {
-			frageSeite(w, http.StatusOK, nonce, wort(texte.FrageTitel), frageForm(token, f.Vorher, f.Bis, ""))
+			frageSeite(w, http.StatusOK, nonce, wort(texte.FrageTitel), form(frageStand{f: kontaktantwort.Sauber(f.Vorher)}, ""))
 			return
 		}
 		if fremd(r) {
 			ungueltig()
 			return
 		}
-		r.Body = http.MaxBytesReader(w, r.Body, frageBytes)
-		if err := r.ParseForm(); err != nil {
-			frageSeite(w, http.StatusRequestEntityTooLarge, nonce, wort(texte.FrageTitel), frageForm(token, f.Vorher, f.Bis, texte.T(texte.FrageZuGross)))
-			return
-		}
-		nachher, ok := frageNachher(r)
-		if !ok {
-			frageSeite(w, http.StatusOK, nonce, wort(texte.FrageTitel), frageForm(token, nachher, f.Bis, texte.T(texte.FrageDatum)))
+		st, nachher, code, problem := frageGeprueft(w, r, f.Vorher, cfg.PhoneCountry, d.now())
+		if code != 0 {
+			frageSeite(w, code, nonce, wort(texte.FrageTitel), form(st, problem))
 			return
 		}
 		as := kontaktantwort.Vergleich(f.Vorher, nachher)
@@ -202,7 +203,7 @@ func KontaktFrage(cfg StartConfig) http.HandlerFunc {
 			return
 		case err != nil:
 			log.Printf("homes: kontakt-frage %s: not kept: %v", f.ID, err)
-			frageSeite(w, http.StatusOK, nonce, wort(texte.FrageTitel), frageForm(token, nachher, f.Bis, texte.T(texte.FrageNicht)))
+			frageSeite(w, http.StatusOK, nonce, wort(texte.FrageTitel), form(st, texte.T(texte.FrageNicht)))
 			return
 		}
 		log.Printf("homes: kontakt-frage %s answered: %d changes", f.ID, len(as))
@@ -216,29 +217,137 @@ func frageNonce() string {
 	return base64.RawStdEncoding.EncodeToString(b)
 }
 
-// frageNachher is the form as fields, in the places they were shown;
-// false when the birthday is not a day (the form again, nothing kept).
-func frageNachher(r *http.Request) (kontaktantwort.Felder, bool) {
-	f := kontaktantwort.Felder{Vorname: r.PostFormValue("vorname"), Nachname: r.PostFormValue("nachname"), Mails: r.PostForm["mail"],
-		Firma: r.PostFormValue("firma"), Position: r.PostFormValue("position")}
+// frageLesen reads the answer into r.PostForm: a plain form, or with the
+// photo a multipart one, read in memory (nothing to disk), its text at
+// most frageBytes and its file at most kontaktantwort.FotoBytes; the file,
+// and what was too much ("" nothing).
+func frageLesen(w http.ResponseWriter, r *http.Request) ([]byte, texte.ID) {
+	mr, err := r.MultipartReader()
+	if err != nil {
+		r.Body = http.MaxBytesReader(w, r.Body, frageBytes)
+		if r.ParseForm() != nil {
+			return nil, texte.FrageZuGross
+		}
+		return nil, ""
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, frageBytes+kontaktantwort.FotoBytes+16<<10)
+	vals, rest := url.Values{}, int64(frageBytes)
+	var foto []byte
+	for {
+		p, err := mr.NextPart()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return nil, texte.FrageZuGross
+		}
+		if p.FormName() == "foto" {
+			b, err := io.ReadAll(io.LimitReader(p, kontaktantwort.FotoBytes+1))
+			if err != nil || len(b) > kontaktantwort.FotoBytes {
+				return nil, texte.FrageFotoGross
+			}
+			if len(b) > 0 && foto == nil {
+				foto = b
+			}
+			continue
+		}
+		b, err := io.ReadAll(io.LimitReader(p, rest+1))
+		if rest -= int64(len(b)); err != nil || rest < 0 {
+			return nil, texte.FrageZuGross
+		}
+		vals.Add(p.FormName(), string(b))
+	}
+	r.PostForm, r.Form = vals, vals
+	return foto, ""
+}
+
+// frageGeprueft reads the answer and holds it to its form: the answer, or
+// the form again with what is wrong where (its code and problem).
+func frageGeprueft(w http.ResponseWriter, r *http.Request, vorher kontaktantwort.Felder, land string, now time.Time) (frageStand, kontaktantwort.Felder, int, string) {
+	foto, zuviel := frageLesen(w, r)
+	if zuviel != "" {
+		st := frageStand{f: kontaktantwort.Sauber(vorher)}
+		if zuviel == texte.FrageFotoGross {
+			st.fehler = map[string]string{"foto": texte.T(zuviel)}
+		}
+		return st, kontaktantwort.Felder{}, http.StatusRequestEntityTooLarge, texte.T(zuviel)
+	}
+	st, nachher := frageNachher(r, vorher, now)
+	var err error
+	if foto != nil {
+		if nachher.Foto, err = kontaktantwort.Foto(foto); err != nil {
+			st.fehler["foto"] = texte.T(texte.FrageFotoKeins)
+		}
+	}
+	maps.Copy(st.fehler, kontaktantwort.Formfehler(vorher, nachher, land))
+	if len(st.fehler) == 0 {
+		return st, nachher, 0, ""
+	}
+	if nachher.Foto != nil {
+		st.fehler["foto"] = texte.T(texte.FrageFotoNochmal) // a file field never comes back filled
+	}
+	return st, nachher, http.StatusOK, texte.T(texte.FrageFehler)
+}
+
+// frageStand is the form as it is shown: the fields, the card's entries
+// ticked to go („tel.0“, „mail.1“, „adr.0“), and what is wrong where.
+type frageStand struct {
+	f      kontaktantwort.Felder
+	weg    map[string]bool
+	fehler map[string]string
+}
+
+// frageNachher is the form as it is shown again and as the answer: the
+// fields in the places they were shown, a ticked „entfernen“ that place
+// empty; the birthday's error when it is no day.
+func frageNachher(r *http.Request, vorher kontaktantwort.Felder, now time.Time) (frageStand, kontaktantwort.Felder) {
+	pf := r.PostForm
+	f := kontaktantwort.Felder{Vorname: pf.Get("vorname"), Nachname: pf.Get("nachname"), Firma: pf.Get("firma"), Position: pf.Get("position"), Nachricht: pf.Get("nachricht")}
 	at := func(vs []string, i int) string {
 		if i < len(vs) {
 			return vs[i]
 		}
 		return ""
 	}
-	tel, art := r.PostForm["tel"], r.PostForm["tel-art"]
+	tel, art, haupt := pf["tel"], pf["tel-art"], pf.Get("tel-haupt")
 	for i := range min(len(tel), kontaktantwort.GrenzeJeArt) {
-		f.Telefone = append(f.Telefone, kontaktantwort.Telefon{Nummer: tel[i], Art: at(art, i)})
+		f.Telefone = append(f.Telefone, kontaktantwort.Telefon{Nummer: tel[i], Art: at(art, i), Haupt: haupt == strconv.Itoa(i)})
 	}
-	str, plz, ort, land := r.PostForm["adr-strasse"], r.PostForm["adr-plz"], r.PostForm["adr-ort"], r.PostForm["adr-land"]
+	mail, art, haupt := pf["mail"], pf["mail-art"], pf.Get("mail-haupt")
+	for i := range min(len(mail), kontaktantwort.GrenzeJeArt) {
+		f.Mails = append(f.Mails, kontaktantwort.Mail{Adresse: mail[i], Art: at(art, i), Haupt: haupt == strconv.Itoa(i)})
+	}
+	str := pf["adr-strasse"]
 	for i := range min(len(str), kontaktantwort.GrenzeJeArt) {
-		f.Adressen = append(f.Adressen, kontaktantwort.Adresse{Strasse: str[i], PLZ: at(plz, i), Ort: at(ort, i), Land: at(land, i)})
+		f.Adressen = append(f.Adressen, kontaktantwort.Adresse{Strasse: str[i], Hausnummer: at(pf["adr-nr"], i), PLZ: at(pf["adr-plz"], i), Ort: at(pf["adr-ort"], i), Land: at(pf["adr-land"], i)})
 	}
 	f = kontaktantwort.Sauber(f)
-	geb, ok := tag(r.PostFormValue("geb-tag"), r.PostFormValue("geb-monat"), r.PostFormValue("geb-jahr"))
-	f.Geburtstag = geb
-	return f, ok
+	st := frageStand{f: f, weg: map[string]bool{}, fehler: map[string]string{}}
+	geb, ok := tag(pf.Get("geb-tag"), pf.Get("geb-monat"), pf.Get("geb-jahr"))
+	st.f.Geburtstag, f.Geburtstag = geb, geb
+	if !ok {
+		st.fehler["geb"] = texte.T(texte.FrageDatum)
+	} else if h := kontaktantwort.Geburtstag(geb, now); geb != "" && geb != vorher.Geburtstag && h != "" {
+		st.fehler["geb"] = h
+	}
+	f.Telefone, f.Mails, f.Adressen = slices.Clone(f.Telefone), slices.Clone(f.Mails), slices.Clone(f.Adressen)
+	for _, w := range pf["weg"] {
+		was, nr, _ := strings.Cut(w, ".")
+		i, err := strconv.Atoi(nr)
+		switch {
+		case err != nil:
+		case was == "tel" && i < min(len(f.Telefone), len(vorher.Telefone)):
+			f.Telefone[i] = kontaktantwort.Telefon{}
+		case was == "mail" && i < min(len(f.Mails), len(vorher.Mails)):
+			f.Mails[i] = kontaktantwort.Mail{}
+		case was == "adr" && i < min(len(f.Adressen), len(vorher.Adressen)):
+			f.Adressen[i] = kontaktantwort.Adresse{}
+		default:
+			continue
+		}
+		st.weg[w] = true
+	}
+	return st, f
 }
 
 // tag is day, month and the year if given as JJJJ-MM-TT or --MM-TT; all
@@ -274,83 +383,197 @@ func tagTeile(s string) (t, m, j string) {
 	return strings.TrimLeft(d, "0"), strings.TrimLeft(mo, "0"), y
 }
 
-// frageForm is the form (owner 2026-11-07: first and last name, numbers
-// with their kind, e-mail, address, birthday with the year optional,
-// company and position): the fields as they are, one empty to add of the
-// lists, and the two ways to send.
-func frageForm(token string, f kontaktantwort.Felder, bis time.Time, problem string) string {
+// kindToken is a kind's autofill hint (owner 2026-11-08: the browser fills
+// the contact's own number and address where it can).
+var kindToken = map[string]string{"mobil": "mobile ", "privat": "home ", "geschaeftlich": "work "}
+
+// frageForm is the form (owner 2026-11-07 and 2026-11-08): first and last
+// name, numbers and e-mail addresses with their kind and the main one,
+// addresses with street and number apart, birthday (the month a German
+// word, the year optional), company and position, their photo and a
+// message; each of the card's numbers, addresses and e-mail addresses may
+// be ticked to go. Every field has its form as an HTML pattern and its
+// error beside it; autofill names each field.
+func frageForm(token string, fr kontaktantwort.Frage, st frageStand, problem string) string {
 	var b strings.Builder
-	in := func(name, label, value, typ, extra string) {
-		b.WriteString(`<label>` + html.EscapeString(label) + `<input name=` + name + ` type=` + typ + ` value="` + html.EscapeString(value) + `" maxlength=200 ` + extra + `></label>`)
+	f, alt := st.f, fr.Vorher
+	in := func(name, key, label, value, extra string) {
+		b.WriteString(`<label>` + html.EscapeString(label) + `<input name=` + name + ` value="` + html.EscapeString(value) + `" ` + extra)
+		if msg := st.fehler[key]; msg != "" {
+			b.WriteString(` aria-invalid=true aria-describedby=f-` + key + `><span class=fehler id=f-` + key + `>` + html.EscapeString(msg) + `</span></label>`)
+			return
+		}
+		b.WriteString(`></label>`)
+	}
+	muster := func(p string, id texte.ID) string {
+		return `pattern="` + html.EscapeString(p) + `" data-fehler="` + wort(id) + `"`
+	}
+	wahl := func(name, value, label string, an bool) {
+		b.WriteString(`<label class=wahl><input type=` + map[bool]string{true: "radio", false: "checkbox"}[name != "weg"] + ` name=` + name + ` value=` + value)
+		if an {
+			b.WriteString(` checked`)
+		}
+		b.WriteString(`>` + html.EscapeString(label) + `</label>`)
+	}
+	auswahl := func(name, cur string, arten []string) {
+		b.WriteString(`<label>` + wort(texte.FrageNummerArt) + `<select name=` + name + `>`)
+		for _, a := range arten {
+			b.WriteString(`<option value=` + a + map[bool]string{true: " selected"}[a == cur] + `>` + wort(nummerArt[a]) + `</option>`)
+		}
+		b.WriteString(`</select></label>`)
 	}
 	auf := func(legend string) { b.WriteString(`<fieldset><legend>` + html.EscapeString(legend) + `</legend>`) }
 	zu := func() { b.WriteString(`</fieldset>`) }
 	b.WriteString(`<p>` + wort(texte.FrageHinweis) + `</p>` + gesagt("", problem))
-	b.WriteString(`<form method=post action="/` + html.EscapeString(token) + `" autocomplete=off>`)
+	b.WriteString(`<form method=post enctype=multipart/form-data action="/` + html.EscapeString(token) + `" data-plz="` + html.EscapeString(plzMuster()) + `">`)
 	auf(texte.T(texte.ArtName))
-	in("vorname", texte.T(texte.ArtVorname), f.Vorname, "text", "autocomplete=given-name")
-	in("nachname", texte.T(texte.ArtNachname), f.Nachname, "text", "autocomplete=family-name")
+	in("vorname", "vorname", texte.T(texte.ArtVorname), f.Vorname, `maxlength=200 autocomplete=given-name `+muster(kontaktantwort.MusterName, texte.FrageNameForm))
+	in("nachname", "nachname", texte.T(texte.ArtNachname), f.Nachname, `maxlength=200 autocomplete=family-name `+muster(kontaktantwort.MusterName, texte.FrageNameForm))
 	zu()
 	auf(texte.T(texte.FrageNummern))
-	for _, p := range append(f.Telefone, kontaktantwort.Telefon{}) {
-		label := texte.T(texte.ArtTelefon)
-		if p.Nummer == "" {
+	for i, p := range liste(f.Telefone, len(alt.Telefone), func(t kontaktantwort.Telefon) bool { return t.Nummer == "" }) {
+		n, label := strconv.Itoa(i), texte.T(texte.ArtTelefon)
+		if i >= len(alt.Telefone) {
 			label = texte.T(texte.FrageWeitereNummer)
 		}
-		b.WriteString(`<div class=nummer>`)
-		in("tel", label, p.Nummer, "tel", "inputmode=tel")
-		b.WriteString(`<label>` + wort(texte.FrageNummerArt) + `<select name=tel-art><option value="">–</option>`)
-		for _, a := range kontaktantwort.Arten {
-			sel := ""
-			if a == p.Art || (p.Art == "" && p.Nummer == "" && a == "mobil") {
-				sel = " selected"
-			}
-			b.WriteString(`<option value=` + a + sel + `>` + wort(nummerArt[a]) + `</option>`)
+		b.WriteString(`<div class=eintrag><div class=nummer>`)
+		in("tel", "tel."+n, label, p.Nummer, `type=tel inputmode=tel maxlength=40 autocomplete="`+kindToken[cmp.Or(p.Art, "mobil")]+`tel" `+muster(kontaktantwort.MusterNummer, texte.FrageNummerForm))
+		auswahl("tel-art", cmp.Or(p.Art, "mobil"), kontaktantwort.Arten)
+		b.WriteString(`</div><div class=wahlen>`)
+		wahl("tel-haupt", n, texte.T(texte.FrageHauptNummer), p.Haupt)
+		if i < len(alt.Telefone) {
+			wahl("weg", "tel."+n, texte.T(texte.FrageEntfernen), st.weg["tel."+n])
 		}
-		b.WriteString(`</select></label></div>`)
+		b.WriteString(`</div></div>`)
 	}
 	zu()
 	auf(texte.T(texte.ArtMail))
-	for _, m := range append(f.Mails, "") {
-		label := texte.T(texte.ArtMail)
-		if m == "" {
+	for i, m := range liste(f.Mails, len(alt.Mails), func(m kontaktantwort.Mail) bool { return m.Adresse == "" }) {
+		n, label := strconv.Itoa(i), texte.T(texte.ArtMail)
+		if i >= len(alt.Mails) {
 			label = texte.T(texte.FrageWeitereMail)
 		}
-		in("mail", label, m, "email", "inputmode=email")
+		b.WriteString(`<div class=eintrag><div class=nummer>`)
+		in("mail", "mail."+n, label, m.Adresse, `type=email inputmode=email maxlength=200 autocomplete="`+kindToken[cmp.Or(m.Art, "privat")]+`email" data-fehler="`+wort(texte.FrageMailForm)+`"`)
+		auswahl("mail-art", cmp.Or(m.Art, "privat"), kontaktantwort.MailArten)
+		b.WriteString(`</div><div class=wahlen>`)
+		wahl("mail-haupt", n, texte.T(texte.FrageHauptMail), m.Haupt)
+		if i < len(alt.Mails) {
+			wahl("weg", "mail."+n, texte.T(texte.FrageEntfernen), st.weg["mail."+n])
+		}
+		b.WriteString(`</div></div>`)
 	}
 	zu()
-	for i, a := range append(f.Adressen, kontaktantwort.Adresse{}) {
+	for i, a := range liste(f.Adressen, len(alt.Adressen), kontaktantwort.Adresse.Leer) {
+		n, sec := strconv.Itoa(i), `autocomplete="section-adr`+strconv.Itoa(i)+` `
 		legend := texte.T(texte.ArtAdresse)
-		if a.Leer() && i > 0 {
+		if i >= len(alt.Adressen) && i > 0 {
 			legend = texte.T(texte.FrageWeitereAdresse)
 		}
 		auf(legend)
-		in("adr-strasse", texte.T(texte.FrageStrasse), a.Strasse, "text", "autocomplete=street-address")
-		b.WriteString(`<div class=zeile>`)
-		in("adr-plz", texte.T(texte.FragePLZ), a.PLZ, "text", "inputmode=numeric autocomplete=postal-code")
-		in("adr-ort", texte.T(texte.FrageOrt), a.Ort, "text", "autocomplete=address-level2")
+		b.WriteString(`<div class=strasse>`)
+		in("adr-strasse", "adr-strasse."+n, texte.T(texte.FrageStrasse), a.Strasse, `maxlength=200 `+sec+`address-line1" `+muster(kontaktantwort.MusterStrasse, texte.FrageStrasseForm))
+		in("adr-nr", "adr-nr."+n, texte.T(texte.FrageHausnummer), a.Hausnummer, `maxlength=10 `+muster(kontaktantwort.MusterHausnummer, texte.FrageHausnummerForm))
+		b.WriteString(`</div><div class=zeile>`)
+		plz, mode := kontaktantwort.PLZSonst, ""
+		if l, ok := kontaktantwort.LandVon(a.Land); ok {
+			plz = l.PLZ
+		}
+		if plz == `[0-9]{5}` || plz == `[0-9]{4}` {
+			mode = "inputmode=numeric "
+		}
+		in("adr-plz", "adr-plz."+n, texte.T(texte.FragePLZ), a.PLZ, `maxlength=10 `+mode+sec+`postal-code" `+muster(plz, texte.FragePLZForm))
+		in("adr-ort", "adr-ort."+n, texte.T(texte.FrageOrt), a.Ort, `maxlength=200 `+sec+`address-level2" `+muster(kontaktantwort.MusterOrt, texte.FrageOrtForm))
 		b.WriteString(`</div>`)
-		in("adr-land", texte.T(texte.FrageLand), a.Land, "text", "autocomplete=country-name")
+		in("adr-land", "adr-land."+n, texte.T(texte.FrageLand), a.Land, `maxlength=60 placeholder=Deutschland `+sec+`country-name" `+muster(kontaktantwort.MusterOrt, texte.FrageLandForm))
+		if i < len(alt.Adressen) {
+			b.WriteString(`<div class=wahlen>`)
+			wahl("weg", "adr."+n, texte.T(texte.FrageEntfernen), st.weg["adr."+n])
+			b.WriteString(`</div>`)
+		}
 		zu()
 	}
 	auf(texte.T(texte.ArtGeburtstag))
 	t, m, j := tagTeile(f.Geburtstag)
 	b.WriteString(`<div class=tag>`)
-	in("geb-tag", texte.T(texte.FrageTag), t, "text", "inputmode=numeric maxlength=2")
-	in("geb-monat", texte.T(texte.FrageMonat), m, "text", "inputmode=numeric maxlength=2")
-	in("geb-jahr", texte.T(texte.FrageJahr), j, "text", "inputmode=numeric maxlength=4")
+	in("geb-tag", "geb", texte.T(texte.FrageTag), t, `inputmode=numeric maxlength=2 autocomplete=bday-day `+muster(kontaktantwort.MusterTag, texte.FrageTagForm))
+	b.WriteString(`<label>` + wort(texte.FrageMonat) + `<select name=geb-monat autocomplete=bday-month><option value="">–</option>`)
+	for k, name := range months {
+		v := strconv.Itoa(k + 1)
+		b.WriteString(`<option value=` + v + map[bool]string{true: " selected"}[v == m] + `>` + name + `</option>`)
+	}
+	b.WriteString(`</select></label>`)
+	in("geb-jahr", "geb-jahr", texte.T(texte.FrageJahr), j, `inputmode=numeric maxlength=4 autocomplete=bday-year `+muster(kontaktantwort.MusterJahr, texte.FrageJahrForm))
 	b.WriteString(`</div>`)
 	zu()
 	auf(texte.T(texte.FrageBeruf))
-	in("firma", texte.T(texte.ArtFirma), f.Firma, "text", "autocomplete=organization")
-	in("position", texte.T(texte.ArtPosition), f.Position, "text", "autocomplete=organization-title")
+	in("firma", "firma", texte.T(texte.ArtFirma), f.Firma, "maxlength=200 autocomplete=organization")
+	in("position", "position", texte.T(texte.ArtPosition), f.Position, "maxlength=200 autocomplete=organization-title")
 	zu()
-	b.WriteString(`<p class=k>` + wort(texte.FrageLoeschen) + `</p>`)
+	auf(texte.T(texte.FrageFoto))
+	in("foto", "foto", texte.T(texte.FrageFotoWahl), "", `type=file accept="image/jpeg,image/png,image/heic,image/heif,image/webp" data-fehler="`+wort(texte.FrageFotoKeins)+`"`)
+	b.WriteString(`<img id=foto-bild alt="" hidden>`)
+	zu()
+	auf(texte.T(texte.FrageNachricht))
+	b.WriteString(`<label>` + html.EscapeString(fmt.Sprintf(texte.T(texte.FrageNachrichtAn), cmp.Or(fr.Von, texte.T(texte.FrageDir)))) +
+		`<textarea name=nachricht rows=4 maxlength=` + strconv.Itoa(kontaktantwort.GrenzeNachricht) + `>` + html.EscapeString(f.Nachricht) + `</textarea></label>`)
+	zu()
 	b.WriteString(`<p class=knoepfe><button name=aktion value=senden data-laeuft="` + wort(texte.FrageSendet) + `">` + wort(texte.FrageSenden) + `</button>` +
 		`<button name=aktion value=stimmt class=zweit data-laeuft="` + wort(texte.FrageSendet) + `">` + wort(texte.FrageStimmt) + `</button></p></form>`)
-	b.WriteString(`<p class=k>` + html.EscapeString(fmt.Sprintf(texte.T(texte.FrageBis), bis.Local().Format("02.01.2006"))) + `</p>`)
+	b.WriteString(`<p class=k>` + html.EscapeString(fmt.Sprintf(texte.T(texte.FrageBis), fr.Bis.Local().Format("02.01.2006"))) + `</p>`)
 	return b.String()
 }
+
+// liste is the rows of a list as the form shows them: the card's n, the
+// new ones the contact filled, and one empty to add.
+func liste[T any](vs []T, n int, leer func(T) bool) []T {
+	var out []T
+	for i, v := range vs {
+		if i < n || !leer(v) {
+			out = append(out, v)
+		}
+	}
+	var zero T
+	return append(out, zero)
+}
+
+// plzMuster is each country's postal code pattern by its names, for the
+// script that sets the PLZ field's pattern when the country changes.
+var plzMuster = sync.OnceValue(func() string {
+	m := map[string]string{"": kontaktantwort.PLZSonst}
+	for _, l := range kontaktantwort.Laender {
+		for _, n := range l.Namen {
+			m[n] = l.PLZ
+		}
+	}
+	b, _ := json.Marshal(m)
+	return string(b)
+})
+
+// frageScript is the page's own: the pressed button says „Wird gesendet …“;
+// a field's error is said beside it in German as soon as it is left (the
+// pattern's data-fehler), and on sending the first wrong one is focused;
+// the country sets the postal code's pattern; a street with its number
+// (autofill) is split; the photo is made a JPEG of at most 1024 pixels in
+// the browser (HEIC and WebP too, where the browser opens them) and shown.
+const frageScript = `(function(){var f=document.querySelector('form');
+document.addEventListener('submit',function(e){var b=e.submitter;if(!b||!b.hasAttribute('data-laeuft'))return;setTimeout(function(){b.textContent=b.getAttribute('data-laeuft');document.querySelectorAll('button').forEach(function(x){x.disabled=true})},0)});
+if(!f)return;
+function zeig(el){if(!el.willValidate)return;var l=el.closest('label'),s=l.querySelector('.fehler'),ok=el.validity.valid;if(ok&&!s)return;
+if(!s){s=document.createElement('span');s.className='fehler';s.id='f-'+Math.random().toString(36).slice(2);l.appendChild(s);el.setAttribute('aria-describedby',s.id)}
+s.textContent=ok?'':(el.getAttribute('data-fehler')||el.validationMessage);s.hidden=ok;el.setAttribute('aria-invalid',ok?'false':'true')}
+f.addEventListener('invalid',function(e){e.preventDefault();zeig(e.target);if(document.activeElement&&document.activeElement.tagName==='BUTTON')e.target.focus()},true);
+f.addEventListener('input',function(e){var el=e.target;if(el.getAttribute('aria-invalid')==='true')zeig(el);
+if(el.name==='adr-land'){var m=JSON.parse(f.getAttribute('data-plz'));el.closest('fieldset').querySelector('[name=adr-plz]').pattern=m[el.value.trim().toLowerCase().replace(/[.\s]+$/,'')]||m['']}},true);
+f.addEventListener('change',function(e){var el=e.target;if(el.name==='foto')return foto(el);
+if(el.name==='adr-strasse'){var n=el.closest('fieldset').querySelector('[name=adr-nr]'),m=el.value.trim().match(/^(.*[^\d\s,])[\s,]+(\d+\s?[a-zA-Z]?(?:\s?[-\/]\s?\d+\s?[a-zA-Z]?)?)$/);if(m&&!n.value){el.value=m[1];n.value=m[2]}}zeig(el)},true);
+function foto(el){var file=el.files&&el.files[0],img=document.getElementById('foto-bild'),bs=f.querySelectorAll('button');img.hidden=true;el.setCustomValidity('');zeig(el);
+if(!file||!window.createImageBitmap||!window.DataTransfer)return;bs.forEach(function(b){b.disabled=true});
+createImageBitmap(file).then(function(bm){var k=Math.min(1,1024/Math.max(bm.width,bm.height)),c=document.createElement('canvas'),x;c.width=Math.max(1,Math.round(bm.width*k));c.height=Math.max(1,Math.round(bm.height*k));
+x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(bm,0,0,c.width,c.height);return new Promise(function(ok){c.toBlob(ok,'image/jpeg',0.9)})})
+.then(function(blob){if(!blob)throw 0;var d=new DataTransfer();d.items.add(new File([blob],'foto.jpg',{type:'image/jpeg'}));el.files=d.files;img.src=URL.createObjectURL(blob);img.hidden=false})
+.catch(function(){el.value='';el.setCustomValidity(el.getAttribute('data-fehler'));zeig(el);el.setCustomValidity('')})
+.then(function(){bs.forEach(function(b){b.disabled=false})})}})()`
 
 // frageSeite is the page: its own calm frame, no menu, no login, nothing
 // fetched from elsewhere (the pages' font and icons are behind the login).
@@ -358,22 +581,24 @@ func frageSeite(w http.ResponseWriter, code int, nonce, title, body string) {
 	var b strings.Builder
 	b.WriteString(`<!doctype html><html lang=de><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=color-scheme content="light dark">` +
 		`<meta name=robots content="noindex,nofollow"><title>` + title + `</title>` + frageStyle + `<main><h1>` + title + `</h1>` + body + `</main>` +
-		`<script nonce="` + nonce + `">document.addEventListener('submit',function(e){var b=e.submitter;if(!b||!b.hasAttribute('data-laeuft'))return;` +
-		`setTimeout(function(){b.textContent=b.getAttribute('data-laeuft');document.querySelectorAll('button').forEach(function(x){x.disabled=true})},0)})</script>`)
+		`<script nonce="` + nonce + `">` + frageScript + `</script>`)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(code)
 	w.Write([]byte(b.String()))
 }
 
-const frageStyle = `<style>:root{color-scheme:light;--bg:#f6f7f9;--card:#fff;--ink:#111827;--muted:#5b6474;--line:#d9dee6;--accent:#c2560c;--warn:#a15c00}
-@media (prefers-color-scheme:dark){:root{color-scheme:dark;--bg:#0c0c0e;--card:#16161c;--ink:#f2f2f5;--muted:#a0a6b4;--line:#2a2a33;--accent:#f97316;--warn:#f59e0b}}
+const frageStyle = `<style>:root{color-scheme:light;--bg:#f6f7f9;--card:#fff;--ink:#111827;--muted:#5b6474;--line:#d9dee6;--accent:#c2560c;--warn:#a15c00;--bad:#b42318}
+@media (prefers-color-scheme:dark){:root{color-scheme:dark;--bg:#0c0c0e;--card:#16161c;--ink:#f2f2f5;--muted:#a0a6b4;--line:#2a2a33;--accent:#f97316;--warn:#f59e0b;--bad:#fda29b}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 main{max-width:32rem;margin:0 auto;padding:28px 16px 48px}h1{font-size:1.5rem;line-height:1.25;margin:0 0 12px}p{margin:0 0 14px}.k{color:var(--muted);font-size:.92rem}
 fieldset{min-width:0;margin:0 0 14px;padding:14px;border:0;border-radius:16px;background:var(--card)}legend{float:left;width:100%;margin:0 0 8px;font-weight:600}fieldset>:not(legend){clear:both}.nummer>*,.tag>*,.zeile>*{min-width:0}
 label{display:block;margin:0 0 10px;font-size:.88rem;color:var(--muted)}label:last-child{margin-bottom:0}
-input,select{display:block;width:100%;margin-top:4px;padding:12px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px}
-input:focus{outline:2px solid var(--accent);outline-offset:1px}.zeile{display:grid;grid-template-columns:7rem 1fr;gap:10px}
-.nummer{display:grid;grid-template-columns:1fr 9rem;gap:10px;margin-bottom:6px}.tag{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:10px}
+input,select,textarea{display:block;width:100%;margin-top:4px;padding:12px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px}
+input:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px}.zeile{display:grid;grid-template-columns:7rem 1fr;gap:10px}.strasse{display:grid;grid-template-columns:1fr 6.5rem;gap:10px}.strasse>*{min-width:0}
+[hidden]{display:none!important}.fehler{display:block;margin-top:4px;color:var(--bad);font-size:.88rem}[aria-invalid=true]{border-color:var(--bad)}
+.wahlen{display:flex;flex-wrap:wrap;gap:6px 18px;margin:0 0 12px}label.wahl{display:flex;align-items:center;gap:8px;margin:0;color:var(--ink);font-size:.92rem}
+label.wahl input{display:inline;width:20px;height:20px;margin:0;padding:0}#foto-bild{display:block;width:120px;height:auto;margin-top:10px;border-radius:12px}
+.nummer{display:grid;grid-template-columns:1fr 9rem;gap:10px}.tag{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:10px}
 .knoepfe{display:flex;flex-direction:column;gap:10px;margin-top:20px}
 button{min-height:48px;padding:0 18px;font:inherit;font-weight:600;border:0;border-radius:14px;background:var(--accent);color:#fff}button.zweit{background:var(--card);color:var(--ink);border:1px solid var(--line)}
 button[disabled]{opacity:.6}.achtung{padding:12px 14px;border-radius:12px;border:1px solid var(--warn);color:var(--warn);margin:0 0 14px}.achtung p{margin:0}</style>`

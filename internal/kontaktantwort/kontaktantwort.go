@@ -60,10 +60,11 @@ const (
 
 // Frage is one link and, once answered, its answer.
 type Frage struct {
-	ID          string      `json:"id"`   // the review's address, not the link's
-	Hash        string      `json:"hash"` // SHA-256 of the link's token, hex
-	Wer         string      `json:"wer"`  // who started it, and reviews it
-	Buch        string      `json:"buch"` // Haushalt | Privat
+	ID          string      `json:"id"`            // the review's address, not the link's
+	Hash        string      `json:"hash"`          // SHA-256 of the link's token, hex
+	Wer         string      `json:"wer"`           // who started it, and reviews it
+	Von         string      `json:"von,omitempty"` // their first name, as the page says it („Nachricht an …“)
+	Buch        string      `json:"buch"`          // Haushalt | Privat
 	UID         string      `json:"uid"`
 	Vorher      Felder      `json:"vorher"` // the fields as the link shows them
 	Am          time.Time   `json:"am"`
@@ -181,9 +182,10 @@ func hash(token string) []byte {
 }
 
 // Neu makes the link for one contact: the token, shown once and never
-// kept, and its Frage. A link of the same person for the same contact
-// that is not answered yet stops working: the new one replaces it.
-func (s *Store) Neu(wer, buch, uid string, vorher Felder) (string, Frage, error) {
+// kept, and its Frage; von is the first name of wer. A link of the same
+// person for the same contact that is not answered yet stops working: the
+// new one replaces it.
+func (s *Store) Neu(wer, von, buch, uid string, vorher Felder) (string, Frage, error) {
 	tok, err := s.random(tokenBytes)
 	if err != nil {
 		return "", Frage{}, err
@@ -194,7 +196,7 @@ func (s *Store) Neu(wer, buch, uid string, vorher Felder) (string, Frage, error)
 	}
 	token := base64.RawURLEncoding.EncodeToString(tok)
 	now := s.now()
-	f := Frage{ID: hex.EncodeToString(id), Hash: hex.EncodeToString(hash(token)), Wer: wer, Buch: buch, UID: uid, Vorher: vorher, Am: now, Bis: now.Add(Frist)}
+	f := Frage{ID: hex.EncodeToString(id), Hash: hex.EncodeToString(hash(token)), Wer: wer, Von: von, Buch: buch, UID: uid, Vorher: vorher, Am: now, Bis: now.Add(Frist)}
 	err = s.change(func(all []Frage) ([]Frage, error) {
 		all = slices.DeleteFunc(all, func(o Frage) bool { return o.Beantwortet == nil && o.Wer == wer && o.Buch == buch && o.UID == uid })
 		return append(all, f), nil

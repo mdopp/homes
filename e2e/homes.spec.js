@@ -1072,7 +1072,7 @@ test('Kontakt prüfen lassen: link, the public form, the review', async ({ page,
   await kontakt.locator('input[name=adr-plz]').first().fill('70173');
   await kontakt.locator('input[name=adr-ort]').first().fill('Stuttgart');
   await kontakt.locator('input[name=geb-tag]').fill('8');
-  await kontakt.locator('input[name=geb-monat]').fill('3');
+  await kontakt.locator('select[name=geb-monat]').selectOption('3');
   await kontakt.locator('input[name=geb-jahr]').fill('1941');
   await kontakt.getByRole('button', { name: 'Änderungen senden' }).click();
   await expect(kontakt.getByRole('heading', { name: 'Danke!' })).toBeVisible();
@@ -1099,4 +1099,92 @@ test('Kontakt prüfen lassen: link, the public form, the review', async ({ page,
   await page.goto('/kontakte/h6');
   await expect(page.locator('body')).toContainText('0171 2345678');
   await expect(page.locator('body')).not.toContainText('nowhere.example');
+});
+
+// owner 2026-11-08: Kontakt prüfen lassen, the second round — every field's form in the browser with
+// its German error beside it, street and house number apart (a card's „7 Gartenstraße“ read as
+// Gartenstraße 7), the kinds and the main number, „entfernen“, the own photo (made a JPEG in the
+// browser, again on the server) and a message; the review shows the removal unticked, the photo
+// and the message; „Alle übernehmen“ leaves the removal and the note alone
+test('Kontakt prüfen lassen: formats, address, removal, photo, message', async ({ page, browser }, info) => {
+  await page.setViewportSize({ width: 411, height: 900 });
+  await page.goto('/kontakte/pruefen?buch=haushalt&uid=h1');
+  await page.getByRole('button', { name: 'Link erstellen' }).click();
+  const link = (await page.locator('#pruefen-text').inputValue()).match(/http:\/\/127\.0\.0\.1:8652\/[A-Za-z0-9_-]{43}/)[0];
+
+  const ctx = await browser.newContext({ viewport: { width: 411, height: 900 }, colorScheme: 'light' });
+  const k = await ctx.newPage();
+  k.on('pageerror', (e) => errors.push(String(e)));
+  k.on('console', (m) => { if (m.type() === 'error' || /pattern/i.test(m.text())) errors.push(m.text()); });
+  await k.goto(link);
+  await expect(k.locator('input[name=adr-strasse]').first()).toHaveValue('Gartenstraße');
+  await expect(k.locator('input[name=adr-nr]').first()).toHaveValue('7');
+  await expect(k.locator('select[name=geb-monat] option').nth(3)).toHaveText('März');
+  // every pattern is one the browser compiles (v flag), and each says its German error
+  const bad = await k.evaluate(() => [...document.querySelectorAll('[pattern]')].filter((e) => { try { new RegExp('^(?:' + e.pattern + ')$', 'v'); return !e.dataset.fehler; } catch (x) { return true; } }).map((e) => e.name));
+  expect(bad).toEqual([]);
+  expect(await k.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
+  await k.screenshot({ path: info.outputPath('kontakt-v2-leer-411.png'), fullPage: true });
+
+  // wrong forms: the browser stops, each error in German beside its field, the first focused
+  await k.locator('input[name=vorname]').fill('Ben2');
+  await k.locator('input[name=tel]').nth(1).fill('0171 12x');
+  await k.locator('input[name=mail]').nth(1).fill('ben@');
+  await k.locator('input[name=adr-plz]').first().fill('7017');
+  await k.locator('input[name=adr-nr]').first().fill('x7');
+  await k.locator('input[name=geb-jahr]').fill('85');
+  await k.getByRole('button', { name: 'Änderungen senden' }).click();
+  await expect(k.locator('input[name=vorname]')).toBeFocused();
+  for (const t of ['Ein Name hat nur Buchstaben', 'So ist es keine Telefonnummer', 'So ist die E-Mail-Adresse nicht gültig', 'in Deutschland sind es fünf Ziffern', 'Eine Hausnummer beginnt mit einer Ziffer', 'Das Jahr mit vier Ziffern']) {
+    await expect(k.locator('.fehler', { hasText: t })).toBeVisible();
+  }
+  await expect(k.getByRole('heading', { name: 'Danke!' })).toHaveCount(0);
+  await k.screenshot({ path: info.outputPath('kontakt-v2-fehler-411.png'), fullPage: true });
+
+  // right: the kinds, a new main number, the old one removed, the photo, a message
+  await k.locator('input[name=vorname]').fill('Ben');
+  await expect(k.locator('.fehler', { hasText: 'Ein Name hat nur Buchstaben' })).toBeHidden();
+  await k.locator('input[name=tel]').nth(1).fill('0711 2345678');
+  await k.locator('select[name=tel-art]').nth(1).selectOption('geschaeftlich');
+  await k.locator('input[name=tel-haupt]').nth(1).check();
+  await k.locator('input[name=weg][value="tel.0"]').check();
+  await k.locator('input[name=mail]').nth(1).fill('ben@arbeit.example');
+  await k.locator('select[name=mail-art]').nth(1).selectOption('geschaeftlich');
+  await k.locator('input[name=adr-plz]').first().fill('70372');
+  await k.locator('input[name=adr-nr]').first().fill('9');
+  await k.locator('input[name=adr-ort]').first().fill('Stuttgart-Bad Cannstatt');
+  await k.locator('input[name=geb-tag]').fill('24');
+  await k.locator('select[name=geb-monat]').selectOption('12');
+  await k.locator('input[name=geb-jahr]').fill('1985');
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAEUlEQVR4nGM4UWGDFTEMLQkAQfNfAVTFtrMAAAAASUVORK5CYII=', 'base64');
+  await k.locator('input[name=foto]').setInputFiles({ name: 'ben.png', mimeType: 'image/png', buffer: png });
+  await expect(k.locator('#foto-bild')).toBeVisible();
+  await k.locator('textarea[name=nachricht]').fill('Wir sind umgezogen, die neue Nummer ist die vom Büro.');
+  await k.screenshot({ path: info.outputPath('kontakt-v2-ausgefuellt-411.png'), fullPage: true });
+  await k.getByRole('button', { name: 'Änderungen senden' }).click();
+  await expect(k.getByRole('heading', { name: 'Danke!' })).toBeVisible();
+  await ctx.close();
+
+  await page.goto('/kontakte/antworten');
+  await page.getByRole('link', { name: 'Ben Beispiel' }).click();
+  const zeilen = page.locator('.aenderung');
+  const weg = zeilen.filter({ hasText: '+49 160 9876543' });
+  await expect(weg).toContainText('entfernen');
+  await expect(weg.locator('input')).not.toBeChecked();
+  await expect(zeilen.filter({ hasText: '0711 2345678 (geschäftlich, Haupt-Nummer)' }).locator('input')).toBeChecked();
+  await expect(zeilen.filter({ hasText: 'Gartenstraße 9, 70372 Stuttgart-Bad Cannstatt' })).toBeVisible();
+  await expect(zeilen.locator('img.foto')).toBeVisible();
+  const notiz = zeilen.filter({ hasText: 'Wir sind umgezogen' });
+  await expect(notiz.locator('input')).not.toBeChecked();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
+  await page.screenshot({ path: info.outputPath('kontakt-v2-antwort-411.png'), fullPage: true });
+  await page.getByRole('button', { name: 'Alle übernehmen' }).click();
+  await expect(page.getByText('ins Adressbuch geschrieben')).toBeVisible();
+  await expect(weg).toContainText('nicht übernommen');
+  await expect(notiz).toContainText('nicht übernommen');
+  await page.screenshot({ path: info.outputPath('kontakt-v2-entschieden-411.png'), fullPage: true });
+  await page.goto('/kontakte/h1');
+  await expect(page.locator('body')).toContainText('0711 2345678');
+  await expect(page.locator('body')).toContainText('Gartenstraße 9');
+  await expect(page.locator('body')).toContainText('+49 160 9876543');
 });

@@ -50,7 +50,7 @@ func (k *korrekturen) person(w http.ResponseWriter, r *http.Request) (string, bo
 	return person, true
 }
 
-// GET /napi/kontakte/korrekturen → {korrekturen: [{id, uid, name, aenderungen: [{nr, art, vorher, nachher, …}]}]}
+// GET /napi/kontakte/korrekturen → {korrekturen: [{id, uid, name, aenderungen: [{nr, art, vorher, nachher, …}]}]}; strasse: the street line
 func (k *korrekturen) list(w http.ResponseWriter, r *http.Request) {
 	person, ok := k.person(w, r)
 	if !ok {
@@ -61,7 +61,7 @@ func (k *korrekturen) list(w http.ResponseWriter, r *http.Request) {
 		kr := korrektur{ID: f.ID, UID: f.UID, Name: f.Name()}
 		for i, a := range f.Aenderungen {
 			if a.Stand == kontaktantwort.Angenommen {
-				a.Hinweise, a.Stand = nil, ""
+				a.Hinweise, a.Stand, a.VorherAdresse, a.NachherAdresse = nil, "", a.VorherAdresse.Zeilenweise(true), a.NachherAdresse.Zeilenweise(false)
 				kr.Aenderungen = append(kr.Aenderungen, korrekturAenderung{Nr: i, Aenderung: a})
 			}
 		}

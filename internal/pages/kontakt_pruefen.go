@@ -3,6 +3,7 @@ package pages
 import (
 	"cmp"
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"html"
@@ -164,7 +165,8 @@ func pruefenErstellen(w http.ResponseWriter, r *http.Request, cfg StartConfig, b
 		http.Error(w, "Nur von Homes' eigener Seite.", http.StatusForbidden)
 		return
 	}
-	token, frage, err := cfg.Antworten.Neu(r.Header.Get("Remote-User"), buch, uid, f)
+	von, _, _ := strings.Cut(strings.TrimSpace(r.Header.Get("Remote-Name")), " ")
+	token, frage, err := cfg.Antworten.Neu(r.Header.Get("Remote-User"), von, buch, uid, f)
 	if err != nil {
 		log.Printf("homes: kontakt prüfen: the link not made: %v", err)
 		b.WriteString("<h1>" + wort(texte.PruefenTitel) + "</h1>" + gesagt("", texte.T(texte.PruefenNicht)))
@@ -194,10 +196,10 @@ func felderKarte(f kontaktantwort.Felder) string {
 	row(texte.T(texte.ArtVorname), f.Vorname)
 	row(texte.T(texte.ArtNachname), f.Nachname)
 	for _, p := range f.Telefone {
-		row(texte.T(texte.ArtTelefon), nummerText(p.Nummer, p.Art))
+		row(texte.T(texte.ArtTelefon), nummerText(p.Nummer, p.Art, p.Haupt, texte.FrageHauptNummer))
 	}
 	for _, m := range f.Mails {
-		row(texte.T(texte.ArtMail), m)
+		row(texte.T(texte.ArtMail), nummerText(m.Adresse, m.Art, m.Haupt, texte.FrageHauptMail))
 	}
 	for _, a := range f.Adressen {
 		row(texte.T(texte.ArtAdresse), a.Zeile())
@@ -219,7 +221,8 @@ const pruefenStyle = `<style>.felder{display:grid;grid-template-columns:auto 1fr
 .aenderung{margin:12px 0;padding:14px;border-radius:16px;background:var(--card)}.aenderung label{display:flex;gap:12px;align-items:flex-start}
 .aenderung input{width:22px;height:22px;flex:none;margin-top:2px}.aenderung .art{font-size:.85rem;color:var(--muted)}
 .aenderung .vorher{color:var(--muted);text-decoration:line-through;overflow-wrap:anywhere}.aenderung .nachher{font-weight:600;overflow-wrap:anywhere}
-.aenderung .hinweis{margin:8px 0 0 34px;color:var(--warn,#e0a030);font-size:.9rem}.aenderung .stand{margin:6px 0 0 34px;font-size:.85rem;color:var(--muted)}</style>`
+.aenderung .hinweis{margin:8px 0 0 34px;color:var(--warn,#e0a030);font-size:.9rem}.aenderung .weg{font-size:.85rem;font-weight:600;color:var(--warn,#e0a030)}
+.aenderung img.foto{width:120px;height:auto;border-radius:12px;margin-top:4px}.aenderung blockquote{margin:0 0 10px;padding:10px 12px;border-left:3px solid var(--line);white-space:normal;overflow-wrap:anywhere}.aenderung .stand{margin:6px 0 0 34px;font-size:.85rem;color:var(--muted)}</style>`
 
 // pruefenScript is the two buttons: the phone's share sheet (WhatsApp,
 // SMS, Mail), else the text copied, each saying what it did.
@@ -346,29 +349,41 @@ func antwortEntscheiden(r *http.Request, cfg StartConfig, f kontaktantwort.Frage
 
 // artText is a field's name as the review says it.
 var artText = map[string]texte.ID{"vorname": texte.ArtVorname, "nachname": texte.ArtNachname, "telefon": texte.ArtTelefon, "mail": texte.ArtMail,
-	"adresse": texte.ArtAdresse, "geburtstag": texte.ArtGeburtstag, "firma": texte.ArtFirma, "position": texte.ArtPosition}
+	"adresse": texte.ArtAdresse, "geburtstag": texte.ArtGeburtstag, "firma": texte.ArtFirma, "position": texte.ArtPosition, "foto": texte.ArtFoto,
+	"notiz": texte.ArtNotiz}
 
-// nummerArt is a number's kind as the family says it.
-var nummerArt = map[string]texte.ID{"mobil": texte.NummerMobil, "privat": texte.NummerPrivat, "geschaeftlich": texte.NummerGeschaeftlich}
+// nummerArt is a number's or an e-mail address's kind as the family says it.
+var nummerArt = map[string]texte.ID{"mobil": texte.NummerMobil, "privat": texte.NummerPrivat, "geschaeftlich": texte.NummerGeschaeftlich,
+	kontaktantwort.Andere: texte.NummerAndere}
 
-// nummerText is a number with its kind: „0171 1234567 (mobil)“.
-func nummerText(n, art string) string {
-	if id, ok := nummerArt[art]; ok && n != "" {
-		return n + " (" + texte.T(id) + ")"
+// nummerText is a number or an e-mail address with its kind and, the main
+// one, haupt's word: „0171 1234567 (mobil, Haupt-Nummer)“.
+func nummerText(n, art string, main bool, haupt texte.ID) string {
+	var ps []string
+	if id, ok := nummerArt[art]; ok {
+		ps = append(ps, texte.T(id))
 	}
-	return n
+	if main {
+		ps = append(ps, texte.T(haupt))
+	}
+	if n == "" || len(ps) == 0 {
+		return n
+	}
+	return n + " (" + strings.Join(ps, ", ") + ")"
 }
 
 // standText is what became of a change, once decided.
 var standText = map[string]texte.ID{kontaktantwort.Uebernommen: texte.StandUebernommen, kontaktantwort.Abgelehnt: texte.StandAbgelehnt,
 	kontaktantwort.Uebersprungen: texte.StandUebersprungen, kontaktantwort.Angenommen: texte.StandAngenommen}
 
-func wertText(a kontaktantwort.Aenderung, v, art string) string {
+func wertText(a kontaktantwort.Aenderung, v, art string, main bool) string {
 	switch {
 	case a.Art == "geburtstag" && v != "":
 		return haushalt.BirthdayText(v)
 	case a.Art == "telefon":
-		return nummerText(v, art)
+		return nummerText(v, art, main, texte.FrageHauptNummer)
+	case a.Art == "mail":
+		return nummerText(v, art, main, texte.FrageHauptMail)
 	}
 	return v
 }
@@ -396,23 +411,34 @@ func antwortSeite(b *strings.Builder, f kontaktantwort.Frage, said, problem stri
 		b.WriteString(`<form method=post action=` + AntwortenPath + `/` + f.ID + `>`)
 	}
 	for i, a := range f.Aenderungen {
-		vorher, nachher := wertText(a, a.Vorher, a.VorherArt), wertText(a, a.Nachher, a.NachherArt)
-		b.WriteString(`<div class=aenderung><label>`)
+		vorher, nachher := wertText(a, a.Vorher, a.VorherArt, a.VorherHaupt), wertText(a, a.Nachher, a.NachherArt, a.NachherHaupt)
+		if a.Art == "notiz" {
+			b.WriteString(`<div class=aenderung><p class=art>` + html.EscapeString(fmt.Sprintf(texte.T(texte.AntwortNachricht), f.Name())) + `</p><blockquote>` +
+				strings.ReplaceAll(html.EscapeString(a.Nachher), "\n", "<br>") + `</blockquote>`)
+		} else {
+			b.WriteString(`<div class=aenderung>`)
+		}
+		b.WriteString(`<label>`)
 		if offen {
 			checked := " checked"
-			if len(a.Hinweise) > 0 {
+			if len(a.Hinweise) > 0 || a.NurAngekreuzt() {
 				checked = ""
 			}
 			b.WriteString(`<input type=checkbox name=nimm value=` + strconv.Itoa(i) + checked + `>`)
 		}
-		b.WriteString(`<span><span class=art>` + wort(artText[a.Art]) + `</span><br>`)
+		b.WriteString(`<span>`)
 		switch {
+		case a.Art == "notiz":
+			b.WriteString(wort(texte.AntwortNotiz))
+		case a.Art == "foto":
+			b.WriteString(`<span class=art>` + wort(texte.ArtFoto) + `</span><br><img class=foto src="data:image/jpeg;base64,` + base64.StdEncoding.EncodeToString(a.Bild) +
+				`" alt="" width=120> <span class=k>(` + wort(texte.AntwortNeu) + `)</span>`)
 		case vorher == "":
-			b.WriteString(`<span class=nachher>` + html.EscapeString(nachher) + `</span> <span class=k>(` + wort(texte.AntwortNeu) + `)</span>`)
+			b.WriteString(`<span class=art>` + wort(artText[a.Art]) + `</span><br><span class=nachher>` + html.EscapeString(nachher) + `</span> <span class=k>(` + wort(texte.AntwortNeu) + `)</span>`)
 		case nachher == "":
-			b.WriteString(`<span class=vorher>` + html.EscapeString(vorher) + `</span> <span class=k>(` + wort(texte.AntwortEntfernt) + `)</span>`)
+			b.WriteString(`<span class=art>` + wort(artText[a.Art]) + `</span><br><span class=vorher>` + html.EscapeString(vorher) + `</span> <span class=weg>` + wort(texte.AntwortEntfernt) + `</span>`)
 		default:
-			b.WriteString(`<span class=vorher>` + html.EscapeString(vorher) + `</span> → <span class=nachher>` + html.EscapeString(nachher) + `</span>`)
+			b.WriteString(`<span class=art>` + wort(artText[a.Art]) + `</span><br><span class=vorher>` + html.EscapeString(vorher) + `</span> → <span class=nachher>` + html.EscapeString(nachher) + `</span>`)
 		}
 		b.WriteString(`</span></label>`)
 		for _, h := range a.Hinweise {

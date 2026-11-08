@@ -231,7 +231,35 @@ const (
 	FragePLZ              ID = "frage.plz"
 	FrageOrt              ID = "frage.ort"
 	FrageLand             ID = "frage.land"
-	FrageLoeschen         ID = "frage.loeschen"
+	FrageHausnummer       ID = "frage.hausnummer"
+	FrageHauptNummer      ID = "frage.haupt-nummer" // the main number, the main e-mail address (vCard PREF)
+	FrageHauptMail        ID = "frage.haupt-mail"
+	FrageEntfernen        ID = "frage.entfernen" // a card's entry ticked to go
+	FrageFoto             ID = "frage.foto"
+	FrageFotoWahl         ID = "frage.foto.wahl"
+	FrageFotoKeins        ID = "frage.foto.keins"
+	FrageFotoGross        ID = "frage.foto.gross"
+	FrageFotoNochmal      ID = "frage.foto.nochmal"
+	FrageNachricht        ID = "frage.nachricht"
+	FrageNachrichtAn      ID = "frage.nachricht.an" // „%s“ is the first name of who sent the link
+	FrageDir              ID = "frage.dir"
+	FrageFehler           ID = "frage.fehler" // the form again: what is wrong is said beside each field
+	FrageNameForm         ID = "frage.form.name"
+	FrageNummerForm       ID = "frage.form.nummer"
+	FrageMailForm         ID = "frage.form.mail"
+	FrageStrasseForm      ID = "frage.form.strasse"
+	FrageHausnummerForm   ID = "frage.form.hausnummer"
+	FragePLZForm          ID = "frage.form.plz"
+	FrageOrtForm          ID = "frage.form.ort"
+	FrageLandForm         ID = "frage.form.land"
+	FrageTagForm          ID = "frage.form.tag"
+	FrageJahrForm         ID = "frage.form.jahr"
+	NummerAndere          ID = "nummer.andere"
+	ArtFoto               ID = "art.foto"
+	ArtNotiz              ID = "art.notiz"
+	AntwortNachricht      ID = "antwort.nachricht" // the message in the review: „%s“ the contact's name
+	AntwortNotiz          ID = "antwort.notiz"     // its tick
+	AntwortHaupt          ID = "antwort.haupt"     // „Haupt-Nummer“ in a number's kind
 	FrageSenden           ID = "frage.senden"
 	FrageStimmt           ID = "frage.stimmt"
 	FrageSendet           ID = "frage.sendet"
@@ -573,7 +601,7 @@ var de = map[ID]string{
 	"buch.handy":                 "dein Handy-Kontakt",
 	"antwort.nur-bestaetigt":     "%s hat bestätigt: alles stimmt so.",
 	"antwort.neu":                "neu",
-	"antwort.entfernt":           "entfernt",
+	"antwort.entfernt":           "entfernen",
 	"antwort.auswahl":            "Ausgewählte übernehmen",
 	"antwort.alle":               "Alle übernehmen",
 	"antwort.laeuft":             "Übernimmt …",
@@ -603,12 +631,40 @@ var de = map[ID]string{
 	"frage.weitere-nummer":       "Weitere Nummer",
 	"frage.weitere-mail":         "Weitere E-Mail",
 	"frage.weitere-adresse":      "Weitere Adresse",
-	"frage.strasse":              "Straße und Hausnummer",
+	"frage.strasse":              "Straße",
+	"frage.hausnummer":           "Hausnummer",
+	"frage.haupt-nummer":         "Haupt-Nummer",
+	"frage.haupt-mail":           "Haupt-Adresse",
+	"frage.entfernen":            "entfernen",
+	"frage.foto":                 "Dein Foto",
+	"frage.foto.wahl":            "Foto wählen (wenn du magst)",
+	"frage.foto.keins":           "Dieses Bild lässt sich nicht öffnen. Wähle ein Foto als JPEG, PNG, HEIC oder WebP.",
+	"frage.foto.gross":           "Das Foto ist zu groß: höchstens 5 MB.",
+	"frage.foto.nochmal":         "Wähle das Foto bitte noch einmal.",
+	"frage.nachricht":            "Nachricht",
+	"frage.nachricht.an":         "Nachricht an %s (wenn du magst)",
+	"frage.dir":                  "die Person, die dir den Link geschickt hat",
+	"frage.fehler":               "Ein paar Angaben passen so noch nicht. Was fehlt, steht beim Feld.",
+	"frage.form.name":            "Ein Name hat nur Buchstaben, Leerzeichen, Bindestriche und Apostrophe.",
+	"frage.form.nummer":          "So ist es keine Telefonnummer: Ziffern mit Vorwahl, etwa 0171 2345678 oder +49 171 2345678.",
+	"frage.form.mail":            "So ist die E-Mail-Adresse nicht gültig, etwa name@beispiel.de.",
+	"frage.form.strasse":         "Eine Straße hat nur Buchstaben, Ziffern, Leerzeichen und . , - ' / ( ).",
+	"frage.form.hausnummer":      "Eine Hausnummer beginnt mit einer Ziffer, etwa 5, 12a oder 3-5.",
+	"frage.form.plz":             "So sieht hier keine Postleitzahl aus; in Deutschland sind es fünf Ziffern.",
+	"frage.form.ort":             "Ein Ort hat nur Buchstaben, Leerzeichen und . - ' / ( ).",
+	"frage.form.land":            "Ein Land hat nur Buchstaben, Leerzeichen und Bindestriche.",
+	"frage.form.tag":             "Der Tag als Zahl, 1 bis 31.",
+	"frage.form.jahr":            "Das Jahr mit vier Ziffern, oder leer.",
+	"nummer.andere":              "andere",
+	"art.foto":                   "Foto",
+	"art.notiz":                  "Notiz",
+	"antwort.nachricht":          "Nachricht von %s",
+	"antwort.notiz":              "An die Notiz des Kontakts anhängen",
+	"antwort.haupt":              "Haupt-Nummer",
 	"frage.plz":                  "PLZ",
 	"frage.ort":                  "Ort",
 	"frage.land":                 "Land",
 	"frage.geburtstag":           "Tag, Monat, Jahr (TT.MM.JJJJ)",
-	"frage.loeschen":             "Stimmt etwas nicht mehr, lösch es einfach aus dem Feld.",
 	"frage.senden":               "Änderungen senden",
 	"frage.stimmt":               "Alles stimmt so",
 	"frage.sendet":               "Wird gesendet …",

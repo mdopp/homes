@@ -63,3 +63,56 @@ func TestCorrectSharedWritesOverTheVersionItRead(t *testing.T) {
 		t.Errorf("a card that is not there: %v", err)
 	}
 }
+
+// owner 2026-11-08: a number's or an address's kind and the main one,
+// written the way the card's vCard version writes them (3.0 TYPE=PREF,
+// 4.0 PREF=1), read back the same; the contact's own photo replaces the
+// card's; the message goes below the note.
+func TestCorrectedKindsTheMainOneThePhotoAndTheNote(t *testing.T) {
+	ja, nein := true, false
+	ks := []Korrektur{
+		{Prop: "TEL", Alt: "0711 123", Neu: "0711 123", Haupt: &ja},                             // the second number becomes the main one
+		{Prop: "EMAIL", Alt: "anna@example.org", Neu: "anna@example.org", Art: "geschaeftlich"}, // its kind, INTERNET kept
+		{Prop: "TEL", Alt: "", Neu: "0151 1", Art: "andere"},
+		{Prop: "PHOTO", Bild: []byte{0xff, 0xd8, 0xff}},
+		{Prop: "NOTE", Neu: "Bin umgezogen."},
+	}
+	got, done := Corrected(strings.Replace(korrekturCard, "END:VCARD", "PHOTO;ENCODING=b;TYPE=JPEG:alt\r\nEND:VCARD", 1), "k1", ks, "x")
+	if !slices.Equal(done, []bool{true, true, true, true, true}) {
+		t.Errorf("done %v", done)
+	}
+	for _, want := range []string{"TEL;TYPE=HOME,PREF:0711 123\r\n", "item1.TEL;TYPE=CELL:+49 151 2345 6789\r\n", "EMAIL;TYPE=INTERNET,WORK:anna@example.org\r\n",
+		"TEL:0151 1\r\n", "PHOTO;ENCODING=b;TYPE=JPEG:/9j/\r\n", "NOTE:bleibt\\n\\nBin umgezogen.\r\n"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("3.0: missing %q in\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, ":alt") {
+		t.Error("the card's old picture stays")
+	}
+	again, _ := Corrected(got, "k1", ks[4:], "x")
+	if strings.Count(again, "Bin umgezogen") != 1 {
+		t.Errorf("the message added twice:\n%s", again)
+	}
+
+	v4 := "BEGIN:VCARD\r\nVERSION:4.0\r\nUID:k4\r\nFN:A\r\nTEL;TYPE=cell;PREF=1:0171 1\r\nTEL;VALUE=uri;TYPE=home:tel:0711 2\r\nEND:VCARD\r\n"
+	got, _ = Corrected(v4, "k4", []Korrektur{{Prop: "TEL", Alt: "0711 2", Neu: "0711 2", Haupt: &ja}, {Prop: "PHOTO", Bild: []byte{1}}}, "x")
+	for _, want := range []string{"TEL;TYPE=CELL:0171 1\r\n", "TEL;VALUE=uri;TYPE=HOME;PREF=1:0711 2\r\n", "PHOTO:data:image/jpeg;base64,AQ==\r\n"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("4.0: missing %q in\n%s", want, got)
+		}
+	}
+	got, _ = Corrected(v4, "k4", []Korrektur{{Prop: "TEL", Alt: "0171 1", Neu: "0171 1", Haupt: &nein}}, "x")
+	if !strings.Contains(got, "TEL;TYPE=CELL:0171 1\r\n") {
+		t.Errorf("the main one taken back:\n%s", got)
+	}
+	root, err := Parse(korrekturCard + v4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cs := Contacts(root)
+	if !slices.Equal(cs[0].PhoneKinds, []string{"mobil", "privat"}) || !slices.Equal(cs[0].EmailKinds, []string{""}) ||
+		!slices.Equal(cs[1].PhonePrefs, []bool{true, false}) || !slices.Equal(cs[1].PhoneKinds, []string{"mobil", "privat"}) {
+		t.Errorf("read back: %+v %+v", cs[0], cs[1])
+	}
+}

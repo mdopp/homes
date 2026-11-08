@@ -2,8 +2,10 @@ package caldav
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"net/url"
+	"slices"
 	"strings"
 )
 
@@ -16,14 +18,19 @@ import (
 // said so; nothing is ever written over a value the owner did not see.
 
 // Korrektur is one accepted change of a card's field: Prop is N-GIVEN,
-// N-FAMILY (FN follows them), TEL, EMAIL, ADR, BDAY, ORG (its first part)
-// or TITLE; Alt "" adds, Neu "" removes. For ADR the values are AltAdr
-// and NeuAdr; for BDAY JJJJ-MM-TT or --MM-TT; for TEL Art is the new
-// number's kind (mobil, privat, geschaeftlich; "" keeps the line's).
+// N-FAMILY (FN follows them), TEL, EMAIL, ADR, BDAY, ORG (its first part),
+// TITLE, PHOTO (Bild, a JPEG, replaces the card's) or NOTE (Neu is added
+// to it); Alt "" adds, Neu "" removes. For ADR the values are AltAdr and
+// NeuAdr; for BDAY JJJJ-MM-TT or --MM-TT; for TEL and EMAIL Art is the new
+// kind (mobil, privat, geschaeftlich, andere; "" keeps the line's) and
+// Haupt whether it is the main one (nil keeps it; the main one is the
+// only one, PREF=1 or in vCard 3.0 TYPE=PREF).
 type Korrektur struct {
 	Prop           string
 	Alt, Neu, Art  string
+	Haupt          *bool
 	AltAdr, NeuAdr *Address
+	Bild           []byte
 }
 
 // ErrNoCard is a card that is not in the shared address books (any more).
@@ -122,8 +129,55 @@ func korrigiert(body []string, k Korrektur) ([]string, bool) {
 		return korrigiertWert(body, k)
 	case "ADR":
 		return korrigiertAdresse(body, k.AltAdr, k.NeuAdr)
+	case "PHOTO":
+		return korrigiertFoto(body, k.Bild)
+	case "NOTE":
+		return korrigiertNotiz(body, strings.TrimSpace(k.Neu))
 	}
 	return body, false
+}
+
+// korrigiertFoto is body with its own pictures replaced by the JPEG bild.
+func korrigiertFoto(body []string, bild []byte) ([]string, bool) {
+	if len(bild) == 0 {
+		return body, false
+	}
+	for i := find(body, "PHOTO", alle); i >= 0; i = find(body, "PHOTO", alle) {
+		body = append(body[:i:i], body[i+1:]...)
+	}
+	b64 := base64.StdEncoding.EncodeToString(bild)
+	if vier(body) {
+		return append(body, "PHOTO:data:image/jpeg;base64,"+b64), true
+	}
+	return append(body, "PHOTO;ENCODING=b;TYPE=JPEG:"+b64), true
+}
+
+// korrigiertNotiz is body with neu added to its NOTE, after an empty line.
+func korrigiertNotiz(body []string, neu string) ([]string, bool) {
+	i := find(body, "NOTE", alle)
+	switch {
+	case neu == "":
+		return body, false
+	case i < 0:
+		return append(body, "NOTE:"+EscapeText(neu)), true
+	}
+	p, _ := parseLine(body[i])
+	if cur := UnescapeText(p.Value); !strings.Contains(cur, neu) {
+		return withValue(body, i, EscapeText(strings.TrimSpace(cur+"\n\n"+neu))), true
+	}
+	return body, true // there already
+}
+
+func alle(Prop) bool { return true }
+
+// vier says whether the card is a vCard 4.0.
+func vier(body []string) bool {
+	i := find(body, "VERSION", alle)
+	if i < 0 {
+		return false
+	}
+	p, _ := parseLine(body[i])
+	return strings.TrimSpace(p.Value) == "4.0"
 }
 
 // korrigiertName changes N's given or family name, and FN with them. A
@@ -194,8 +248,9 @@ func korrigiertEinzeln(body []string, k Korrektur) ([]string, bool) {
 	return append(body, k.Prop+":"+EscapeText(neu)), true
 }
 
-// korrigiertWert changes one TEL or EMAIL: alt's line, or a new one; a
-// number's kind with it when k.Art names one.
+// korrigiertWert changes one TEL or EMAIL: alt's line, or a new one; its
+// kind and whether it is the main one with it when k says so. A new main
+// one takes that from the others of its kind.
 func korrigiertWert(body []string, k Korrektur) ([]string, bool) {
 	prop := k.Prop
 	same := func(v string) func(Prop) bool {
@@ -203,30 +258,78 @@ func korrigiertWert(body []string, k Korrektur) ([]string, bool) {
 		return func(p Prop) bool { return gleichWert(prop, UnescapeText(p.Value)) == want }
 	}
 	neu := strings.TrimSpace(k.Neu)
-	if k.Alt == "" {
-		if neu == "" || find(body, prop, same(neu)) >= 0 {
-			return body, neu != "" // there already: nothing to add, and nothing wrong
-		}
-		return append(body, prop+phoneType(k.Art)+":"+EscapeText(neu)), true
-	}
 	i := find(body, prop, same(k.Alt))
-	if i < 0 {
+	switch {
+	case k.Alt == "" && (neu == "" || find(body, prop, same(neu)) >= 0):
+		return body, neu != "" // there already: nothing to add, and nothing wrong
+	case k.Alt == "":
+		body, i = append(body, prop+":"), len(body)
+	case i < 0:
 		return body, false
-	}
-	if neu == "" {
+	case neu == "":
 		return append(body[:i:i], body[i+1:]...), true
 	}
-	if prop == "TEL" && k.Art != "" {
-		p, _ := parseLine(body[i])
-		group := ""
-		if g := strings.LastIndexByte(p.Name, '.'); g >= 0 {
-			group = body[i][:g+1]
+	out := append([]string(nil), body...)
+	if k.Haupt != nil && *k.Haupt {
+		for j, l := range out {
+			if p, ok := parseLine(l); ok && j != i && propName(p.Name) == prop && isPref(p) {
+				out[j] = wertZeile(l, p, "", false, vier(out)) + p.Value
+			}
 		}
-		out := append([]string(nil), body...)
-		out[i] = group + "TEL" + phoneType(k.Art) + ":" + EscapeText(neu)
-		return out, true
 	}
-	return withValue(body, i, EscapeText(neu)), true
+	p, _ := parseLine(out[i])
+	if k.Art == "" && k.Haupt == nil {
+		return withValue(out, i, EscapeText(neu)), true
+	}
+	pref := isPref(p)
+	if k.Haupt != nil {
+		pref = *k.Haupt
+	}
+	out[i] = wertZeile(out[i], p, k.Art, pref, vier(out)) + EscapeText(neu)
+	return out, true
+}
+
+// wertZeile is line's group, name and parameters up to the colon, with the
+// kind art ("" keeps the line's) and pref as asked; the other parameters
+// and TYPE values (VOICE, INTERNET, …) stay.
+func wertZeile(line string, p Prop, art string, pref, v4 bool) string {
+	var types []string
+	for _, t := range strings.Split(strings.ToUpper(p.Params["TYPE"]), ",") {
+		t = strings.TrimSpace(t)
+		kind := t == "CELL" || t == "HOME" || t == "WORK"
+		if t != "" && t != "PREF" && !(kind && art != "") {
+			types = append(types, t)
+		}
+	}
+	if t := kindTypes[art]; t != "" {
+		types = append(types, t)
+	}
+	if pref && !v4 {
+		types = append(types, "PREF")
+	}
+	var b strings.Builder
+	b.WriteString(line[:strings.IndexAny(line, ";:")])
+	keys := make([]string, 0, len(p.Params))
+	for key := range p.Params {
+		if key != "TYPE" && key != "PREF" {
+			keys = append(keys, key)
+		}
+	}
+	slices.Sort(keys)
+	for _, key := range keys {
+		v := p.Params[key]
+		if strings.ContainsAny(v, ";:,") {
+			v = `"` + v + `"`
+		}
+		b.WriteString(";" + key + "=" + v)
+	}
+	if len(types) > 0 {
+		b.WriteString(";TYPE=" + strings.Join(types, ","))
+	}
+	if pref && v4 {
+		b.WriteString(";PREF=1")
+	}
+	return b.String() + ":"
 }
 
 // gleichWert is a value as two are compared: a number by its digits and a

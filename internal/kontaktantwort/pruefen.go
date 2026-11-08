@@ -16,9 +16,11 @@ import (
 
 // The checks run before the owner sees an answer (owner 2026-11-07): a
 // number that does not parse, an e-mail address whose syntax is wrong or
-// whose domain takes no mail, a birthday that cannot be, a name changed
-// completely, too many changes at once. Each finding is one plain German
-// sentence beside its field; nothing is refused, the owner decides.
+// whose domain takes no mail, a birthday that cannot be, a German PLZ and
+// Ort that do not belong together (owner 2026-11-08, offline), a name
+// changed completely, too many changes at once. Each finding is one plain
+// German sentence beside its field; nothing is refused, the owner decides.
+// A field's form is the page's to refuse (Formfehler).
 
 // Resolver is the DNS the e-mail check asks (net.DefaultResolver; a fake in the tests).
 type Resolver interface {
@@ -53,6 +55,8 @@ func (p Pruefung) Pruefen(ctx context.Context, vorher, nachher Felder, as []Aend
 			h = p.Mail(ctx, a.Nachher)
 		case a.Art == "geburtstag":
 			h = Geburtstag(a.Nachher, p.Now)
+		case a.Art == "adresse" && a.NachherAdresse != nil:
+			h = OrtFehler(a.NachherAdresse.PLZ, a.NachherAdresse.Ort, a.NachherAdresse.Land)
 		}
 		if h != "" {
 			a.Hinweise = append(a.Hinweise, h)

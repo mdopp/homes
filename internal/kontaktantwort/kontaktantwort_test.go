@@ -16,12 +16,12 @@ func store(t *testing.T, now *time.Time) *Store {
 	return &Store{Path: filepath.Join(t.TempDir(), Datei), Now: func() time.Time { return *now }}
 }
 
-var anna = Felder{Vorname: "Anna", Nachname: "Beispiel", Telefone: []Telefon{{"+49 151 23456789", "mobil"}}, Mails: []string{"anna@example.org"}}
+var anna = Felder{Vorname: "Anna", Nachname: "Beispiel", Telefone: []Telefon{{"+49 151 23456789", "mobil", false}}, Mails: []Mail{{Adresse: "anna@example.org"}}}
 
 func TestTheLinkIsLongRandomHashedAndWorksOnceForFourteenDays(t *testing.T) {
 	now := time.Date(2026, 11, 7, 10, 0, 0, 0, time.UTC)
 	s := store(t, &now)
-	token, f, err := s.Neu("mdopp", Haushalt, "h0", anna)
+	token, f, err := s.Neu("mdopp", "Michael", Haushalt, "h0", anna)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +54,7 @@ func TestTheLinkIsLongRandomHashedAndWorksOnceForFourteenDays(t *testing.T) {
 		t.Errorf("a second answer was taken: %v", err)
 	}
 
-	token2, _, _ := s.Neu("mdopp", Privat, "k1", anna)
+	token2, _, _ := s.Neu("mdopp", "Michael", Privat, "k1", anna)
 	now = now.Add(14*24*time.Hour - time.Second)
 	if _, err := s.Zum(token2); err != nil {
 		t.Errorf("a link a second before its end: %v", err)
@@ -68,8 +68,8 @@ func TestTheLinkIsLongRandomHashedAndWorksOnceForFourteenDays(t *testing.T) {
 func TestANewLinkForTheSameContactReplacesTheOpenOne(t *testing.T) {
 	now := time.Now()
 	s := store(t, &now)
-	old, _, _ := s.Neu("mdopp", Haushalt, "h0", anna)
-	neu, _, _ := s.Neu("mdopp", Haushalt, "h0", anna)
+	old, _, _ := s.Neu("mdopp", "Michael", Haushalt, "h0", anna)
+	neu, _, _ := s.Neu("mdopp", "Michael", Haushalt, "h0", anna)
 	if _, err := s.Zum(old); err != ErrWeg {
 		t.Errorf("the old link still opens: %v", err)
 	}
@@ -81,10 +81,10 @@ func TestANewLinkForTheSameContactReplacesTheOpenOne(t *testing.T) {
 func TestTheReviewIsTheStartersAndAHandyKontaktWaitsForThePhone(t *testing.T) {
 	now := time.Now()
 	s := store(t, &now)
-	token, f, _ := s.Neu("mdopp", Privat, "lookup.1", anna)
+	token, f, _ := s.Neu("mdopp", "Michael", Privat, "lookup.1", anna)
 	nachher := anna
-	nachher.Telefone = []Telefon{{"+49 151 99999999", "mobil"}}
-	nachher.Mails = []string{"anna@example.org", "anna@beispiel.example"}
+	nachher.Telefone = []Telefon{{"+49 151 99999999", "mobil", false}}
+	nachher.Mails = []Mail{{Adresse: "anna@example.org"}, {Adresse: "anna@beispiel.example"}}
 	if _, err := s.Beantworten(token, Antwort{Aenderungen: Vergleich(anna, nachher)}); err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +129,7 @@ func TestTheReviewIsTheStartersAndAHandyKontaktWaitsForThePhone(t *testing.T) {
 func TestADiscardedAnswerNeverReachesThePhone(t *testing.T) {
 	now := time.Now()
 	s := store(t, &now)
-	token, f, _ := s.Neu("mdopp", Privat, "k", anna)
+	token, f, _ := s.Neu("mdopp", "Michael", Privat, "k", anna)
 	nachher := anna
 	nachher.Nachname = "Muster"
 	s.Beantworten(token, Antwort{Aenderungen: Vergleich(anna, nachher)})
@@ -143,7 +143,7 @@ func TestADiscardedAnswerNeverReachesThePhone(t *testing.T) {
 func TestOldEntriesGo(t *testing.T) {
 	now := time.Now()
 	s := store(t, &now)
-	token, f, _ := s.Neu("mdopp", Haushalt, "h", anna)
+	token, f, _ := s.Neu("mdopp", "Michael", Haushalt, "h", anna)
 	s.Beantworten(token, Antwort{Bestaetigt: true})
 	got, _ := s.Eine(f.ID, "mdopp")
 	s.Entscheiden(f.ID, "mdopp", Stand(got, true, nil))
@@ -154,9 +154,9 @@ func TestOldEntriesGo(t *testing.T) {
 }
 
 func TestVergleichPlaceByPlace(t *testing.T) {
-	vorher := Felder{Vorname: "Anna", Telefone: []Telefon{{"0171 1234567", "mobil"}, {"0711 123", "privat"}, {"0711 9", "privat"}}, Mails: []string{"a@x.de"}, Firma: "A",
+	vorher := Felder{Vorname: "Anna", Telefone: []Telefon{{"0171 1234567", "mobil", false}, {"0711 123", "privat", false}, {"0711 9", "privat", false}}, Mails: []Mail{{Adresse: "a@x.de"}}, Firma: "A",
 		Adressen: []Adresse{{Strasse: "Weg 1", PLZ: "12345", Ort: "Stadt"}}, Geburtstag: "1980-01-02"}
-	nachher := Felder{Vorname: "Anna", Telefone: []Telefon{{"0171-1234567", "mobil"}, {"", ""}, {"0711 9", "geschaeftlich"}, {"0151 7654321", "mobil"}}, Mails: []string{"A@X.de"}, Firma: "A", Position: "Chefin",
+	nachher := Felder{Vorname: "Anna", Telefone: []Telefon{{"0171-1234567", "mobil", false}, {"", "", false}, {"0711 9", "geschaeftlich", false}, {"0151 7654321", "mobil", false}}, Mails: []Mail{{Adresse: "A@X.de"}}, Firma: "A", Position: "Chefin",
 		Adressen: []Adresse{{Strasse: "Weg 2", PLZ: "12345", Ort: "Stadt"}, {}}, Geburtstag: "1980-01-03"}
 	got := Vergleich(vorher, nachher)
 	var arts []string
@@ -262,10 +262,10 @@ func TestSauberCutsAndFlattens(t *testing.T) {
 	long := strings.Repeat("ä", GrenzeWert+5)
 	var many []Telefon
 	for range GrenzeJeArt + 3 {
-		many = append(many, Telefon{"0171 1234567", "fax<script>"})
+		many = append(many, Telefon{"0171 1234567", "fax<script>", false})
 	}
-	got := Sauber(Felder{Vorname: "Anna\r\nBCC: x", Telefone: many, Mails: []string{long}})
-	if got.Vorname != "Anna BCC: x" || len(got.Telefone) != GrenzeJeArt || got.Telefone[0].Art != "" || len([]rune(got.Mails[0])) != GrenzeWert {
-		t.Errorf("Sauber = %q, %d, %+v, %d", got.Vorname, len(got.Telefone), got.Telefone[0], len([]rune(got.Mails[0])))
+	got := Sauber(Felder{Vorname: "Anna\r\nBCC: x", Telefone: many, Mails: []Mail{{Adresse: long}}})
+	if got.Vorname != "Anna BCC: x" || len(got.Telefone) != GrenzeJeArt || got.Telefone[0].Art != Andere || len([]rune(got.Mails[0].Adresse)) != GrenzeWert {
+		t.Errorf("Sauber = %q, %d, %+v, %d", got.Vorname, len(got.Telefone), got.Telefone[0], len([]rune(got.Mails[0].Adresse)))
 	}
 }

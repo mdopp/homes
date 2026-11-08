@@ -98,8 +98,8 @@ func TestKontaktPruefenFromTheLinkToTheAddressBook(t *testing.T) {
 	if rec.Code != 200 {
 		t.Fatalf("form %d", rec.Code)
 	}
-	mustContain(t, body, "Stimmen deine Kontaktdaten?", `name=vorname type=text value="Anna"`, `name=nachname type=text value="Beispiel"`,
-		`value="+49 151 23456789"`, `<option value=mobil selected>`, `value="anna@example.org"`, `name=firma type=text value="Bäckerei"`,
+	mustContain(t, body, "Stimmen deine Kontaktdaten?", `name=vorname value="Anna"`, `name=nachname value="Beispiel"`,
+		`value="+49 151 23456789"`, `<option value=mobil selected>`, `value="anna@example.org"`, `name=firma value="Bäckerei"`,
 		`action="/`+token+`"`, "Alles stimmt so", "Änderungen senden")
 	mustNotContain(t, body, "DE00", "Oma", "/kontakte", "/start", "Abmelden", "<nav")
 	for k, want := range map[string]string{"Referrer-Policy": "no-referrer", "Cache-Control": "no-store", "X-Frame-Options": "DENY"} {

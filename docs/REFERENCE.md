@@ -309,31 +309,64 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     base64url, `https://kontakt.<domain>/<token>`, shown once with a
     prepared German sentence, *Teilen …* (the phone's share sheet) and
     *Kopieren*. Homes keeps only its SHA-256; a new link for the same
-    contact retires the open one. The fields (owner 2026-11-07): first
-    and last name, numbers with their kind (mobil, privat,
-    geschäftlich), e-mail addresses, postal addresses, the birthday
-    (day, month, the year optional), company and position — nothing
-    else. The page without a login (`pages.KontaktServer`, its own
-    listener `HOMES_KONTAKT_LISTEN`, nothing else registered there):
-    `GET /<token>` the form, `POST /<token>` the answer (form, ≤ 32 KB,
-    same-origin only), one answer, 14 days; every link that is none,
-    used or over gets the same 404 *Link ungültig oder abgelaufen*;
-    10 requests per address and then one every 30 s, 120 for all, else
-    429; `no-store`, `no-referrer`, a nonce CSP, no frames. The checks
-    before the review: the number (country code, German mobile,
-    service and landline lengths, E.164's 15 digits), the e-mail's
-    syntax and its domain's MX (else A/AAAA) within 3 s, the birthday (a
-    real day, not ahead, not over 120 years back), a name changed
-    completely, five changes or more. *Kontakt-Antworten*
+    contact retires the open one. The fields (owner 2026-11-07 and
+    2026-11-08): first and last name; numbers with their kind (mobil,
+    privat, geschäftlich, andere) and the *Haupt-Nummer*; e-mail
+    addresses with theirs (privat, geschäftlich, andere) and the
+    *Haupt-Adresse* (vCard `PREF=1`, in 3.0 `TYPE=PREF`, both ways);
+    postal addresses with street and house number apart (a card's street
+    line read in either order, „7 Gartenstraße“ too, and written back as
+    the country writes it: Germany „Straße Nr“, the US, UK, France …
+    „Nr Straße“); the birthday (day, the month a German select, the year
+    optional); company and position; their own photo; a message to the
+    sender (≤ 1000 characters) — nothing else. Each of the card's numbers,
+    e-mail and postal addresses can be ticked *entfernen*. Every field
+    carries `autocomplete` (given-name, family-name, `mobile|home|work
+    tel`, `home|work email`, `section-adr<n> address-line1`,
+    postal-code, address-level2, country-name, organization,
+    organization-title, bday-day/-month/-year) and its form as an HTML
+    `pattern`, `type` and `inputmode`; the page's script says each error
+    in German beside its field, sets the PLZ pattern by the country,
+    splits an autofilled „Straße Nr“, and makes the photo a JPEG of at
+    most 1024 px in the browser (HEIC and WebP where the browser opens
+    them). The server holds the same forms for what the contact changed
+    or added (`kontaktantwort.Formfehler`: numbers to E.164, DE and
+    international; e-mail syntax; the postal code by its country, DE five
+    digits, a table of 25 countries, else letters, digits, spaces and
+    hyphens; names, streets, house numbers, places; a real birthday, not
+    ahead, not over 120 years back) and answers the form again with each
+    error beside its field, the link unused. The photo (`kontaktantwort.Foto`):
+    ≤ 5 MB, a JPEG or PNG that decodes whole and has at most 40 MP,
+    else refused; kept as a new JPEG of at most 512 px made from its
+    pixels, so no EXIF or other metadata. The page without a login
+    (`pages.KontaktServer`, its own listener `HOMES_KONTAKT_LISTEN`,
+    nothing else registered there): `GET /<token>` the form, `POST
+    /<token>` the answer (multipart, read in memory: its text ≤ 32 KB,
+    the photo ≤ 5 MB; same-origin only), one answer, 14 days; every link
+    that is none, used or over gets the same 404 *Link ungültig oder
+    abgelaufen*; 10 requests per address and then one every 30 s, 120
+    for all, else 429; `no-store`, `no-referrer`, a nonce CSP (images
+    `blob:` only, the photo's preview), no frames. The checks before the
+    review: the e-mail's domain's MX (else A/AAAA) within 3 s; a German
+    PLZ and Ort against each other, offline, by the table shipped with
+    Homes (`internal/kontaktantwort/plz-orte.tsv.gz`, 136 KB, 8,163
+    postal codes with their places, boroughs and suburbs, from the
+    OpenPLZ API's OpenStreetMap streets, ODbL; `tools/plz/plz.py` makes
+    it, `PLZ-LIZENZ.md` beside it), flagged, never refused; a name
+    changed completely; five changes or more. *Kontakt-Antworten*
     (`/kontakte/antworten`, `…/<id>`, the starter's only; a task on Deine
     Aufgaben while one is open): each field before → after with its
-    findings, ticked unless flagged; *Ausgewählte übernehmen*, *Alle
-    übernehmen*, *Verwerfen* (POST `aktion`, `nimm=<n>`). A house
-    contact's taken changes are written into its Radicale card over the
-    version read (`caldav.CorrectShared`: only the lines of those fields,
-    a field changed meanwhile left alone and said so); a Handy-Kontakt's
-    wait for the phone (`/napi/kontakte/korrekturen`). Decided answers go
-    after 30 days, unanswered links after their 14.
+    findings, the photo, the message with *An die Notiz des Kontakts
+    anhängen*; ticked unless flagged, a removal (*entfernen*) and the
+    note never; *Ausgewählte übernehmen*, *Alle übernehmen* (never a
+    removal or the note), *Verwerfen* (POST `aktion`, `nimm=<n>`). A
+    house contact's taken changes are written into its Radicale card
+    over the version read (`caldav.CorrectShared`: only the lines of
+    those fields, a kind or main one in its TYPE and PREF, the photo as
+    its PHOTO, the message below its NOTE; a field changed meanwhile left
+    alone and said so); a Handy-Kontakt's wait for the phone
+    (`/napi/kontakte/korrekturen`). Decided answers go after 30 days,
+    unanswered links after their 14.
   - *Dieselbe Person?* (`/kontakte/dieselbe`, the key's owner only, as
     Meine Kontakte; a quiet line on Kontakte and Meine Kontakte while
     there are pairs): pairs of persons whose faces Immich holds close, ten
@@ -1003,12 +1036,16 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
 - Kontakt prüfen lassen, for the phone (owner 2026-11-07): `GET
   /napi/kontakte/korrekturen` → `{korrekturen: [{id, uid, name,
   aenderungen: [{nr, art, vorher, nachher, vorher_art, nachher_art,
-  vorher_adresse, nachher_adresse}]}]}`, the device's person's accepted
-  changes of their own Handy-Kontakte not yet written; `uid` is the
-  lookup key the app sent with `POST /napi/kontakte`; `art` is
-  `vorname|nachname|telefon|mail|adresse|geburtstag|firma|position`, a
-  number's kind `mobil|privat|geschaeftlich`, an address `{strasse, plz,
-  ort, land}`. `POST /napi/kontakte/korrekturen/<id>` `{geschrieben:
+  vorher_haupt, nachher_haupt, vorher_adresse, nachher_adresse,
+  bild}]}]}`, the device's person's accepted changes of their own
+  Handy-Kontakte not yet written; `uid` is the lookup key the app sent
+  with `POST /napi/kontakte`; `art` is
+  `vorname|nachname|telefon|mail|adresse|geburtstag|firma|position|foto|notiz`,
+  a number's kind `mobil|privat|geschaeftlich|andere`, an e-mail's
+  `privat|geschaeftlich|andere`, `*_haupt` the main one, an address
+  `{strasse, plz, ort, land}` with `strasse` the street line, number and
+  all (before: the phone's own line), a photo's `bild` a JPEG of at most
+  512 px (base64), a note's `nachher` the text to add below the note. `POST /napi/kontakte/korrekturen/<id>` `{geschrieben:
   [nr…]}`: those written, every other one of it not (404 when nothing of
   it waits). Module `kontakte`.
 - The phone's contacts (laib ADR 0029; optional in the app, behind

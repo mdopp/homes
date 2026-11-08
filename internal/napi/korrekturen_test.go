@@ -21,7 +21,7 @@ func TestKorrekturenForThePhone(t *testing.T) {
 	nachher := vorher
 	nachher.Telefone = []kontaktantwort.Telefon{{Nummer: "0711 445577", Art: "privat"}}
 	nachher.Position = "Rentnerin"
-	token, f, _ := store.Neu("anna", kontaktantwort.Privat, "3789r1-2B4D", vorher)
+	token, f, _ := store.Neu("anna", "Anna", kontaktantwort.Privat, "3789r1-2B4D", vorher)
 	store.Beantworten(token, kontaktantwort.Antwort{Aenderungen: kontaktantwort.Vergleich(vorher, nachher)})
 	people := map[string]string{"anna1": "anna", "ben1": "ben"}
 	h := Handler(Config{Validate: StaticValidator([]string{"anna1", "ben1"}), Haushalt: haushalt.Config{Contacts: &caldav.Client{URL: "http://127.0.0.1:1"}},
@@ -67,5 +67,34 @@ func TestKorrekturenForThePhone(t *testing.T) {
 	}
 	if done, _ := store.Eine(f.ID, "anna"); done.Aenderungen[0].Stand != kontaktantwort.Uebernommen || done.Aenderungen[1].Stand != kontaktantwort.Abgelehnt {
 		t.Errorf("stand %+v", done.Aenderungen)
+	}
+}
+
+// owner 2026-11-08: the phone gets one street line (the card's own as
+// before, the new one street and number as the country writes them), the
+// main number, the photo as base64 and the message for the note.
+func TestKorrekturenCarryTheStreetLineTheMainOneThePhotoAndTheNote(t *testing.T) {
+	store := &kontaktantwort.Store{Path: filepath.Join(t.TempDir(), kontaktantwort.Datei)}
+	vorher := kontaktantwort.Felder{Vorname: "Oma", Adressen: []kontaktantwort.Adresse{{Strasse: "Hauptstraße", Hausnummer: "5", PLZ: "12345", Ort: "Stadt", Wie: "5 Hauptstraße"}}}
+	nachher := kontaktantwort.Felder{Vorname: "Oma", Telefone: []kontaktantwort.Telefon{{Nummer: "0711 1", Art: "privat", Haupt: true}},
+		Adressen: []kontaktantwort.Adresse{{Strasse: "Hauptstraße", Hausnummer: "7", PLZ: "12345", Ort: "Stadt"}}, Foto: []byte{0xff, 0xd8}, Nachricht: "Neu hier"}
+	token, f, _ := store.Neu("anna", "Anna", kontaktantwort.Privat, "k", vorher)
+	store.Beantworten(token, kontaktantwort.Antwort{Aenderungen: kontaktantwort.Vergleich(vorher, nachher)})
+	got, _ := store.Eine(f.ID, "anna")
+	store.Entscheiden(f.ID, "anna", kontaktantwort.Stand(got, false, []int{0, 1, 2, 3}))
+	h := Handler(Config{Validate: StaticValidator([]string{"anna1"}), Haushalt: haushalt.Config{Contacts: &caldav.Client{URL: "http://127.0.0.1:1"}},
+		Antworten: store, Whoami: func(string) (string, bool) { return "anna", true }})
+	req := httptest.NewRequest("GET", "/napi/kontakte/korrekturen", nil)
+	req.Header.Set("Authorization", "Bearer anna1")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	for _, want := range []string{`"nachher_haupt":true`, `"vorher_adresse":{"strasse":"5 Hauptstraße","plz":"12345","ort":"Stadt"}`,
+		`"nachher_adresse":{"strasse":"Hauptstraße 7","plz":"12345","ort":"Stadt"}`, `"art":"foto"`, `"bild":"/9g="`, `"art":"notiz"`, `"nachher":"Neu hier"`} {
+		if !strings.Contains(rec.Body.String(), want) {
+			t.Errorf("missing %s in %s", want, rec.Body.String())
+		}
+	}
+	if strings.Contains(rec.Body.String(), `"wie"`) || strings.Contains(rec.Body.String(), `"hausnummer"`) {
+		t.Errorf("the page's parts reach the phone: %s", rec.Body.String())
 	}
 }
