@@ -63,7 +63,7 @@ budget() { # budget <name> <cap> <dir…>
 # the message, the multipart read in memory (kontakt_frage.go); the review's removal, photo and note (kontakt_pruefen.go)
 # 2026-11-08, owner approved 2026-11-08: Kontakt-Formular Mülleimer (17,655 -> 17,709): a trash button per
 # existing number, e-mail and address with „Rückgängig“, its no-JS fallback (kontakt_frage.go)
-# 2026-11-08, PENDING the owner's yes: Kontakte-Navigation (17,709 -> 17,761): the area's segments
+# 2026-11-08, owner approved 2026-11-08: Kontakte-Navigation (17,709 -> 17,761): the area's segments
 # Haushalt · Meine · Fragen n · Antworten n and the path back on every Kontakte page (kontakte_nav.go), the actions at the top
 budget pages 17762 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
