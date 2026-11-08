@@ -23,9 +23,14 @@ type Contact struct {
 	Org                           string
 	Phones                        []string
 	// PhoneKinds are the numbers' kinds, in the same order: mobil, privat,
-	// geschaeftlich, or "" (from TEL's TYPE)
+	// geschaeftlich, or "" (from TEL's TYPE); EmailKinds the addresses'
+	// (privat, geschaeftlich, ""); the Prefs say which is the main one
+	// (PREF=1, vCard 3.0's TYPE=PREF)
 	PhoneKinds []string
+	PhonePrefs []bool
 	Emails     []string
+	EmailKinds []string
+	EmailPrefs []bool
 	// Birthday is JJJJ-MM-TT, or --MM-TT without a year; a card's
 	// birthday in another form is kept as its text.
 	Birthday string
@@ -192,8 +197,8 @@ func propName(n string) string {
 	return n
 }
 
-// PhoneKind is a TEL's TYPE as the family names it: mobil, geschaeftlich,
-// privat, or "".
+// PhoneKind is a TEL's or an EMAIL's TYPE as the family names it: mobil,
+// geschaeftlich, privat, or "".
 func PhoneKind(types string) string {
 	t := "," + strings.ToUpper(types) + ","
 	switch {
@@ -207,9 +212,12 @@ func PhoneKind(types string) string {
 	return ""
 }
 
-// phoneType is a kind as TEL's TYPE parameter, "" for none.
-func phoneType(kind string) string {
-	return map[string]string{"mobil": ";TYPE=CELL", "geschaeftlich": ";TYPE=WORK", "privat": ";TYPE=HOME"}[kind]
+// kindTypes are the TYPE values that say a kind; kindType is a kind's.
+var kindTypes = map[string]string{"mobil": "CELL", "geschaeftlich": "WORK", "privat": "HOME"}
+
+// isPref says whether a TEL or EMAIL is the main one: PREF=1, or vCard 3.0's TYPE=PREF.
+func isPref(p Prop) bool {
+	return strings.TrimSpace(p.Params["PREF"]) == "1" || strings.Contains(","+strings.ToUpper(p.Params["TYPE"])+",", ",PREF,")
 }
 
 // Contacts reads every VCARD in a parsed stream.
@@ -241,10 +249,13 @@ func Contacts(root *Component) []Contact {
 				if v = strings.TrimSpace(strings.TrimPrefix(v, "tel:")); v != "" {
 					ct.Phones = append(ct.Phones, v)
 					ct.PhoneKinds = append(ct.PhoneKinds, PhoneKind(p.Params["TYPE"]))
+					ct.PhonePrefs = append(ct.PhonePrefs, isPref(p))
 				}
 			case "EMAIL":
 				if v = strings.TrimSpace(strings.TrimPrefix(v, "mailto:")); v != "" {
 					ct.Emails = append(ct.Emails, v)
+					ct.EmailKinds = append(ct.EmailKinds, PhoneKind(p.Params["TYPE"]))
+					ct.EmailPrefs = append(ct.EmailPrefs, isPref(p))
 				}
 			case "BDAY":
 				ct.Birthday = birthday(v, p.Params["X-APPLE-OMIT-YEAR"])

@@ -58,7 +58,10 @@ budget() { # budget <name> <cap> <dir…>
 # link into Immich, a grey line for its places and its company, the questions as one task on Deine Aufgaben
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (16,579 -> 17,411): the start and the link
 # with its share sheet (kontakt_pruefen.go), the review before → after, and the page without a login on its own listener (kontakt_frage.go)
-budget pages 17412 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-08, owner approved 2026-11-08: Kontakt-Formular v2 (17,404 -> 17,655): the public form's
+# patterns, autofill and German errors beside each field, street and number apart, kinds and the main one, „entfernen“, the photo and
+# the message, the multipart read in memory (kontakt_frage.go); the review's removal, photo and note (kontakt_pruefen.go)
+budget pages 17656 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -105,7 +108,9 @@ budget cmd 1448 cmd/homes             # homes' wiring: 1,018 with the demo then
 # /api/search/metadata with personIds, exif and people) and immichfake's search over a library
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (14,642 -> 15,006): a card's taken fields
 # written line by line over the version read (caldav/korrektur.go), N, ORG, TITLE and the numbers' kinds read
-budget connectors 15007 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
+# 2026-11-08, owner approved 2026-11-08: Kontakt-Formular v2 (15,006 -> 15,120): caldav reads an e-mail's kind and
+# the main number and address (PREF=1, 3.0 TYPE=PREF) and writes them as the card's version does, the contact's photo and the note
+budget connectors 15121 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
 # 2026-11-04, internal/jsonfile (47 lines, 50 of cap) from household's cap to shared's: it
 # replaces nine copies of a save, 62 of their lines in household
 # 2026-11-05, owner 2026-11-05 yes: Immich for the contacts (9,583 -> 9,874):
@@ -126,7 +131,10 @@ budget connectors 15007 $connectors   # one client per service, with its fake: 1
 # questions one task; Öffnen and the icon per module in /napi/einrichtung
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (11,088 -> 12,059): kontaktantwort, the
 # links' hashes and the answers, the comparison field by field and the checks (number, e-mail and its MX, birthday, name)
-budget household 12060 $household      # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-08, owner approved 2026-11-08: Kontakt-Formular v2 (12,059 -> 12,516): kontaktantwort's form of each
+# field (format.go), street and number and the PLZ by country, the PLZ↔Ort check against the open table shipped with Homes
+# (adresse.go), the photo decoded and made again (foto.go), kinds, main ones, removals and the message (felder.go)
+budget household 12520 $household      # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one

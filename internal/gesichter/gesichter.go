@@ -32,6 +32,7 @@ import (
 	"image"
 	"image/color"
 	"image/jpeg"
+	_ "image/png" // a contact's own photo (kontaktantwort.Foto)
 	"log"
 	"net/url"
 	"os"
@@ -361,10 +362,11 @@ func (g *Gesichter) Pflegen(ctx context.Context, jede time.Duration, kontakte *c
 	}
 }
 
-// Klein is the JPEG b made no larger than kante on its longer side, each
-// pixel the mean of those it covers; the same b gives the same bytes.
+// Klein is the JPEG (or PNG, a contact's own photo) b made no larger than
+// kante on its longer side, each pixel the mean of those it covers, a
+// transparent one white; the same b gives the same bytes.
 func Klein(b []byte, kante int) ([]byte, error) {
-	src, err := jpeg.Decode(bytes.NewReader(b))
+	src, _, err := image.Decode(bytes.NewReader(b))
 	if err != nil {
 		return nil, err
 	}
@@ -381,8 +383,9 @@ func Klein(b []byte, kante int) ([]byte, error) {
 			var r, gr, bl, n uint64
 			for yy := y0; yy < y1; yy++ {
 				for xx := x0; xx < x1; xx++ {
-					cr, cg, cb, _ := src.At(xx, yy).RGBA()
-					r, gr, bl, n = r+uint64(cr), gr+uint64(cg), bl+uint64(cb), n+1
+					cr, cg, cb, ca := src.At(xx, yy).RGBA()
+					w := uint64(0xffff - ca) // premultiplied: over white
+					r, gr, bl, n = r+uint64(cr)+w, gr+uint64(cg)+w, bl+uint64(cb)+w, n+1
 				}
 			}
 			dst.Set(x, y, color.RGBA64{uint16(r / n), uint16(gr / n), uint16(bl / n), 0xffff})

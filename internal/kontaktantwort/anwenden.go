@@ -8,12 +8,13 @@ import (
 )
 
 // Stand is the review's answer per change: taken (alle, or the numbers in
-// nimm) or not.
+// nimm) or not. A removal and the message for the note are taken only
+// when ticked, never by alle (owner 2026-11-08).
 func Stand(f Frage, alle bool, nimm []int) []string {
 	out := make([]string, len(f.Aenderungen))
-	for i := range out {
+	for i, a := range f.Aenderungen {
 		out[i] = Abgelehnt
-		if alle {
+		if alle && !a.NurAngekreuzt() {
 			out[i] = Angenommen
 		}
 	}
