@@ -637,7 +637,7 @@ test('Standortverlauf, connected, leads with the timeline and ends with a quiet 
 // Felder geprüft?"): with every fold open, the page is no wider than the
 // screen, a field to type in has room, a button is big enough for a
 // finger, and no text runs out of its box.
-const PAGES = ['/start', '/raeume', '/raeume/light.kueche', '/medien', '/energie', '/energie?zeitraum=jahr', '/kalender', '/kalender/verwalten', '/kontakte', '/kontakte/h3', '/kontakte/privat', '/kontakte/dieselbe',
+const PAGES = ['/start', '/raeume', '/raeume/light.kueche', '/medien', '/energie', '/energie?zeitraum=jahr', '/kalender', '/kalender/verwalten', '/kontakte', '/kontakte/h3', '/kontakte/privat', '/kontakte/privat/k0', '/kontakte/dieselbe',
   '/notizen', '/notizen?tag=kochen', '/notizen/einkaufsliste.md', '/notizen/markdown.md', '/notizen/einkaufsliste.md?bearbeiten=1', '/mehr', '/musik', '/platte', '/discogs', '/aktivierungswort', '/aufgaben', '/dokumente', '/dokumente/suche?q=strom', '/dokumente/suche?nur=versicherungen', '/willkommen', '/einrichten/fotos', '/box/geraete', '/pair-device', '/podcasts', '/gesehen', '/standort',
   '/daten-sichern', '/netzlaufwerk', '/box', '/box/aufgaben', '/box/auslastung', '/box/haushalt', '/box/personen', '/box/module', '/adresse',
   '/einkauf', '/einkauf?liste=liste-baumarkt', '/einkauf?liste=liste-musik', '/einkauf/rezepte', '/einkauf/rezepte?n=rezepte%2Flasagne.md', '/notizen/rezepte/lasagne.md'];
@@ -755,13 +755,14 @@ test('Kontakte lists the address book, the search filters while typing, a row op
   const rows = page.locator('.kontakte li');
   await expect(rows).toHaveCount(9);
   const segmente = page.locator('nav.segmente a');
-  for (const [i, text] of [/^Haushalt$/, /^Meine$/, /^Fragen \d+$/].entries()) await expect(segmente.nth(i)).toHaveText(text); // anna holds the Immich key
+  await expect(segmente).toHaveText(['Haushalt', 'Meine']); // owner 2026-11-08: no lists of questions or answers
   await expect(segmente.first()).toHaveAttribute('aria-current', 'page');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
-  const suche0 = await page.getByRole('searchbox').boundingBox();
-  const aktion = await page.getByRole('link', { name: 'Kontakt prüfen lassen' }).boundingBox();
-  expect(aktion.y).toBeLessThan((await rows.first().boundingBox()).y); // the action above the list
-  expect(suche0.y).toBeLessThan(aktion.y);
+  expect((await page.getByRole('searchbox').boundingBox()).y).toBeLessThan((await rows.first().boundingBox()).y);
+  await expect(page.getByRole('button', { name: 'Suchen' })).toHaveCount(0); // it filters while typing
+  // each row: its share icon (anna is an admin), and what waits about it as a count
+  await expect(rows.getByRole('button', { name: /^Link teilen: .* prüfen lassen$/ })).toHaveCount(9);
+  await expect(rows.filter({ hasText: 'Oma Hilde' }).locator('.anzahl')).toBeVisible();
   await expect(page.getByText('Neue Kontakte und Änderungen machst du auf dem Handy')).toBeHidden();
   await page.getByText('Wie das funktioniert').click();
   await expect(page.getByText('Neue Kontakte und Änderungen machst du auf dem Handy')).toBeVisible();
@@ -782,8 +783,10 @@ test('Kontakte lists the address book, the search filters while typing, a row op
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Oma Hilde');
   await expect(page.locator('nav.pfad')).toHaveText('Kontakte › Oma Hilde');
   await expect(page.locator('nav.segmente a[aria-current]')).toHaveText('Haushalt');
-  const oben = page.locator('.oben a');
+  const oben = page.locator('.oben a, .oben button');
   await expect(oben.first()).toBeVisible();
+  await expect(page.locator('.oben').getByRole('button', { name: 'Link teilen' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Dieselbe Person?' })).toBeVisible(); // its questions on it, under its fields
   expect((await oben.last().boundingBox()).y).toBeLessThan((await page.locator('.karte').first().boundingBox()).y); // its links before its fields
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
   await page.screenshot({ path: info.outputPath('kontakt-411.png'), fullPage: true });
@@ -794,8 +797,8 @@ test('Kontakte lists the address book, the search filters while typing, a row op
 });
 
 // owner 2026-11-06: Immich's people are no longer offered as contacts; every contact is a person in
-// Immich, and the key's owner opens each of their own Handy-Kontakte's photos from Meine Kontakte
-test('Meine Kontakte: the own Handy-Kontakte, each to its person in Immich', async ({ page }, info) => {
+// Immich. owner 2026-11-08: each of the own Handy-Kontakte has its page, with Fotos to its person
+test('Meine Kontakte: the own Handy-Kontakte, each with its page and its person in Immich', async ({ page }, info) => {
   await page.setViewportSize({ width: 411, height: 900 });
   await page.goto('/kontakte');
   await expect(page.getByText('In Immich, aber noch kein Haushalts-Kontakt')).toHaveCount(0);
@@ -803,52 +806,58 @@ test('Meine Kontakte: the own Handy-Kontakte, each to its person in Immich', asy
   await expect(page).toHaveURL(/\/kontakte\/privat$/);
   await expect(page.locator('nav.pfad')).toHaveText('Kontakte › Meine');
   await expect(page.locator('.kontakte li')).toHaveCount(5);
-  await expect(page.getByRole('link', { name: 'Oma Hilde' })).toHaveAttribute('href', '/kontakte/privat/k0/fotos');
   await page.screenshot({ path: info.outputPath('meine-kontakte-411.png'), fullPage: true });
-  const r = await page.request.get('/kontakte/privat/k0/fotos', { maxRedirects: 0 });
-  expect(r.status()).toBe(302);
-  expect(r.headers()['location']).toBe('https://photos.example/people/p-hilde');
+  await page.getByRole('link', { name: /^Opa Karl/ }).click();
+  await expect(page).toHaveURL(/\/kontakte\/privat\/k1$/);
+  await expect(page.locator('nav.pfad')).toHaveText('Kontakte › Meine › Opa Karl');
+  await expect(page.locator('.oben').getByRole('link', { name: 'Fotos in Immich' })).toHaveAttribute('href', 'https://photos.example/people/p-karl');
+  await expect(page.locator('.oben').getByRole('button', { name: 'Link teilen' })).toBeVisible();
 });
 
-// owner 2026-11-06: „Dieselbe Person?“ — faces Immich holds close, two by two, for the key's owner;
-// Nein is said at once on the button and on the page, and the pair is gone
-test('Dieselbe Person? shows pairs of faces and takes a Nein', async ({ page }, info) => {
+// owner 2026-11-08 („alles auf dem Kontakt, damit weniger Listen“): „Dieselbe Person?“ — faces Immich
+// holds close — is asked on the contact whose person it is; Nein is said there and the pair is gone
+test('Dieselbe Person? on the contact takes a Nein', async ({ page }, info) => {
   await page.setViewportSize({ width: 411, height: 900 });
-  await page.goto('/kontakte/privat');
-  await page.locator('nav.segmente a', { hasText: 'Fragen' }).click();
-  await expect(page).toHaveURL(/\/kontakte\/dieselbe$/);
-  await expect(page.locator('nav.segmente a[aria-current]')).toContainText('Fragen');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Fragen von Immich');
-  await expect(page.getByRole('heading', { name: 'Dieselbe Person?' })).toHaveCount(1); // one heading, not two
+  await page.goto('/kontakte/privat/k0');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Oma Hilde');
+  await expect(page.getByRole('heading', { name: 'Dieselbe Person?' })).toHaveCount(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
-  await page.screenshot({ path: info.outputPath('fragen-411.png'), fullPage: true });
   const paare = page.locator('section.paar:not(.frage)');
-  await expect(paare).toHaveCount(6);
+  const n = await paare.count();
+  expect(n).toBeGreaterThan(1);
   await expect(paare.first()).toContainText('Oma Hilde');
   await expect(paare.first()).toContainText('ohne Namen');
   await expect(paare.first()).toContainText('412 Fotos');
   await page.screenshot({ path: info.outputPath('dieselbe-411.png'), fullPage: true });
   await paare.last().getByRole('button', { name: 'Nein' }).click();
   await expect(page.getByText('Gemerkt: Nach diesen beiden fragt Homes nicht wieder.')).toBeVisible();
-  await expect(paare).toHaveCount(5);
+  await expect(page).toHaveURL(/\/kontakte\/privat\/k0$/);
+  await expect(paare).toHaveCount(n - 1);
   await page.screenshot({ path: info.outputPath('dieselbe-nein-411.png'), fullPage: true });
+  // the task's address opens a contact with something open, not a list
+  await page.goto('/kontakte/dieselbe');
+  await expect(page).toHaveURL(/\/kontakte\/(privat\/)?[a-z0-9]+$/);
+  await expect(page.locator('section.paar').first()).toBeVisible();
 });
 
 // owner 2026-11-06: a contact's picture is a suggestion, never an answer — „Ist das …?“ shows it
-// beside the person Immich gave its face; Nein takes Homes' upload out at once and the question goes
-test('Ist das …? asks about a contact picture and takes a Nein', async ({ page }, info) => {
+// beside the person Immich gave its face, on the contact; Nein takes Homes' upload out at once
+test('Ist das …? asks on the contact and takes a Nein', async ({ page }, info) => {
   await page.setViewportSize({ width: 411, height: 900 });
-  await page.goto('/kontakte/dieselbe');
+  await page.goto('/kontakte/privat');
+  await expect(page.locator('.kontakte li', { hasText: 'Lena Schmidt' }).locator('.anzahl')).toBeVisible();
+  await page.goto('/kontakte/privat/b0');
   const fragen = page.locator('section.frage');
-  await expect(fragen).toHaveCount(2);
-  await expect(fragen.first()).toContainText('Ist das Lena Schmidt?');
-  await expect(fragen.first()).toContainText('Bild im Kontakt');
-  await expect(fragen.first().getByRole('button', { name: 'Ja, das ist Lena Schmidt' })).toBeVisible();
-  await expect(fragen.last()).toContainText('Oma Hilde');
-  await page.screenshot({ path: info.outputPath('ist-das-411.png'), fullPage: true });
-  await fragen.last().getByRole('button', { name: 'Nein' }).click();
-  await expect(page.getByText('Gemerkt: Homes hat das Bild aus Immich genommen und fragt nach dieser Person nicht wieder.')).toBeVisible();
   await expect(fragen).toHaveCount(1);
+  await expect(fragen).toContainText('Ist das Lena Schmidt?');
+  await expect(fragen).toContainText('Bild im Kontakt');
+  await expect(fragen.getByRole('button', { name: 'Ja, das ist Lena Schmidt' })).toBeVisible();
+  await page.screenshot({ path: info.outputPath('ist-das-411.png'), fullPage: true });
+  await page.goto('/kontakte/privat/b1');
+  await expect(fragen).toContainText('Oma Hilde');
+  await fragen.getByRole('button', { name: 'Nein' }).click();
+  await expect(page.getByText('Gemerkt: Homes hat das Bild aus Immich genommen und fragt nach dieser Person nicht wieder.')).toBeVisible();
+  await expect(fragen).toHaveCount(0);
   await page.screenshot({ path: info.outputPath('ist-das-nein-411.png'), fullPage: true });
 });
 
@@ -1066,18 +1075,19 @@ for (const scheme of ['dark', 'light']) {
 // contact checks and corrects their own fields on a page without a login (its own host and
 // listener, kontakt.<domain>), the link dies on the answer, and the review shows each field
 // before → after with the checks; only what is ticked is written
+// owner 2026-11-08: „nicht Link erstellen und dann teilen, sondern direkt Link teilen“ — one tap
+// makes the link and opens the phone's share sheet with the prepared message
 test('Kontakt prüfen lassen: link, the public form, the review', async ({ page, browser }, info) => {
   await page.setViewportSize({ width: 411, height: 900 });
+  await page.addInitScript(() => { navigator.share = (d) => { window.geteilt = d.text; return Promise.resolve(); }; });
   await page.goto('/kontakte/h6');
-  await page.getByRole('link', { name: 'Kontakt prüfen lassen' }).click();
-  await expect(page.getByRole('heading', { name: 'Oma Hilde prüfen lassen' })).toBeVisible();
-  await expect(page.locator('dl.felder')).toContainText('0711 445566');
-  await page.getByRole('button', { name: 'Link erstellen' }).click();
-  await expect(page.getByText('Link erstellt.')).toBeVisible();
-  const text = await page.locator('#pruefen-text').inputValue();
+  await page.locator('.oben').getByRole('button', { name: 'Link teilen' }).click();
+  await page.waitForFunction(() => window.geteilt);
+  const text = await page.evaluate(() => window.geteilt);
   expect(text).toContain('Hallo Oma,');
   const link = text.match(/http:\/\/127\.0\.0\.1:8652\/[A-Za-z0-9_-]{43}/)[0];
-  await page.screenshot({ path: info.outputPath('pruefen-link-411.png'), fullPage: true });
+  await expect(page.locator('.oben').getByRole('button', { name: 'Link teilen' })).toBeEnabled();
+  await expect(page).toHaveURL(/\/kontakte\/h6$/);
 
   // the contact, without a login, in a browser of their own
   const ctx = await browser.newContext({ viewport: { width: 411, height: 900 }, colorScheme: 'light' });
@@ -1108,11 +1118,11 @@ test('Kontakt prüfen lassen: link, the public form, the review', async ({ page,
   await expect(kontakt.getByRole('heading', { name: 'Link ungültig oder abgelaufen' })).toBeVisible();
   await ctx.close();
 
-  // the review: before → after, the e-mail flagged and so not ticked
+  // the review on the contact, from the task: before → after, the e-mail flagged and so not ticked
   await page.goto('/aufgaben');
   await page.getByRole('link', { name: '1 Kontakt-Antwort prüfen' }).first().click();
-  await expect(page).toHaveURL(/\/kontakte\/antworten$/);
-  await page.getByRole('link', { name: 'Oma Hilde' }).click();
+  await expect(page).toHaveURL(/\/kontakte\/h6$/);
+  await expect(page.getByRole('heading', { name: 'Antwort auf deinen Link' })).toBeVisible();
   const zeilen = page.locator('.aenderung');
   await expect(zeilen).toHaveCount(4);
   await expect(zeilen.filter({ hasText: 'hilde@nowhere.example' })).toContainText('gibt es nicht');
@@ -1123,6 +1133,7 @@ test('Kontakt prüfen lassen: link, the public form, the review', async ({ page,
   await expect(page.getByText('3 Änderungen ins Adressbuch geschrieben')).toBeVisible();
   await expect(zeilen.filter({ hasText: 'hilde@nowhere.example' })).toContainText('nicht übernommen');
   await page.screenshot({ path: info.outputPath('kontakt-antwort-entschieden-411.png'), fullPage: true });
+  await expect(page.locator('.karte').first()).toContainText('0171 2345678'); // the card as written, on the same page
   await page.goto('/kontakte/h6');
   await expect(page.locator('body')).toContainText('0171 2345678');
   await expect(page.locator('body')).not.toContainText('nowhere.example');
@@ -1135,9 +1146,15 @@ test('Kontakt prüfen lassen: link, the public form, the review', async ({ page,
 // and the message; „Alle übernehmen“ leaves the removal and the note alone
 test('Kontakt prüfen lassen: formats, address, removal, photo, message', async ({ page, browser }, info) => {
   await page.setViewportSize({ width: 411, height: 900 });
-  await page.goto('/kontakte/pruefen?buch=haushalt&uid=h1');
-  await page.getByRole('button', { name: 'Link erstellen' }).click();
-  const link = (await page.locator('#pruefen-text').inputValue()).match(/http:\/\/127\.0\.0\.1:8652\/[A-Za-z0-9_-]{43}/)[0];
+  // a browser without a share sheet: the row's icon copies the message and says so
+  await page.addInitScript(() => { Object.defineProperty(Navigator.prototype, 'share', { value: undefined, configurable: true }); });
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/kontakte');
+  const knopf = page.locator('.kontakte li', { hasText: 'Ben Beispiel' }).getByRole('button', { name: 'Link teilen: Ben Beispiel prüfen lassen' });
+  await knopf.click();
+  await expect(knopf).toHaveText('Link kopiert');
+  const link = (await page.evaluate(() => navigator.clipboard.readText())).match(/http:\/\/127\.0\.0\.1:8652\/[A-Za-z0-9_-]{43}/)[0];
+  await page.screenshot({ path: info.outputPath('kontakte-kopiert-411.png'), fullPage: true });
 
   const ctx = await browser.newContext({ viewport: { width: 411, height: 900 }, colorScheme: 'light' });
   const k = await ctx.newPage();
@@ -1198,8 +1215,9 @@ test('Kontakt prüfen lassen: formats, address, removal, photo, message', async 
   await expect(k.getByRole('heading', { name: 'Danke!' })).toBeVisible();
   await ctx.close();
 
-  await page.goto('/kontakte/antworten');
-  await page.getByRole('link', { name: 'Ben Beispiel' }).click();
+  await page.goto('/kontakte');
+  await page.locator('.kontakte li', { hasText: 'Ben Beispiel' }).getByRole('link', { name: /^Ben Beispiel/ }).click();
+  await expect(page).toHaveURL(/\/kontakte\/h1$/);
   const zeilen = page.locator('.aenderung');
   const weg = zeilen.filter({ hasText: '+49 160 9876543' });
   await expect(weg).toContainText('entfernen');

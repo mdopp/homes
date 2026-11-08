@@ -13,17 +13,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mdopp/homes/internal/caldav"
 	"github.com/mdopp/homes/internal/gesichter"
 	"github.com/mdopp/homes/internal/immich"
+	"github.com/mdopp/homes/internal/kontaktantwort"
 	"github.com/mdopp/homes/internal/texte"
 )
 
 // DieselbePath is „Dieselbe Person?“ (owner 2026-11-06): pairs of persons
-// whose faces Immich holds close, ten a page, each with its two faces,
-// names and photo counts, and Ja (merge in Immich), Nein (never asked
-// again) and Überspringen. Only the Immich key's owner, as Meine
-// Kontakte; the pairs come from the hourly run (gesichter.Vorschlagen),
-// never from Immich while the page loads.
+// whose faces Immich holds close, each with its two faces, names and photo
+// counts, and Ja (merge in Immich), Nein (never asked again) and
+// Überspringen; from the hourly run (gesichter.Vorschlagen), for the key's
+// owner. Asked on the contact's page (2026-11-08): this, the task's
+// address, opens the next such contact, then what belongs to none.
 const DieselbePath = KontaktePath + "/dieselbe"
 
 const (
@@ -31,50 +33,87 @@ const (
 	dieselbeWait    = 30 * time.Second // a merge in Immich before the page says so
 )
 
-const dieselbeStyle = `<style>.paar{margin:18px 0 0;padding:14px;border-radius:16px;background:var(--card)}
-.paar .zwei{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0}.paar figure{margin:0;text-align:center;min-width:0}
-.paar img,.paar .ohne{display:block;width:96px;height:96px;margin:0 auto 8px;border-radius:50%;object-fit:cover;background:var(--track)}
-.paar figure>a{display:block}.paar figcaption{overflow-wrap:anywhere}.paar figcaption b{display:block}.paar figcaption i,.paar figcaption span,.paar figcaption small{display:block;color:var(--muted);font-size:.85rem}.paar figcaption small{font-size:.78rem;margin-top:2px}
-.paar form{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}.paar form button{flex:1 1 auto}.paar form button.leise{flex:0 0 auto}
-.blaettern{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:20px 0 0}</style>`
+const dieselbeStyle = `<style>.paar{margin:18px 0 0;padding:14px;border-radius:16px;background:var(--card)}.paar .zwei{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0}.paar figure{margin:0;text-align:center;min-width:0}.paar img,.paar .ohne{display:block;width:96px;height:96px;margin:0 auto 8px;border-radius:50%;object-fit:cover;background:var(--track)}
+.paar figure>a{display:block}.paar figcaption{overflow-wrap:anywhere}.paar figcaption b{display:block}.paar figcaption i,.paar figcaption span,.paar figcaption small{display:block;color:var(--muted);font-size:.85rem}.paar figcaption small{font-size:.78rem;margin-top:2px}.paar form{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}.paar form button{flex:1 1 auto}.paar form button.leise{flex:0 0 auto}</style>`
 
-// Dieselbe is the page, and its answers (POST a, b, antwort ja|nein|spaeter;
-// about a contact's picture kontakt, b, antwort ja|nein|keinfoto).
+// Dieselbe is the task's address, and the answers to what is left (POST
+// as on a contact's page, immichAntwort).
 func Dieselbe(cfg StartConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost && !showOnly(w, r, texte.T(texte.Dieselbe)) {
-			return
-		}
-		if !privatEigen(r, cfg) {
-			http.Redirect(w, r, KontaktePath, http.StatusSeeOther)
-			return
-		}
 		said, problem := "", ""
 		if r.Method == http.MethodPost {
 			if !fromHomes(r) {
 				http.Error(w, "Das geht nur von Homes' eigener Seite.", http.StatusForbidden)
 				return
 			}
-			r.ParseForm()
-			antwort, kontakt := r.PostForm.Get("antwort"), r.PostForm.Get("kontakt")
-			erlaubt := []string{"ja", "nein", "spaeter"}
-			if kontakt != "" {
-				erlaubt[2] = "keinfoto"
-			}
-			if !slices.Contains(erlaubt, antwort) {
-				http.Error(w, "Ja, Nein oder Überspringen? Die Antwort fehlt.", http.StatusBadRequest)
+			var ok bool
+			if said, problem, ok = immichAntwort(w, r, cfg); !ok {
 				return
 			}
-			a, b := r.PostForm.Get("a"), r.PostForm.Get("b")
-			antworten, gesagt := func(ctx context.Context) (string, error) { return cfg.Gesichter.Antworten(ctx, a, b, antwort) }, dieselbeGesagt
-			if kontakt != "" {
-				antworten, gesagt = func(ctx context.Context) (string, error) { return cfg.Gesichter.Bestaetigen(ctx, kontakt, b, antwort) }, istGesagt
-			}
-			said, problem = dieselbeAntworten(r.Context(), antwort, antworten, gesagt)
+		} else if !showOnly(w, r, texte.T(texte.Dieselbe)) {
+			return
 		}
-		seite, _ := strconv.Atoi(r.FormValue("seite"))
-		writePage(w, http.StatusOK, dieselbeSeite(r, cfg, seite, said, problem))
+		if !privatEigen(r, cfg) {
+			http.Redirect(w, r, KontaktePath, http.StatusSeeOther)
+			return
+		}
+		var haus, meine []caldav.Contact
+		if cfg.Contacts != nil {
+			fetch(r, func(ctx context.Context) {
+				haus, _, _ = cfg.Contacts.Contacts(ctx)
+				meine, _ = meineKontakte(ctx, cfg, r.Header.Get("Remote-User"))
+			})
+		}
+		o, n := offenFuer(r, cfg), len(meine)
+		for i, ct := range append(meine, haus...) {
+			if buch := map[bool]string{true: kontaktantwort.Privat, false: kontaktantwort.Haushalt}[i < n]; r.Method != http.MethodPost && o.zahl(cfg, buch, ct.UID, kontaktName(ct)) > 0 {
+				http.Redirect(w, r, kontaktPfad(buch, ct.UID), http.StatusSeeOther)
+				return
+			}
+		}
+		writePage(w, http.StatusOK, dieselbeRest(r, cfg, said, problem))
 	}
+}
+
+// dieselbeRest is the page once no contact has a question left: what
+// belongs to none, the outcome, the questions, the first pairs.
+func dieselbeRest(r *http.Request, cfg StartConfig, said, problem string) *strings.Builder {
+	t := func(id texte.ID) string { return html.EscapeString(texte.T(id)) }
+	b := kontakteHead(r, cfg, texte.T(texte.Dieselbe), "", texte.T(texte.Dieselbe))
+	b.WriteString(dieselbeStyle + "<h1>" + t(texte.Dieselbe) + "</h1>" + gesagt(said, problem))
+	fragen, paare := cfg.Gesichter.Fragen(), cfg.Gesichter.Paare()
+	b.WriteString(istFragen(cfg, fragen, DieselbePath))
+	if len(paare)+len(fragen) == 0 {
+		b.WriteString("<p class=k>" + t(texte.DieselbeLeer) + "</p>")
+	}
+	for _, p := range paare[:min(len(paare), dieselbeJeSeite)] {
+		b.WriteString(paarKarte(cfg, p, DieselbePath))
+	}
+	b.WriteString(wieDas(texte.IstDasHinweis, texte.DieselbeHinweis))
+	return b
+}
+
+// immichAntwort passes the key owner's answer on: about a contact's
+// picture (kontakt, b, antwort ja|nein|keinfoto) or a pair (a, b, antwort
+// ja|nein|spaeter); ok false: refused, and said so.
+func immichAntwort(w http.ResponseWriter, r *http.Request, cfg StartConfig) (said, problem string, ok bool) {
+	if !privatEigen(r, cfg) {
+		http.Redirect(w, r, KontaktePath, http.StatusSeeOther)
+		return "", "", false
+	}
+	r.ParseForm()
+	antwort, kontakt := r.PostForm.Get("antwort"), r.PostForm.Get("kontakt")
+	if erlaubt := map[bool][]string{false: {"ja", "nein", "spaeter"}, true: {"ja", "nein", "keinfoto"}}[kontakt != ""]; !slices.Contains(erlaubt, antwort) {
+		http.Error(w, "Ja, Nein oder Überspringen? Die Antwort fehlt.", http.StatusBadRequest)
+		return "", "", false
+	}
+	a, b := r.PostForm.Get("a"), r.PostForm.Get("b")
+	antworten, gesagt := func(ctx context.Context) (string, error) { return cfg.Gesichter.Antworten(ctx, a, b, antwort) }, dieselbeGesagt
+	if kontakt != "" {
+		antworten, gesagt = func(ctx context.Context) (string, error) { return cfg.Gesichter.Bestaetigen(ctx, kontakt, b, antwort) }, istGesagt
+	}
+	said, problem = dieselbeAntworten(r.Context(), antwort, antworten, gesagt)
+	return said, problem, true
 }
 
 // dieselbeGesagt are a pair's answers as the page says them.
@@ -92,7 +131,7 @@ func dieselbeAntworten(ctx context.Context, antwort string, antworten func(conte
 	case errors.Is(err, gesichter.ErrKeinPaar), errors.Is(err, gesichter.ErrKeineFrage):
 		return "", texte.T(texte.DieselbeWeg)
 	case errors.As(err, &fehlt):
-		return "", "" // the page's line says which permission
+		return "", fmt.Sprintf(texte.T(texte.MeineKontakteRecht), fehlt.Recht)
 	case errors.Is(err, gesichter.ErrNichtZusammen):
 		return "", texte.T(texte.DieselbeNichtGemacht)
 	case err != nil:
@@ -105,40 +144,14 @@ func dieselbeAntworten(ctx context.Context, antwort string, antworten func(conte
 	return texte.T(gesagt[antwort]), ""
 }
 
-// dieselbeSeite is the page: its line, the outcome, the pairs of seite.
-func dieselbeSeite(r *http.Request, cfg StartConfig, seite int, said, problem string) *strings.Builder {
+// paarKarte is one pair, its two faces and its three buttons, posted to action.
+func paarKarte(cfg StartConfig, p gesichter.Paar, action string) string {
 	t := func(id texte.ID) string { return html.EscapeString(texte.T(id)) }
-	b := kontakteHead(r, cfg, texte.T(texte.KontakteFragenH1), DieselbePath, texte.T(texte.KontakteFragen))
-	b.WriteString(dieselbeStyle + "<h1>" + t(texte.KontakteFragenH1) + "</h1>")
-	if recht := cfg.Gesichter.Fehlt(); recht != "" {
-		problem = fmt.Sprintf(texte.T(texte.MeineKontakteRecht), recht)
-	}
-	b.WriteString(gesagt(said, problem))
-	paare := cfg.Gesichter.Paare()
-	seiten := max(1, (len(paare)+dieselbeJeSeite-1)/dieselbeJeSeite)
-	seite = min(max(seite, 1), seiten)
-	b.WriteString(istFragen(cfg, seite))
-	if len(paare) == 0 {
-		b.WriteString("<p class=k>" + t(texte.DieselbeLeer) + "</p>")
-	}
-	for _, p := range paare[(seite-1)*dieselbeJeSeite : min(len(paare), seite*dieselbeJeSeite)] {
-		b.WriteString(`<section class=paar><div class=zwei>` + dieselbeGesicht(cfg, p.A) + dieselbeGesicht(cfg, p.B) + `</div><form method=post action=` + DieselbePath +
-			`><input type=hidden name=a value="` + html.EscapeString(p.A.ID) + `"><input type=hidden name=b value="` + html.EscapeString(p.B.ID) +
-			`"><input type=hidden name=seite value=` + strconv.Itoa(seite) + `><button name=antwort value=ja data-laeuft="` + t(texte.DieselbeJaLaeuft) + `">` + t(texte.DieselbeJa) +
-			`</button><button name=antwort value=nein data-laeuft="` + t(texte.DieselbeNeinLaeuft) + `">` + t(texte.DieselbeNein) +
-			`</button><button name=antwort value=spaeter class=leise data-laeuft="` + t(texte.DieselbeSpaeterLauft) + `">` + t(texte.DieselbeSpaeter) + `</button></form></section>`)
-	}
-	if seiten > 1 {
-		link := func(n int, id texte.ID) string {
-			if n < 1 || n > seiten {
-				return "<span></span>"
-			}
-			return `<a href="` + DieselbePath + `?seite=` + strconv.Itoa(n) + `">` + t(id) + `</a>`
-		}
-		b.WriteString(`<nav class=blaettern>` + link(seite-1, texte.DieselbeZurueck) + `<span class=k>` + html.EscapeString(fmt.Sprintf(texte.T(texte.DieselbeSeiten), seite, seiten)) + `</span>` + link(seite+1, texte.DieselbeWeiter) + `</nav>`)
-	}
-	b.WriteString(wieDas(texte.IstDasHinweis, texte.DieselbeHinweis))
-	return b
+	return `<section class=paar><div class=zwei>` + dieselbeGesicht(cfg, p.A) + dieselbeGesicht(cfg, p.B) + `</div><form method=post action="` + html.EscapeString(action) +
+		`"><input type=hidden name=a value="` + html.EscapeString(p.A.ID) + `"><input type=hidden name=b value="` + html.EscapeString(p.B.ID) +
+		`"><button name=antwort value=ja data-laeuft="` + t(texte.DieselbeJaLaeuft) + `">` + t(texte.DieselbeJa) +
+		`</button><button name=antwort value=nein data-laeuft="` + t(texte.DieselbeNeinLaeuft) + `">` + t(texte.DieselbeNein) +
+		`</button><button name=antwort value=spaeter class=leise data-laeuft="` + t(texte.DieselbeSpaeterLauft) + `">` + t(texte.DieselbeSpaeter) + `</button></form></section>`
 }
 
 // dieselbeGesicht is one person of a pair: the face, a link to all its

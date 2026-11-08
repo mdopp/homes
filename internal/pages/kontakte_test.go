@@ -45,7 +45,7 @@ func TestKontakteListsTheAddressBookByName(t *testing.T) {
 		`<a href="/kontakte/o">Örtel, Jana</a> <a class=ruf href="mailto:jana@example.org">jana@example.org</a>`,
 		`<a href="/kontakte/x">Xaver</a></li>`, // nothing to tap
 		`<a href="/kontakte/z">Zahnarzt Dr. Berg</a> <a class=ruf href="tel:071112345">`,
-		`type=search id=kontakte-suche name=q`)
+		`type=search id=kontakte-suche placeholder=`)
 	before(t, body, ">Anna<", ">Örtel, Jana<") // Ö as O
 	before(t, body, ">Örtel, Jana<", ">Xaver<")
 	before(t, body, ">Xaver<", ">Zahnarzt Dr. Berg<")
@@ -57,21 +57,14 @@ func TestKontakteListsTheAddressBookByName(t *testing.T) {
 	}
 }
 
-// The search finds a name, a number and an e-mail, as typed or plainer.
+// The search filters while typing (owner 2026-11-08: no button, no second
+// page), by each row's name, numbers and e-mails as plain words.
 func TestKontakteSearch(t *testing.T) {
 	_, c := addressBook(t, "a|Anna|+49 151 2222|anna@example.org", "b|Bäckerei Müller|0711 999|", "c|Clara||clara@schule.example")
-	for q, want := range map[string]string{"anna": ">Anna<", "mueller": "", "Müller": ">Bäckerei Müller<", "0711 9": ">Bäckerei Müller<", "schule": ">Clara<", "151": ">Anna<"} {
-		_, body, _ := familyPage(t, Kontakte, StartConfig{Contacts: c}, "GET", "/kontakte?q="+strings.ReplaceAll(q, " ", "+"), "family")
-		n := strings.Count(body, "<li data-suche=")
-		switch {
-		case want == "" && n != 0, want == "" && !strings.Contains(body, "Kein Kontakt passt zu „"+q+"“."):
-			t.Errorf("%q: %d rows, want none and the line", q, n)
-		case want != "" && (n != 1 || !strings.Contains(body, want)):
-			t.Errorf("%q: %d rows, want %s alone", q, n, want)
-		}
-	}
-	_, body, _ := familyPage(t, Kontakte, StartConfig{Contacts: c}, "GET", "/kontakte?q=%3Cq%3E", "family")
-	mustContain(t, body, "Kein Kontakt passt zu „&lt;q&gt;“.")
+	_, body, _ := familyPage(t, Kontakte, StartConfig{Contacts: c}, "GET", "/kontakte", "family")
+	mustContain(t, body, `<li data-suche="anna491512222annaexampleorg">`, `<li data-suche="backereimuller0711999">`, `<li data-suche="claraclaraschuleexample">`,
+		`<p class=k id=kontakte-keiner data-vorlage="Kein Kontakt passt zu „%s“." hidden></p>`, "window.homesKontakte")
+	mustNotContain(t, body, "name=q", ">Suchen</button>")
 }
 
 // Many contacts: a card per first letter; few: one card.

@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/mdopp/homes/internal/caldav"
@@ -82,14 +83,14 @@ func TestMeineKontakte(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("%d %s", rec.Code, body)
 	}
-	mustContain(t, body, "<h1>Meine Kontakte</h1>", `<a href="/kontakte/privat/c/fotos">Carla Berg</a>`, `href="tel:07112"`, `<a href="/kontakte/privat/o/fotos">Oma Erna</a>`, `id=kontakte-suche`)
+	mustContain(t, body, "<h1>Meine Kontakte</h1>", `<a href="/kontakte/privat/c">Carla Berg</a>`, `href="tel:07112"`, `<a href="/kontakte/privat/o">Oma Erna</a>`, `id=kontakte-suche`)
 	mustNotContain(t, body, "Xaver", "Emil Geheim")
-	for path, want := range map[string]string{"/kontakte/privat/c/fotos": "https://photos.box.test/people/" + fake.ID("Carla Berg"), "/kontakte/privat/o/fotos": "https://photos.box.test/people/p-oma"} {
-		if rec := as(MeineKontakte, cfg, path, "anna", "anna@box.test"); rec.Code != http.StatusFound || rec.Header().Get("Location") != want {
-			t.Errorf("%s: %d %q", path, rec.Code, rec.Header().Get("Location"))
+	for path, want := range map[string]string{"/kontakte/privat/c": "https://photos.box.test/people/" + fake.ID("Carla Berg"), "/kontakte/privat/o": "https://photos.box.test/people/p-oma"} {
+		if rec := as(MeineKontakte, cfg, path, "anna", "anna@box.test"); !strings.Contains(rec.Body.String(), `<p class=weiter-in><a href="`+want+`" target=_blank rel=noopener aria-label="Fotos in Immich">Fotos</a></p>`) {
+			t.Errorf("%s: no Fotos to %s:\n%s", path, want, rec.Body.String())
 		}
 	}
-	if rec := as(MeineKontakte, cfg, "/kontakte/privat/x/fotos", "anna", "anna@box.test"); rec.Code != http.StatusNotFound {
+	if rec := as(MeineKontakte, cfg, "/kontakte/privat/x", "anna", "anna@box.test"); rec.Code != http.StatusNotFound {
 		t.Fatalf("unknown: %d", rec.Code)
 	}
 	// the household's „Fotos“ leads to the person Homes gave the card
@@ -97,7 +98,7 @@ func TestMeineKontakte(t *testing.T) {
 		t.Fatalf("household: %q", rec.Header().Get("Location"))
 	}
 	// anyone else: to Kontakte, no link
-	for _, path := range []string{MeineKontaktePath, "/kontakte/privat/c/fotos"} {
+	for _, path := range []string{MeineKontaktePath, "/kontakte/privat/c"} {
 		if rec := as(MeineKontakte, cfg, path, "ben", "ben@box.test"); rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != KontaktePath {
 			t.Errorf("ben %s: %d", path, rec.Code)
 		}

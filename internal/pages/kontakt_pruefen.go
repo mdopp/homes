@@ -9,23 +9,22 @@ import (
 	"html"
 	"log"
 	"net/http"
-	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/mdopp/homes/internal/caldav"
+
 	"github.com/mdopp/homes/internal/haushalt"
 	"github.com/mdopp/homes/internal/kontaktantwort"
 	"github.com/mdopp/homes/internal/texte"
 )
 
-// Kontakt prüfen lassen (owner 2026-11-07, kontaktantwort): the person
-// picks one of their Handy-Kontakte or, an admin, one of the house's,
-// sees what the link will show, makes it, and sends it from the phone's
-// share sheet with a prepared sentence (the Bote writes only to the
-// household). The answers come back to Kontakt-Antworten: each field
-// before → after with what the checks found, taken one by one or all,
-// or discarded. Nothing reaches an address book without that.
+// Kontakt prüfen lassen (owner 2026-11-07, kontaktantwort; 2026-11-08:
+// „direkt Link teilen“): one button makes the link and hands it to the
+// phone's share sheet. The answer comes back to the contact's page, each
+// field before → after with what the checks found; nothing reaches an
+// address book without that review.
 const (
 	PruefenPath   = KontaktePath + "/pruefen"
 	AntwortenPath = KontaktePath + "/antworten"
@@ -36,21 +35,21 @@ func (cfg StartConfig) pruefenAn() bool {
 	return cfg.Antworten != nil && cfg.Contacts != nil && cfg.KontaktURL != ""
 }
 
-// pruefenAktion is a list's one action, at its top (q picks the book).
-func pruefenAktion(cfg StartConfig, q string) string {
-	if !cfg.pruefenAn() {
+// pruefenKnopf is „Link teilen“ for the contact uid of buch (pruefenScript);
+// klein: the row's icon.
+func pruefenKnopf(r *http.Request, cfg StartConfig, buch, uid, name string, klein bool) string {
+	if !cfg.pruefenAn() || uid == "" || buch == kontaktantwort.Haushalt && !isAdmin(r) {
 		return ""
 	}
-	return `<p class=weiter-in><a href=` + PruefenPath + q + `>` + wort(texte.PruefenTitel) + `</a></p>`
+	innen, label := wort(texte.PruefenTeilen), ""
+	if klein {
+		innen, label = teilenSymbol, ` aria-label="`+html.EscapeString(fmt.Sprintf(texte.T(texte.PruefenTeilenFuer), name))+`"`
+	}
+	return `<form method=post action=` + PruefenPath + ` class=teilen data-teilen><input type=hidden name=buch value=` + buch + `><input type=hidden name=uid value="` + html.EscapeString(uid) +
+		`"><button` + label + ` data-laeuft="` + wort(texte.PruefenErstelltLaeuft) + `" data-kopiert="` + wort(texte.PruefenKopiert) + `" data-nochmal="` + wort(texte.PruefenNochmal) + `">` + innen + `</button></form>`
 }
 
-// pruefenKnopf is a house contact's „Kontakt prüfen lassen“, for an admin.
-func pruefenKnopf(r *http.Request, cfg StartConfig, uid string) string {
-	if !cfg.pruefenAn() || !isAdmin(r) {
-		return ""
-	}
-	return `<p class=weiter-in><a href="` + PruefenPath + `?buch=haushalt&amp;uid=` + html.EscapeString(url.QueryEscape(uid)) + `">` + wort(texte.PruefenTitel) + `</a></p>`
-}
+const teilenSymbol = `<svg viewBox="0 0 24 24" width=20 height=20 aria-hidden=true fill=none stroke=currentColor stroke-width=2 stroke-linecap=round><circle cx=18 cy=5 r=3 /><circle cx=6 cy=12 r=3 /><circle cx=18 cy=19 r=3 /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>`
 
 func wort(id texte.ID) string { return html.EscapeString(texte.T(id)) }
 
@@ -67,228 +66,79 @@ func pruefenKontakte(ctx context.Context, r *http.Request, cfg StartConfig, buch
 	return meineKontakte(ctx, cfg, r.Header.Get("Remote-User"))
 }
 
-// Pruefen is the start: the list to pick from (?buch=privat|haushalt), a
-// contact's page before the link (?uid=), and the link made (POST).
+// Pruefen makes the link (POST buch=privat|haushalt, uid) and answers the
+// sentence to send with it, a refusal as one plain sentence; a GET goes
+// to Kontakte.
 func Pruefen(cfg StartConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
-		if !cfg.pruefenAn() {
-			notSetContacts.write(w, r, cfg, texte.T(texte.PruefenTitel))
+		if r.Method != http.MethodPost {
+			http.Redirect(w, r, KontaktePath, http.StatusSeeOther)
 			return
 		}
-		if r.Method != http.MethodPost && !showOnly(w, r, texte.T(texte.PruefenTitel)) {
-			return
-		}
-		if r.Method == http.MethodPost {
-			r.Body = http.MaxBytesReader(w, r.Body, 4<<10)
-			r.ParseForm()
-		}
-		buch, uid := r.FormValue("buch"), r.FormValue("uid")
+		r.Body = http.MaxBytesReader(w, r.Body, 4<<10)
+		buch, uid := r.PostFormValue("buch"), r.PostFormValue("uid")
 		if buch != kontaktantwort.Haushalt {
 			buch = kontaktantwort.Privat
 		}
-		if buch == kontaktantwort.Haushalt && !isAdmin(r) {
-			missing{http.StatusForbidden, texte.T(texte.PruefenNurAdmins), texte.T(texte.PruefenTitel), PruefenPath, texte.T(texte.PruefenTitel)}.write(w, r, cfg)
+		switch {
+		case !cfg.pruefenAn() || !fromHomes(r): // no button without the one, nor from elsewhere
+			http.Error(w, "Nur von Homes' eigener Seite.", http.StatusForbidden)
+			return
+		case buch == kontaktantwort.Haushalt && !isAdmin(r):
+			http.Error(w, texte.T(texte.PruefenNurAdmins), http.StatusForbidden)
 			return
 		}
 		var all []caldav.Contact
 		var err error
 		fetch(r, func(ctx context.Context) { all, err = pruefenKontakte(ctx, r, cfg, buch) })
-		weg := []string{texte.T(texte.PruefenTitel)}
-		ct, gefunden := caldav.Contact{}, false
-		for _, c := range all {
-			if uid != "" && c.UID == uid {
-				ct, gefunden = c, true
-				weg = append(weg, PruefenPath+"?buch="+buch, kontaktantwort.FelderVon(c).Name())
-			}
-		}
-		b := kontakteHead(r, cfg, texte.T(texte.PruefenTitel), "", weg...)
-		b.WriteString(kontakteStyle + pruefenStyle)
 		if err != nil {
 			log.Printf("homes: kontakt prüfen: %s: %v", buch, err)
-			b.WriteString("<h1>" + wort(texte.PruefenTitel) + "</h1><p class=k>" + saysNoContacts + "</p>")
-			writePage(w, http.StatusOK, b)
+			http.Error(w, saysNoContacts, http.StatusServiceUnavailable)
 			return
 		}
-		if uid == "" {
-			pruefenListe(b, r, cfg, buch, all)
-			writePage(w, http.StatusOK, b)
+		i := slices.IndexFunc(all, func(ct caldav.Contact) bool { return uid != "" && ct.UID == uid })
+		if i < 0 {
+			http.Error(w, texte.T(texte.PruefenWeg), http.StatusNotFound)
 			return
 		}
-		if gefunden {
-			f := kontaktantwort.FelderVon(ct)
-			if r.Method == http.MethodPost {
-				pruefenErstellen(w, r, cfg, b, buch, uid, f)
-				return
-			}
-			b.WriteString("<h1>" + html.EscapeString(fmt.Sprintf(texte.T(texte.PruefenVorher), f.Name())) + "</h1>")
-			b.WriteString("<p>" + html.EscapeString(fmt.Sprintf(texte.T(texte.PruefenWas), cmp.Or(f.Vorname, f.Name()))) + "</p>" + felderKarte(f))
-			b.WriteString(`<form method=post action=` + PruefenPath + `><input type=hidden name=buch value=` + buch + `><input type=hidden name=uid value="` + html.EscapeString(uid) +
-				`"><button data-laeuft="` + wort(texte.PruefenErstelltLaeuft) + `">` + wort(texte.PruefenErstellen) + `</button></form>` + wieDas(texte.PruefenHinweis))
-			writePage(w, http.StatusOK, b)
+		f := kontaktantwort.FelderVon(all[i])
+		von, _, _ := strings.Cut(strings.TrimSpace(r.Header.Get("Remote-Name")), " ")
+		token, frage, err := cfg.Antworten.Neu(r.Header.Get("Remote-User"), von, buch, uid, f)
+		if err != nil {
+			log.Printf("homes: kontakt prüfen: the link not made: %v", err)
+			http.Error(w, texte.T(texte.PruefenNicht), http.StatusServiceUnavailable)
 			return
 		}
-		b.WriteString("<h1>" + wort(texte.PruefenTitel) + "</h1><p>" + wort(texte.PruefenWeg) + "</p><p><a href=" + PruefenPath + "?buch=" + buch + ">" + wort(texte.PruefenZurueck) + "</a></p>")
-		writePage(w, http.StatusNotFound, b)
+		log.Printf("homes: kontakt prüfen: link %s made (%s)", frage.ID, buch)
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		fmt.Fprintf(w, texte.T(texte.PruefenText), cmp.Or(f.Vorname, f.Name()), strings.TrimRight(cfg.KontaktURL, "/")+"/"+token)
 	}
 }
 
-// pruefenListe is the list to pick from, with the switch between the two books.
-func pruefenListe(b *strings.Builder, r *http.Request, cfg StartConfig, buch string, all []caldav.Contact) {
-	b.WriteString("<h1>" + wort(texte.PruefenTitel) + "</h1>")
-	defer b.WriteString(wieDas(texte.PruefenHinweis))
-	if isAdmin(r) {
-		cur := func(x string) string {
-			if x == buch {
-				return " aria-current=page"
-			}
-			return ""
-		}
-		b.WriteString(`<p class=buecher><a href=` + PruefenPath + `?buch=privat` + cur(kontaktantwort.Privat) + `>` + wort(texte.PruefenHandy) + `</a>` +
-			`<a href=` + PruefenPath + `?buch=haushalt` + cur(kontaktantwort.Haushalt) + `>` + wort(texte.PruefenHaus) + `</a></p>`)
-	}
-	if len(all) == 0 {
-		b.WriteString("<p class=k>" + wort(texte.PruefenLeer) + "</p>")
-		return
-	}
-	field := wort(texte.KontakteSuchen)
-	b.WriteString(`<input type=search id=kontakte-suche placeholder="` + field + `" aria-label="` + field + `" autocomplete=off><p class=k id=kontakte-keiner data-vorlage="` + wort(texte.KontakteKeiner) + `" hidden></p>`)
-	kontakteListe(b, kontaktZeilen(all, func(uid string) string { return PruefenPath + "?buch=" + buch + "&uid=" + url.QueryEscape(uid) }), len(all) >= kontakteBuchstaben)
-	b.WriteString(kontakteScript)
-}
+const pruefenStyle = `<style>.knoepfe{display:flex;gap:10px;flex-wrap:wrap}.aenderung{margin:12px 0;padding:14px;border-radius:16px;background:var(--card)}.aenderung label{display:flex;gap:12px;align-items:flex-start}.aenderung input{width:22px;height:22px;flex:none;margin-top:2px}.aenderung .art{font-size:.85rem;color:var(--muted)}
+.aenderung .vorher{color:var(--muted);text-decoration:line-through;overflow-wrap:anywhere}.aenderung .nachher{font-weight:600;overflow-wrap:anywhere}.aenderung .hinweis{margin:8px 0 0 34px;color:var(--warn,#e0a030);font-size:.9rem}.aenderung .weg{font-size:.85rem;font-weight:600;color:var(--warn,#e0a030)}.aenderung img.foto{width:120px;height:auto;border-radius:12px;margin-top:4px}.aenderung blockquote{margin:0 0 10px;padding:10px 12px;border-left:3px solid var(--line);white-space:normal;overflow-wrap:anywhere}.aenderung .stand{margin:6px 0 0 34px;font-size:.85rem;color:var(--muted)}</style>`
 
-// pruefenErstellen makes the link and shows it once, with the sentence to send.
-func pruefenErstellen(w http.ResponseWriter, r *http.Request, cfg StartConfig, b *strings.Builder, buch, uid string, f kontaktantwort.Felder) {
-	if !fromHomes(r) {
-		http.Error(w, "Nur von Homes' eigener Seite.", http.StatusForbidden)
-		return
-	}
-	von, _, _ := strings.Cut(strings.TrimSpace(r.Header.Get("Remote-Name")), " ")
-	token, frage, err := cfg.Antworten.Neu(r.Header.Get("Remote-User"), von, buch, uid, f)
-	if err != nil {
-		log.Printf("homes: kontakt prüfen: the link not made: %v", err)
-		b.WriteString("<h1>" + wort(texte.PruefenTitel) + "</h1>" + gesagt("", texte.T(texte.PruefenNicht)))
-		writePage(w, http.StatusOK, b)
-		return
-	}
-	log.Printf("homes: kontakt prüfen: link %s made (%s)", frage.ID, buch)
-	link := strings.TrimRight(cfg.KontaktURL, "/") + "/" + token
-	text := fmt.Sprintf(texte.T(texte.PruefenText), cmp.Or(f.Vorname, f.Name()), link)
-	b.WriteString("<h1>" + html.EscapeString(f.Name()) + "</h1>" + gesagt(texte.T(texte.PruefenErstellt), ""))
-	b.WriteString(`<textarea id=pruefen-text readonly rows=6 aria-label="` + wort(texte.PruefenNachricht) + `">` + html.EscapeString(text) + `</textarea>` +
-		`<p class=knoepfe><button type=button id=pruefen-teilen data-titel="` + wort(texte.PruefenTitel) + `">` + wort(texte.PruefenTeilen) + `</button>` +
-		`<button type=button id=pruefen-kopieren data-fertig="` + wort(texte.PruefenKopiert) + `">` + wort(texte.PruefenKopieren) + `</button></p>` +
-		`<p class=k>` + wort(texte.PruefenNurJetzt) + `</p><p><a href=` + PruefenPath + `?buch=` + buch + `>` + wort(texte.PruefenZurueck) + `</a></p>` + pruefenScript)
-	writePage(w, http.StatusOK, b)
-}
+// pruefenScript is „Link teilen“: the link made, the share sheet opens,
+// else the message is copied („Link kopiert“); a share sheet refused as
+// too late is „Jetzt teilen“ for the next tap; a refusal under the button.
+const pruefenScript = `<script>(function(){if(window.homesTeilen)return;window.homesTeilen=1;function zeig(b,t){var w=b.innerHTML;b.textContent=t;setTimeout(function(){b.innerHTML=w},3e3)}function sag(f,t){var p=f.querySelector('.k');if(!p){p=document.createElement('p');p.className='k';p.setAttribute('role','alert');f.appendChild(p)}p.textContent=t}function kopier(f,b){function n(){sag(f,f.text)}if(navigator.clipboard)navigator.clipboard.writeText(f.text).then(function(){zeig(b,b.getAttribute('data-kopiert'))},n);else n()}
+function teil(f,b){if(!navigator.share)return kopier(f,b);navigator.share({text:f.text}).then(function(){if(f.w)b.innerHTML=f.w},function(x){if(x&&x.name==='NotAllowedError'){f.w=f.w||b.innerHTML;b.textContent=b.getAttribute('data-nochmal')}else if(!x||x.name!=='AbortError')kopier(f,b)})}
+document.addEventListener('submit',function(e){var f=e.target;if(!f.hasAttribute('data-teilen')||!window.fetch)return;e.preventDefault();var b=f.querySelector('button');if(f.text)return teil(f,b);if(b.disabled)return;var w=b.innerHTML,d=new URLSearchParams(new FormData(f)),c=window.AbortController?new AbortController():null,u=setTimeout(function(){if(c)c.abort()},3e4);b.disabled=true;b.textContent=b.getAttribute('data-laeuft');
+fetch(f.action,{method:'POST',body:d,credentials:'same-origin',signal:c?c.signal:undefined}).then(function(r){return r.text().then(function(t){if(!r.ok)throw t;return t})}).then(function(t){clearTimeout(u);f.text=t;b.disabled=false;b.innerHTML=w;teil(f,b)},function(t){clearTimeout(u);b.disabled=false;b.innerHTML=w;sag(f,typeof t==='string'&&t?t:'Homes ist gerade nicht erreichbar. Versuch es gleich noch einmal.')})},true)})()</script>`
 
-// felderKarte is the fields as the link shows them.
-func felderKarte(f kontaktantwort.Felder) string {
-	var b strings.Builder
-	b.WriteString("<dl class=felder>")
-	row := func(art, v string) {
-		if v != "" {
-			b.WriteString("<dt>" + html.EscapeString(art) + "</dt><dd>" + html.EscapeString(v) + "</dd>")
-		}
-	}
-	row(texte.T(texte.ArtVorname), f.Vorname)
-	row(texte.T(texte.ArtNachname), f.Nachname)
-	for _, p := range f.Telefone {
-		row(texte.T(texte.ArtTelefon), nummerText(p.Nummer, p.Art, p.Haupt, texte.FrageHauptNummer))
-	}
-	for _, m := range f.Mails {
-		row(texte.T(texte.ArtMail), nummerText(m.Adresse, m.Art, m.Haupt, texte.FrageHauptMail))
-	}
-	for _, a := range f.Adressen {
-		row(texte.T(texte.ArtAdresse), a.Zeile())
-	}
-	if f.Geburtstag != "" {
-		row(texte.T(texte.ArtGeburtstag), haushalt.BirthdayText(f.Geburtstag))
-	}
-	row(texte.T(texte.ArtFirma), f.Firma)
-	row(texte.T(texte.ArtPosition), f.Position)
-	b.WriteString("</dl>")
-	return b.String()
-}
-
-const pruefenStyle = `<style>.felder{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:12px 0 18px;padding:14px;border-radius:16px;background:var(--card)}
-.felder dt{color:var(--muted);font-size:.9rem}.felder dd{margin:0;overflow-wrap:anywhere}
-.buecher{display:flex;gap:8px;flex-wrap:wrap}.buecher a{padding:8px 14px;border-radius:999px;background:var(--card);color:var(--ink)}.buecher a[aria-current]{background:var(--accent-soft);color:var(--accent);font-weight:600}
-#pruefen-text{width:100%;box-sizing:border-box;font:inherit;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
-.knoepfe{display:flex;gap:10px;flex-wrap:wrap}
-.aenderung{margin:12px 0;padding:14px;border-radius:16px;background:var(--card)}.aenderung label{display:flex;gap:12px;align-items:flex-start}
-.aenderung input{width:22px;height:22px;flex:none;margin-top:2px}.aenderung .art{font-size:.85rem;color:var(--muted)}
-.aenderung .vorher{color:var(--muted);text-decoration:line-through;overflow-wrap:anywhere}.aenderung .nachher{font-weight:600;overflow-wrap:anywhere}
-.aenderung .hinweis{margin:8px 0 0 34px;color:var(--warn,#e0a030);font-size:.9rem}.aenderung .weg{font-size:.85rem;font-weight:600;color:var(--warn,#e0a030)}
-.aenderung img.foto{width:120px;height:auto;border-radius:12px;margin-top:4px}.aenderung blockquote{margin:0 0 10px;padding:10px 12px;border-left:3px solid var(--line);white-space:normal;overflow-wrap:anywhere}.aenderung .stand{margin:6px 0 0 34px;font-size:.85rem;color:var(--muted)}</style>`
-
-// pruefenScript is the two buttons: the phone's share sheet (WhatsApp,
-// SMS, Mail), else the text copied, each saying what it did.
-const pruefenScript = `<script>(function(){var t=document.getElementById('pruefen-text'),s=document.getElementById('pruefen-teilen'),k=document.getElementById('pruefen-kopieren');if(!t)return;
-function kopiert(){var w=k.textContent;k.textContent=k.getAttribute('data-fertig');setTimeout(function(){k.textContent=w},2500)}
-function kopieren(){if(navigator.clipboard){navigator.clipboard.writeText(t.value).then(kopiert,function(){t.select();document.execCommand('copy');kopiert()})}else{t.select();document.execCommand('copy');kopiert()}}
-k.addEventListener('click',kopieren);
-if(!navigator.share){s.hidden=true;return}
-s.addEventListener('click',function(){navigator.share({title:s.getAttribute('data-titel'),text:t.value}).catch(function(e){if(e&&e.name!=='AbortError')kopieren()})})})()</script>`
-
-// Antworten is Kontakt-Antworten: the list (GET /kontakte/antworten) and
-// one answer's review (…/<id>, POST aktion=auswahl|alle|verwerfen, nimm=<n>…).
+// Antworten is the task's address (/kontakte/antworten, and its old
+// …/<id>): the contact of the first answer waiting, which is reviewed there.
 func Antworten(cfg StartConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "no-store")
-		if !cfg.pruefenAn() {
-			notSetContacts.write(w, r, cfg, texte.T(texte.AntwortenTitel))
-			return
-		}
-		if r.Method != http.MethodPost && !showOnly(w, r, texte.T(texte.AntwortenTitel)) {
-			return
-		}
-		wer := r.Header.Get("Remote-User")
-		id := strings.Trim(strings.TrimPrefix(r.URL.Path, AntwortenPath), "/")
-		f, err := cfg.Antworten.Eine(id, wer)
-		said, problem, weg := "", "", []string{texte.T(texte.KontakteAntworten)}
-		if id != "" && err == nil {
-			if r.Method == http.MethodPost {
-				if !fromHomes(r) {
-					http.Error(w, "Nur von Homes' eigener Seite.", http.StatusForbidden)
-					return
-				}
-				f, said, problem = antwortEntscheiden(r, cfg, f) // before the head: its count follows
+		ziel := KontaktePath
+		if cfg.pruefenAn() {
+			if offen := cfg.Antworten.ZuPruefen(r.Header.Get("Remote-User")); len(offen) > 0 {
+				ziel = kontaktPfad(offen[0].Buch, offen[0].UID)
 			}
-			weg = append(weg, AntwortenPath, f.Name())
 		}
-		b := kontakteHead(r, cfg, texte.T(texte.AntwortenTitel), AntwortenPath, weg...)
-		b.WriteString(pruefenStyle)
-		if id == "" {
-			antwortenListe(b, cfg, wer)
-			writePage(w, http.StatusOK, b)
-			return
-		}
-		if err != nil {
-			b.WriteString("<h1>" + wort(texte.AntwortenTitel) + "</h1><p>" + wort(texte.AntwortWeg) + "</p><p><a href=" + AntwortenPath + ">" + wort(texte.AntwortenZurueck) + "</a></p>")
-			writePage(w, http.StatusNotFound, b)
-			return
-		}
-		antwortSeite(b, f, said, problem)
-		writePage(w, http.StatusOK, b)
+		http.Redirect(w, r, ziel, http.StatusSeeOther)
 	}
-}
-
-func antwortenListe(b *strings.Builder, cfg StartConfig, wer string) {
-	b.WriteString("<h1>" + wort(texte.AntwortenTitel) + "</h1>")
-	offen := cfg.Antworten.ZuPruefen(wer)
-	if len(offen) == 0 {
-		b.WriteString("<p class=k>" + wort(texte.AntwortenLeer) + "</p>")
-	}
-	b.WriteString("<ul class=kontakte>")
-	for _, f := range offen {
-		was := texte.T(texte.AntwortenBestaetigt)
-		if len(f.Aenderungen) > 0 {
-			was = texte.Anzahl(len(f.Aenderungen), "Änderung", "Änderungen")
-		}
-		b.WriteString(`<li><a href=` + AntwortenPath + `/` + f.ID + `>` + html.EscapeString(f.Name()) + `</a><span class=k> · ` + html.EscapeString(was) + `</span></li>`)
-	}
-	b.WriteString("</ul>")
 }
 
 // antwortEntscheiden keeps the review and, for a Haushalts-Kontakt, writes
@@ -389,9 +239,9 @@ func wertText(a kontaktantwort.Aenderung, v, art string, main bool) string {
 	return v
 }
 
-// antwortSeite is one answer: each field before → after, its findings,
-// and while undecided the three ways to end it.
-func antwortSeite(b *strings.Builder, f kontaktantwort.Frage, said, problem string) {
+// antwortFelder is one answer: each field before → after, its findings,
+// and while undecided the three ways to end it, posted to action.
+func antwortFelder(b *strings.Builder, f kontaktantwort.Frage, action string) {
 	buch := texte.T(texte.BuchHandy)
 	if f.Buch == kontaktantwort.Haushalt {
 		buch = texte.T(texte.BuchHaus)
@@ -400,7 +250,7 @@ func antwortSeite(b *strings.Builder, f kontaktantwort.Frage, said, problem stri
 	if f.Beantwortet != nil {
 		am = f.Beantwortet.Local().Format("02.01.2006, 15:04")
 	}
-	b.WriteString("<h1>" + html.EscapeString(f.Name()) + "</h1><p class=k>" + html.EscapeString(fmt.Sprintf(texte.T(texte.AntwortVon), am, buch)) + "</p>" + gesagt(said, problem))
+	b.WriteString("<p class=k>" + html.EscapeString(fmt.Sprintf(texte.T(texte.AntwortVon), am, buch)) + "</p>")
 	for _, h := range f.Hinweise {
 		b.WriteString(`<div class=achtung role=note><p>` + html.EscapeString(h) + `</p></div>`)
 	}
@@ -409,7 +259,7 @@ func antwortSeite(b *strings.Builder, f kontaktantwort.Frage, said, problem stri
 		b.WriteString("<p>" + html.EscapeString(fmt.Sprintf(texte.T(texte.AntwortNurBestaetigt), f.Name())) + "</p>")
 	}
 	if offen {
-		b.WriteString(`<form method=post action=` + AntwortenPath + `/` + f.ID + `>`)
+		b.WriteString(`<form method=post action="` + html.EscapeString(action) + `"><input type=hidden name=id value="` + html.EscapeString(f.ID) + `">`)
 	}
 	for i, a := range f.Aenderungen {
 		vorher, nachher := wertText(a, a.Vorher, a.VorherArt, a.VorherHaupt), wertText(a, a.Nachher, a.NachherArt, a.NachherHaupt)

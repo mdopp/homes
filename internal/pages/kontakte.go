@@ -3,7 +3,6 @@ package pages
 import (
 	"cmp"
 	"context"
-	"fmt"
 	"html"
 	"log"
 	"net/http"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/mdopp/homes/internal/caldav"
 	"github.com/mdopp/homes/internal/cards"
+	"github.com/mdopp/homes/internal/kontaktantwort"
 	"github.com/mdopp/homes/internal/namen"
 	"github.com/mdopp/homes/internal/texte"
 )
@@ -25,16 +25,21 @@ const KontaktePath = "/kontakte"
 const kontakteBuchstaben = 16
 
 // kontaktZeile is one contact in the list: its name, its page, the first
-// number or e-mail to tap and what the search finds it by.
-type kontaktZeile struct{ name, seite, ziel, zielText, suche string }
+// number or e-mail to tap, what the search finds it by, what waits about
+// it and its „Link teilen“.
+type kontaktZeile struct {
+	name, seite, ziel, zielText, suche, knopf string
+	zahl                                      int
+}
 
 // Kontakte is the household's address book (owner 2026-11-05: „Web zeigt,
 // Handy bearbeitet“): the cards /napi/gemeinsam/kontakte serves, by name,
 // each leading to its page (Kontakt) with its first number or e-mail to
-// tap; a search by name, number and e-mail, live and as ?q=. Where to
+// tap; a search by name, number and e-mail while typing. Where to
 // change them is folded away at the end; Radicale not answering is
 // Kontakt's plain line (haus#33). Above the list the area's segments
-// (kontakte_nav.go), the search and the one action, Kontakt prüfen lassen.
+// (kontakte_nav.go) and the search; on a row what waits about it and,
+// for an admin, „Link teilen“.
 func Kontakte(cfg StartConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !showOnly(w, r, "Die Kontakte") {
@@ -55,35 +60,23 @@ func Kontakte(cfg StartConfig) http.HandlerFunc {
 			writePage(w, http.StatusOK, b)
 			return
 		}
-		q := trimRunes(oneLine(r.URL.Query().Get("q")), 80)
-		field := texte.T(texte.KontakteSuchen)
-		b.WriteString(`<form method=get action=` + KontaktePath + ` role=search><input type=search id=kontakte-suche name=q value="` + html.EscapeString(q) +
-			`" placeholder="` + field + `" aria-label="` + field + `" autocomplete=off> <button data-laeuft="Sucht …">Suchen</button></form>` + pruefenAktion(cfg, ""))
-		zeilen, gesucht := kontaktZeilen(all, cards.ContactPage), namen.Plain(q)
-		zeilen = slices.DeleteFunc(zeilen, func(z kontaktZeile) bool { return !strings.Contains(z.suche, gesucht) })
-		keiner := `<p class=k id=kontakte-keiner data-vorlage="` + html.EscapeString(texte.T(texte.KontakteKeiner)) + `"`
-		switch {
-		case len(all) == 0:
-			b.WriteString("<p class=k>" + html.EscapeString(texte.T(texte.KontakteLeer)) + "</p>")
-		case len(zeilen) == 0:
-			b.WriteString(keiner + ">" + html.EscapeString(fmt.Sprintf(texte.T(texte.KontakteKeiner), q)) + "</p>")
-		default:
-			b.WriteString(keiner + " hidden></p>")
-			kontakteListe(b, zeilen, len(all) >= kontakteBuchstaben)
-		}
-		b.WriteString(wieDas(texte.KontakteBearbeiten) + kontakteScript)
+		kontakteListe(b, kontaktZeilen(r, cfg, all, kontaktantwort.Haushalt), texte.KontakteLeer)
+		b.WriteString(wieDas(texte.KontakteBearbeiten))
 		writePage(w, http.StatusOK, b)
 	}
 }
 
-// kontaktZeilen are the contacts as rows, by name as the family reads it,
-// each leading to seite(uid).
-func kontaktZeilen(all []caldav.Contact, seite func(string) string) []kontaktZeile {
+// kontaktZeilen are the contacts of buch as rows, by name as the family
+// reads it, each leading to its page, with how many things wait about it
+// and its „Link teilen“.
+func kontaktZeilen(r *http.Request, cfg StartConfig, all []caldav.Contact, buch string) []kontaktZeile {
 	var out []kontaktZeile
+	o := offenFuer(r, cfg)
 	for _, ct := range all {
-		z := kontaktZeile{name: cmp.Or(trimRunes(oneLine(ct.Name), 120), trimRunes(oneLine(ct.Org), 120), "(ohne Namen)")}
+		z := kontaktZeile{name: kontaktName(ct)}
 		if uid := strings.TrimSpace(ct.UID); uid != "" {
-			z.seite = seite(uid) // a card without one has no page of its own
+			z.seite = kontaktPfad(buch, uid) // a card without one has no page of its own
+			z.zahl, z.knopf = o.zahl(cfg, buch, uid, z.name), pruefenKnopf(r, cfg, buch, uid, z.name, true)
 		}
 		hay := []string{z.name, ct.Org}
 		for _, p := range ct.Phones {
@@ -105,8 +98,18 @@ func kontaktZeilen(all []caldav.Contact, seite func(string) string) []kontaktZei
 	return out
 }
 
-// kontakteListe writes the rows as cards: one, or one per first letter.
-func kontakteListe(b *strings.Builder, zeilen []kontaktZeile, buchstaben bool) {
+// kontakteListe writes the search, filtering while typing, and the rows
+// as cards: one, or from kontakteBuchstaben on one per first letter;
+// without any, leer.
+func kontakteListe(b *strings.Builder, zeilen []kontaktZeile, leer texte.ID) {
+	field, buchstaben := wort(texte.KontakteSuchen), len(zeilen) >= kontakteBuchstaben
+	if len(zeilen) == 0 {
+		b.WriteString("<p class=k>" + wort(leer) + "</p>")
+		return
+	}
+	b.WriteString(`<input type=search id=kontakte-suche placeholder="` + field + `" aria-label="` + field + `" autocomplete=off><p class=k id=kontakte-keiner data-vorlage="` +
+		wort(texte.KontakteKeiner) + `" hidden></p>`)
+	defer b.WriteString(kontakteScript)
 	titel := texte.T(texte.KontakteAdressbuch)
 	for i, z := range zeilen {
 		if buchstaben {
@@ -118,14 +121,14 @@ func kontakteListe(b *strings.Builder, zeilen []kontaktZeile, buchstaben bool) {
 		}
 		b.WriteString(`<li data-suche="` + html.EscapeString(z.suche) + `">`)
 		if z.seite != "" {
-			b.WriteString(`<a href="` + html.EscapeString(z.seite) + `">` + html.EscapeString(z.name) + "</a>")
+			b.WriteString(`<a href="` + html.EscapeString(z.seite) + `">` + html.EscapeString(z.name) + zahl(z.zahl) + "</a>")
 		} else {
 			b.WriteString("<span>" + html.EscapeString(z.name) + "</span>")
 		}
 		if z.ziel != "" {
 			b.WriteString(` <a class=ruf href="` + html.EscapeString(z.ziel) + `">` + html.EscapeString(z.zielText) + "</a>")
 		}
-		b.WriteString("</li>")
+		b.WriteString(z.knopf + "</li>")
 	}
 	b.WriteString("</ul></section>")
 }
