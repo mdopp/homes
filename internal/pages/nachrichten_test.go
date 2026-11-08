@@ -2,6 +2,7 @@ package pages
 
 import (
 	"context"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -17,10 +18,10 @@ import (
 )
 
 // haus#207, owner 2026-11-03: „Daten sichern“ shows the person's state
-// from Homes' ledger and the inbox. Owner 2026-11-04 (the Mehr audit): the
-// backing up is the app's, so the page is the state with a dot per source,
-// one line to the app, what goes without the phone, and the phone change
-// folded at the end — no copy of the app's six guides.
+// from Homes' ledger and the inbox. Owner 2026-11-08: the page is the one
+// overview — a line per source, a phone source with nothing yet says where
+// to switch it on, E-Mail its way, the keys one button into the archive,
+// what never goes and the phone change folded; no intro, no guide.
 func TestDatenSichernShowsTheStandAndTheGuide(t *testing.T) {
 	inbox, data := t.TempDir(), t.TempDir()
 	os.MkdirAll(filepath.Join(data, "sicherung", "anna"), 0o700)
@@ -42,20 +43,22 @@ func TestDatenSichernShowsTheStandAndTheGuide(t *testing.T) {
 	for _, want := range []string{"<h1>Daten sichern</h1>", "Dein Stand",
 		`<span class="punkt gelb"></span><div>WhatsApp<span class=k>zuletzt Sa 31.10. 03:11 · 2 Dateien, 3,2 GB · 1 Datei wartet auf dein Archiv`, // Berlin time
 		`<span class="punkt "></span><div>Signal<span class=k>zuletzt heute 03:00 · 1 Datei, 2,0 KB`,
-		`<span class="punkt grau"></span><div>SMS und Anrufe<span class=k>noch nichts angekommen`, " frei.",
-		"Das Sichern macht die Homes-App: Mehr → Daten sichern.", "<h2>Ohne Handy</h2>", "App-Passwort", "jede Stunde", "Bitwarden",
-		"<details class=wechsel><summary>Handy wechseln</summary>"} {
+		`<span class="punkt grau"></span><div>SMS und Anrufe<span class=k>noch nichts angekommen · in der Homes-App einschalten`, " frei.",
+		`<div>E-Mail<span class=k>Trag dein Postfach einmal im Archiv ein; es holt dann jede Stunde neue Mails.`, "Bitwarden",
+		"<summary>Was nie ins Archiv kommt</summary>", "<details class=wechsel><summary>Handy wechseln</summary>"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("the page lacks %q", want)
 		}
 	}
-	for _, gone := range []string{"Discord", "Nachrichten sichern", "Chat-Backups", "64-stelligen Schlüssel verwenden", "„Kontakte übertragen“", "Was nie ins Archiv kommt", "je nach App-Version", "<h2>Signal</h2>"} {
+	for _, gone := range []string{"Discord", "Nachrichten sichern", "Chat-Backups", "64-stelligen Schlüssel verwenden", "„Kontakte übertragen“", "je nach App-Version", "<h2>Signal</h2>",
+		"class=lead", "Das Sichern macht die Homes-App", "Ohne Handy", "/tresor"} { // no archive for anna here: no link into it
 		if strings.Contains(body, gone) {
 			t.Errorf("the page still says %q", gone)
 		}
 	}
-	before(t, body, "Dein Stand", "Das Sichern macht die Homes-App")
-	before(t, body, "Ohne Handy", "Handy wechseln")
+	mustContain(t, body, texte.T(texte.KontaktKeinArchiv))
+	before(t, body, "Dein Stand", "Bitwarden")
+	before(t, body, "Was nie ins Archiv kommt", "Handy wechseln")
 	if strings.Contains(body, "<form") || strings.Contains(body, "<button") {
 		t.Error("nothing on the page changes anything yet: no form, no button")
 	}
@@ -120,6 +123,29 @@ func TestDatenSichernShowsWhatANewPhoneGetsBack(t *testing.T) {
 	}
 }
 
+// Owner 2026-11-08: the keys are entered in the person's archive, never in
+// the app; the page is the way there — its /tresor at home, the plain reason
+// away from home or without an archive.
+func TestDatenSichernLeadsToTheKeys(t *testing.T) {
+	cfg := StartConfig{Sicherung: napi.NewSicherung(t.TempDir(), t.TempDir()), Archive: map[string]bool{"anna": true}, ArchivURL: "https://archiv.box.test"}
+	seite := func(user, von string) string {
+		req := httptest.NewRequest("GET", DatenPath, nil)
+		req.Header.Set("Remote-User", user)
+		req.Header.Set("X-Forwarded-For", von)
+		rec := httptest.NewRecorder()
+		Nachrichten(cfg).ServeHTTP(rec, req)
+		return rec.Body.String()
+	}
+	mustContain(t, seite("anna", "192.168.1.23"), `<a class=knopf href="https://archiv.box.test/tresor">Schlüssel im Archiv eintragen</a>`,
+		"Signal-Passphrase, WhatsApp-Schlüssel und Postfach")
+	unterwegs := seite("anna", "203.0.113.7")
+	mustContain(t, unterwegs, texte.T(texte.KontaktArchivDaheim))
+	mustNotContain(t, unterwegs, "/tresor")
+	ben := seite("ben", "192.168.1.23")
+	mustContain(t, ben, texte.T(texte.KontaktKeinArchiv))
+	mustNotContain(t, ben, "/tresor")
+}
+
 func TestDatenSichernWithoutTheArchiv(t *testing.T) {
 	code, body, _ := familyPage(t, Nachrichten, StartConfig{}, "GET", DatenPath, "family")
 	if code != 200 || !strings.Contains(body, "Gibt es hier noch nicht") || strings.Contains(body, "Dein Stand") {
@@ -171,6 +197,8 @@ func TestDatenSichernStandortKontakteKalender(t *testing.T) {
 	mustContain(t, body, `<span class="punkt grau"></span><div><a href=/standort>Standort</a><span class=k>noch nichts aufgezeichnet`,
 		`<span class="punkt "></span><div>Kontakte<span class=k>2 Kontakte im Adressbuch „Handy-Kontakte“`,
 		`<span class="punkt grau"></span><div>Kalender<span class=k>1 Kalender; das Archiv übernimmt sie, während es offen ist`)
+	_, ben, _ := familyPageAs(t, Nachrichten, cfg, "GET", DatenPath, "ben", "family") // no contacts of his own
+	mustContain(t, ben, `<div>Kontakte<span class=k>noch nichts angekommen · in der Homes-App einschalten`)
 	mustNotContain(t, body, "Deine Kalender in Homes übernimmt")
 	cfg.Reitti.Verbinden(context.Background(), "anna", "gut-0123")
 	_, body, _ = familyPage(t, Nachrichten, cfg, "GET", DatenPath, "family")

@@ -6,6 +6,18 @@ package texte
 
 // The module titles are "modul.<name>"; Titel finds them.
 const (
+	// Daten sichern (owner 2026-11-08: the one overview; the app keeps only what needs the phone)
+	DatenInDerApp       ID = "daten.in-der-app"    // a phone source with nothing yet: where to switch it on
+	DatenMail           ID = "daten.mail"          // E-Mail's line: Homes cannot see the mailbox, so the way
+	DatenKeinKalender   ID = "daten.kein-kalender" // the person sees no calendar yet, not even the household's
+	DatenTermine        ID = "daten.termine"       // after the count of calendars
+	DatenSchluessel     ID = "daten.schluessel"    // the button into the archive's /tresor
+	DatenWelche         ID = "daten.welche"        // its quiet line: which keys
+	DatenBitwarden      ID = "daten.bitwarden"     // the keys belong in Bitwarden too
+	DatenNieTitel       ID = "daten.nie.titel"     // the <details>: what never reaches the archive
+	DatenNie            ID = "daten.nie"
+	DatenWechsel        ID = "daten.wechsel" // the phone change (haus#209, homes-android#197): three steps, one a line
+	DatenWechselMedien  ID = "daten.wechsel.medien"
 	SpurFehlt           ID = "spur.fehlt"        // the box does not run the module's backend
 	SpurAus             ID = "spur.aus"          // the owner switched it off
 	SpurAngefordert     ID = "spur.angefordert"  // a wish is open
@@ -264,27 +276,38 @@ const (
 )
 
 var de = map[ID]string{
-	"modul.geraete":      "Geräte",
-	"modul.energie":      "Energie",
-	"modul.sprechen":     "Sprechen",
-	"modul.kalender":     "Kalender",
-	"modul.kontakte":     "Kontakte",
-	"modul.konto":        "Homes-Konto",
-	"modul.einkauf":      "Einkauf",
-	"modul.notizen":      "Notizen",
-	"modul.dokumente":    "Dokumente",
-	"modul.musik":        "Musik",
-	"modul.podcasts":     "Podcasts",
-	"modul.hoerbuecher":  "Hörbücher und Podcasts",
-	"modul.gesehen":      "Gesehen & Gehört",
-	"modul.sicherung":    "Daten sichern",
-	"modul.standort":     "Standortverlauf",
-	"modul.netzlaufwerk": "Netzlaufwerk",
-	"modul.werkstatt":    "Werkstatt",
-	"modul.nutzung":      "Was wird genutzt",
-	"modul.fotos":        "Fotos",
-	"modul.passwoerter":  "Passwörter",
-	"modul.filme":        "Filme und Musik",
+	"daten.in-der-app":     "in der Homes-App einschalten",
+	"daten.mail":           "Trag dein Postfach einmal im Archiv ein; es holt dann jede Stunde neue Mails.",
+	"daten.kein-kalender":  "noch kein Kalender",
+	"daten.termine":        "das Archiv übernimmt sie, während es offen ist",
+	"daten.schluessel":     "Schlüssel im Archiv eintragen",
+	"daten.welche":         "Signal-Passphrase, WhatsApp-Schlüssel und Postfach",
+	"daten.bitwarden":      "Leg Archiv-Passwort, Signal-Passphrase und WhatsApp-Schlüssel auch in Bitwarden ab: wer einen verliert, kann diese Sicherungen nicht mehr lesen.",
+	"daten.nie.titel":      "Was nie ins Archiv kommt",
+	"daten.wechsel":        "Auf dem neuen Handy die Homes-App installieren und mit deinem Namen koppeln.\nIn der Homes-App: Mehr → Daten sichern → „Sicherung zurückholen“. Für Signal einen Ordner wählen, etwa „Dokumente/Signal“. WhatsApp vorher installieren, aber noch nicht öffnen, und den Ordner „Android/media/com.whatsapp/WhatsApp“ freigeben (gibt es ihn noch nicht: „Android/media“).\nSignal neu installieren, bei der Einrichtung „Aus Sicherung wiederherstellen“ wählen, die Datei auswählen und die 30-stellige Passphrase aus Bitwarden eingeben. WhatsApp öffnen, mit derselben Nummer anmelden und „Wiederherstellen“ wählen.",
+	"daten.wechsel.medien": "Fotos und Sprachnachrichten kommen nur zurück, während dein Archiv offen ist. Die App überschreibt nichts, ohne zu fragen.",
+	"daten.nie":            "Nachrichten, die sich selbst löschen, und Fotos oder Videos zur einmaligen Ansicht: sie stehen in keiner Sicherung.",
+	"modul.geraete":        "Geräte",
+	"modul.energie":        "Energie",
+	"modul.sprechen":       "Sprechen",
+	"modul.kalender":       "Kalender",
+	"modul.kontakte":       "Kontakte",
+	"modul.konto":          "Homes-Konto",
+	"modul.einkauf":        "Einkauf",
+	"modul.notizen":        "Notizen",
+	"modul.dokumente":      "Dokumente",
+	"modul.musik":          "Musik",
+	"modul.podcasts":       "Podcasts",
+	"modul.hoerbuecher":    "Hörbücher und Podcasts",
+	"modul.gesehen":        "Gesehen & Gehört",
+	"modul.sicherung":      "Daten sichern",
+	"modul.standort":       "Standortverlauf",
+	"modul.netzlaufwerk":   "Netzlaufwerk",
+	"modul.werkstatt":      "Werkstatt",
+	"modul.nutzung":        "Was wird genutzt",
+	"modul.fotos":          "Fotos",
+	"modul.passwoerter":    "Passwörter",
+	"modul.filme":          "Filme und Musik",
 
 	SpurFehlt:           "auf dieser Box nicht eingerichtet",
 	SpurAus:             "ausgeschaltet",
