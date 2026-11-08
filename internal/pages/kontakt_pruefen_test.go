@@ -76,8 +76,20 @@ func startLink(t *testing.T, cfg StartConfig, buch, uid, groups string) string {
 	if rec.Code != 200 || m == nil {
 		t.Fatalf("no link made (%d):\n%s", rec.Code, rec.Body.String())
 	}
-	mustContain(t, rec.Body.String(), "Link erstellt", "Teilen …", "Kopieren", "nur einmal")
+	if ct := rec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/plain") || !strings.HasPrefix(rec.Body.String(), "Hallo ") || !strings.Contains(rec.Body.String(), "nur einmal") {
+		t.Fatalf("not the message for the share sheet (%s):\n%s", ct, rec.Body.String())
+	}
 	return m[1]
+}
+
+// antworteAuf decides anna's answer id on the contact's page at pfad.
+func antworteAuf(cfg StartConfig, pfad, id string, form url.Values) *httptest.ResponseRecorder {
+	form.Set("id", id)
+	h := Kontakt(cfg)
+	if strings.HasPrefix(pfad, MeineKontaktePath) {
+		h = MeineKontakte(cfg)
+	}
+	return frag(h, "POST", pfad, "anna", "family", form)
 }
 
 func formOf(vals map[string][]string) url.Values { return url.Values(vals) }
@@ -137,26 +149,30 @@ func TestKontaktPruefenFromTheLinkToTheAddressBook(t *testing.T) {
 		t.Errorf("tasks %+v", as)
 	}
 	id := open[0].ID
-	// the segment Antworten with its count while one waits, on every Kontakte page; the path to the answer
-	segment := `<a href=/kontakte/antworten>Antworten <span class=anzahl aria-label="1 offen">1</span></a>`
-	mustContain(t, frag(Kontakte(cfg), "GET", KontaktePath, "anna", "family", nil).Body.String(), `<a href=/kontakte aria-current=page>Haushalt</a>`, segment)
-	mustContain(t, frag(Kontakt(cfg), "GET", "/kontakte/h1", "anna", "family", nil).Body.String(), segment)
-	rec = frag(Antworten(cfg), "GET", AntwortenPath+"/"+id, "anna", "family", nil)
-	body = rec.Body.String()
-	mustContain(t, body, `<a href=/kontakte>Kontakte</a> › <a href="/kontakte/antworten">Antworten</a> › <span>Anna Beispiel</span></nav>`, "<h1>Anna Beispiel</h1>", "Nachname", `<span class=vorher>Beispiel</span> → <span class=nachher>Muster</span>`,
+	// owner 2026-11-08: no list of answers; the task opens the contact, its row says one waits, the review is on it
+	if rec := frag(Antworten(cfg), "GET", AntwortenPath, "anna", "family", nil); rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/kontakte/h1" {
+		t.Errorf("the task's address: %d %q", rec.Code, rec.Header().Get("Location"))
+	}
+	mustContain(t, frag(Kontakte(cfg), "GET", KontaktePath, "anna", "family", nil).Body.String(), `<a href=/kontakte aria-current=page>Haushalt</a>`,
+		`<a href="/kontakte/h1">Anna Beispiel <span class=anzahl aria-label="1 offen">1</span></a>`)
+	body = frag(Kontakt(cfg), "GET", "/kontakte/h1", "anna", "family", nil).Body.String()
+	mustContain(t, body, `<a href=/kontakte>Kontakte</a> › <span>Anna Beispiel</span></nav>`, "<h1>Anna Beispiel</h1>", "<h2>Antwort auf deinen Link</h2>", "Nachname",
+		`<span class=vorher>Beispiel</span> → <span class=nachher>Muster</span>`,
 		`<span class=vorher>+49 151 23456789 (mobil)</span> → <span class=nachher>+49 151 99999999 (mobil)</span>`,
 		`0711 1234567 (geschäftlich)</span> <span class=k>(neu)`, "Neuer Weg 2, 12345 Stadt, Deutschland", "12.04.", "Inhaberin",
-		"Ausgewählte übernehmen", "Alle übernehmen", "Verwerfen")
-	if rec := frag(Antworten(cfg), "GET", AntwortenPath+"/"+id, "ben", "family", nil); rec.Code != 404 {
-		t.Errorf("ben opens anna's review: %d", rec.Code)
+		`<form method=post action="/kontakte/h1"><input type=hidden name=id value="`+id+`">`, "Ausgewählte übernehmen", "Alle übernehmen", "Verwerfen")
+	before(t, body, "+49 151 23456789</a>", "<h2>Antwort auf deinen Link</h2>") // the contact first, then what waits
+	mustNotContain(t, frag(Kontakt(cfg), "GET", "/kontakte/h1", "ben", "family", nil).Body.String(), "Antwort auf deinen Link")
+	if rec := frag(Kontakt(cfg), "POST", "/kontakte/h1", "ben", "family", url.Values{"id": {id}, "aktion": {"alle"}}); !strings.Contains(rec.Body.String(), "Diese Antwort gibt es nicht") {
+		t.Errorf("ben decides anna's review: %d", rec.Code)
 	}
 
-	// take the family name (0) and the new position (last) only
+	// take the family name (0) and the new position (last) only, on the contact's page
 	got, _ := cfg.Antworten.Eine(id, "anna")
 	last := len(got.Aenderungen) - 1
-	rec = frag(Antworten(cfg), "POST", AntwortenPath+"/"+id, "anna", "family", url.Values{"aktion": {"auswahl"}, "nimm": {"0", strconv.Itoa(last)}})
-	mustContain(t, rec.Body.String(), "2 Änderungen ins Adressbuch geschrieben", `<a href=/kontakte/antworten aria-current=page>Antworten</a>`) // the count follows at once
-	mustNotContain(t, frag(Kontakte(cfg), "GET", KontaktePath, "anna", "family", nil).Body.String(), "class=segmente")                          // none waits: Haushalt alone
+	rec = antworteAuf(cfg, "/kontakte/h1", id, url.Values{"aktion": {"auswahl"}, "nimm": {"0", strconv.Itoa(last)}})
+	mustContain(t, rec.Body.String(), "2 Änderungen ins Adressbuch geschrieben", "<h1>Anna Muster</h1>", "nicht übernommen") // the card as written, each change's outcome
+	mustNotContain(t, frag(Kontakte(cfg), "GET", KontaktePath, "anna", "family", nil).Body.String(), "class=anzahl")         // none waits
 	card := dav.Objects()["/homes/haushalt-kontakte/h1.vcf"]
 	mustContain(t, card, "FN:Anna Muster", "N:Muster;Anna;;;", "TITLE:Inhaberin", "TEL;TYPE=CELL:+49 151 23456789", "X-IBAN:DE00")
 	mustNotContain(t, card, "99999999", "Neuer Weg", "BDAY")
@@ -252,12 +268,18 @@ func TestThePublicPageIsRateLimited(t *testing.T) {
 	}
 }
 
-// Haushalts-Kontakte are an admin's; a person's own Handy-Kontakte theirs.
-// A Handy-Kontakt's accepted changes wait for the phone; discarded, none.
+// Haushalts-Kontakte are an admin's; a person's own Handy-Kontakte theirs,
+// and anyone has Meine Kontakte for it, without the Immich key. A refusal
+// is one plain sentence. A Handy-Kontakt's accepted changes wait for the
+// phone; discarded, none.
 func TestWhoMayStartAndWhereAHandyKontaktGoes(t *testing.T) {
 	cfg, dav := pruefenCfg(t)
-	if rec := frag(Pruefen(cfg), "POST", PruefenPath, "anna", "family", url.Values{"buch": {"haushalt"}, "uid": {"h1"}}); rec.Code != 403 {
-		t.Errorf("a family member starts a house contact: %d", rec.Code)
+	if rec := frag(Pruefen(cfg), "POST", PruefenPath, "anna", "family", url.Values{"buch": {"haushalt"}, "uid": {"h1"}}); rec.Code != 403 ||
+		!strings.HasPrefix(rec.Header().Get("Content-Type"), "text/plain") || !strings.Contains(rec.Body.String(), "nur ein Admin") {
+		t.Errorf("a family member starts a house contact: %d %s", rec.Code, rec.Body.String())
+	}
+	if rec := frag(Pruefen(cfg), "POST", PruefenPath, "anna", "family", url.Values{"buch": {"privat"}, "uid": {"weg"}}); rec.Code != 404 {
+		t.Errorf("a contact not there: %d", rec.Code)
 	}
 	req := httptest.NewRequest("POST", PruefenPath, strings.NewReader("buch=privat&uid=3789r1-2B4D"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -268,14 +290,22 @@ func TestWhoMayStartAndWhereAHandyKontaktGoes(t *testing.T) {
 	if rec.Code != 403 {
 		t.Errorf("a link made from another site: %d", rec.Code)
 	}
-	code, body, _ := familyPage(t, Pruefen, cfg, "GET", PruefenPath, "family")
-	if code != 200 || !strings.Contains(body, "Oma &lt;b&gt;Hilde&lt;/b&gt;") || strings.Contains(body, "Kontakte des Hauses") {
-		t.Errorf("the start for the family: %d\n%s", code, body)
+	if rec := frag(Pruefen(cfg), "GET", PruefenPath, "anna", "family", nil); rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != KontaktePath {
+		t.Errorf("the old start page: %d", rec.Code)
 	}
+	list := frag(MeineKontakte(cfg), "GET", MeineKontaktePath, "anna", "family", nil).Body.String()
+	mustContain(t, list, `<a href=/kontakte/privat aria-current=page>Meine</a>`, `<a href="/kontakte/privat/3789r1-2B4D">Oma &lt;b&gt;Hilde&lt;/b&gt;</a>`,
+		`<form method=post action=/kontakte/pruefen class=teilen data-teilen><input type=hidden name=buch value=privat><input type=hidden name=uid value="3789r1-2B4D"><button aria-label="Link teilen: Oma &lt;b&gt;Hilde&lt;/b&gt; prüfen lassen"`)
+	seite := frag(MeineKontakte(cfg), "GET", "/kontakte/privat/3789r1-2B4D", "anna", "family", nil).Body.String()
+	mustContain(t, seite, `<a href=/kontakte>Kontakte</a> › <a href="/kontakte/privat">Meine</a> › <span>Oma &lt;b&gt;Hilde&lt;/b&gt;</span></nav>`, ">Link teilen</button>", "0711 445566")
+	mustNotContain(t, seite, "Fotos") // not the Immich key's owner
 	token := startLink(t, cfg, "privat", "3789r1-2B4D", "family")
 	frag(KontaktServer(cfg), "POST", "/"+token, "", "", url.Values{"vorname": {"Hilde"}, "nachname": {"Oma"}, "tel": {"0711 445577"}, "tel-art": {"privat"}, "aktion": {"senden"}})
 	f := cfg.Antworten.ZuPruefen("anna")[0]
-	rec = frag(Antworten(cfg), "POST", AntwortenPath+"/"+f.ID, "anna", "family", url.Values{"aktion": {"alle"}})
+	if rec := frag(Antworten(cfg), "GET", AntwortenPath, "anna", "family", nil); rec.Header().Get("Location") != "/kontakte/privat/3789r1-2B4D" {
+		t.Errorf("the task opens %q", rec.Header().Get("Location"))
+	}
+	rec = antworteAuf(cfg, "/kontakte/privat/3789r1-2B4D", f.ID, url.Values{"aktion": {"alle"}})
 	mustContain(t, rec.Body.String(), "gehen an dein Handy")
 	if card := dav.Objects()["/anna/handy-kontakte/k1.vcf"]; strings.Contains(card, "445577") {
 		t.Error("Homes wrote a Handy-Kontakt itself")
@@ -285,19 +315,39 @@ func TestWhoMayStartAndWhereAHandyKontaktGoes(t *testing.T) {
 	}
 }
 
-// owner 2026-11-08: a contact's actions stand right under its name, with
-// the path back; the list's one action and the search are at its top,
-// the explanation of Kontakt prüfen lassen folded away.
+// owner 2026-11-08: „Link teilen“ stands right under the contact's name,
+// for an admin on a house contact, with the path back; the list has the
+// search at its top and an icon per row, the same form; no family member
+// sees one on a house contact.
 func TestKontakteActionsAtTheTop(t *testing.T) {
 	cfg, _ := pruefenCfg(t)
 	body := frag(Kontakt(cfg), "GET", "/kontakte/h1", "anna", "family,admins", nil).Body.String()
-	mustContain(t, body, `<a href=/kontakte>Kontakte</a> › <span>Anna Beispiel</span></nav>`)
-	before(t, body, "<h1>Anna Beispiel</h1><div class=oben>", `>Kontakt prüfen lassen</a>`)
-	before(t, body, `>Kontakt prüfen lassen</a>`, "+49 151 23456789")
-	list := frag(Kontakte(cfg), "GET", KontaktePath, "anna", "family", nil).Body.String()
-	before(t, list, "id=kontakte-suche", `<p class=weiter-in><a href=/kontakte/pruefen>Kontakt prüfen lassen</a></p>`)
-	before(t, list, `>Kontakt prüfen lassen</a>`, ">Anna Beispiel<")
-	pick := frag(Pruefen(cfg), "GET", PruefenPath+"?uid=3789r1-2B4D", "anna", "family", nil).Body.String()
-	mustContain(t, pick, `› <a href="/kontakte/pruefen?buch=privat">Kontakt prüfen lassen</a> › <span>Oma &lt;b&gt;Hilde&lt;/b&gt;</span></nav>`)
-	before(t, pick, "Link erstellen", "<details class=wie><summary>Wie das funktioniert</summary>")
+	mustContain(t, body, `<a href=/kontakte>Kontakte</a> › <span>Anna Beispiel</span></nav>`, `data-laeuft="Erstellt den Link …" data-kopiert="Link kopiert" data-nochmal="Jetzt teilen">Link teilen</button>`)
+	before(t, body, "<h1>Anna Beispiel</h1><div class=oben>", `>Link teilen</button>`)
+	before(t, body, `>Link teilen</button>`, "+49 151 23456789")
+	mustNotContain(t, body, "Link erstellen")
+	list := frag(Kontakte(cfg), "GET", KontaktePath, "anna", "family,admins", nil).Body.String()
+	before(t, list, "id=kontakte-suche", ">Anna Beispiel<")
+	before(t, list, ">Anna Beispiel<", `aria-label="Link teilen: Anna Beispiel prüfen lassen"`)
+	mustNotContain(t, frag(Kontakte(cfg), "GET", KontaktePath, "anna", "family", nil).Body.String(), "class=teilen data-teilen>")
+	mustNotContain(t, frag(Kontakt(cfg), "GET", "/kontakte/h1", "anna", "family", nil).Body.String(), "class=teilen data-teilen>")
+}
+
+// An answer whose contact has gone meanwhile is not lost: the task still
+// opens its page, with the name and the review, and ends it there.
+func TestAntwortOhneKontakt(t *testing.T) {
+	cfg, dav := pruefenCfg(t)
+	token := startLink(t, cfg, "haushalt", "h1", "family,admins")
+	frag(KontaktServer(cfg), "POST", "/"+token, "", "", url.Values{"vorname": {"Anna"}, "nachname": {"Muster"}, "aktion": {"senden"}})
+	dav.Put("/homes/haushalt-kontakte/h1.vcf", strings.Replace(pruefenKarte, "UID:h1", "UID:h9", 1)) // h1 is gone
+	if rec := frag(Antworten(cfg), "GET", AntwortenPath, "anna", "family", nil); rec.Header().Get("Location") != "/kontakte/h1" {
+		t.Fatalf("the task: %q", rec.Header().Get("Location"))
+	}
+	body := frag(Kontakt(cfg), "GET", "/kontakte/h1", "anna", "family", nil).Body.String()
+	mustContain(t, body, "<h1>Anna Beispiel</h1>", "<h2>Antwort auf deinen Link</h2>", ">Verwerfen</button>")
+	f := cfg.Antworten.ZuPruefen("anna")[0]
+	mustContain(t, antworteAuf(cfg, "/kontakte/h1", f.ID, url.Values{"aktion": {"verwerfen"}}).Body.String(), "Verworfen: nichts wurde geändert.")
+	if rec := frag(Kontakt(cfg), "GET", "/kontakte/h1", "anna", "family", nil); rec.Code != http.StatusNotFound || len(cfg.Antworten.ZuPruefen("anna")) != 0 {
+		t.Errorf("after: %d", rec.Code)
+	}
 }

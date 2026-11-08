@@ -252,33 +252,50 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     by name (accents as their letter), one card, or a card per first letter
     from 16 contacts on. Each row leads to the contact's page and carries
     its first number (`tel:`), else its first e-mail (`mailto:`), as a tap
-    of its own. The search (`?q=`, and live while typing) finds name,
-    number and e-mail, compared as `namen.Plain`; under it the page's one
-    action, *Kontakt prüfen lassen*. Where to edit is folded away at the
-    end (*Wie das funktioniert*); Radicale not answering is *Die Kontakte
-    lassen sich gerade nicht lesen.*, once. Immich's people are never
-    offered as contacts (owner 2026-11-06).
+    of its own. The search filters while typing (no button, no `?q=` since
+    2026-11-08) by name, number and e-mail, compared as `namen.Plain`. A
+    row shows how many things wait about the contact for the viewer (a
+    count: the answer to their link, and for the Immich key's owner its
+    „Ist das …?“ questions and „Dieselbe Person?“ pairs) and, for an admin,
+    a share icon, *Link teilen* (below). Where to edit is folded away at
+    the end (*Wie das funktioniert*); Radicale not answering is *Die
+    Kontakte lassen sich gerade nicht lesen.*, once. Immich's people are
+    never offered as contacts (owner 2026-11-06).
+  - *Everything on the contact* (owner 2026-11-08: „Sollte alles Button auf
+    dem Kontakt … damit weniger Listen“, `kontakt_offen.go`): a contact's
+    page (`/kontakte/<uid>`, `/kontakte/privat/<uid>`) has its links
+    (*Dokumente*, *Nachrichten*, *Fotos*) and *Link teilen* right under its
+    name, its fields, and below them what waits for the viewer about it,
+    answered right there (POST to the contact's own address, the page
+    coming back with the outcome where it was asked): the answer to their
+    *Kontakt prüfen lassen* (*Antwort auf deinen Link*, the review below),
+    and for the key's owner *Ist das …?* (its picture) and *Dieselbe
+    Person?* (the pairs of which the contact's Immich person is one side).
+    There are no list pages of questions or answers. Their tasks on Deine
+    Aufgaben keep their addresses: `/kontakte/antworten` opens the contact
+    of the oldest answer waiting (an answer whose contact is gone opens
+    that contact's address with its name and the review), and
+    `/kontakte/dieselbe` the next contact with a question (Meine Kontakte
+    first), and once none is left shows what belongs to no contact (pairs
+    of persons no contact has, the first ten).
   - *The Kontakte area's selection* (owner 2026-11-08, `kontakte_nav.go`):
-    under the Haushalt pills on every Kontakte page (the list, Meine
-    Kontakte, Fragen, Kontakt prüfen lassen, Kontakt-Antworten, a
-    contact), the segments *Haushalt · Meine · Fragen n · Antworten n*,
-    the current marked: *Meine* and *Fragen* (pairs and „Ist das …?“
-    questions) for the Immich key's owner, *Antworten* while answers wait
-    (and on its own pages); no row when *Haushalt* would stand alone.
-    On a page below the list, a path back: *Kontakte › Antworten › Oma Hilde*. A
-    contact's page has its links (*Dokumente*, *Nachrichten*, *Fotos*,
-    *Kontakt prüfen lassen*) right under its name, before its fields.
-  - *Meine Kontakte* (`/kontakte/privat`, kontakte module, with `fotos` and
-    `HOMES_IMMICH_KEY`; owner 2026-11-06): the key owner's own Handy-Kontakte
+    under the Haushalt pills on every Kontakte page, the segments *Haushalt
+    · Meine*, the current marked, *Meine* for whoever has Meine Kontakte;
+    no row when *Haushalt* would stand alone. On a page below the list, a
+    path back: *Kontakte › Meine › Oma Hilde*.
+  - *Meine Kontakte* (`/kontakte/privat`, kontakte module; owner
+    2026-11-06 and 2026-11-08): the viewer's own Handy-Kontakte
     (`/<login>/handy-kontakte/`, read only, never mixed with the household's
-    book), as Kontakte lists the household's, with its search. A name leads
-    to `/kontakte/privat/<uid>/fotos`: 302 to the Immich person Homes gave
-    the contact, else the one person of its name, else Immich's search; an
-    unknown uid is 404. Only the key's owner sees it: the login Homes saw on
-    a page with `Remote-Email` equal to the e-mail of the key's Immich
-    account (`GET /api/users/me`); anyone else gets 303 to `/kontakte`. When
-    the key lacks a permission (as `GET /api/api-keys/me` lists them, or as
-    a call was refused), one line says which to tick in Immich.
+    book), as Kontakte lists the household's, with its search, for the
+    Immich key's owner and, with *Kontakt prüfen lassen* on the box, for
+    anyone; else 303 to `/kontakte`. A name leads to the contact's page
+    (`/kontakte/privat/<uid>`, unknown 404): *Link teilen*, and for the
+    key's owner *Fotos*, a link (new tab) to the Immich person Homes gave
+    the contact, else the one person of its name, else Immich's search.
+    The key's owner is the login Homes saw on a page with `Remote-Email`
+    equal to the e-mail of the key's Immich account (`GET /api/users/me`).
+    When the key lacks a permission (as `GET /api/api-keys/me` lists them,
+    or as a call was refused), one line says which to tick in Immich.
   - *Every contact a person in Immich* (owner 2026-11-06, background, hourly,
     at most 200 calls a run, the rest in the next): each Haushalts-Kontakt
     and each of the key owner's Handy-Kontakte (firm cards aside) gets the
@@ -311,14 +328,18 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     and hidden persons never; at most 50 a run, one German line in the
     log. The contacts' lines follow the merge. Without `person.merge` the
     step is skipped and the missing-permission line names it.
-  - *Kontakt prüfen lassen* (`/kontakte/pruefen`, owner 2026-11-07,
-    `internal/kontaktantwort`): a person picks one of their own
-    Handy-Kontakte (`?buch=privat`) or, an admin, one of the house's
-    (`?buch=haushalt`, also the button on a contact's page), sees what the
-    link will show, and makes it (POST `buch`, `uid`): 32 random bytes,
-    base64url, `https://kontakt.<domain>/<token>`, shown once with a
-    prepared German sentence, *Teilen …* (the phone's share sheet) and
-    *Kopieren*. Homes keeps only its SHA-256; a new link for the same
+  - *Kontakt prüfen lassen* (owner 2026-11-07, `internal/kontaktantwort`;
+    2026-11-08: „nicht Link erstellen und dann teilen, sondern direkt Link
+    teilen“): *Link teilen* on one of the person's own Handy-Kontakte or,
+    an admin, one of the house's (on its page and as its row's icon) makes
+    the link (POST `/kontakte/pruefen`, `buch=privat|haushalt`, `uid`; the
+    answer the prepared German sentence as `text/plain`, a refusal one
+    plain sentence; a GET goes to `/kontakte`) and opens the phone's share
+    sheet with it at once (`navigator.share`); without one, or when it
+    fails, the sentence is copied and the button says *Link kopiert*; a
+    share sheet the browser refuses as too late leaves *Jetzt teilen* for
+    the next tap. The link: 32 random bytes, base64url,
+    `https://kontakt.<domain>/<token>`. Homes keeps only its SHA-256; a new link for the same
     contact retires the open one. The fields (owner 2026-11-07 and
     2026-11-08): first and last name; numbers with their kind (mobil,
     privat, geschäftlich, andere) and the *Haupt-Nummer*; e-mail
@@ -363,9 +384,9 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     postal codes with their places, boroughs and suburbs, from the
     OpenPLZ API's OpenStreetMap streets, ODbL; `tools/plz/plz.py` makes
     it, `PLZ-LIZENZ.md` beside it), flagged, never refused; a name
-    changed completely; five changes or more. *Kontakt-Antworten*
-    (`/kontakte/antworten`, `…/<id>`, the starter's only; a task on Deine
-    Aufgaben while one is open): each field before → after with its
+    changed completely; five changes or more. The review, on the
+    contact's page (the starter's only; a task on Deine Aufgaben while one
+    is open, POST `id`, `aktion`, `nimm`): each field before → after with its
     findings, the photo, the message with *An die Notiz des Kontakts
     anhängen*; ticked unless flagged, a removal (*entfernen*) and the
     note never; *Ausgewählte übernehmen*, *Alle übernehmen* (never a
@@ -377,9 +398,9 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     alone and said so); a Handy-Kontakt's wait for the phone
     (`/napi/kontakte/korrekturen`). Decided answers go after 30 days,
     unanswered links after their 14.
-  - *Dieselbe Person?* (`/kontakte/dieselbe`, the segment *Fragen*, titled
-    *Fragen von Immich*; the key's owner only, as Meine Kontakte): pairs of persons whose faces Immich holds close, ten
-    a page (`?seite=`). The hourly run asks, for at most 40 named persons
+  - *Dieselbe Person?* (on the contact of either person, see above; what
+    belongs to no contact at `/kontakte/dieselbe`; the key's owner only):
+    pairs of persons whose faces Immich holds close. The hourly run asks, for at most 40 named persons
     not asked for a day, `GET /api/people?closestPersonId=<id>` (Immich
     gives an order, no distance, and puts favourites first: they are read
     past and never offered) and keeps the 3 closest, their small faces and
@@ -391,7 +412,7 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     more photos; the contacts' lines follow), *Nein* (kept in
     `immich-gesichter.json`, `nein`: the pair never comes back) and
     *Überspringen* (last). Only a pair on offer is merged; a pair gone,
-    Immich not answering or a missing `person.merge` is said on the page.
+    Immich not answering or a missing `person.merge` is said where it was asked.
     A pair is offered only when both faces are kept as JPEGs (Immich
     answers 404 for a person whose face it has no thumbnail of, and a
     closest face is fetched at most 80 a run) and neither person is in no
@@ -407,7 +428,7 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     the app (`/napi/einrichtung`, `immich-pruefen`), gone by itself once
     none is.
   - *Ist das …?* (owner 2026-11-06: a contact's picture is a suggestion,
-    never an answer; on the same page, before the pairs): the hourly run
+    never an answer; on the contact's page, before the pairs): the hourly run
     uploads, at most 10 a run, the picture (vCard PHOTO, a JPEG) of each of
     the key owner's own Handy-Kontakte whose person has no face, archived
     (`POST /api/assets`, `visibility=archive`: out of the timeline, its

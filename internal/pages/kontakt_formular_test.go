@@ -91,7 +91,7 @@ func TestKontaktFormularV2(t *testing.T) {
 	}
 
 	f := cfg.Antworten.ZuPruefen("anna")[0]
-	rec = frag(Antworten(cfg), "GET", AntwortenPath+"/"+f.ID, "anna", "family", nil)
+	rec = frag(Kontakt(cfg), "GET", "/kontakte/h1", "anna", "family", nil)
 	page := rec.Body.String()
 	mustContain(t, page, `0711 1234567 (geschäftlich, Haupt-Nummer)</span> <span class=k>(neu)`,
 		`anna@example.org (andere)</span> <span class=weg>entfernen</span>`, `Lindenweg 3, 70173 München`, "gehört zu Stuttgart, nicht zu München",
@@ -102,7 +102,7 @@ func TestKontaktFormularV2(t *testing.T) {
 		}
 	}
 	// Alle übernehmen: not the removal, not the message
-	frag(Antworten(cfg), "POST", AntwortenPath+"/"+f.ID, "anna", "family", url.Values{"aktion": {"alle"}})
+	antworteAuf(cfg, "/kontakte/h1", f.ID, url.Values{"aktion": {"alle"}})
 	card := dav.Objects()["/homes/haushalt-kontakte/h1.vcf"]
 	mustContain(t, card, "TEL;TYPE=WORK,PREF:0711 1234567", "TEL;TYPE=CELL:+49 151 23456789", "EMAIL:anna@example.org", "ADR:;;Lindenweg 3;München;;70173;", "PHOTO;ENCODING=b;TYPE=JPEG:/9j/", "BDAY:--0308")
 	mustNotContain(t, card, "NOTE", "Grüße")
@@ -125,7 +125,7 @@ func TestKontaktFormularTickedOnly(t *testing.T) {
 	if len(f.Aenderungen) != 2 || !f.Aenderungen[0].Entfernen() || f.Aenderungen[1].Art != "notiz" {
 		t.Fatalf("changes %+v", f.Aenderungen)
 	}
-	frag(Antworten(cfg), "POST", AntwortenPath+"/"+f.ID, "anna", "family", url.Values{"aktion": {"auswahl"}, "nimm": {"0", "1"}})
+	antworteAuf(cfg, "/kontakte/h1", f.ID, url.Values{"aktion": {"auswahl"}, "nimm": {"0", "1"}})
 	card := dav.Objects()["/homes/haushalt-kontakte/h1.vcf"]
 	mustContain(t, card, "NOTE:Bin umgezogen.")
 	mustNotContain(t, card, "23456789")

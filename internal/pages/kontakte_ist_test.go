@@ -3,6 +3,7 @@ package pages
 import (
 	"encoding/base64"
 	"image/color"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
@@ -43,16 +44,26 @@ func istConfig(t *testing.T) (StartConfig, *immichfake.Server) {
 	return StartConfig{Contacts: c, Gesichter: g}, fake
 }
 
-// „Ist das …?“: the owner sees each contact's picture beside the person
-// Immich gave its face, with Ja, Nein and Kein Foto; Ja merges and says
-// so, Nein takes the picture out and says so; nothing before the Ja;
-// anyone else neither sees nor answers.
+// „Ist das …?“ on the contact (owner 2026-11-08): the owner sees its
+// picture beside the person Immich gave its face, with Ja, Nein and Kein
+// Foto, its row counting it and the task's address opening it; Ja merges
+// and says so there, Nein takes the picture out and says so; nothing
+// before the Ja; anyone else neither sees nor answers.
 func TestIstDas(t *testing.T) {
 	cfg, fake := istConfig(t)
-	mustContain(t, as(Kontakte, cfg, KontaktePath, "anna", "anna@box.test").Body.String(), `<a href=/kontakte/dieselbe>Fragen <span class=anzahl aria-label="2 offen">2</span></a>`)
-	body := as(Dieselbe, cfg, DieselbePath, "anna", "anna@box.test").Body.String()
-	mustContain(t, body, "<h2>Ist das …?</h2>", "<b>Ist das Mama?</b>", "<b>Mama</b><span>Bild im Kontakt</span>", "<i>ohne Namen</i>", "<b>Ist das Tina?</b>", "<b>Ben</b>",
+	mustContain(t, as(MeineKontakte, cfg, MeineKontaktePath, "anna", "anna@box.test").Body.String(), `<a href="/kontakte/privat/m">Mama <span class=anzahl aria-label="1 offen">1</span></a>`,
+		`<a href="/kontakte/privat/t">Tina <span class=anzahl aria-label="1 offen">1</span></a>`)
+	if rec := as(Dieselbe, cfg, DieselbePath, "anna", "anna@box.test"); rec.Code != 303 || rec.Header().Get("Location") != "/kontakte/privat/m" {
+		t.Fatalf("the task: %d %q", rec.Code, rec.Header().Get("Location"))
+	}
+	body := as(MeineKontakte, cfg, "/kontakte/privat/m", "anna", "anna@box.test").Body.String()
+	mustContain(t, body, "<h1>Mama</h1>", "<h2>Ist das …?</h2>", "<b>Ist das Mama?</b>", "<b>Mama</b><span>Bild im Kontakt</span>", "<i>ohne Namen</i>", `<form method=post action="/kontakte/privat/m">`,
 		`name=kontakt value="privat/m"`, `name=b value="u1"`, `value=ja data-laeuft="Führt zusammen …">Ja, das ist Mama</button>`, `>Nein</button>`, `value=keinfoto class=leise data-laeuft="Nimmt das Bild heraus …">Kein Foto von Mama</button>`)
+	mustNotContain(t, body, "Ist das Tina?")
+	mustContain(t, as(MeineKontakte, cfg, "/kontakte/privat/t", "anna", "anna@box.test").Body.String(), "<b>Ist das Tina?</b>", "<b>Ben</b>")
+	antworte := func(cfg StartConfig, user string, form url.Values) *httptest.ResponseRecorder {
+		return antworteBei(MeineKontakte(cfg), "/kontakte/privat/"+strings.TrimPrefix(form.Get("kontakt"), "privat/"), user, form)
+	}
 	// the contact's picture opens Homes' upload in Immich, the person all its photos, each in a new tab
 	mustContain(t, body, `<a href="https://photos.box.test/photos/a-`, `target=_blank rel=noopener aria-label="Bild im Kontakt"><img`,
 		`<a href="https://photos.box.test/people/u1" target=_blank rel=noopener`)

@@ -97,13 +97,10 @@ const (
 	KontakteKeiner     ID = "kontakte.keiner"     // „%s“: no card matches the search
 	KontakteAdressbuch ID = "kontakte.adressbuch" // the card's title while the list is not grouped by letter
 	// the Kontakte area's segments and path (owner 2026-11-08)
-	KontakteHaushalt  ID = "kontakte.seg.haushalt"
-	KontakteMeine     ID = "kontakte.seg.meine"
-	KontakteFragen    ID = "kontakte.seg.fragen"
-	KontakteAntworten ID = "kontakte.seg.antworten"
-	KontakteFragenH1  ID = "kontakte.fragen" // the Fragen page's heading
-	KontakteWie       ID = "kontakte.wie"    // the <details> that holds a page's explanation
-	KontaktePfad      ID = "kontakte.pfad"   // the path's name for a screen reader
+	KontakteHaushalt ID = "kontakte.seg.haushalt"
+	KontakteMeine    ID = "kontakte.seg.meine"
+	KontakteWie      ID = "kontakte.wie"  // the <details> that holds a page's explanation
+	KontaktePfad     ID = "kontakte.pfad" // the path's name for a screen reader
 	// a contact's two fixed links (owner 2026-11-05): the page's buttons, the phone book's labels, what a link says instead
 	KontaktDokumente       ID = "kontakt.dokumente"        // the button to Paperless
 	KontaktNachrichten     ID = "kontakt.nachrichten"      // the button to the viewer's archive
@@ -137,9 +134,6 @@ const (
 	DieselbeWeg          ID = "dieselbe.weg"         // the pair is no longer offered
 	DieselbeNichtGemacht ID = "dieselbe.nicht"       // Immich merged neither: one is gone
 	DieselbeStumm        ID = "dieselbe.stumm"       // Immich did not answer
-	DieselbeSeiten       ID = "dieselbe.seiten"      // „Seite %d von %d“
-	DieselbeWeiter       ID = "dieselbe.weiter"      // the next ten
-	DieselbeZurueck      ID = "dieselbe.zurueck"     // the ten before
 	DieselbeOrte         ID = "dieselbe.orte"        // under a face: „%s“ the places, then the years
 	DieselbeMit          ID = "dieselbe.mit"         // under a face: „%s“ the named persons in the same photos
 	DieselbeInImmich     ID = "dieselbe.immich"      // a face's link: „%s“ the name, all its photos in Immich
@@ -158,32 +152,18 @@ const (
 	IstDasKeinFotoGemerkt ID = "ist-das.kein-foto.gemerkt" // „Kein Foto“ kept
 	IstDasStumm           ID = "ist-das.stumm"             // Immich did not answer
 	// Kontakt prüfen lassen (owner 2026-11-07): the start, the answers' review, the page without a login
-	PruefenTitel          ID = "pruefen" // the start page, its link and the contact's button
-	PruefenHinweis        ID = "pruefen.hinweis"
-	PruefenHandy          ID = "pruefen.handy" // the two books
-	PruefenHaus           ID = "pruefen.haus"
-	PruefenLeer           ID = "pruefen.leer"
-	PruefenVorher         ID = "pruefen.vorher"    // „%s“ is the contact's name
-	PruefenWas            ID = "pruefen.was"       // „%s“ is the first name
-	PruefenErstellen      ID = "pruefen.erstellen" // the button, and pressed
 	PruefenErstelltLaeuft ID = "pruefen.erstellen.laeuft"
-	PruefenErstellt       ID = "pruefen.erstellt"
-	PruefenNachricht      ID = "pruefen.nachricht" // the text field's name
-	PruefenText           ID = "pruefen.text"      // the prepared message: the first name, the link
-	PruefenTeilen         ID = "pruefen.teilen"    // the share sheet, and copy
-	PruefenKopieren       ID = "pruefen.kopieren"
+	PruefenText           ID = "pruefen.text"        // the prepared message: the first name, the link
+	PruefenTeilen         ID = "pruefen.teilen"      // the contact's button: the link made and shared
+	PruefenTeilenFuer     ID = "pruefen.teilen-fuer" // a row's icon, for a screen reader: „%s“ the name
+	PruefenNochmal        ID = "pruefen.nochmal"     // the link made, the share sheet needs one more tap
+	KontaktAntwort        ID = "kontakt.antwort"     // the answer's heading on the contact
 	PruefenKopiert        ID = "pruefen.kopiert"
-	PruefenNurJetzt       ID = "pruefen.nur-jetzt"
 	PruefenWeg            ID = "pruefen.weg"
-	PruefenZurueck        ID = "pruefen.zurueck"
 	PruefenNicht          ID = "pruefen.nicht"
 	PruefenNurAdmins      ID = "pruefen.nur-admins"
-	AntwortenTitel        ID = "antworten"         // the review's page
 	AntwortenAufgabe      ID = "antworten.aufgabe" // the task: „%s“ how many, „2 Kontakt-Antworten“
 	AntwortenAufgabeWarum ID = "antworten.aufgabe.warum"
-	AntwortenLeer         ID = "antworten.leer"
-	AntwortenBestaetigt   ID = "antworten.bestaetigt"
-	AntwortenZurueck      ID = "antworten.zurueck"
 	AntwortWeg            ID = "antwort.weg"
 	AntwortVon            ID = "antwort.von" // the date, the book
 	BuchHaus              ID = "buch.haus"
@@ -401,9 +381,6 @@ var de = map[ID]string{
 	"kontakte.keiner":           "Kein Kontakt passt zu „%s“.",
 	"kontakte.seg.haushalt":     "Haushalt",
 	"kontakte.seg.meine":        "Meine",
-	"kontakte.seg.fragen":       "Fragen",
-	"kontakte.seg.antworten":    "Antworten",
-	"kontakte.fragen":           "Fragen von Immich",
 	"kontakte.wie":              "Wie das funktioniert",
 	"kontakte.pfad":             "Wo du bist",
 	"kontakte.adressbuch":       "Adressbuch",
@@ -418,7 +395,7 @@ var de = map[ID]string{
 	"kontakt.fotos-kurz":        "Fotos",
 	"kontakt.kein-immich":       "Auf dieser Box gibt es kein Immich.",
 	"meine-kontakte":            "Meine Kontakte",
-	"meine-kontakte.hinweis":    "Deine eigenen Handy-Kontakte; nur du siehst sie. Ein Tipp auf einen Namen öffnet seine Fotos in Immich. Jeder Kontakt hat dort eine Person mit seinem Namen: Gibst du in Immich einem Gesicht diesen Namen, führt Homes beide innerhalb einer Stunde zusammen.",
+	"meine-kontakte.hinweis":    "Deine eigenen Handy-Kontakte; nur du siehst sie. Ändern kannst du sie auf dem Handy.",
 	"meine-kontakte.leer":       "Dein Handy hat noch keine Kontakte geschickt. In der Homes-App: Kontakte übertragen.",
 	"meine-kontakte.weg":        "Diesen Kontakt gibt es in deinen Handy-Kontakten nicht mehr.",
 	"meine-kontakte.recht":      "Dem Immich-Schlüssel von Homes fehlt diese Berechtigung: %s. Ohne sie bekommen neue Kontakte keine Person in Immich, doppelte Personen bleiben getrennt, oder die Bilder deiner Kontakte kommen nicht als Vorschlag. In Immich: oben rechts dein Bild → Kontoeinstellungen → API-Schlüssel, beim Schlüssel „Homes“ auf Bearbeiten tippen und sie ankreuzen.",
@@ -438,9 +415,6 @@ var de = map[ID]string{
 	"dieselbe.weg":              "Diesen Vorschlag gibt es nicht mehr. Hier sind die aktuellen.",
 	"dieselbe.nicht":            "Immich hat die beiden nicht zusammengeführt, weil es eine davon nicht mehr gibt. Nichts wurde geändert.",
 	"dieselbe.stumm":            "Immich hat gerade nicht geantwortet, nichts wurde zusammengeführt. Versuch es gleich noch einmal.",
-	"dieselbe.seiten":           "Seite %d von %d",
-	"dieselbe.weiter":           "Weitere",
-	"dieselbe.zurueck":          "Zurück",
 	"dieselbe.orte":             "Orte: %s",
 	"dieselbe.mit":              "Auch dabei: %s",
 	"dieselbe.immich":           "Alle Fotos von %s in Immich",
@@ -581,32 +555,18 @@ var de = map[ID]string{
 	"dok.garantie.bis":           "Garantie bis %s",
 	"dok.kuendbar":               "kündbar bis %s",
 	"dok.termin":                 "Kündigungstermin %s",
-	"pruefen":                    "Kontakt prüfen lassen",
-	"pruefen.hinweis":            "Du schickst einem Kontakt einen Link. Dort sieht er nur seine eigenen Angaben – Name, Nummern, E-Mail, Adresse, Geburtstag – und kann sie bestätigen, korrigieren oder ergänzen. Bevor etwas übernommen wird, siehst du jede Änderung.",
-	"pruefen.handy":              "Deine Handy-Kontakte",
-	"pruefen.haus":               "Kontakte des Hauses",
-	"pruefen.leer":               "Hier gibt es noch keine Kontakte.",
-	"pruefen.vorher":             "%s prüfen lassen",
-	"pruefen.was":                "Das sieht %s unter dem Link:",
-	"pruefen.erstellen":          "Link erstellen",
-	"pruefen.erstellen.laeuft":   "Erstellt …",
-	"pruefen.erstellt":           "Link erstellt. Er gilt 14 Tage und nur einmal. Schick ihn selbst, etwa per WhatsApp, SMS oder Mail.",
-	"pruefen.nachricht":          "Die Nachricht mit dem Link",
+	"pruefen.erstellen.laeuft":   "Erstellt den Link …",
+	"pruefen.teilen-fuer":        "Link teilen: %s prüfen lassen",
+	"pruefen.nochmal":            "Jetzt teilen",
+	"kontakt.antwort":            "Antwort auf deinen Link",
 	"pruefen.text":               "Hallo %s, ich möchte deine Kontaktdaten in unserem Adressbuch aktuell halten. Magst du kurz prüfen, ob alles stimmt? Der Link gilt 14 Tage und nur einmal: %s",
-	"pruefen.teilen":             "Teilen …",
-	"pruefen.kopieren":           "Kopieren",
-	"pruefen.kopiert":            "Kopiert",
-	"pruefen.nur-jetzt":          "Homes zeigt diesen Link nur jetzt. Geht er verloren, erstelle einfach einen neuen – der alte gilt dann nicht mehr.",
+	"pruefen.teilen":             "Link teilen",
+	"pruefen.kopiert":            "Link kopiert",
 	"pruefen.weg":                "Diesen Kontakt gibt es nicht mehr.",
-	"pruefen.zurueck":            "Einen anderen Kontakt prüfen lassen",
 	"pruefen.nicht":              "Der Link ließ sich nicht erstellen. Versuch es gleich noch einmal; hilft das nicht, sag dem Admin Bescheid.",
 	"pruefen.nur-admins":         "Kontakte des Hauses lässt nur ein Admin prüfen. Deine eigenen Handy-Kontakte kannst du prüfen lassen.",
-	"antworten":                  "Kontakt-Antworten",
 	"antworten.aufgabe":          "%s prüfen",
 	"antworten.aufgabe.warum":    "Jemand hat seine Kontaktdaten geprüft. Übernimm, was stimmt.",
-	"antworten.leer":             "Keine Antworten offen.",
-	"antworten.bestaetigt":       "alles stimmt",
-	"antworten.zurueck":          "Zu den Kontakt-Antworten",
 	"antwort.weg":                "Diese Antwort gibt es nicht (mehr).",
 	"antwort.von":                "Antwort vom %s · %s",
 	"buch.haus":                  "Kontakt des Hauses",
