@@ -1025,11 +1025,17 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   the old `/nachrichten-sichern` redirects there; under Mehr when the box
   has the inbox) shows the same state for the signed-in person, one line
   with a dot per source (grey nothing yet, amber waiting for the archive,
-  green arrived), and what else the archive keeps (owner, 2026-11-04): the
+  green arrived; a phone source with nothing yet adds *in der Homes-App
+  einschalten*), and what else the archive keeps (owner, 2026-11-04): the
   location history's last point (Reitti), the number of cards in
-  Handy-Kontakte and of the person's calendars (neither tells Homes a time), says in one sentence that the Homes app does the backing
-  up (its guides per source are the app's alone; owner, 2026-11-04), what
-  goes without the phone (mail, calendars), and *Handy wechseln* folded at
+  Handy-Kontakte and of the person's calendars (neither tells Homes a
+  time), and E-Mail as the way to it (Homes cannot see the mailbox). It is
+  the one overview (owner, 2026-11-08): no intro, no guide; the app keeps
+  only what needs the phone and links here (*Alles im Überblick*). Below
+  the card, *Schlüssel im Archiv eintragen* opens the archive's `/tresor`
+  (`HOMES_ARCHIV_INTERN`'s persons, at home; away or without an archive
+  the plain reason instead), *Was nie ins Archiv kommt* and *Handy wechseln*
+  folded at
   the end. The sources are `whatsapp`, `signal` and `sms`. Its card *Zum
   Zurückholen* (haus#209) shows what the
   archive keeps in `letzte/` (the same as `/napi/sicherung/letzte`), with
