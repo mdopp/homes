@@ -65,7 +65,9 @@ budget() { # budget <name> <cap> <dir…>
 # existing number, e-mail and address with „Rückgängig“, its no-JS fallback (kontakt_frage.go)
 # 2026-11-08, owner approved 2026-11-08: Kontakte-Navigation (17,709 -> 17,761): the area's segments
 # Haushalt · Meine · Fragen n · Antworten n and the path back on every Kontakte page (kontakte_nav.go), the actions at the top
-budget pages 17762 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-09, owner approved 2026-11-09: the teaser on the apex host and Zugang anfragen (pages 17,753 -> 18,023): the public
+# page on the shared listener told apart by Host, the request's form, throttle and Danke, the admins' /zugang and the rows on Start (teaser.go)
+budget pages 18100 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -139,7 +141,9 @@ budget connectors 15121 $connectors   # one client per service, with its fake: 1
 # field (format.go), street and number and the PLZ by country, the PLZ↔Ort check against the open table shipped with Homes
 # (adresse.go), the photo decoded and made again (foto.go), kinds, main ones, removals and the message (felder.go)
 # 2026-11-08, owner approved 2026-11-08: the owner's answer wins over a background run that read before it (12,520 -> 12,560): gesichter
-budget household 12560 $household      # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-09, owner approved 2026-11-09: the teaser on the apex host and Zugang anfragen (household 12,557 -> 12,741): internal/zugang,
+# the requests kept with a salted hash of the address, the file as the throttle's memory (one per address an hour, twenty a day)
+budget household 12800 $household      # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one
