@@ -1134,7 +1134,7 @@ test('Kontakt prüfen lassen: formats, address, removal, photo, message', async 
   await k.locator('input[name=adr-nr]').first().fill('x7');
   await k.locator('input[name=geb-jahr]').fill('85');
   await k.getByRole('button', { name: 'Änderungen senden' }).click();
-  await expect(k.locator('input[name=vorname]')).toBeFocused();
+  await expect.poll(() => k.evaluate(() => document.activeElement && document.activeElement.name)).toBe('vorname');
   for (const t of ['Ein Name hat nur Buchstaben', 'So ist es keine Telefonnummer', 'So ist die E-Mail-Adresse nicht gültig', 'in Deutschland sind es fünf Ziffern', 'Eine Hausnummer beginnt mit einer Ziffer', 'Das Jahr mit vier Ziffern']) {
     await expect(k.locator('.fehler', { hasText: t })).toBeVisible();
   }
