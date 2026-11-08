@@ -537,10 +537,10 @@ func liste[T any](vs []T, n int, leer func(T) bool) []T {
 	return append(out, zero)
 }
 
-// plzMuster is each country's postal code pattern by its names, for the
-// script that sets the PLZ field's pattern when the country changes.
+// plzMuster is each country's postal code pattern by its names ("" Germany, "*" any
+// other), for the script that sets the PLZ field's pattern when the country changes.
 var plzMuster = sync.OnceValue(func() string {
-	m := map[string]string{"": kontaktantwort.PLZSonst}
+	m := map[string]string{"*": kontaktantwort.PLZSonst}
 	for _, l := range kontaktantwort.Laender {
 		for _, n := range l.Namen {
 			m[n] = l.PLZ
@@ -564,7 +564,7 @@ if(!s){s=document.createElement('span');s.className='fehler';s.id='f-'+Math.rand
 s.textContent=ok?'':(el.getAttribute('data-fehler')||el.validationMessage);s.hidden=ok;el.setAttribute('aria-invalid',ok?'false':'true')}
 var erst=0;f.addEventListener('invalid',function(e){e.preventDefault();zeig(e.target);if(!erst){erst=1;e.target.focus();setTimeout(function(){erst=0},0)}},true);
 f.addEventListener('input',function(e){var el=e.target;if(el.getAttribute('aria-invalid')==='true')zeig(el);
-if(el.name==='adr-land'){var m=JSON.parse(f.getAttribute('data-plz'));el.closest('fieldset').querySelector('[name=adr-plz]').pattern=m[el.value.trim().toLowerCase().replace(/[.\s]+$/,'')]||m['']}},true);
+if(el.name==='adr-land'){var m=JSON.parse(f.getAttribute('data-plz'));el.closest('fieldset').querySelector('[name=adr-plz]').pattern=m[el.value.trim().toLowerCase().replace(/[.\s]+$/,'')]||m['*']}},true);
 f.addEventListener('change',function(e){var el=e.target;if(el.name==='foto')return foto(el);
 if(el.name==='adr-strasse'){var n=el.closest('fieldset').querySelector('[name=adr-nr]'),m=el.value.trim().match(/^(.*[^\d\s,])[\s,]+(\d+\s?[a-zA-Z]?(?:\s?[-\/]\s?\d+\s?[a-zA-Z]?)?)$/);if(m&&!n.value){el.value=m[1];n.value=m[2]}}zeig(el)},true);
 function foto(el){var file=el.files&&el.files[0],img=document.getElementById('foto-bild'),bs=f.querySelectorAll('button');img.hidden=true;el.setCustomValidity('');zeig(el);

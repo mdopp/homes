@@ -61,7 +61,7 @@ type Land struct {
 // Laender are the countries whose postal codes are checked; another
 // country's code may hold letters, digits, spaces and hyphens only.
 var Laender = []Land{
-	{Code: "DE", Namen: []string{"deutschland", "germany", "bundesrepublik deutschland", "brd", "d", "de"}, PLZ: `[0-9]{5}`},
+	{Code: "DE", Namen: []string{"", "deutschland", "germany", "bundesrepublik deutschland", "brd", "d", "de"}, PLZ: `[0-9]{5}`},
 	{Code: "AT", Namen: []string{"österreich", "austria", "a", "at"}, PLZ: `[0-9]{4}`},
 	{Code: "CH", Namen: []string{"schweiz", "switzerland", "suisse", "svizzera", "ch"}, PLZ: `[0-9]{4}`},
 	{Code: "LI", Namen: []string{"liechtenstein", "fl", "li"}, PLZ: `94[89][0-9]`},
@@ -98,12 +98,9 @@ func init() {
 	}
 }
 
-// LandVon is the country land names; "" is Germany, the house's.
+// LandVon is the country land names; "" is Germany, the house's (its first name).
 func LandVon(land string) (Land, bool) {
 	n := strings.ToLower(strings.Trim(strings.Join(strings.Fields(land), " "), ". "))
-	if n == "" {
-		return Laender[0], true
-	}
 	for _, c := range Laender {
 		for _, name := range c.Namen {
 			if n == name {
