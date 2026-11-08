@@ -746,12 +746,24 @@ test('Auslastung shows the box and refreshes its values in place', async ({ page
 });
 
 // owner 2026-11-05 („Web zeigt, Handy bearbeitet“): the household's address book, by name;
-// typing filters at once, the number is a tap of its own, the row opens the contact
+// typing filters at once, the number is a tap of its own, the row opens the contact.
+// owner 2026-11-08: the area's segments at the top of every Kontakte page, the search and the
+// one action above the list, the path back on a contact, its links right under its name
 test('Kontakte lists the address book, the search filters while typing, a row opens the contact', async ({ page }, info) => {
   await page.setViewportSize({ width: 411, height: 900 });
   await page.goto('/kontakte');
   const rows = page.locator('.kontakte li');
   await expect(rows).toHaveCount(9);
+  const segmente = page.locator('nav.segmente a');
+  for (const [i, text] of [/^Haushalt$/, /^Meine$/, /^Fragen \d+$/].entries()) await expect(segmente.nth(i)).toHaveText(text); // anna holds the Immich key
+  await expect(segmente.first()).toHaveAttribute('aria-current', 'page');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
+  const suche0 = await page.getByRole('searchbox').boundingBox();
+  const aktion = await page.getByRole('link', { name: 'Kontakt prüfen lassen' }).boundingBox();
+  expect(aktion.y).toBeLessThan((await rows.first().boundingBox()).y); // the action above the list
+  expect(suche0.y).toBeLessThan(aktion.y);
+  await expect(page.getByText('Neue Kontakte und Änderungen machst du auf dem Handy')).toBeHidden();
+  await page.getByText('Wie das funktioniert').click();
   await expect(page.getByText('Neue Kontakte und Änderungen machst du auf dem Handy')).toBeVisible();
   await expect(page.locator('a.ruf', { hasText: '0711 556677' })).toHaveAttribute('href', 'tel:0711556677');
   await page.screenshot({ path: info.outputPath('kontakte-411.png'), fullPage: true });
@@ -768,6 +780,15 @@ test('Kontakte lists the address book, the search filters while typing, a row op
   await page.getByRole('link', { name: 'Oma Hilde' }).click();
   await expect(page).toHaveURL(/\/kontakte\/h6$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Oma Hilde');
+  await expect(page.locator('nav.pfad')).toHaveText('Kontakte › Oma Hilde');
+  await expect(page.locator('nav.segmente a[aria-current]')).toHaveText('Haushalt');
+  const oben = page.locator('.oben a');
+  await expect(oben.first()).toBeVisible();
+  expect((await oben.last().boundingBox()).y).toBeLessThan((await page.locator('.karte').first().boundingBox()).y); // its links before its fields
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
+  await page.screenshot({ path: info.outputPath('kontakt-411.png'), fullPage: true });
+  await page.locator('nav.pfad').getByRole('link', { name: 'Kontakte' }).click();
+  await expect(page).toHaveURL(/\/kontakte$/);
   await page.goto('/kalender');
   await expect(page.getByText('Neue Termine und Änderungen machst du auf dem Handy')).toBeVisible();
 });
@@ -778,8 +799,9 @@ test('Meine Kontakte: the own Handy-Kontakte, each to its person in Immich', asy
   await page.setViewportSize({ width: 411, height: 900 });
   await page.goto('/kontakte');
   await expect(page.getByText('In Immich, aber noch kein Haushalts-Kontakt')).toHaveCount(0);
-  await page.getByRole('link', { name: 'Meine Kontakte' }).click();
+  await page.locator('nav.segmente').getByRole('link', { name: 'Meine', exact: true }).click();
   await expect(page).toHaveURL(/\/kontakte\/privat$/);
+  await expect(page.locator('nav.pfad')).toHaveText('Kontakte › Meine');
   await expect(page.locator('.kontakte li')).toHaveCount(5);
   await expect(page.getByRole('link', { name: 'Oma Hilde' })).toHaveAttribute('href', '/kontakte/privat/k0/fotos');
   await page.screenshot({ path: info.outputPath('meine-kontakte-411.png'), fullPage: true });
@@ -793,8 +815,13 @@ test('Meine Kontakte: the own Handy-Kontakte, each to its person in Immich', asy
 test('Dieselbe Person? shows pairs of faces and takes a Nein', async ({ page }, info) => {
   await page.setViewportSize({ width: 411, height: 900 });
   await page.goto('/kontakte/privat');
-  await page.getByRole('link', { name: 'Dieselbe Person?' }).click();
+  await page.locator('nav.segmente a', { hasText: 'Fragen' }).click();
   await expect(page).toHaveURL(/\/kontakte\/dieselbe$/);
+  await expect(page.locator('nav.segmente a[aria-current]')).toContainText('Fragen');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Fragen von Immich');
+  await expect(page.getByRole('heading', { name: 'Dieselbe Person?' })).toHaveCount(1); // one heading, not two
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
+  await page.screenshot({ path: info.outputPath('fragen-411.png'), fullPage: true });
   const paare = page.locator('section.paar:not(.frage)');
   await expect(paare).toHaveCount(6);
   await expect(paare.first()).toContainText('Oma Hilde');

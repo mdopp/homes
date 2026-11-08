@@ -36,17 +36,12 @@ func (cfg StartConfig) pruefenAn() bool {
 	return cfg.Antworten != nil && cfg.Contacts != nil && cfg.KontaktURL != ""
 }
 
-// pruefenLink is the quiet line under Kontakte: the start, and the
-// answers waiting.
-func pruefenLink(r *http.Request, cfg StartConfig) string {
+// pruefenAktion is a list's one action, at its top (q picks the book).
+func pruefenAktion(cfg StartConfig, q string) string {
 	if !cfg.pruefenAn() {
 		return ""
 	}
-	out := `<p class=k><a href=` + PruefenPath + `>` + wort(texte.PruefenTitel) + `</a> · ` + wort(texte.PruefenKurz) + `</p>`
-	if n := len(cfg.Antworten.ZuPruefen(r.Header.Get("Remote-User"))); n > 0 {
-		out += `<p class=k><a href=` + AntwortenPath + `>` + html.EscapeString(antwortenAufgabe(n)) + `</a></p>`
-	}
-	return out
+	return `<p class=weiter-in><a href=` + PruefenPath + q + `>` + wort(texte.PruefenTitel) + `</a></p>`
 }
 
 // pruefenKnopf is a house contact's „Kontakt prüfen lassen“, for an admin.
@@ -99,7 +94,15 @@ func Pruefen(cfg StartConfig) http.HandlerFunc {
 		var all []caldav.Contact
 		var err error
 		fetch(r, func(ctx context.Context) { all, err = pruefenKontakte(ctx, r, cfg, buch) })
-		b := familyHead(r, cfg, texte.T(texte.PruefenTitel), "Kontakte")
+		weg := []string{texte.T(texte.PruefenTitel)}
+		ct, gefunden := caldav.Contact{}, false
+		for _, c := range all {
+			if uid != "" && c.UID == uid {
+				ct, gefunden = c, true
+				weg = append(weg, PruefenPath+"?buch="+buch, kontaktantwort.FelderVon(c).Name())
+			}
+		}
+		b := kontakteHead(r, cfg, texte.T(texte.PruefenTitel), "", weg...)
 		b.WriteString(kontakteStyle + pruefenStyle)
 		if err != nil {
 			log.Printf("homes: kontakt prüfen: %s: %v", buch, err)
@@ -112,19 +115,16 @@ func Pruefen(cfg StartConfig) http.HandlerFunc {
 			writePage(w, http.StatusOK, b)
 			return
 		}
-		for _, ct := range all {
-			if ct.UID != uid {
-				continue
-			}
+		if gefunden {
 			f := kontaktantwort.FelderVon(ct)
 			if r.Method == http.MethodPost {
 				pruefenErstellen(w, r, cfg, b, buch, uid, f)
 				return
 			}
-			b.WriteString("<h1>" + html.EscapeString(fmt.Sprintf(texte.T(texte.PruefenVorher), f.Name())) + "</h1><p class=k>" + wort(texte.PruefenHinweis) + "</p>")
+			b.WriteString("<h1>" + html.EscapeString(fmt.Sprintf(texte.T(texte.PruefenVorher), f.Name())) + "</h1>")
 			b.WriteString("<p>" + html.EscapeString(fmt.Sprintf(texte.T(texte.PruefenWas), cmp.Or(f.Vorname, f.Name()))) + "</p>" + felderKarte(f))
 			b.WriteString(`<form method=post action=` + PruefenPath + `><input type=hidden name=buch value=` + buch + `><input type=hidden name=uid value="` + html.EscapeString(uid) +
-				`"><button data-laeuft="` + wort(texte.PruefenErstelltLaeuft) + `">` + wort(texte.PruefenErstellen) + `</button></form>`)
+				`"><button data-laeuft="` + wort(texte.PruefenErstelltLaeuft) + `">` + wort(texte.PruefenErstellen) + `</button></form>` + wieDas(texte.PruefenHinweis))
 			writePage(w, http.StatusOK, b)
 			return
 		}
@@ -135,10 +135,8 @@ func Pruefen(cfg StartConfig) http.HandlerFunc {
 
 // pruefenListe is the list to pick from, with the switch between the two books.
 func pruefenListe(b *strings.Builder, r *http.Request, cfg StartConfig, buch string, all []caldav.Contact) {
-	b.WriteString("<h1>" + wort(texte.PruefenTitel) + "</h1><p class=k>" + wort(texte.PruefenHinweis) + "</p>")
-	if n := len(cfg.Antworten.ZuPruefen(r.Header.Get("Remote-User"))); n > 0 {
-		b.WriteString(`<p class=weiter-in><a href=` + AntwortenPath + `>` + html.EscapeString(antwortenAufgabe(n)) + `</a></p>`)
-	}
+	b.WriteString("<h1>" + wort(texte.PruefenTitel) + "</h1>")
+	defer b.WriteString(wieDas(texte.PruefenHinweis))
 	if isAdmin(r) {
 		cur := func(x string) string {
 			if x == buch {
@@ -247,26 +245,29 @@ func Antworten(cfg StartConfig) http.HandlerFunc {
 		}
 		wer := r.Header.Get("Remote-User")
 		id := strings.Trim(strings.TrimPrefix(r.URL.Path, AntwortenPath), "/")
-		b := familyHead(r, cfg, texte.T(texte.AntwortenTitel), "Kontakte")
+		f, err := cfg.Antworten.Eine(id, wer)
+		said, problem, weg := "", "", []string{texte.T(texte.KontakteAntworten)}
+		if id != "" && err == nil {
+			if r.Method == http.MethodPost {
+				if !fromHomes(r) {
+					http.Error(w, "Nur von Homes' eigener Seite.", http.StatusForbidden)
+					return
+				}
+				f, said, problem = antwortEntscheiden(r, cfg, f) // before the head: its count follows
+			}
+			weg = append(weg, AntwortenPath, f.Name())
+		}
+		b := kontakteHead(r, cfg, texte.T(texte.AntwortenTitel), AntwortenPath, weg...)
 		b.WriteString(pruefenStyle)
 		if id == "" {
 			antwortenListe(b, cfg, wer)
 			writePage(w, http.StatusOK, b)
 			return
 		}
-		f, err := cfg.Antworten.Eine(id, wer)
 		if err != nil {
 			b.WriteString("<h1>" + wort(texte.AntwortenTitel) + "</h1><p>" + wort(texte.AntwortWeg) + "</p><p><a href=" + AntwortenPath + ">" + wort(texte.AntwortenZurueck) + "</a></p>")
 			writePage(w, http.StatusNotFound, b)
 			return
-		}
-		said, problem := "", ""
-		if r.Method == http.MethodPost {
-			if !fromHomes(r) {
-				http.Error(w, "Nur von Homes' eigener Seite.", http.StatusForbidden)
-				return
-			}
-			f, said, problem = antwortEntscheiden(r, cfg, f)
 		}
 		antwortSeite(b, f, said, problem)
 		writePage(w, http.StatusOK, b)
@@ -287,7 +288,7 @@ func antwortenListe(b *strings.Builder, cfg StartConfig, wer string) {
 		}
 		b.WriteString(`<li><a href=` + AntwortenPath + `/` + f.ID + `>` + html.EscapeString(f.Name()) + `</a><span class=k> · ` + html.EscapeString(was) + `</span></li>`)
 	}
-	b.WriteString("</ul><p><a href=" + PruefenPath + ">" + wort(texte.PruefenTitel) + "</a></p>")
+	b.WriteString("</ul>")
 }
 
 // antwortEntscheiden keeps the review and, for a Haushalts-Kontakt, writes
@@ -458,5 +459,4 @@ func antwortSeite(b *strings.Builder, f kontaktantwort.Frage, said, problem stri
 				`<button name=aktion value=verwerfen class=leise data-frage="` + wort(texte.AntwortVerwerfenFrage) + `" data-laeuft="` + wort(texte.AntwortVerwirft) + `">` + wort(texte.AntwortVerwerfen) + `</button></p></form>`)
 		}
 	}
-	b.WriteString("<p><a href=" + AntwortenPath + ">" + wort(texte.AntwortenZurueck) + "</a></p>")
 }

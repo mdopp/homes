@@ -31,7 +31,7 @@ func addressBook(t *testing.T, cards ...string) (*davfake.Server, *caldav.Client
 
 // owner 2026-11-05 („Web zeigt, Handy bearbeitet“): the household's
 // address book, by name, each row leading to its page with its number or
-// e-mail to tap, and the one line saying where to edit.
+// e-mail to tap, and where to edit folded away at its end.
 func TestKontakteListsTheAddressBookByName(t *testing.T) {
 	_, c := addressBook(t, "z|Zahnarzt Dr. Berg|0711 12345|", "o|Örtel, Jana||jana@example.org", "a|Anna|+49 151 2222|anna@example.org", "x|Xaver||")
 	code, body, _ := familyPage(t, Kontakte, StartConfig{Contacts: c}, "GET", "/kontakte", "family")
@@ -39,7 +39,7 @@ func TestKontakteListsTheAddressBookByName(t *testing.T) {
 		t.Fatalf("status %d", code)
 	}
 	mustContain(t, body, "<h1>Kontakte</h1>",
-		"Neue Kontakte und Änderungen machst du auf dem Handy in den Haushalts-Kontakten oder über den Boten.",
+		"<details class=wie><summary>Wie das funktioniert</summary><p class=k>Neue Kontakte und Änderungen machst du auf dem Handy in den Haushalts-Kontakten oder über den Boten.",
 		`<h2 id=karte-adressbuch>Adressbuch</h2>`,
 		`<a href="/kontakte/a">Anna</a> <a class=ruf href="tel:+491512222">+49 151 2222</a>`, // the number before the e-mail
 		`<a href="/kontakte/o">Örtel, Jana</a> <a class=ruf href="mailto:jana@example.org">jana@example.org</a>`,
@@ -49,6 +49,8 @@ func TestKontakteListsTheAddressBookByName(t *testing.T) {
 	before(t, body, ">Anna<", ">Örtel, Jana<") // Ö as O
 	before(t, body, ">Örtel, Jana<", ">Xaver<")
 	before(t, body, ">Xaver<", ">Zahnarzt Dr. Berg<")
+	before(t, body, ">Zahnarzt Dr. Berg<", "<details class=wie>")
+	mustNotContain(t, body, "class=segmente", "class=pfad") // Haushalt alone: no segments; the list is the top
 	mustNotContain(t, body, "<form method=post", "Bearbeiten", "Löschen")
 	if _, kal, _ := familyPage(t, Kalender, StartConfig{Calendar: c}, "GET", "/kalender", "family"); !strings.Contains(kal, "machst du auf dem Handy im Haushalts-Kalender oder über den Boten.") {
 		t.Errorf("the calendar does not say where to edit, as the contacts do:\n%s", kal)

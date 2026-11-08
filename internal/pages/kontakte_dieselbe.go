@@ -38,16 +38,6 @@ const dieselbeStyle = `<style>.paar{margin:18px 0 0;padding:14px;border-radius:1
 .paar form{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}.paar form button{flex:1 1 auto}.paar form button.leise{flex:0 0 auto}
 .blaettern{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:20px 0 0}</style>`
 
-// dieselbeLink is the quiet line to the page, while it has pairs.
-func dieselbeLink(cfg StartConfig) string {
-	n := len(cfg.Gesichter.Paare()) + len(cfg.Gesichter.Fragen())
-	if n == 0 {
-		return ""
-	}
-	return `<p class=k><a href=` + DieselbePath + `>` + html.EscapeString(texte.T(texte.Dieselbe)) + `</a> · ` +
-		html.EscapeString(fmt.Sprintf(texte.T(texte.DieselbeKurz), texte.Anzahl(n, "Vorschlag", "Vorschläge"))) + `</p>`
-}
-
 // Dieselbe is the page, and its answers (POST a, b, antwort ja|nein|spaeter;
 // about a contact's picture kontakt, b, antwort ja|nein|keinfoto).
 func Dieselbe(cfg StartConfig) http.HandlerFunc {
@@ -118,8 +108,8 @@ func dieselbeAntworten(ctx context.Context, antwort string, antworten func(conte
 // dieselbeSeite is the page: its line, the outcome, the pairs of seite.
 func dieselbeSeite(r *http.Request, cfg StartConfig, seite int, said, problem string) *strings.Builder {
 	t := func(id texte.ID) string { return html.EscapeString(texte.T(id)) }
-	b := familyHead(r, cfg, texte.T(texte.Dieselbe), "Kontakte")
-	b.WriteString(dieselbeStyle + "<h1>" + t(texte.Dieselbe) + "</h1><p class=k>" + t(texte.DieselbeHinweis) + "</p>")
+	b := kontakteHead(r, cfg, texte.T(texte.KontakteFragenH1), DieselbePath, texte.T(texte.KontakteFragen))
+	b.WriteString(dieselbeStyle + "<h1>" + t(texte.KontakteFragenH1) + "</h1>")
 	if recht := cfg.Gesichter.Fehlt(); recht != "" {
 		problem = fmt.Sprintf(texte.T(texte.MeineKontakteRecht), recht)
 	}
@@ -147,6 +137,7 @@ func dieselbeSeite(r *http.Request, cfg StartConfig, seite int, said, problem st
 		}
 		b.WriteString(`<nav class=blaettern>` + link(seite-1, texte.DieselbeZurueck) + `<span class=k>` + html.EscapeString(fmt.Sprintf(texte.T(texte.DieselbeSeiten), seite, seiten)) + `</span>` + link(seite+1, texte.DieselbeWeiter) + `</nav>`)
 	}
+	b.WriteString(wieDas(texte.IstDasHinweis, texte.DieselbeHinweis))
 	return b
 }
 

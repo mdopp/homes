@@ -75,7 +75,7 @@ func TestKontakteOhneImmichVorschlaege(t *testing.T) {
 func TestMeineKontakte(t *testing.T) {
 	cfg, fake := privatConfig(t)
 	mustNotContain(t, as(Kontakte, cfg, KontaktePath, "anna", "ben@box.test").Body.String(), MeineKontaktePath)
-	mustContain(t, as(Kontakte, cfg, KontaktePath, "anna", "Anna@Box.test").Body.String(), `<a href=/kontakte/privat>Meine Kontakte</a>`)
+	mustContain(t, as(Kontakte, cfg, KontaktePath, "anna", "Anna@Box.test").Body.String(), `<nav class=segmente aria-label=Kontakte><a href=/kontakte aria-current=page>Haushalt</a><a href=/kontakte/privat>Meine</a>`)
 	cfg.Gesichter.Abgleichen(t.Context()) // the hourly run, now with anna's own
 	rec := as(MeineKontakte, cfg, MeineKontaktePath, "anna", "anna@box.test")
 	body := rec.Body.String()

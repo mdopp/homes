@@ -28,15 +28,6 @@ func privatEigen(r *http.Request, cfg StartConfig) bool {
 	return cfg.fotosAn() && u != "" && cfg.Gesichter.Wessen() == u
 }
 
-// meineKontakteLink is the quiet line under Kontakte, for the key's owner,
-// and the one to „Dieselbe Person?“.
-func meineKontakteLink(r *http.Request, cfg StartConfig) string {
-	if !privatEigen(r, cfg) {
-		return ""
-	}
-	return `<p class=k><a href=` + MeineKontaktePath + `>` + html.EscapeString(texte.T(texte.MeineKontakte)) + `</a> · ` + html.EscapeString(texte.T(texte.MeineKontakteKurz)) + `</p>` + dieselbeLink(cfg)
-}
-
 // meineKontakte is the viewer's own Handy-Kontakte.
 func meineKontakte(ctx context.Context, cfg StartConfig, person string) ([]caldav.Contact, error) {
 	cards, _, err := cfg.Contacts.BookCards(ctx, "/"+url.PathEscape(person)+"/handy-kontakte/")
@@ -77,8 +68,8 @@ func MeineKontakte(cfg StartConfig) http.HandlerFunc {
 			return
 		}
 		t := func(id texte.ID) string { return html.EscapeString(texte.T(id)) }
-		b := familyHead(r, cfg, texte.T(texte.MeineKontakte), "Kontakte")
-		b.WriteString(kontakteStyle + "<h1>" + t(texte.MeineKontakte) + "</h1><p class=k>" + t(texte.MeineKontakteHinweis) + "</p>" + dieselbeLink(cfg))
+		b := kontakteHead(r, cfg, texte.T(texte.MeineKontakte), MeineKontaktePath, texte.T(texte.KontakteMeine))
+		b.WriteString(kontakteStyle + "<h1>" + t(texte.MeineKontakte) + "</h1>")
 		if recht := cfg.Gesichter.Fehlt(); recht != "" {
 			b.WriteString(gesagt("", fmt.Sprintf(texte.T(texte.MeineKontakteRecht), recht)))
 		}
@@ -90,10 +81,11 @@ func MeineKontakte(cfg StartConfig) http.HandlerFunc {
 			b.WriteString("<p class=k>" + t(texte.MeineKontakteLeer) + "</p>")
 		default:
 			field := t(texte.KontakteSuchen)
-			b.WriteString(`<input type=search id=kontakte-suche placeholder="` + field + `" aria-label="` + field + `" autocomplete=off><p class=k id=kontakte-keiner data-vorlage="` + t(texte.KontakteKeiner) + `" hidden></p>`)
+			b.WriteString(`<input type=search id=kontakte-suche placeholder="` + field + `" aria-label="` + field + `" autocomplete=off>` + pruefenAktion(cfg, "?buch=privat") + `<p class=k id=kontakte-keiner data-vorlage="` + t(texte.KontakteKeiner) + `" hidden></p>`)
 			kontakteListe(b, kontaktZeilen(all, func(uid string) string { return MeineKontaktePath + "/" + url.PathEscape(uid) + "/fotos" }), len(all) >= kontakteBuchstaben)
 			b.WriteString(kontakteScript)
 		}
+		b.WriteString(wieDas(texte.MeineKontakteHinweis))
 		writePage(w, http.StatusOK, b)
 	}
 }

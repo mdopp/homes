@@ -96,6 +96,14 @@ const (
 	KontakteLeer       ID = "kontakte.leer"       // the address book has no card
 	KontakteKeiner     ID = "kontakte.keiner"     // „%s“: no card matches the search
 	KontakteAdressbuch ID = "kontakte.adressbuch" // the card's title while the list is not grouped by letter
+	// the Kontakte area's segments and path (owner 2026-11-08)
+	KontakteHaushalt  ID = "kontakte.seg.haushalt"
+	KontakteMeine     ID = "kontakte.seg.meine"
+	KontakteFragen    ID = "kontakte.seg.fragen"
+	KontakteAntworten ID = "kontakte.seg.antworten"
+	KontakteFragenH1  ID = "kontakte.fragen" // the Fragen page's heading
+	KontakteWie       ID = "kontakte.wie"    // the <details> that holds a page's explanation
+	KontaktePfad      ID = "kontakte.pfad"   // the path's name for a screen reader
 	// a contact's two fixed links (owner 2026-11-05): the page's buttons, the phone book's labels, what a link says instead
 	KontaktDokumente       ID = "kontakt.dokumente"        // the button to Paperless
 	KontaktNachrichten     ID = "kontakt.nachrichten"      // the button to the viewer's archive
@@ -109,13 +117,11 @@ const (
 	KontaktFotosKurz     ID = "kontakt.fotos-kurz"     // the web address's label in the phone book
 	KontaktKeinImmich    ID = "kontakt.kein-immich"    // the box has no Immich (any more)
 	MeineKontakte        ID = "meine-kontakte"         // the page, and its line under Kontakte
-	MeineKontakteKurz    ID = "meine-kontakte.kurz"    // that line's words after the link
 	MeineKontakteHinweis ID = "meine-kontakte.hinweis" // the page's quiet line
 	MeineKontakteLeer    ID = "meine-kontakte.leer"    // the phone sent none yet
 	MeineKontakteWeg     ID = "meine-kontakte.weg"     // a uid not in the book
 	MeineKontakteRecht   ID = "meine-kontakte.recht"   // the key lacks „%s“ (one or a list)
 	Dieselbe             ID = "dieselbe"               // the page „Dieselbe Person?“ and its link
-	DieselbeKurz         ID = "dieselbe.kurz"          // the link's words after it: „%s“ is how many
 	DieselbeHinweis      ID = "dieselbe.hinweis"       // the page's quiet line
 	DieselbeLeer         ID = "dieselbe.leer"          // no pair to ask about
 	DieselbeOhneName     ID = "dieselbe.ohne-name"     // a face without a name
@@ -152,8 +158,7 @@ const (
 	IstDasKeinFotoGemerkt ID = "ist-das.kein-foto.gemerkt" // „Kein Foto“ kept
 	IstDasStumm           ID = "ist-das.stumm"             // Immich did not answer
 	// Kontakt prüfen lassen (owner 2026-11-07): the start, the answers' review, the page without a login
-	PruefenTitel          ID = "pruefen"      // the start page, its link and the contact's button
-	PruefenKurz           ID = "pruefen.kurz" // the quiet line's words after it
+	PruefenTitel          ID = "pruefen" // the start page, its link and the contact's button
 	PruefenHinweis        ID = "pruefen.hinweis"
 	PruefenHandy          ID = "pruefen.handy" // the two books
 	PruefenHaus           ID = "pruefen.haus"
@@ -394,6 +399,13 @@ var de = map[ID]string{
 	"kontakte.suchen":           "Name, Nummer, E-Mail",
 	"kontakte.leer":             "Im Adressbuch steht noch niemand.",
 	"kontakte.keiner":           "Kein Kontakt passt zu „%s“.",
+	"kontakte.seg.haushalt":     "Haushalt",
+	"kontakte.seg.meine":        "Meine",
+	"kontakte.seg.fragen":       "Fragen",
+	"kontakte.seg.antworten":    "Antworten",
+	"kontakte.fragen":           "Fragen von Immich",
+	"kontakte.wie":              "Wie das funktioniert",
+	"kontakte.pfad":             "Wo du bist",
 	"kontakte.adressbuch":       "Adressbuch",
 	"kontakt.dokumente":         "Dokumente in Paperless",
 	"kontakt.nachrichten":       "Nachrichten im Archiv",
@@ -406,13 +418,11 @@ var de = map[ID]string{
 	"kontakt.fotos-kurz":        "Fotos",
 	"kontakt.kein-immich":       "Auf dieser Box gibt es kein Immich.",
 	"meine-kontakte":            "Meine Kontakte",
-	"meine-kontakte.kurz":       "deine eigenen Handy-Kontakte, jeweils mit seinen Fotos in Immich.",
 	"meine-kontakte.hinweis":    "Deine eigenen Handy-Kontakte; nur du siehst sie. Ein Tipp auf einen Namen öffnet seine Fotos in Immich. Jeder Kontakt hat dort eine Person mit seinem Namen: Gibst du in Immich einem Gesicht diesen Namen, führt Homes beide innerhalb einer Stunde zusammen.",
 	"meine-kontakte.leer":       "Dein Handy hat noch keine Kontakte geschickt. In der Homes-App: Kontakte übertragen.",
 	"meine-kontakte.weg":        "Diesen Kontakt gibt es in deinen Handy-Kontakten nicht mehr.",
 	"meine-kontakte.recht":      "Dem Immich-Schlüssel von Homes fehlt diese Berechtigung: %s. Ohne sie bekommen neue Kontakte keine Person in Immich, doppelte Personen bleiben getrennt, oder die Bilder deiner Kontakte kommen nicht als Vorschlag. In Immich: oben rechts dein Bild → Kontoeinstellungen → API-Schlüssel, beim Schlüssel „Homes“ auf Bearbeiten tippen und sie ankreuzen.",
 	"dieselbe":                  "Dieselbe Person?",
-	"dieselbe.kurz":             "%s, welche Gesichter in Immich zu einer Person gehören könnten.",
 	"dieselbe.hinweis":          "Immich hält diese Gesichter für ähnlich. Sagst du Ja, führt Homes beide in Immich zu einer Person zusammen. Ein Nein merkt sich Homes, dann fragt es nicht wieder. Nur du siehst diese Seite.",
 	"dieselbe.leer":             "Gerade gibt es nichts zu fragen. Homes schaut jede Stunde in Immich nach ähnlichen Gesichtern.",
 	"dieselbe.ohne-name":        "ohne Namen",
@@ -572,7 +582,6 @@ var de = map[ID]string{
 	"dok.kuendbar":               "kündbar bis %s",
 	"dok.termin":                 "Kündigungstermin %s",
 	"pruefen":                    "Kontakt prüfen lassen",
-	"pruefen.kurz":               "ein Link, mit dem jemand seine Angaben selbst prüft",
 	"pruefen.hinweis":            "Du schickst einem Kontakt einen Link. Dort sieht er nur seine eigenen Angaben – Name, Nummern, E-Mail, Adresse, Geburtstag – und kann sie bestätigen, korrigieren oder ergänzen. Bevor etwas übernommen wird, siehst du jede Änderung.",
 	"pruefen.handy":              "Deine Handy-Kontakte",
 	"pruefen.haus":               "Kontakte des Hauses",

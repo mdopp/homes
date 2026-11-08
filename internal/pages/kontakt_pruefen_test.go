@@ -137,9 +137,13 @@ func TestKontaktPruefenFromTheLinkToTheAddressBook(t *testing.T) {
 		t.Errorf("tasks %+v", as)
 	}
 	id := open[0].ID
+	// the segment Antworten with its count while one waits, on every Kontakte page; the path to the answer
+	segment := `<a href=/kontakte/antworten>Antworten <span class=anzahl aria-label="1 offen">1</span></a>`
+	mustContain(t, frag(Kontakte(cfg), "GET", KontaktePath, "anna", "family", nil).Body.String(), `<a href=/kontakte aria-current=page>Haushalt</a>`, segment)
+	mustContain(t, frag(Kontakt(cfg), "GET", "/kontakte/h1", "anna", "family", nil).Body.String(), segment)
 	rec = frag(Antworten(cfg), "GET", AntwortenPath+"/"+id, "anna", "family", nil)
 	body = rec.Body.String()
-	mustContain(t, body, "<h1>Anna Beispiel</h1>", "Nachname", `<span class=vorher>Beispiel</span> → <span class=nachher>Muster</span>`,
+	mustContain(t, body, `<a href=/kontakte>Kontakte</a> › <a href="/kontakte/antworten">Antworten</a> › <span>Anna Beispiel</span></nav>`, "<h1>Anna Beispiel</h1>", "Nachname", `<span class=vorher>Beispiel</span> → <span class=nachher>Muster</span>`,
 		`<span class=vorher>+49 151 23456789 (mobil)</span> → <span class=nachher>+49 151 99999999 (mobil)</span>`,
 		`0711 1234567 (geschäftlich)</span> <span class=k>(neu)`, "Neuer Weg 2, 12345 Stadt, Deutschland", "12.04.", "Inhaberin",
 		"Ausgewählte übernehmen", "Alle übernehmen", "Verwerfen")
@@ -151,7 +155,8 @@ func TestKontaktPruefenFromTheLinkToTheAddressBook(t *testing.T) {
 	got, _ := cfg.Antworten.Eine(id, "anna")
 	last := len(got.Aenderungen) - 1
 	rec = frag(Antworten(cfg), "POST", AntwortenPath+"/"+id, "anna", "family", url.Values{"aktion": {"auswahl"}, "nimm": {"0", strconv.Itoa(last)}})
-	mustContain(t, rec.Body.String(), "2 Änderungen ins Adressbuch geschrieben")
+	mustContain(t, rec.Body.String(), "2 Änderungen ins Adressbuch geschrieben", `<a href=/kontakte/antworten aria-current=page>Antworten</a>`) // the count follows at once
+	mustNotContain(t, frag(Kontakte(cfg), "GET", KontaktePath, "anna", "family", nil).Body.String(), "class=segmente")                          // none waits: Haushalt alone
 	card := dav.Objects()["/homes/haushalt-kontakte/h1.vcf"]
 	mustContain(t, card, "FN:Anna Muster", "N:Muster;Anna;;;", "TITLE:Inhaberin", "TEL;TYPE=CELL:+49 151 23456789", "X-IBAN:DE00")
 	mustNotContain(t, card, "99999999", "Neuer Weg", "BDAY")
@@ -278,4 +283,21 @@ func TestWhoMayStartAndWhereAHandyKontaktGoes(t *testing.T) {
 	if fh := cfg.Antworten.FuersHandy("anna"); len(fh) != 1 || fh[0].UID != "3789r1-2B4D" {
 		t.Errorf("for the phone: %+v", fh)
 	}
+}
+
+// owner 2026-11-08: a contact's actions stand right under its name, with
+// the path back; the list's one action and the search are at its top,
+// the explanation of Kontakt prüfen lassen folded away.
+func TestKontakteActionsAtTheTop(t *testing.T) {
+	cfg, _ := pruefenCfg(t)
+	body := frag(Kontakt(cfg), "GET", "/kontakte/h1", "anna", "family,admins", nil).Body.String()
+	mustContain(t, body, `<a href=/kontakte>Kontakte</a> › <span>Anna Beispiel</span></nav>`)
+	before(t, body, "<h1>Anna Beispiel</h1><div class=oben>", `>Kontakt prüfen lassen</a>`)
+	before(t, body, `>Kontakt prüfen lassen</a>`, "+49 151 23456789")
+	list := frag(Kontakte(cfg), "GET", KontaktePath, "anna", "family", nil).Body.String()
+	before(t, list, "id=kontakte-suche", `<p class=weiter-in><a href=/kontakte/pruefen>Kontakt prüfen lassen</a></p>`)
+	before(t, list, `>Kontakt prüfen lassen</a>`, ">Anna Beispiel<")
+	pick := frag(Pruefen(cfg), "GET", PruefenPath+"?uid=3789r1-2B4D", "anna", "family", nil).Body.String()
+	mustContain(t, pick, `› <a href="/kontakte/pruefen?buch=privat">Kontakt prüfen lassen</a> › <span>Oma &lt;b&gt;Hilde&lt;/b&gt;</span></nav>`)
+	before(t, pick, "Link erstellen", "<details class=wie><summary>Wie das funktioniert</summary>")
 }

@@ -32,9 +32,9 @@ type kontaktZeile struct{ name, seite, ziel, zielText, suche string }
 // Handy bearbeitet“): the cards /napi/gemeinsam/kontakte serves, by name,
 // each leading to its page (Kontakt) with its first number or e-mail to
 // tap; a search by name, number and e-mail, live and as ?q=. Where to
-// change them is one quiet line, as on the calendar; Radicale not
-// answering is Kontakt's plain line (haus#33). For the Immich key's owner,
-// a quiet line to Meine Kontakte (kontakte_privat.go).
+// change them is folded away at the end; Radicale not answering is
+// Kontakt's plain line (haus#33). Above the list the area's segments
+// (kontakte_nav.go), the search and the one action, Kontakt prüfen lassen.
 func Kontakte(cfg StartConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !showOnly(w, r, "Die Kontakte") {
@@ -47,8 +47,8 @@ func Kontakte(cfg StartConfig) http.HandlerFunc {
 		var all []caldav.Contact
 		var err error
 		fetch(r, func(ctx context.Context) { all, _, err = cfg.Contacts.Contacts(ctx) })
-		b := familyHead(r, cfg, "Kontakte", "Kontakte")
-		b.WriteString(kontakteStyle + "<h1>Kontakte</h1><p class=k>" + html.EscapeString(texte.T(texte.KontakteBearbeiten)) + "</p>")
+		b := kontakteHead(r, cfg, "Kontakte", KontaktePath)
+		b.WriteString(kontakteStyle + "<h1>Kontakte</h1>")
 		if err != nil {
 			log.Printf("homes: kontakte page: %v", err)
 			b.WriteString("<p class=k>" + saysNoContacts + "</p>")
@@ -58,7 +58,7 @@ func Kontakte(cfg StartConfig) http.HandlerFunc {
 		q := trimRunes(oneLine(r.URL.Query().Get("q")), 80)
 		field := texte.T(texte.KontakteSuchen)
 		b.WriteString(`<form method=get action=` + KontaktePath + ` role=search><input type=search id=kontakte-suche name=q value="` + html.EscapeString(q) +
-			`" placeholder="` + field + `" aria-label="` + field + `" autocomplete=off> <button data-laeuft="Sucht …">Suchen</button></form>`)
+			`" placeholder="` + field + `" aria-label="` + field + `" autocomplete=off> <button data-laeuft="Sucht …">Suchen</button></form>` + pruefenAktion(cfg, ""))
 		zeilen, gesucht := kontaktZeilen(all, cards.ContactPage), namen.Plain(q)
 		zeilen = slices.DeleteFunc(zeilen, func(z kontaktZeile) bool { return !strings.Contains(z.suche, gesucht) })
 		keiner := `<p class=k id=kontakte-keiner data-vorlage="` + html.EscapeString(texte.T(texte.KontakteKeiner)) + `"`
@@ -71,7 +71,7 @@ func Kontakte(cfg StartConfig) http.HandlerFunc {
 			b.WriteString(keiner + " hidden></p>")
 			kontakteListe(b, zeilen, len(all) >= kontakteBuchstaben)
 		}
-		b.WriteString(meineKontakteLink(r, cfg) + pruefenLink(r, cfg) + kontakteScript)
+		b.WriteString(wieDas(texte.KontakteBearbeiten) + kontakteScript)
 		writePage(w, http.StatusOK, b)
 	}
 }

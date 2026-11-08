@@ -50,21 +50,21 @@ func antworte(cfg StartConfig, user string, form url.Values) *httptest.ResponseR
 	return rec
 }
 
-// Only the key's owner: a link under Kontakte and Meine Kontakte while
-// there are pairs, the page with the two faces, names, photo counts and
+// Only the key's owner: the segment Fragen, with its count, on Kontakte
+// and Meine Kontakte, the page with the two faces, names, photo counts and
 // three buttons; anyone else goes to Kontakte, and a post of theirs
 // merges nothing.
 func TestDieselbeNurEigentuemer(t *testing.T) {
 	cfg, fake := dieselbeConfig(t)
-	mustContain(t, as(Kontakte, cfg, KontaktePath, "anna", "anna@box.test").Body.String(), `<a href=/kontakte/dieselbe>Dieselbe Person?</a> · 18 Vorschläge`)
-	mustContain(t, as(MeineKontakte, cfg, MeineKontaktePath, "anna", "anna@box.test").Body.String(), `<a href=/kontakte/dieselbe>Dieselbe Person?</a>`)
+	mustContain(t, as(Kontakte, cfg, KontaktePath, "anna", "anna@box.test").Body.String(), `<a href=/kontakte/dieselbe>Fragen <span class=anzahl aria-label="18 offen">18</span></a>`)
+	mustContain(t, as(MeineKontakte, cfg, MeineKontaktePath, "anna", "anna@box.test").Body.String(), `<a href=/kontakte/dieselbe>Fragen <span class=anzahl`)
 	mustNotContain(t, as(Kontakte, cfg, KontaktePath, "ben", "ben@box.test").Body.String(), DieselbePath)
 	rec := as(Dieselbe, cfg, DieselbePath, "anna", "anna@box.test")
 	body := rec.Body.String()
 	if rec.Code != http.StatusOK {
 		t.Fatalf("%d %s", rec.Code, body)
 	}
-	mustContain(t, body, "<h1>Dieselbe Person?</h1>", "<b>Anna</b><span>40 Fotos</span>", "<i>ohne Namen</i><span>1 Foto</span>", `src="data:image/jpeg;base64,`,
+	mustContain(t, body, "<a href=/kontakte/dieselbe aria-current=page>Fragen", "<a href=/kontakte>Kontakte</a> › <span>Fragen</span></nav>", "<h1>Fragen von Immich</h1>", "<b>Anna</b><span>40 Fotos</span>", "<i>ohne Namen</i><span>1 Foto</span>", `src="data:image/jpeg;base64,`,
 		`name=a value="p-anna"`, `name=b value="u0"`, `value=ja data-laeuft="Führt zusammen …">Ja, dieselbe Person</button>`, `>Nein</button>`, `>Überspringen</button>`)
 	if strings.Count(body, "<section class=paar>") != 10 || !strings.Contains(body, "Seite 1 von 2") {
 		t.Fatalf("not ten a page: %d", strings.Count(body, "<section class=paar>"))
