@@ -138,7 +138,8 @@ budget connectors 15121 $connectors   # one client per service, with its fake: 1
 # 2026-11-08, owner approved 2026-11-08: Kontakt-Formular v2 (12,059 -> 12,516): kontaktantwort's form of each
 # field (format.go), street and number and the PLZ by country, the PLZ↔Ort check against the open table shipped with Homes
 # (adresse.go), the photo decoded and made again (foto.go), kinds, main ones, removals and the message (felder.go)
-budget household 12520 $household      # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-08, owner approved 2026-11-08: the owner's answer wins over a background run that read before it (12,520 -> 12,560): gesichter
+budget household 12560 $household      # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one
