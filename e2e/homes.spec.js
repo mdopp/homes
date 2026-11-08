@@ -344,14 +344,15 @@ async function above(page, a, b) {
 
 // The Mehr audit (owner 2026-11-04): filing is the first and biggest thing on Dokumente; the title
 // asks once a file is chosen; the mail is one quiet line below.
-// Daten sichern: the state first, one line per source with a dot, the app's one sentence, the change folded last.
+// Daten sichern (owner 2026-11-08: the one overview): the state first, one line per source with a dot,
+// then the way to the keys, what never goes and the phone change folded last.
 test('Daten sichern leads with the state, the phone change folded', async ({ page }) => {
   await page.goto('/daten-sichern');
   const stand = page.locator('#karte-dein-stand, section:has(h2:text-is("Dein Stand"))').first();
-  for (const q of ['WhatsApp', 'Signal', 'SMS und Anrufe', 'Standort', 'Kontakte', 'Kalender']) await expect(stand.locator('li.quelle', { hasText: q })).toHaveCount(1);
-  expect(await above(page, 'li.quelle', 'text=Das Sichern macht die Homes-App')).toBe(true);
-  await expect(page.locator('details.wechsel')).not.toHaveAttribute('open', '');
-  expect(await above(page, 'text=Das Sichern macht die Homes-App', 'details.wechsel')).toBe(true);
+  for (const q of ['WhatsApp', 'Signal', 'SMS und Anrufe', 'Standort', 'Kontakte', 'E-Mail', 'Kalender']) await expect(stand.locator('li.quelle', { hasText: q })).toHaveCount(1);
+  expect(await above(page, 'li.quelle', 'p.schluessel')).toBe(true);
+  for (const d of await page.locator('details.wechsel').all()) await expect(d).not.toHaveAttribute('open', '');
+  expect(await above(page, 'p.schluessel', 'details.wechsel')).toBe(true);
 });
 
 // Netzlaufwerk once the password is set: the addresses first, the state in a line, the change folded.
