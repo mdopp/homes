@@ -562,7 +562,7 @@ if(!f)return;
 function zeig(el){if(!el.willValidate)return;var l=el.closest('label'),s=l.querySelector('.fehler'),ok=el.validity.valid;if(ok&&!s)return;
 if(!s){s=document.createElement('span');s.className='fehler';s.id='f-'+Math.random().toString(36).slice(2);l.appendChild(s);el.setAttribute('aria-describedby',s.id)}
 s.textContent=ok?'':(el.getAttribute('data-fehler')||el.validationMessage);s.hidden=ok;el.setAttribute('aria-invalid',ok?'false':'true')}
-f.addEventListener('invalid',function(e){e.preventDefault();zeig(e.target);if(document.activeElement&&document.activeElement.tagName==='BUTTON')e.target.focus()},true);
+var erst=0;f.addEventListener('invalid',function(e){e.preventDefault();zeig(e.target);if(!erst){erst=1;e.target.focus();setTimeout(function(){erst=0},0)}},true);
 f.addEventListener('input',function(e){var el=e.target;if(el.getAttribute('aria-invalid')==='true')zeig(el);
 if(el.name==='adr-land'){var m=JSON.parse(f.getAttribute('data-plz'));el.closest('fieldset').querySelector('[name=adr-plz]').pattern=m[el.value.trim().toLowerCase().replace(/[.\s]+$/,'')]||m['']}},true);
 f.addEventListener('change',function(e){var el=e.target;if(el.name==='foto')return foto(el);
