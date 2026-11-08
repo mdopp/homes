@@ -15,6 +15,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -272,7 +273,16 @@ func frageGeprueft(w http.ResponseWriter, r *http.Request, vorher kontaktantwort
 		}
 		return st, kontaktantwort.Felder{}, http.StatusRequestEntityTooLarge, texte.T(zuviel)
 	}
+	if k := r.PostForm.Get("loeschen"); k != "" { // a trash can without the script: the form again, the row marked
+		r.PostForm["weg"] = append(r.PostForm["weg"], k)
+	}
+	if k := r.PostForm.Get("zurueck"); k != "" {
+		r.PostForm["weg"] = slices.DeleteFunc(r.PostForm["weg"], func(w string) bool { return w == k })
+	}
 	st, nachher := frageNachher(r, vorher, now)
+	if r.PostForm.Get("loeschen")+r.PostForm.Get("zurueck") != "" {
+		return st, nachher, http.StatusOK, ""
+	}
 	var err error
 	if foto != nil {
 		if nachher.Foto, err = kontaktantwort.Foto(foto); err != nil {
@@ -397,8 +407,9 @@ var kindToken = map[string]string{"mobil": "mobile ", "privat": "home ", "gescha
 func frageForm(token string, fr kontaktantwort.Frage, st frageStand, problem string) string {
 	var b strings.Builder
 	f, alt := st.f, fr.Vorher
+	ro := "" // a row ticked to go: its fields stay as they were, not checked
 	in := func(name, key, label, value, extra string) {
-		b.WriteString(`<label>` + html.EscapeString(label) + `<input name=` + name + ` value="` + html.EscapeString(value) + `" ` + extra)
+		b.WriteString(`<label>` + html.EscapeString(label) + `<input name=` + name + ` value="` + html.EscapeString(value) + `" ` + ro + eigenesMuster(extra, value))
 		if msg := st.fehler[key]; msg != "" {
 			b.WriteString(` aria-invalid=true aria-describedby=f-` + key + `><span class=fehler id=f-` + key + `>` + html.EscapeString(msg) + `</span></label>`)
 			return
@@ -409,11 +420,22 @@ func frageForm(token string, fr kontaktantwort.Frage, st frageStand, problem str
 		return `pattern="` + html.EscapeString(p) + `" data-fehler="` + wort(id) + `"`
 	}
 	wahl := func(name, value, label string, an bool) {
-		b.WriteString(`<label class=wahl><input type=` + map[bool]string{true: "radio", false: "checkbox"}[name != "weg"] + ` name=` + name + ` value=` + value)
-		if an {
-			b.WriteString(` checked`)
+		b.WriteString(`<label class=wahl><input type=radio name=` + name + ` value=` + value + map[bool]string{true: " checked"}[an] + `>` + html.EscapeString(label) + `</label>`)
+	}
+	// weg is a card's row's trash can (owner 2026-11-08): the script greys the row and offers
+	// Rückgängig; without it the button sends the form back with the row marked.
+	weg := func(key string, label texte.ID) {
+		aus := st.weg[key]
+		if aus {
+			b.WriteString(`<input type=hidden name=weg value=` + key + `>`)
 		}
-		b.WriteString(`>` + html.EscapeString(label) + `</label>`)
+		b.WriteString(`<button type=submit name=loeschen value=` + key + ` class=papierkorb formnovalidate aria-label="` + wort(label) + `" title="` + wort(label) + `"` +
+			map[bool]string{true: " hidden"}[aus] + `>` + papierkorbIcon + `</button><button type=submit name=zurueck value=` + key + ` class=zurueck formnovalidate` +
+			map[bool]string{false: " hidden"}[aus] + `>` + wort(texte.FrageRueckgaengig) + `</button>`)
+	}
+	reihe := func(key string) {
+		ro = map[bool]string{true: "readonly "}[st.weg[key]]
+		b.WriteString(`<div class="eintrag` + map[bool]string{true: " geloescht"}[st.weg[key]] + `">`)
 	}
 	auswahl := func(name, cur string, arten []string) {
 		b.WriteString(`<label>` + wort(texte.FrageNummerArt) + `<select name=` + name + `>`)
@@ -436,15 +458,17 @@ func frageForm(token string, fr kontaktantwort.Frage, st frageStand, problem str
 		if i >= len(alt.Telefone) {
 			label = texte.T(texte.FrageWeitereNummer)
 		}
-		b.WriteString(`<div class=eintrag><div class=nummer>`)
+		reihe("tel." + n)
+		b.WriteString(`<div class=nummer>`)
 		in("tel", "tel."+n, label, p.Nummer, `type=tel inputmode=tel maxlength=40 autocomplete="`+kindToken[cmp.Or(p.Art, "mobil")]+`tel" `+muster(kontaktantwort.MusterNummer, texte.FrageNummerForm))
 		auswahl("tel-art", cmp.Or(p.Art, "mobil"), kontaktantwort.Arten)
 		b.WriteString(`</div><div class=wahlen>`)
 		wahl("tel-haupt", n, texte.T(texte.FrageHauptNummer), p.Haupt)
 		if i < len(alt.Telefone) {
-			wahl("weg", "tel."+n, texte.T(texte.FrageEntfernen), st.weg["tel."+n])
+			weg("tel."+n, texte.FrageNummerLoeschen)
 		}
 		b.WriteString(`</div></div>`)
+		ro = ""
 	}
 	zu()
 	auf(texte.T(texte.ArtMail))
@@ -453,15 +477,17 @@ func frageForm(token string, fr kontaktantwort.Frage, st frageStand, problem str
 		if i >= len(alt.Mails) {
 			label = texte.T(texte.FrageWeitereMail)
 		}
-		b.WriteString(`<div class=eintrag><div class=nummer>`)
+		reihe("mail." + n)
+		b.WriteString(`<div class=nummer>`)
 		in("mail", "mail."+n, label, m.Adresse, `type=email inputmode=email maxlength=200 autocomplete="`+kindToken[cmp.Or(m.Art, "privat")]+`email" data-fehler="`+wort(texte.FrageMailForm)+`"`)
 		auswahl("mail-art", cmp.Or(m.Art, "privat"), kontaktantwort.MailArten)
 		b.WriteString(`</div><div class=wahlen>`)
 		wahl("mail-haupt", n, texte.T(texte.FrageHauptMail), m.Haupt)
 		if i < len(alt.Mails) {
-			wahl("weg", "mail."+n, texte.T(texte.FrageEntfernen), st.weg["mail."+n])
+			weg("mail."+n, texte.FrageMailLoeschen)
 		}
 		b.WriteString(`</div></div>`)
+		ro = ""
 	}
 	zu()
 	for i, a := range liste(f.Adressen, len(alt.Adressen), kontaktantwort.Adresse.Leer) {
@@ -471,6 +497,7 @@ func frageForm(token string, fr kontaktantwort.Frage, st frageStand, problem str
 			legend = texte.T(texte.FrageWeitereAdresse)
 		}
 		auf(legend)
+		reihe("adr." + n)
 		b.WriteString(`<div class=strasse>`)
 		in("adr-strasse", "adr-strasse."+n, texte.T(texte.FrageStrasse), a.Strasse, `maxlength=200 `+sec+`address-line1" `+muster(kontaktantwort.MusterStrasse, texte.FrageStrasseForm))
 		in("adr-nr", "adr-nr."+n, texte.T(texte.FrageHausnummer), a.Hausnummer, `maxlength=10 `+muster(kontaktantwort.MusterHausnummer, texte.FrageHausnummerForm))
@@ -488,9 +515,11 @@ func frageForm(token string, fr kontaktantwort.Frage, st frageStand, problem str
 		in("adr-land", "adr-land."+n, texte.T(texte.FrageLand), a.Land, `maxlength=60 placeholder=Deutschland `+sec+`country-name" `+muster(kontaktantwort.MusterOrt, texte.FrageLandForm))
 		if i < len(alt.Adressen) {
 			b.WriteString(`<div class=wahlen>`)
-			wahl("weg", "adr."+n, texte.T(texte.FrageEntfernen), st.weg["adr."+n])
+			weg("adr."+n, texte.FrageAdresseLoeschen)
 			b.WriteString(`</div>`)
 		}
+		b.WriteString(`</div>`)
+		ro = ""
 		zu()
 	}
 	auf(texte.T(texte.ArtGeburtstag))
@@ -565,6 +594,11 @@ s.textContent=ok?'':(el.getAttribute('data-fehler')||el.validationMessage);s.hid
 var erst=0;f.addEventListener('invalid',function(e){e.preventDefault();zeig(e.target);if(!erst){var t=erst=e.target;setTimeout(function(){t.focus();erst=0},0)}},true);
 f.addEventListener('input',function(e){var el=e.target;if(el.getAttribute('aria-invalid')==='true')zeig(el);
 if(el.name==='adr-land'){var m=JSON.parse(f.getAttribute('data-plz'));el.closest('fieldset').querySelector('[name=adr-plz]').pattern=m[el.value.trim().toLowerCase().replace(/[.\s]+$/,'')]||m['*']}},true);
+f.addEventListener('click',function(e){var k=e.target.closest('button[name=loeschen],button[name=zurueck]');if(!k)return;e.preventDefault();
+var r=k.closest('.eintrag'),aus=k.name==='loeschen',h=r.querySelector('input[name=weg]');r.classList.toggle('geloescht',aus);
+r.querySelectorAll('input:not([type=hidden]):not([type=radio])').forEach(function(x){x.readOnly=aus;zeig(x)});
+if(aus&&!h){h=document.createElement('input');h.type='hidden';h.name='weg';h.value=k.value;r.appendChild(h)}if(!aus&&h)h.remove();
+r.querySelector('button[name=loeschen]').hidden=aus;r.querySelector('button[name=zurueck]').hidden=!aus;r.querySelector(aus?'button[name=zurueck]':'button[name=loeschen]').focus()});
 f.addEventListener('change',function(e){var el=e.target;if(el.name==='foto')return foto(el);
 if(el.name==='adr-strasse'){var n=el.closest('fieldset').querySelector('[name=adr-nr]'),m=el.value.trim().match(/^(.*[^\d\s,])[\s,]+(\d+\s?[a-zA-Z]?(?:\s?[-\/]\s?\d+\s?[a-zA-Z]?)?)$/);if(m&&!n.value){el.value=m[1];n.value=m[2]}}zeig(el)},true);
 function foto(el){var file=el.files&&el.files[0],img=document.getElementById('foto-bild'),bs=f.querySelectorAll('button');img.hidden=true;el.setCustomValidity('');zeig(el);
@@ -574,6 +608,24 @@ x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawI
 .then(function(blob){if(!blob)throw 0;var d=new DataTransfer();d.items.add(new File([blob],'foto.jpg',{type:'image/jpeg'}));el.files=d.files;img.src=URL.createObjectURL(blob);img.hidden=false})
 .catch(function(){el.value='';el.setCustomValidity(el.getAttribute('data-fehler'));zeig(el);el.setCustomValidity('')})
 .then(function(){bs.forEach(function(b){b.disabled=false})})}})()`
+
+var musterAttr = regexp.MustCompile(`pattern="([^"]*)"`)
+
+// eigenesMuster is extra without its pattern when value, the card's own, has not that form:
+// Homes checks it only once changed, so the browser must not stop the contact over it.
+func eigenesMuster(extra, value string) string {
+	m := musterAttr.FindStringSubmatch(extra)
+	if m == nil || value == "" {
+		return extra
+	}
+	if ok, err := regexp.MatchString(`^(?:`+html.UnescapeString(m[1])+`)$`, value); ok || err != nil {
+		return extra
+	}
+	return strings.Replace(extra, m[0], "", 1)
+}
+
+// papierkorbIcon is the trash can of a row the contact may take away.
+const papierkorbIcon = `<svg viewBox="0 0 24 24" aria-hidden=true><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg>`
 
 // frageSeite is the page: its own calm frame, no menu, no login, nothing
 // fetched from elsewhere (the pages' font and icons are behind the login).
@@ -597,7 +649,9 @@ input,select,textarea{display:block;width:100%;margin-top:4px;padding:12px;font:
 input:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px}.zeile{display:grid;grid-template-columns:7rem 1fr;gap:10px}.strasse{display:grid;grid-template-columns:1fr 6.5rem;gap:10px}.strasse>*{min-width:0}
 [hidden]{display:none!important}.fehler{display:block;margin-top:4px;color:var(--bad);font-size:.88rem}[aria-invalid=true]{border-color:var(--bad)}
 .wahlen{display:flex;flex-wrap:wrap;gap:6px 18px;margin:0 0 12px}label.wahl{display:flex;align-items:center;gap:8px;margin:0;color:var(--ink);font-size:.92rem}
-label.wahl input{display:inline;width:20px;height:20px;margin:0;padding:0}#foto-bild{display:block;width:120px;height:auto;margin-top:10px;border-radius:12px}
+label.wahl input{display:inline;width:20px;height:20px;margin:0;padding:0}
+.wahlen{align-items:center}.papierkorb,.zurueck{margin-left:auto;min-height:44px;padding:0 12px;background:var(--card);color:var(--ink);border:1px solid var(--line)}.papierkorb{width:44px;padding:0}
+.papierkorb svg{width:20px;height:20px;vertical-align:middle;fill:none;stroke:currentColor;stroke-width:2}.geloescht input:not([type=hidden]),.geloescht select,.geloescht label.wahl{opacity:.45;text-decoration:line-through;pointer-events:none}#foto-bild{display:block;width:120px;height:auto;margin-top:10px;border-radius:12px}
 .nummer{display:grid;grid-template-columns:1fr 9rem;gap:10px}.tag{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:10px}
 .knoepfe{display:flex;flex-direction:column;gap:10px;margin-top:20px}
 button{min-height:48px;padding:0 18px;font:inherit;font-weight:600;border:0;border-radius:14px;background:var(--accent);color:#fff}button.zweit{background:var(--card);color:var(--ink);border:1px solid var(--line)}

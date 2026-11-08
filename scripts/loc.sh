@@ -61,7 +61,9 @@ budget() { # budget <name> <cap> <dir…>
 # 2026-11-08, owner approved 2026-11-08: Kontakt-Formular v2 (17,404 -> 17,655): the public form's
 # patterns, autofill and German errors beside each field, street and number apart, kinds and the main one, „entfernen“, the photo and
 # the message, the multipart read in memory (kontakt_frage.go); the review's removal, photo and note (kontakt_pruefen.go)
-budget pages 17656 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-08, owner approved 2026-11-08: Kontakt-Formular Mülleimer (17,655 -> 17,709): a trash button per
+# existing number, e-mail and address with „Rückgängig“, its no-JS fallback (kontakt_frage.go)
+budget pages 17710 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted

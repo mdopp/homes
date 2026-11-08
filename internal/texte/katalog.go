@@ -234,7 +234,10 @@ const (
 	FrageHausnummer       ID = "frage.hausnummer"
 	FrageHauptNummer      ID = "frage.haupt-nummer" // the main number, the main e-mail address (vCard PREF)
 	FrageHauptMail        ID = "frage.haupt-mail"
-	FrageEntfernen        ID = "frage.entfernen" // a card's entry ticked to go
+	FrageNummerLoeschen   ID = "frage.nummer-loeschen" // a card's row's trash can, its label
+	FrageMailLoeschen     ID = "frage.mail-loeschen"
+	FrageAdresseLoeschen  ID = "frage.adresse-loeschen"
+	FrageRueckgaengig     ID = "frage.rueckgaengig"
 	FrageFoto             ID = "frage.foto"
 	FrageFotoWahl         ID = "frage.foto.wahl"
 	FrageFotoKeins        ID = "frage.foto.keins"
@@ -635,7 +638,10 @@ var de = map[ID]string{
 	"frage.hausnummer":           "Hausnummer",
 	"frage.haupt-nummer":         "Haupt-Nummer",
 	"frage.haupt-mail":           "Haupt-Adresse",
-	"frage.entfernen":            "entfernen",
+	"frage.nummer-loeschen":      "Nummer löschen",
+	"frage.mail-loeschen":        "E-Mail löschen",
+	"frage.adresse-loeschen":     "Adresse löschen",
+	"frage.rueckgaengig":         "Rückgängig",
 	"frage.foto":                 "Dein Foto",
 	"frage.foto.wahl":            "Foto wählen (wenn du magst)",
 	"frage.foto.keins":           "Dieses Bild lässt sich nicht öffnen. Wähle ein Foto als JPEG, PNG, HEIC oder WebP.",
