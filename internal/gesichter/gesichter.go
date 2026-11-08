@@ -82,9 +82,6 @@ type Gesichter struct {
 // gone; g.mu is held.
 func (g *Gesichter) beantworten(keys, gone []string) {
 	g.zug++
-	if g.beantwortet == nil {
-		g.beantwortet, g.weg = map[string]uint64{}, map[string]bool{}
-	}
 	for _, k := range keys {
 		g.beantwortet[k] = g.zug
 	}
@@ -168,7 +165,7 @@ func (g *Gesichter) laden() {
 	if g.geladen {
 		return
 	}
-	g.geladen = true
+	g.geladen, g.beantwortet, g.weg = true, map[string]uint64{}, map[string]bool{}
 	if b, err := os.ReadFile(filepath.Join(g.Dir, cacheDatei)); err == nil {
 		json.Unmarshal(b, &g.stand)
 	}

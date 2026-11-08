@@ -9,6 +9,7 @@ import (
 // its older stand over it (the „Ist das …?“ question came back after Ja).
 func TestNachziehenAnswerWins(t *testing.T) {
 	g := &Gesichter{}
+	g.laden()
 	g.beantworten([]string{"privat/alt"}, nil)
 	seit := g.zug // the run reads here
 	g.beantworten([]string{"privat/tinka", "privat/weg"}, []string{"p-alt"})
