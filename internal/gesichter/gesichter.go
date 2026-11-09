@@ -67,6 +67,9 @@ type Gesichter struct {
 	Web      string         // HOMES_IMMICH_PUBLIC_URL, https://photos.<domain>
 	Dir      string         // HOMES_DATA
 	Now      func() time.Time
+	// Handy keeps a change for the key owner's phone to write into their
+	// own contacts (kontaktantwort.Store.Handy, handy.go); nil: none asked
+	Handy func(wer string, a HandyAenderung) error
 
 	mu         sync.Mutex
 	geladen    bool
@@ -132,6 +135,9 @@ type stand struct {
 	// Unbekannt those the owner does not know, by id
 	Ohne      []immich.Person      `json:"ohne,omitempty"`
 	Unbekannt map[string]time.Time `json:"unbekannt,omitempty"`
+	// Bekannt are the named persons seen, by id (handy.go); nil before
+	// the first look, so the names given before it ask for nothing
+	Bekannt map[string]bool `json:"bekannt"`
 }
 
 // zuordnung is a contact's Immich person; Eigen: Homes made it, so Homes
@@ -144,6 +150,7 @@ type zuordnung struct {
 	Geburtstag string `json:"geburtstag,omitempty"`
 	Eigen      bool   `json:"eigen,omitempty"`
 	Immich     string `json:"immich,omitempty"`
+	Handy      string `json:"handy,omitempty"` // the name the owner's phone was asked to write; "" none
 }
 
 type bild struct {
@@ -369,13 +376,13 @@ func (g *Gesichter) save() error {
 }
 
 // Pflegen keeps Immich's people fresh, merges those of one name, gives
-// each of kontakte's contacts its person and asks for the closest faces:
-// now, then every jede.
-func (g *Gesichter) Pflegen(ctx context.Context, jede time.Duration, kontakte *caldav.Client) {
+// each of kontakte's contacts its person and asks for the closest faces,
+// and asks the owner's phone through handy (Handy): now, then every jede.
+func (g *Gesichter) Pflegen(ctx context.Context, jede time.Duration, kontakte *caldav.Client, handy func(string, HandyAenderung) error) {
 	if g == nil || g.Immich == nil {
 		return
 	}
-	g.Kontakte = kontakte
+	g.Kontakte, g.Handy = kontakte, handy
 	for {
 		if err := g.Auffrischen(ctx); err != nil && ctx.Err() == nil {
 			log.Printf("homes: immich: people and faces: %v", err)
@@ -385,6 +392,9 @@ func (g *Gesichter) Pflegen(ctx context.Context, jede time.Duration, kontakte *c
 		}
 		if err := g.Abgleichen(ctx); err != nil && ctx.Err() == nil {
 			log.Printf("homes: immich: a person per contact: %v", err)
+		}
+		if err := g.Neuanlegen(ctx); err != nil && ctx.Err() == nil {
+			log.Printf("homes: immich: new contacts for the owner's phone: %v", err)
 		}
 		if err := g.Kontaktbilder(ctx); err != nil && ctx.Err() == nil {
 			log.Printf("homes: immich: the contacts' pictures: %v", err)

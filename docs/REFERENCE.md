@@ -471,7 +471,10 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     correction is). `zuordnung` notes both names as last seen or written
     (`name`, `immich`), so neither side is written back; both renamed
     since: the later wins, Immich's `updatedAt` against the card's `REV`.
-    The owner's own Handy-Kontakte are the phone's mirror and not written.
+    The owner's own Handy-Kontakte are the phone's mirror: Homes asks the
+    phone through the app's corrections instead (see `/napi/kontakte/korrekturen`),
+    and a person newly named in Immich that no contact has becomes a new
+    contact there.
   - *Ist das …?* (owner 2026-11-06: a contact's picture is a suggestion,
     never an answer; on the contact's page, before the pairs): the hourly run
     uploads, at most 10 a run, the picture (vCard PHOTO, a JPEG) of each of
@@ -1137,7 +1140,15 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   all (before: the phone's own line), a photo's `bild` a JPEG of at most
   512 px (base64), a note's `nachher` the text to add below the note. `POST /napi/kontakte/korrekturen/<id>` `{geschrieben:
   [nr…]}`: those written, every other one of it not (404 when nothing of
-  it waits). Module `kontakte`.
+  it waits). Module `kontakte`. Homes' own changes come the same way
+  (owner 2026-11-09, „App erweitern“; for the Immich key's owner): a
+  contact whose Immich person was renamed gets `vorname`/`nachname`
+  (once; `zuordnung.handy`), and `uid` `""` is a **new contact** of a
+  person newly named in Immich that no contact has: `name` its name,
+  `vorname`, `nachname` (`vorher` empty) and the face as `foto`. The app
+  makes it in the owner's phone and reports it like any; the next
+  upload brings it, and the hourly run links it. Each person is asked
+  for once (`bekannt`; the names given before Homes first looked never).
 - The phone's contacts (laib ADR 0029; optional in the app, behind
   Android's contacts permission): `POST /napi/kontakte`, `text/vcard`,
   all of the phone's contacts as concatenated vCards (≤ 64 MB, else 413),
