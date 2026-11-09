@@ -29,6 +29,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mdopp/homes/internal/gesichter"
 	"github.com/mdopp/homes/internal/jsonfile"
 )
 
@@ -314,6 +315,35 @@ func (s *Store) Entscheiden(id, wer string, stand []string) (Frage, error) {
 		return all, nil
 	})
 	return f, err
+}
+
+// Handy keeps, decided already, a change Homes itself makes in wer's own
+// Handy-Kontakte for the phone to write (owner 2026-11-09, „App
+// erweitern“, gesichter.HandyAenderung): the name a contact's Immich person
+// got, or with UID "" a new contact (its name the answer's name, and the
+// face as its photo). One of the same contact still waiting is replaced.
+// No review page shows it: it was never a link.
+func (s *Store) Handy(wer string, a gesichter.HandyAenderung) error {
+	id, err := s.random(8)
+	if err != nil {
+		return err
+	}
+	now := s.now()
+	vorher := Felder{Vorname: a.AltVorname, Nachname: a.AltNachname}
+	if a.UID == "" {
+		vorher = Felder{Vorname: a.Vorname, Nachname: a.Nachname}
+	}
+	as := []Aenderung{{Art: "vorname", Vorher: a.AltVorname, Nachher: a.Vorname, Stand: Angenommen}, {Art: "nachname", Vorher: a.AltNachname, Nachher: a.Nachname, Stand: Angenommen}}
+	if len(a.Bild) > 0 {
+		as = append(as, Aenderung{Art: "foto", Bild: a.Bild, Stand: Angenommen})
+	}
+	f := Frage{ID: hex.EncodeToString(id), Wer: wer, Buch: Privat, UID: a.UID, Vorher: vorher, Am: now, Bis: now, Beantwortet: &now, Entschieden: &now, Aenderungen: as}
+	return s.change(func(all []Frage) ([]Frage, error) {
+		all = slices.DeleteFunc(all, func(o Frage) bool {
+			return a.UID != "" && o.Wer == wer && o.UID == a.UID && o.Hash == "" && o.WartetAufsHandy()
+		})
+		return append(all, f), nil
+	})
 }
 
 // FuersHandy are wer's accepted changes of their Handy-Kontakte that the

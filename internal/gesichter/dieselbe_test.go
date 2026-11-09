@@ -39,7 +39,7 @@ func zwillinge(t *testing.T) (*Gesichter, *immichfake.Server) {
 	}
 	g.mu.Lock()
 	g.laden()
-	g.stand.Zuordnung["haushalt/c"] = zuordnung{carla.ID, "Carla Berg", "1990-04-12", true, "Carla Berg"}
+	g.stand.Zuordnung["haushalt/c"] = zuordnung{carla.ID, "Carla Berg", "1990-04-12", true, "Carla Berg", ""}
 	g.stand.Zuordnung["privat/d"] = zuordnung{ID: "d2", Name: "Dora"}
 	g.stand.Zuordnung["haushalt/a"] = zuordnung{ID: "a1", Name: "Anna Müller"}
 	g.mu.Unlock()

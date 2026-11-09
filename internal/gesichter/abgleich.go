@@ -123,19 +123,23 @@ func (g *Gesichter) Abgleichen(ctx context.Context) error {
 // or both changed and Immich's is the later (updatedAt over the card's
 // REV). N and FN are written as an owner's correction is (CorrectShared),
 // and z notes the name on both sides, so nothing goes back. A card changed
-// meanwhile waits for the next run. A Handy-Kontakt is the phone's: Homes
-// writes none (laib ADR 0029). n is the calls it took.
+// meanwhile waits for the next run. A Handy-Kontakt is the phone's mirror
+// (laib ADR 0029): the owner's phone is asked to write it, once (z.Handy,
+// owner 2026-11-09 „App erweitern“), and its next upload brings the name.
+// n is the calls it took.
 func (g *Gesichter) folgen(ctx context.Context, k kontakt, z zuordnung, p immich.Person) (_ kontakt, _ zuordnung, n int, err error) {
 	neu := strings.Join(strings.Fields(p.Name), " ")
 	if neu == "" || p.ID != z.ID {
 		return k, z, 0, nil
 	}
-	if z.Immich == "" || namen.Plain(neu) == namen.Plain(z.Immich) {
-		z.Immich = neu
+	if gleich := namen.Plain(neu) == namen.Plain(k.name); gleich || z.Immich == "" || namen.Plain(neu) == namen.Plain(z.Immich) {
+		if z.Immich, z.Handy = neu, ""; gleich { // followed already (the phone wrote it), or never apart
+			z.Name = k.name
+		}
 		return k, z, 0, nil
 	}
 	uid, haushalt := strings.CutPrefix(k.key, "haushalt/")
-	if !haushalt || (k.name != z.Name && !zeit(p.Stand).After(zeit(k.rev))) {
+	if k.name != z.Name && !zeit(p.Stand).After(zeit(k.rev)) {
 		return k, z, 0, nil
 	}
 	family, given := k.family, k.given
@@ -143,6 +147,14 @@ func (g *Gesichter) folgen(ctx context.Context, k kontakt, z zuordnung, p immich
 		family, given = nameTeile(k.name)
 	}
 	nf, ng := nameTeile(neu)
+	if !haushalt {
+		if g.Handy != nil && z.Handy != neu {
+			if err = g.Handy(g.Wessen(), HandyAenderung{UID: strings.TrimPrefix(k.key, "privat/"), AltVorname: given, AltNachname: family, Vorname: ng, Nachname: nf}); err == nil {
+				z.Handy = neu
+			}
+		}
+		return k, z, 0, err
+	}
 	done, err := g.Kontakte.CorrectShared(ctx, uid, []caldav.Korrektur{{Prop: "N-FAMILY", Alt: family, Neu: nf}, {Prop: "N-GIVEN", Alt: given, Neu: ng}})
 	if err != nil || slices.Contains(done, false) {
 		return k, z, 1, err
@@ -181,7 +193,7 @@ func (g *Gesichter) zuordnen(ctx context.Context, k kontakt, z zuordnung, neu ma
 		err := g.Immich.Aendern(ctx, z.ID, k.name, k.geburtstag)
 		var a immich.Antwort
 		if err == nil {
-			return zuordnung{z.ID, k.name, k.geburtstag, true, k.name}, n, nil
+			return zuordnung{z.ID, k.name, k.geburtstag, true, k.name, ""}, n, nil
 		}
 		if !errors.As(err, &a) || a.Code != 400 { // 400: merged away or deleted in Immich
 			return z, n, err
@@ -206,5 +218,5 @@ func (g *Gesichter) zuordnen(ctx context.Context, k kontakt, z zuordnung, neu ma
 	}
 	n++
 	p, err := g.Immich.Anlegen(ctx, k.name, k.geburtstag)
-	return zuordnung{p.ID, k.name, k.geburtstag, true, k.name}, n, err
+	return zuordnung{p.ID, k.name, k.geburtstag, true, k.name, ""}, n, err
 }
