@@ -59,11 +59,11 @@ func netzFrage(cfg StartConfig, f kontaktnetz.Frage, action string) string {
 	knopf := func(wert string, id, laeuft texte.ID, klasse string) string {
 		return `<button name=antwort value=` + wert + klasse + ` data-laeuft="` + wort(laeuft) + `">` + wort(id) + "</button>"
 	}
-	return `<section class="paar beziehung"><h3>` + esc(fmt.Sprintf(texte.T(texte.NetzFrage), f.X.Name, netzDu(f))) + `</h3><div class=zwei>` + netzGesicht(cfg, f.X) + netzGesicht(cfg, f.Y) +
+	return `<article class="paar beziehung"><h3>` + esc(fmt.Sprintf(texte.T(texte.NetzFrage), f.X.Name, netzDu(f))) + `</h3><div class=zwei>` + netzGesicht(cfg, f.X) + netzGesicht(cfg, f.Y) +
 		"</div><p class=k>" + esc(cfg.Netz.Gruende(f.Y.ID, f.Kante)) + `</p><form method=post action="` + esc(action) + `"><input type=hidden name=x value="` + esc(f.X.ID) +
 		`"><input type=hidden name=y value="` + esc(f.Y.ID) + `"><label>` + esc(fmt.Sprintf(texte.T(texte.NetzIst), f.X.Name)) + `<select name=art required>` + opts + "</select></label>" + weil +
 		knopf("ja", texte.NetzSpeichern, texte.NetzSpeichernLauft, "") + knopf("keine", texte.NetzKeineBez, texte.NetzKeineBezLauft, " class=leise formnovalidate") +
-		knopf("spaeter", texte.NetzSpaeter, texte.NetzSpaeterLauft, " class=leise formnovalidate") + "</form></section>"
+		knopf("spaeter", texte.NetzSpaeter, texte.NetzSpaeterLauft, " class=leise formnovalidate") + "</form></article>"
 }
 
 // netzGesicht is a node as „Dieselbe Person?“ shows a face: its Immich

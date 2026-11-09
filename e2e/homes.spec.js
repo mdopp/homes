@@ -844,7 +844,7 @@ test('Beziehungen klären: the suggestion is chosen, Speichern keeps it, a conta
   await page.setViewportSize({ width: 411, height: 900 });
   await page.goto('/kontakte/netz');
   await expect(page.getByRole('heading', { name: 'Beziehungen klären' })).toBeVisible();
-  const clara = page.locator('section.beziehung', { has: page.getByRole('heading', { name: 'Wie steht Clara Beispiel zu dir?' }) });
+  const clara = page.locator('article.beziehung', { has: page.getByRole('heading', { name: 'Wie steht Clara Beispiel zu dir?' }) });
   await expect(clara.getByLabel('Clara Beispiel ist …')).toHaveValue('kind');
   await expect(clara).toContainText('Vorschlag, weil gleicher Nachname und gleiche Adresse, 30 Jahre Altersunterschied.');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
@@ -855,7 +855,7 @@ test('Beziehungen klären: the suggestion is chosen, Speichern keeps it, a conta
   await expect(page.getByRole('heading', { name: 'Wie steht Clara Beispiel zu dir?' })).toHaveCount(0);
   await expect(page.locator('.netzliste ol > li', { hasText: 'Clara Beispiel' })).toContainText('Kind (von dir angegeben)');
   await page.goto('/kontakte/h2');
-  const ben = page.locator('section.beziehung', { has: page.getByRole('heading', { name: 'Wie steht Ben Beispiel zu Clara Beispiel?' }) });
+  const ben = page.locator('article.beziehung', { has: page.getByRole('heading', { name: 'Wie steht Ben Beispiel zu Clara Beispiel?' }) });
   await expect(ben.getByLabel('Ben Beispiel ist …')).toHaveValue('eltern');
   await ben.getByRole('button', { name: 'Überspringen' }).click();
   await expect(page.getByText('Übersprungen. Die Frage kommt später noch einmal.')).toBeVisible();
