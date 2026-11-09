@@ -89,8 +89,8 @@ func TestDieselbeAufDemKontakt(t *testing.T) {
 	cfg, fake := dieselbeConfig(t, "a|Anna||")
 	list := as(Kontakte, cfg, KontaktePath, "anna", "anna@box.test").Body.String()
 	mustContain(t, list, `<a href="/kontakte/a">Anna <span class=anzahl aria-label="3 offen">3</span></a>`, `<a href="/kontakte/x">Xaver</a>`)
-	if rec := as(Dieselbe, cfg, DieselbePath, "anna", "anna@box.test"); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `<a href="/kontakte/a?weiter">Anna <span class=anzahl aria-label="3 offen">3</span></a>`) || strings.Contains(rec.Body.String(), "Xaver") {
-		t.Fatalf("the task's list: %d %s", rec.Code, rec.Body.String())
+	if rec := as(Dieselbe, cfg, DieselbePath, "anna", "anna@box.test"); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `<form method=post action="/kontakte/dieselbe"><input type=hidden name=a value="p-anna"><input type=hidden name=b value="u0">`) {
+		t.Fatalf("the task answers the pairs in place: %d", rec.Code) // owner 2026-11-09: no click-through
 	}
 	body := as(Kontakt, cfg, "/kontakte/a", "anna", "anna@box.test").Body.String()
 	mustContain(t, body, "<h2>Dieselbe Person?</h2>", `<form method=post action="/kontakte/a"><input type=hidden name=a value="p-anna"><input type=hidden name=b value="u0">`)
