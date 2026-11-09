@@ -488,3 +488,10 @@ func named(t *testing.T, name string) {
 	assistent.Set(name)
 	t.Cleanup(func() { assistent.Set("") })
 }
+
+// owner 2026-11-09: a cover's ▲ ■ ▼ (z-index 2) showed above the bottom menu; the menu stays on top
+func TestMenueUeberDenKacheln(t *testing.T) {
+	if !strings.Contains(frame, ".tabs{position:fixed;left:0;right:0;bottom:0;z-index:10;") || !strings.Contains(kachelStyle, ".kachel .knoepfe{grid-area:knoepfe;position:relative;z-index:2;") {
+		t.Fatal("the bottom menu must lie above the tiles' buttons")
+	}
+}
