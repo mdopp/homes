@@ -121,37 +121,39 @@ const (
 	KontaktKeinArchiv      ID = "kontakt.kein-archiv"      // the viewer has no message archive
 	KontaktArchivDaheim    ID = "kontakt.archiv-daheim"    // the archive opens at home only, and the viewer is away
 	// Immich for the contacts (owner 2026-11-05): the third link, and the Kontakte page's suggestions
-	KontaktFotos         ID = "kontakt.fotos"          // the button to the Immich person
-	KontaktFotosKurz     ID = "kontakt.fotos-kurz"     // the web address's label in the phone book
-	KontaktKeinImmich    ID = "kontakt.kein-immich"    // the box has no Immich (any more)
-	MeineKontakte        ID = "meine-kontakte"         // the page, and its line under Kontakte
-	MeineKontakteHinweis ID = "meine-kontakte.hinweis" // the page's quiet line
-	MeineKontakteLeer    ID = "meine-kontakte.leer"    // the phone sent none yet
-	MeineKontakteWeg     ID = "meine-kontakte.weg"     // a uid not in the book
-	MeineKontakteRecht   ID = "meine-kontakte.recht"   // the key lacks „%s“ (one or a list)
-	Dieselbe             ID = "dieselbe"               // the page „Dieselbe Person?“ and its link
-	DieselbeHinweis      ID = "dieselbe.hinweis"       // the page's quiet line
-	DieselbeLeer         ID = "dieselbe.leer"          // no pair to ask about
-	DieselbeOhneName     ID = "dieselbe.ohne-name"     // a face without a name
-	DieselbeJa           ID = "dieselbe.ja"            // the buttons, and each pressed
-	DieselbeJaLaeuft     ID = "dieselbe.ja.laeuft"
-	DieselbeNein         ID = "dieselbe.nein"
-	DieselbeNeinLaeuft   ID = "dieselbe.nein.laeuft"
-	DieselbeSpaeter      ID = "dieselbe.spaeter"
-	DieselbeSpaeterLauft ID = "dieselbe.spaeter.laeuft"
-	DieselbeZusammen     ID = "dieselbe.zusammen"    // merged: „%s“ is the name kept
-	DieselbeGemerkt      ID = "dieselbe.gemerkt"     // „Nein“ kept
-	DieselbeHinten       ID = "dieselbe.hinten"      // skipped
-	DieselbeWeg          ID = "dieselbe.weg"         // the pair is no longer offered
-	DieselbeWeiter       ID = "dieselbe.weiter"      // back to the list of contacts with a question
-	DieselbeNichtGemacht ID = "dieselbe.nicht"       // Immich merged neither: one is gone
-	DieselbeStumm        ID = "dieselbe.stumm"       // Immich did not answer
-	DieselbeOrte         ID = "dieselbe.orte"        // under a face: „%s“ the places, then the years
-	DieselbeMit          ID = "dieselbe.mit"         // under a face: „%s“ the named persons in the same photos
-	DieselbeInImmich     ID = "dieselbe.immich"      // a face's link: „%s“ the name, all its photos in Immich
-	DieselbeInImmichOhne ID = "dieselbe.immich.ohne" // the same for a face without a name
-	DieselbeAufgabe      ID = "dieselbe.aufgabe"     // the key owner's task: „%s“ how many, „3 Personen“
-	DieselbeAufgabeWarum ID = "dieselbe.aufgabe.warum"
+	KontaktFotos            ID = "kontakt.fotos"             // the button to the Immich person
+	KontaktFotosKurz        ID = "kontakt.fotos-kurz"        // the web address's label in the phone book
+	KontaktKeinImmich       ID = "kontakt.kein-immich"       // the box has no Immich (any more)
+	KontaktKeineFotos       ID = "kontakt.keine-fotos"       // a firm or nobody Immich knows: no photos to show
+	KontaktKeineNachrichten ID = "kontakt.keine-nachrichten" // no number, no e-mail: nothing to search the archive for
+	MeineKontakte           ID = "meine-kontakte"            // the page, and its line under Kontakte
+	MeineKontakteHinweis    ID = "meine-kontakte.hinweis"    // the page's quiet line
+	MeineKontakteLeer       ID = "meine-kontakte.leer"       // the phone sent none yet
+	MeineKontakteWeg        ID = "meine-kontakte.weg"        // a uid not in the book
+	MeineKontakteRecht      ID = "meine-kontakte.recht"      // the key lacks „%s“ (one or a list)
+	Dieselbe                ID = "dieselbe"                  // the page „Dieselbe Person?“ and its link
+	DieselbeHinweis         ID = "dieselbe.hinweis"          // the page's quiet line
+	DieselbeLeer            ID = "dieselbe.leer"             // no pair to ask about
+	DieselbeOhneName        ID = "dieselbe.ohne-name"        // a face without a name
+	DieselbeJa              ID = "dieselbe.ja"               // the buttons, and each pressed
+	DieselbeJaLaeuft        ID = "dieselbe.ja.laeuft"
+	DieselbeNein            ID = "dieselbe.nein"
+	DieselbeNeinLaeuft      ID = "dieselbe.nein.laeuft"
+	DieselbeSpaeter         ID = "dieselbe.spaeter"
+	DieselbeSpaeterLauft    ID = "dieselbe.spaeter.laeuft"
+	DieselbeZusammen        ID = "dieselbe.zusammen"    // merged: „%s“ is the name kept
+	DieselbeGemerkt         ID = "dieselbe.gemerkt"     // „Nein“ kept
+	DieselbeHinten          ID = "dieselbe.hinten"      // skipped
+	DieselbeWeg             ID = "dieselbe.weg"         // the pair is no longer offered
+	DieselbeWeiter          ID = "dieselbe.weiter"      // back to the list of contacts with a question
+	DieselbeNichtGemacht    ID = "dieselbe.nicht"       // Immich merged neither: one is gone
+	DieselbeStumm           ID = "dieselbe.stumm"       // Immich did not answer
+	DieselbeOrte            ID = "dieselbe.orte"        // under a face: „%s“ the places, then the years
+	DieselbeMit             ID = "dieselbe.mit"         // under a face: „%s“ the named persons in the same photos
+	DieselbeInImmich        ID = "dieselbe.immich"      // a face's link: „%s“ the name, all its photos in Immich
+	DieselbeInImmichOhne    ID = "dieselbe.immich.ohne" // the same for a face without a name
+	DieselbeAufgabe         ID = "dieselbe.aufgabe"     // the key owner's task: „%s“ how many, „3 Personen“
+	DieselbeAufgabeWarum    ID = "dieselbe.aufgabe.warum"
 	// „Ist das …?“: a contact's picture beside the person Immich gave its face
 	IstDas                ID = "ist-das"             // the section
 	IstDasHinweis         ID = "ist-das.hinweis"     // its quiet line
@@ -430,6 +432,8 @@ var de = map[ID]string{
 	"kontakt.fotos":             "Fotos in Immich",
 	"kontakt.fotos-kurz":        "Fotos",
 	"kontakt.kein-immich":       "Auf dieser Box gibt es kein Immich.",
+	"kontakt.keine-nachrichten": "Zu diesem Kontakt ist keine Nummer und keine Mail-Adresse bekannt, also keine Nachrichten.",
+	"kontakt.keine-fotos":       "Zu diesem Kontakt gibt es in Immich keine Person, also keine Fotos.",
 	"meine-kontakte":            "Meine Kontakte",
 	"meine-kontakte.hinweis":    "Deine eigenen Handy-Kontakte; nur du siehst sie. Ändern kannst du sie auf dem Handy.",
 	"meine-kontakte.leer":       "Dein Handy hat noch keine Kontakte geschickt. In der Homes-App: Kontakte übertragen.",

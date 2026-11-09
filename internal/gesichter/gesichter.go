@@ -196,8 +196,7 @@ func (g *Gesichter) person(name string) (immich.Person, bool) {
 
 // Link is where „Fotos“ opens Immich for the contact (key as in
 // Zuordnung) of that name: its person's page, else the one person of the
-// name, else Immich's search for the name (web/src/lib/route.ts:
-// /people/<id>, and /search?query=<SmartSearchDto as JSON>).
+// name; "" without one (web/src/lib/route.ts: /people/<id>).
 func (g *Gesichter) Link(key, name string) string {
 	if g == nil {
 		return ""
@@ -211,8 +210,7 @@ func (g *Gesichter) Link(key, name string) string {
 	if ok && g.Immich != nil {
 		return g.Web + "/people/" + url.PathEscape(p.ID)
 	}
-	q, _ := json.Marshal(map[string]string{"query": strings.TrimSpace(name)})
-	return g.Web + "/search?" + url.Values{"query": {string(q)}}.Encode()
+	return "" // no person: Immich's smart search for a name shows anything (owner 2026-11-09: „eindeutig zuviel“)
 }
 
 // PersonSeite is person id's page in Immich, all of its photos; "" without

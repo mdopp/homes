@@ -48,7 +48,7 @@ func Kontakt(cfg StartConfig) http.HandlerFunc {
 				kontaktSprung(w, r, cfg, ct, kontaktName(ct), was)
 				return
 			}
-			kontaktSeite(w, r, cfg, ct, kontaktantwort.Haushalt, KontaktePath, kontaktSpruenge(cfg, ct.UID), e)
+			kontaktSeite(w, r, cfg, ct, kontaktantwort.Haushalt, KontaktePath, kontaktSpruenge(cfg, ct), e)
 			return
 		}
 		kontaktWeg(w, r, cfg, e, kontaktantwort.Haushalt, uid, "Diesen Kontakt gibt es nicht.")

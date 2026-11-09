@@ -115,10 +115,11 @@ func TestKontaktSprungNachrichten(t *testing.T) {
 	if q := archivQuery(t, rec.Header().Get("Location")); q != `"+491701234567" | "erna@example.org"` {
 		t.Fatalf("query %q", q)
 	}
-	// neither: the name
-	if q := archivQuery(t, oeffne(cfg, "/kontakte/x/nachrichten", "anna", zuHause).Header().Get("Location")); q != `"Xaver"` {
-		t.Fatalf("by name %q", q)
+	// neither: no search for the name (it finds the Bote's own messages), one plain line and no button
+	if rec := oeffne(cfg, "/kontakte/x/nachrichten", "anna", zuHause); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "keine Nummer und keine Mail-Adresse") {
+		t.Fatalf("by name: %d %q", rec.Code, rec.Header().Get("Location"))
 	}
+	mustNotContain(t, oeffne(cfg, "/kontakte/x", "anna", zuHause).Body.String(), `/kontakte/x/nachrichten`)
 	// a viewer without an archive: one plain line
 	if rec := oeffne(cfg, "/kontakte/oma/nachrichten", "bert", zuHause); rec.Code != http.StatusOK || rec.Header().Get("Location") != "" ||
 		!strings.Contains(rec.Body.String(), "Für dich gibt es auf dieser Box noch kein Archiv für Nachrichten.") {
