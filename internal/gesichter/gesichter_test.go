@@ -5,7 +5,6 @@ import (
 	"image"
 	"image/color"
 	"image/jpeg"
-	"net/url"
 	"testing"
 	"time"
 
@@ -50,9 +49,7 @@ func TestLink(t *testing.T) {
 	if got := g.Link("", "anna  MÜLLER"); got != "https://photos.box.test/people/p-anna" {
 		t.Fatalf("match: %q", got)
 	}
-	search := func(name string) string {
-		return "https://photos.box.test/search?" + url.Values{"query": {`{"query":"` + name + `"}`}}.Encode()
-	}
+	search := func(string) string { return "" } // no person: no search for the name (owner 2026-11-09)
 	if got := g.Link("", "Carla"); got != search("Carla") {
 		t.Fatalf("no match: %q", got)
 	}

@@ -82,9 +82,13 @@ func kontaktSprungPfad(rest string) (uid, was string) {
 }
 
 // kontaktSpruenge are the page's buttons, one per link the box has.
-func kontaktSpruenge(cfg StartConfig, uid string) string {
+func kontaktSpruenge(cfg StartConfig, ct caldav.Contact) string {
 	var b strings.Builder
+	uid, name := ct.UID, cmp.Or(oneLine(ct.Name), oneLine(ct.Org))
 	for _, s := range cfg.spruenge() {
+		if s.was == sprungFotos && (ct.IsFirm() || cfg.Gesichter.Link("haushalt/"+uid, name) == "") || s.was == sprungNachrichten && archivSuche(cfg, ct) == "" {
+			continue // nothing to find there: no button (owner 2026-11-09)
+		}
 		b.WriteString(`<p class=weiter-in><a href="` + html.EscapeString(cards.ContactPage(uid)+"/"+s.was) + `">` + html.EscapeString(texte.T(s.knopf)) + "</a></p>")
 	}
 	return b.String()
@@ -101,6 +105,8 @@ func kontaktSprung(w http.ResponseWriter, r *http.Request, cfg StartConfig, ct c
 	switch {
 	case was == sprungFotos && !cfg.fotosAn():
 		say(texte.T(texte.KontaktKeinImmich))
+	case was == sprungFotos && (ct.IsFirm() || cfg.Gesichter.Link("haushalt/"+ct.UID, cmp.Or(oneLine(ct.Name), oneLine(ct.Org))) == ""):
+		say(texte.T(texte.KontaktKeineFotos)) // a firm, or nobody Immich knows: no search for the name
 	case was == sprungFotos:
 		http.Redirect(w, r, cfg.Gesichter.Link("haushalt/"+ct.UID, cmp.Or(oneLine(ct.Name), oneLine(ct.Org))), http.StatusFound)
 	case was == sprungDokumente && !cfg.paperless().Set():
@@ -113,6 +119,8 @@ func kontaktSprung(w http.ResponseWriter, r *http.Request, cfg StartConfig, ct c
 		say(texte.T(texte.KontaktKeinArchiv))
 	case !atHome(r): // the archive is the house's network's only (laib's archiv template)
 		say(texte.T(texte.KontaktArchivDaheim))
+	case archivSuche(cfg, ct) == "":
+		say(texte.T(texte.KontaktKeineNachrichten))
 	default:
 		http.Redirect(w, r, cfg.ArchivURL+"/?"+archivSuche(cfg, ct), http.StatusFound)
 	}
@@ -148,8 +156,8 @@ func dokumenteVon(r *http.Request, cfg StartConfig, ct caldav.Contact) string {
 // archivSuche is msgvault's „Everything“ searched for the contact, as its
 // web UI keeps a view in its address (workspace, mode, explore with the
 // query; web/src/lib/explore/state.svelte.ts): its numbers as +<country>…
-// and its e-mails, each quoted, as alternatives (" | "); without either,
-// its name.
+// and its e-mails, each quoted, as alternatives (" | "); without either
+// "": no search for the name.
 func archivSuche(cfg StartConfig, ct caldav.Contact) string {
 	var terms []string
 	add := func(t string) {
@@ -168,7 +176,7 @@ func archivSuche(cfg StartConfig, ct caldav.Contact) string {
 		}
 	}
 	if len(terms) == 0 {
-		add(cmp.Or(oneLine(ct.Name), oneLine(ct.Org)))
+		return "" // no number, no e-mail: a name searched as full text finds the Bote's own messages (owner 2026-11-09)
 	}
 	explore, _ := json.Marshal(map[string]any{"schemaVersion": 2, "query": strings.Join(terms, " | ")})
 	return url.Values{"workspace": {"everything"}, "mode": {"full_text"}, "explore": {string(explore)}}.Encode()

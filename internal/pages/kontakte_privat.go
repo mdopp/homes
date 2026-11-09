@@ -63,7 +63,9 @@ func MeineKontakte(cfg StartConfig) http.HandlerFunc {
 			if r.URL.Path != MeineKontaktePath && ct.UID == uid {
 				fotos := ""
 				if privatEigen(r, cfg) {
-					fotos = "<p class=weiter-in>" + immichLink(cfg.Gesichter.Link("privat/"+uid, oneLine(ct.Name)), texte.T(texte.KontaktFotos), wort(texte.KontaktFotosKurz)) + "</p>"
+					if l := cfg.Gesichter.Link("privat/"+uid, oneLine(ct.Name)); l != "" && !ct.IsFirm() {
+						fotos = "<p class=weiter-in>" + immichLink(l, texte.T(texte.KontaktFotos), wort(texte.KontaktFotosKurz)) + "</p>"
+					}
 				}
 				kontaktSeite(w, r, cfg, ct, kontaktantwort.Privat, MeineKontaktePath, fotos, e)
 				return

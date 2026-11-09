@@ -9,7 +9,6 @@ import (
 	"image/jpeg"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"strings"
 	"testing"
 
@@ -54,28 +53,29 @@ func fotosConfig(t *testing.T) (StartConfig, *immichfake.Server) {
 	return cfg, fake
 }
 
-func immichSuche(name string) string {
-	return "https://photos.box.test/search?" + url.Values{"query": {`{"query":"` + name + `"}`}}.Encode()
-}
-
-// „Fotos“: the Immich person of the contact's name, else Immich's search
-// for it; without the key the search too; without Immich one plain line.
+// „Fotos“: the Immich person of the contact's name; without one (or
+// without the key) one plain line, never Immich's search for the name
+// (owner 2026-11-09: „eindeutig zuviel“); without Immich one plain line.
 func TestKontaktSprungFotos(t *testing.T) {
 	cfg, _ := fotosConfig(t)
 	for _, c := range []struct{ path, want string }{
 		{"/kontakte/oma/fotos", "https://photos.box.test/people/p-oma"}, // match
-		{"/kontakte/x/fotos", immichSuche("Xaver")},                     // no match
-		{"/kontakte/berg/fotos", immichSuche("Herr Berg")},              // no match either: names, not organisations
 	} {
 		if rec := oeffne(cfg, c.path, "anna", unterwegs); rec.Code != http.StatusFound || rec.Header().Get("Location") != c.want {
 			t.Errorf("%s: %d %q", c.path, rec.Code, rec.Header().Get("Location"))
 		}
 	}
-	cfg.Gesichter.Immich = nil // no key
-	if rec := oeffne(cfg, "/kontakte/oma/fotos", "anna", zuHause); rec.Header().Get("Location") != immichSuche("Oma Erna") {
-		t.Fatalf("no key: %d %q", rec.Code, rec.Header().Get("Location"))
+	for _, p := range []string{"/kontakte/x/fotos", "/kontakte/berg/fotos"} { // nobody Immich knows, a firm
+		if rec := oeffne(cfg, p, "anna", unterwegs); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "keine Person, also keine Fotos") {
+			t.Errorf("%s: %d %q", p, rec.Code, rec.Header().Get("Location"))
+		}
 	}
 	mustContain(t, oeffne(cfg, "/kontakte/oma", "anna", zuHause).Body.String(), `<p class=weiter-in><a href="/kontakte/oma/fotos">Fotos in Immich</a></p>`)
+	mustNotContain(t, oeffne(cfg, "/kontakte/x", "anna", zuHause).Body.String(), `/kontakte/x/fotos`) // nobody Immich knows: no button
+	cfg.Gesichter.Immich = nil // no key
+	if rec := oeffne(cfg, "/kontakte/oma/fotos", "anna", zuHause); rec.Header().Get("Location") != "" {
+		t.Fatalf("no key: %d %q", rec.Code, rec.Header().Get("Location"))
+	}
 	for _, off := range []StartConfig{{Gesichter: nil}, {Gesichter: cfg.Gesichter, Module: modulListe(t, "kontakte")}} {
 		c := cfg
 		c.Gesichter, c.Module = off.Gesichter, off.Module
