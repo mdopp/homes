@@ -72,7 +72,7 @@ func TestKontaktSprungFotos(t *testing.T) {
 	}
 	mustContain(t, oeffne(cfg, "/kontakte/oma", "anna", zuHause).Body.String(), `<p class=weiter-in><a href="/kontakte/oma/fotos">Fotos in Immich</a></p>`)
 	mustNotContain(t, oeffne(cfg, "/kontakte/x", "anna", zuHause).Body.String(), `/kontakte/x/fotos`) // nobody Immich knows: no button
-	cfg.Gesichter.Immich = nil // no key
+	cfg.Gesichter.Immich = nil                                                                        // no key
 	if rec := oeffne(cfg, "/kontakte/oma/fotos", "anna", zuHause); rec.Header().Get("Location") != "" {
 		t.Fatalf("no key: %d %q", rec.Code, rec.Header().Get("Location"))
 	}
