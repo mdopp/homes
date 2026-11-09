@@ -25,6 +25,11 @@ func TestTelefon(t *testing.T) {
 		"033201 12345":       "+49 3320112345",  // 03…: three to five digits, not split
 		"0137 1234567":       "+49 1371234567",  // another 01… number: not split
 		"+49 541 564890":     "+49 541 564890",  // already in form
+		"+49 681 844-0":      "+49 681 844-0",   // an extension stays apart
+		"030/310 07-26 47":   "+49 30 31007-2647",
+		"05401 849395-0":     "+49 5401 849395-0",
+		"0541-76099644":      "+49 541 76099644", // a hyphen after the area code is no extension
+		"0179-2443258":       "+49 179 2443258",
 	} {
 		if got, ok := Telefon(in, "49"); !ok || got != want {
 			t.Errorf("%q: %q %v, want %q", in, got, ok, want)

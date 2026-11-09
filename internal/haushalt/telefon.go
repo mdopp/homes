@@ -9,9 +9,8 @@ import (
 	"github.com/mdopp/homes/internal/caldav"
 )
 
-// vorwahlen are the German area codes (without the 0) Telefon splits off
-// as they are: the two- and three-digit areas, and the service numbers.
-// Another area outside 03… has four digits; one in 03… is not split.
+// vorwahlen are the German area codes (without the 0) Telefon splits off as they are, two and
+// three digits, and the service numbers; another area outside 03… has four, one in 03… is not split.
 const vorwahlen = " 30 40 69 89 201 202 203 208 209 211 212 214 221 228 231 234 241 251 261 271 281 291 " +
 	"331 335 340 341 345 351 355 361 365 371 375 381 385 391 395 421 431 441 451 461 471 481 491 511 521 531 541 551 561 571 581 591 " +
 	"611 621 631 641 651 661 671 681 711 721 731 741 751 761 771 781 791 821 831 841 851 861 871 881 906 911 921 931 941 951 961 971 981 991 " +
@@ -49,10 +48,12 @@ func Telefon(s, cc string) (string, bool) {
 	if r := len(n) - area; r < short || r > long {
 		return s, false
 	}
-	if area == 0 {
-		return "+49 " + n, true
+	if i := strings.LastIndex(v, "-"); area > 0 && i > 0 && strings.Trim(v[i+1:], "0123456789 ") == "" { // DIN 5008 keeps an extension apart: „+49 681 844-0“
+		if k := len(digits(v[i+1:])); k <= 5 && len(n)-area-k >= 2 {
+			return "+49 " + n[:area] + " " + n[area:len(n)-k] + "-" + n[len(n)-k:], true
+		}
 	}
-	return "+49 " + n[:area] + " " + n[area:], true
+	return "+49 " + strings.TrimLeft(n[:area]+" "+n[area:], " "), true
 }
 
 // vereinheitlichen puts every number of the household's cards in
@@ -70,8 +71,7 @@ func vereinheitlichen(ctx context.Context, c *caldav.Client, cc string, a map[st
 	var neu, unklar, fehler []string
 	for _, cd := range all {
 		name := cut(cmp.Or(oneLine(cd.Name), oneLine(cd.Org), "(ohne Namen)"), 100)
-		var ks []caldav.Korrektur
-		from := len(neu)
+		ks, from := []caldav.Korrektur(nil), len(neu)
 		for _, p := range cd.Phones {
 			t, ok := Telefon(p, cc)
 			switch {
