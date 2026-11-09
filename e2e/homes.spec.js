@@ -912,7 +912,7 @@ test('Kontakt prüfen lassen: the relations on the form, the review takes a new 
   await bez.getByLabel('Weitere Person (Name)').fill('Opa Karl');
   await kontakt.getByRole('button', { name: 'Änderungen senden' }).click();
   await expect(kontakt.getByText('Bitte wähle, was diese Person für dich ist.')).toBeVisible();
-  await kontakt.locator('fieldset', { has: kontakt.locator('legend', { hasText: 'Beziehungen' }) }).getByLabel(/^ist für dich/).selectOption('grosseltern');
+  await kontakt.locator('fieldset', { has: kontakt.locator('legend', { hasText: 'Beziehungen' }) }).getByLabel(/^ist für dich/).first().selectOption('grosseltern') // the row with Opa Karl; an empty one follows;
   await kontakt.screenshot({ path: info.outputPath('kontakt-formular-beziehungen-411.png'), fullPage: true });
   await kontakt.getByRole('button', { name: 'Änderungen senden' }).click();
   await expect(kontakt.getByRole('heading', { name: 'Danke!' })).toBeVisible();
