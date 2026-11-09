@@ -70,6 +70,9 @@ type Gesichter struct {
 	// Handy keeps a change for the key owner's phone to write into their
 	// own contacts (kontaktantwort.Store.Handy, handy.go); nil: none asked
 	Handy func(wer string, a HandyAenderung) error
+	// Danach runs at the end of each run of Pflegen: the contact net
+	// (netz.Rechnen, owner 2026-11-09), which decides itself when it is due
+	Danach func(context.Context) error
 
 	mu         sync.Mutex
 	geladen    bool
@@ -370,6 +373,26 @@ func (g *Gesichter) Auffrischen(ctx context.Context) error {
 	return g.save()
 }
 
+func (g *Gesichter) danach(ctx context.Context) error {
+	if g.Danach == nil {
+		return nil
+	}
+	return g.Danach(ctx)
+}
+
+// Zuordnungen are each contact's Immich person id, by "haushalt/<uid>" or
+// "privat/<uid>", and the e-mail of the key's account (the contact net).
+func (g *Gesichter) Zuordnungen() (map[string]string, string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.laden()
+	out := map[string]string{}
+	for k, z := range g.stand.Zuordnung {
+		out[k] = z.ID
+	}
+	return out, g.stand.Email
+}
+
 // save keeps the stand; g.mu is held.
 func (g *Gesichter) save() error {
 	return jsonfile.Save(filepath.Join(g.Dir, cacheDatei), g.stand)
@@ -404,6 +427,9 @@ func (g *Gesichter) Pflegen(ctx context.Context, jede time.Duration, kontakte *c
 		}
 		if err := g.Umfelder(ctx); err != nil && ctx.Err() == nil {
 			log.Printf("homes: immich: the places and company of the pairs: %v", err)
+		}
+		if err := g.danach(ctx); err != nil && ctx.Err() == nil {
+			log.Printf("homes: immich: the contact net: %v", err)
 		}
 		select {
 		case <-ctx.Done():

@@ -42,6 +42,7 @@ import (
 	"github.com/mdopp/homes/internal/modul"
 	"github.com/mdopp/homes/internal/musicbrainz"
 	"github.com/mdopp/homes/internal/napi"
+	"github.com/mdopp/homes/internal/netz"
 	"github.com/mdopp/homes/internal/pages"
 	"github.com/mdopp/homes/internal/podcasts"
 	"github.com/mdopp/homes/internal/reitti"
@@ -95,6 +96,7 @@ type site struct {
 	dienste                   map[string]bool              // the services Laib runs (dienstePflegen): the link modules; nil, Laib has not said yet
 	archive                   map[string]napi.ArchivIntern // each person's message archive (HOMES_ARCHIV_INTERN): a contact's Nachrichten
 	gesichter                 *gesichter.Gesichter         // Immich for the contacts (HOMES_IMMICH_*): Fotos, faces, a person per contact; nil, none
+	netz                      *netz.Netz                   // „Wer steht wem nahe“ from the key owner's photos and the phone books, daily (owner 2026-11-09); nil, none
 	antworten                 *kontaktantwort.Store        // Kontakt prüfen lassen (owner 2026-11-07): the links and answers, in HOMES_DATA
 	kontaktURL                string                       // the public page's host (HOMES_KONTAKT_URL, https://kontakt.<domain>); "", no links
 	// the teaser on the domain itself (owner 2026-11-08): its Host on the public listener (HOMES_TEASER_HOST; "", none),
@@ -158,7 +160,7 @@ func familyOf(s site) pages.StartConfig {
 		Samba: s.samba, SambaHost: s.sambaHost, Usage: s.usage, PublicURL: s.publicURL, Welcome: s.welcome, STT: s.stt,
 		HAPublicURL: s.haPublic, Inverted: s.inverted, RadicalePublicURL: s.radicale, Views: s.views,
 		DocumentsMail: s.docsMail, PaperlessPublicURL: s.paperlessPublic, PaperlessLANOnly: s.paperlessLAN, Sicherung: s.napi.Sicherung,
-		Reitti: s.napi.Reitti, Module: s.napi.Module, Einrichtung: s.napi.Einrichtung, PhoneCountry: s.hh.PhoneCountry, Gesichter: s.gesichter}
+		Reitti: s.napi.Reitti, Module: s.napi.Module, Einrichtung: s.napi.Einrichtung, PhoneCountry: s.hh.PhoneCountry, Gesichter: s.gesichter, Netz: s.netz}
 	family.Archive, family.ArchivURL = archivOf(s)
 	family.Antworten, family.DNS, family.KontaktURL = s.antworten, net.DefaultResolver, s.kontaktURL
 	family.Zugang = s.zugang // the teaser's access requests, for the admins' Start and /zugang (owner 2026-11-08)
@@ -502,10 +504,11 @@ func main() {
 		domain: einrichten.Domain(os.Getenv("HOMES_PUBLIC_URL")), archive: archive, gesichter: gesichter.FromEnv(dataDir),
 		antworten: &kontaktantwort.Store{Path: filepath.Join(dataDir, kontaktantwort.Datei)}, kontaktURL: os.Getenv("HOMES_KONTAKT_URL"),
 		teaserHost: os.Getenv("HOMES_TEASER_HOST"), teaserPerson: os.Getenv("HOMES_TEASER_PERSON"), zugang: &zugang.Store{Path: filepath.Join(dataDir, zugang.Datei)}}
-	st.napi.Antworten = st.antworten   // the phone's accepted corrections of its own contacts
-	st.hh.Wessen = st.gesichter.Wessen // handy_firmen: the Immich key owner's own phone contacts, nobody else's
-	start := st                        // what the list is built from again once Laib says what runs (dienstePflegen)
-	st.napi.Module = logModule(&st)    // HOMES_MODULE_AUS takes what it switches off out of st
+	st.napi.Antworten = st.antworten        // the phone's accepted corrections of its own contacts
+	st.hh.Wessen = st.gesichter.Wessen      // handy_firmen: the Immich key owner's own phone contacts, nobody else's
+	st.netz = netzVon(st.gesichter, hh.Loc) // the contact net after each hourly run, read from Immich once a day (owner 2026-11-09)
+	start := st                             // what the list is built from again once Laib says what runs (dienstePflegen)
+	st.napi.Module = logModule(&st)         // HOMES_MODULE_AUS takes what it switches off out of st
 	st.napi.Einrichtung = einrichtung(st, devices.Gekoppelt(store), jellyfin.KeyFromEnv())
 	// the counter stops only once the server has: a page is counted after
 	// it is answered, so the last flush waits for the requests under way (#92)
@@ -559,4 +562,15 @@ func gesehenFromEnv(dav *caldav.Client) *gesehen.Service {
 		return nil
 	}
 	return g
+}
+
+// netzVon is the contact net of g's key owner, computed after each of g's
+// background runs; nil without Immich.
+func netzVon(g *gesichter.Gesichter, loc *time.Location) *netz.Netz {
+	if g == nil {
+		return nil
+	}
+	n := &netz.Netz{G: g, Loc: loc}
+	g.Danach = n.Rechnen
+	return n
 }
