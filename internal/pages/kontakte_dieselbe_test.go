@@ -57,7 +57,7 @@ func antworteBei(h http.Handler, pfad, user string, form url.Values) *httptest.R
 }
 
 // Only the key's owner: with no contact of these persons, the task's page
-// shows the first ten pairs with the two faces, names, photo counts and
+// shows the pairs (one per named person) with the two faces, names, photo counts and
 // three buttons, no segment of its own; anyone else goes to Kontakte, and
 // a post of theirs merges nothing.
 func TestDieselbeNurEigentuemer(t *testing.T) {
@@ -70,8 +70,8 @@ func TestDieselbeNurEigentuemer(t *testing.T) {
 	}
 	mustContain(t, body, "<a href=/kontakte>Kontakte</a> › <span>Dieselbe Person?</span></nav>", "<h1>Dieselbe Person?</h1>", "<b>Anna</b><span>40 Fotos</span>", "<i>ohne Namen</i><span>1 Foto</span>", `src="data:image/jpeg;base64,`,
 		`name=a value="p-anna"`, `name=b value="u0"`, `value=ja data-laeuft="Führt zusammen …">Ja, dieselbe Person</button>`, `>Nein</button>`, `>Überspringen</button>`)
-	if strings.Count(body, "<section class=paar>") != 10 {
-		t.Fatalf("not ten: %d", strings.Count(body, "<section class=paar>"))
+	if strings.Count(body, "<section class=paar>") != 6 { // one per named person: only its closest (owner 2026-11-09)
+		t.Fatalf("not six: %d", strings.Count(body, "<section class=paar>"))
 	}
 	if rec := as(Dieselbe, cfg, DieselbePath, "ben", "ben@box.test"); rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != KontaktePath {
 		t.Fatalf("ben: %d", rec.Code)
@@ -88,13 +88,13 @@ func TestDieselbeNurEigentuemer(t *testing.T) {
 func TestDieselbeAufDemKontakt(t *testing.T) {
 	cfg, fake := dieselbeConfig(t, "a|Anna||")
 	list := as(Kontakte, cfg, KontaktePath, "anna", "anna@box.test").Body.String()
-	mustContain(t, list, `<a href="/kontakte/a">Anna <span class=anzahl aria-label="3 offen">3</span></a>`, `<a href="/kontakte/x">Xaver</a>`)
+	mustContain(t, list, `<a href="/kontakte/a">Anna <span class=anzahl aria-label="1 offen">1</span></a>`, `<a href="/kontakte/x">Xaver</a>`)
 	if rec := as(Dieselbe, cfg, DieselbePath, "anna", "anna@box.test"); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `<form method=post action="/kontakte/dieselbe"><input type=hidden name=a value="p-anna"><input type=hidden name=b value="u0">`) {
 		t.Fatalf("the task answers the pairs in place: %d", rec.Code) // owner 2026-11-09: no click-through
 	}
 	body := as(Kontakt, cfg, "/kontakte/a", "anna", "anna@box.test").Body.String()
 	mustContain(t, body, "<h2>Dieselbe Person?</h2>", `<form method=post action="/kontakte/a"><input type=hidden name=a value="p-anna"><input type=hidden name=b value="u0">`)
-	if n := strings.Count(body, "<section class=paar>"); n != 3 {
+	if n := strings.Count(body, "<section class=paar>"); n != 1 {
 		t.Fatalf("%d pairs on Anna", n)
 	}
 	mustNotContain(t, as(Kontakt, cfg, "/kontakte/a", "ben", "ben@box.test").Body.String(), "Dieselbe Person?")
@@ -102,9 +102,6 @@ func TestDieselbeAufDemKontakt(t *testing.T) {
 	mustContain(t, rec.Body.String(), "<h1>Anna</h1>", "Zusammengeführt: Die Fotos gehören jetzt zu Anna.")
 	if fmt.Sprint(fake.Merges()) != "[[p-anna u0]]" {
 		t.Fatalf("%v", fake.Merges())
-	}
-	for _, b := range []string{"u1", "u2"} {
-		antworteBei(Kontakt(cfg), "/kontakte/a", "anna", url.Values{"a": {"p-anna"}, "b": {b}, "antwort": {"nein"}})
 	}
 	rest := as(Dieselbe, cfg, DieselbePath, "anna", "anna@box.test")
 	if rest.Code != http.StatusOK || strings.Contains(rest.Body.String(), `value="p-anna"`) || !strings.Contains(rest.Body.String(), `value="p-ben"`) {
@@ -129,7 +126,7 @@ func TestDieselbeAntworten(t *testing.T) {
 	for _, p := range cfg.Gesichter.Paare() {
 		keys[p.Key()] = true
 	}
-	if keys["p-ben|u3"] || !keys["p-ben|u4"] {
+	if keys["p-ben|u3"] || keys["p-ben|u4"] || !keys["p-carla|u6"] { // a Nein ends Ben's (owner 2026-11-09)
 		t.Errorf("the pairs after Nein: %v", keys)
 	}
 	if rec := antworte(cfg, "anna", url.Values{"a": {"p-anna"}, "b": {"u2"}}); rec.Code != http.StatusBadRequest {

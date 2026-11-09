@@ -14,7 +14,7 @@ import (
 
 // werBox: Anna and Ben named; unnamed faces x1–x3 in 30 photos each (x2
 // twice beside Anna in Münster, x3 once beside her), x4 in 8, x5 in 6, x6
-// in 5, x7 in none, x8 without a face Immich can show.
+// in 4 (too few to ask, owner 2026-11-09), x7 in none, x8 without a face Immich can show.
 func werBox(t *testing.T) (*Gesichter, *immichfake.Server) {
 	t.Helper()
 	fake := immichfake.New("key")
@@ -22,7 +22,7 @@ func werBox(t *testing.T) (*Gesichter, *immichfake.Server) {
 	for i, p := range []struct {
 		id, name string
 		fotos    int
-	}{{"anna", "Anna", 100}, {"ben", "Ben", 20}, {"x1", "", 30}, {"x2", "", 30}, {"x3", "", 30}, {"x4", "", 8}, {"x5", "", 6}, {"x6", "", 5}, {"x7", "", 0}, {"x8", "", 40}} {
+	}{{"anna", "Anna", 100}, {"ben", "Ben", 20}, {"x1", "", 30}, {"x2", "", 30}, {"x3", "", 30}, {"x4", "", 8}, {"x5", "", 6}, {"x6", "", 4}, {"x7", "", 0}, {"x8", "", 40}} {
 		var face []byte
 		if p.id != "x8" {
 			face = Face(t, color.RGBA{uint8(i * 20), 90, 90, 255})
@@ -93,12 +93,12 @@ func TestBenennen(t *testing.T) {
 	if _, err := g.Benennen(t.Context(), "x3", ""); err != nil {
 		t.Fatal(err)
 	}
-	if got := fmt.Sprint(wer(g)); got != "[x1 x4 x5 x6]" {
+	if got := fmt.Sprint(wer(g)); got != "[x1 x4 x5]" { // x6 is in 4 photos: never asked
 		t.Fatal(got)
 	}
 	neu := &Gesichter{Immich: g.Immich, Dir: g.Dir, Now: g.Now}
 	pflegen(t, neu)
-	if got := fmt.Sprint(wer(neu)); got != "[x1 x4 x5 x6]" {
+	if got := fmt.Sprint(wer(neu)); got != "[x1 x4 x5]" {
 		t.Fatalf("anew: %s", got)
 	}
 	for _, id := range []string{"x3", "x7", "x8", "anna", "nie"} {

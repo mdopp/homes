@@ -33,7 +33,7 @@ const (
 	maxVerschmelzen = 50 // persons merged away in one run
 	maxNaehe        = 40 // persons asked for their closest in one run
 	maxNachladen    = 80 // faces and photo counts fetched in one run
-	kandidaten      = 3  // the closest taken per person
+	kandidaten      = 1  // the closest taken per person: only the closest, so a „Nein“ ends it (owner 2026-11-09)
 	// naeheTTL is how long a person's closest are kept before asking again.
 	naeheTTL = 24 * time.Hour
 )

@@ -30,7 +30,7 @@ func TestDieselbeWerIstDas(t *testing.T) {
 	if n := strings.Count(body, `<section class="paar wer">`); n != 5 || strings.Index(body, "Wer ist das?") > strings.Index(body, "<section class=paar>") {
 		t.Fatalf("%d faces, or below the pairs", n)
 	}
-	if n := strings.Count(body, ">Kontakt</a>"); n != 2 { // Anna's two pairs among the first ten; Ben has no contact
+	if n := strings.Count(body, ">Kontakt</a>"); n != 1 { // Anna's pair; Ben has no contact
 		t.Fatalf("%d contact links", n)
 	}
 	mustNotContain(t, body, `name=wer value="u12"`) // the sixth

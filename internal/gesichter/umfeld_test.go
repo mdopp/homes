@@ -42,7 +42,7 @@ func TestPaareNurMitGesicht(t *testing.T) {
 	}
 	g.mu.Lock()
 	g.stand.Bilder["u5"] = bild{JPEG: []byte{0xff, 0xd8, 0, 0}, Stand: "1", Geholt: g.now()}
-	if len(g.stand.Naehe["anna"].Kandidaten) != 3 {
+	if !slices.Equal(g.stand.Naehe["anna"].Kandidaten, []string{"u4"}) { // only the closest (owner 2026-11-09)
 		t.Fatalf("closest: %v", g.stand.Naehe["anna"])
 	}
 	g.mu.Unlock()

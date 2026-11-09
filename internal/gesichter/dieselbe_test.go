@@ -248,13 +248,14 @@ func TestAntworten(t *testing.T) {
 		t.Fatal("a merged pair is still offered")
 	}
 	g.Auffrischen(t.Context())
-	g.Vorschlagen(t.Context()) // the one kept is asked again
-	if !slices.Contains(paare(g), "anna-u2") {
-		t.Fatalf("not asked again: %v", paare(g))
+	g.Vorschlagen(t.Context()) // only the closest is asked (owner 2026-11-09): after Anna's Nein, nobody for Anna
+	if slices.ContainsFunc(paare(g), func(k string) bool { return strings.HasPrefix(k, "anna-") }) {
+		t.Fatalf("asked on after a Nein: %v", paare(g))
 	}
 	fake.Ohne = []string{"person.merge"}
 	var fehlt immich.FehltRecht
-	if _, err := g.Antworten(t.Context(), "anna", "u2", "ja"); !errors.As(err, &fehlt) || g.Fehlt() != "person.merge" {
+	p := g.Paare()[0]
+	if _, err := g.Antworten(t.Context(), p.A.ID, p.B.ID, "ja"); !errors.As(err, &fehlt) || g.Fehlt() != "person.merge" {
 		t.Fatalf("%v %q", err, g.Fehlt())
 	}
 }
