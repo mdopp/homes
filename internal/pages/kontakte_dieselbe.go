@@ -13,10 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mdopp/homes/internal/caldav"
 	"github.com/mdopp/homes/internal/gesichter"
 	"github.com/mdopp/homes/internal/immich"
-	"github.com/mdopp/homes/internal/kontaktantwort"
 	"github.com/mdopp/homes/internal/texte"
 )
 
@@ -57,34 +55,16 @@ func Dieselbe(cfg StartConfig) http.HandlerFunc {
 			http.Redirect(w, r, KontaktePath, http.StatusSeeOther)
 			return
 		}
-		var haus, meine []caldav.Contact
-		if cfg.Contacts != nil {
-			fetch(r, func(ctx context.Context) {
-				haus, _, _ = cfg.Contacts.Contacts(ctx)
-				meine, _ = meineKontakte(ctx, cfg, r.Header.Get("Remote-User"))
-			})
-		}
-		var offen []kontaktZeile // the contacts with a question, a list to work through (owner 2026-11-09)
-		for _, z := range append(kontaktZeilen(r, cfg, meine, kontaktantwort.Privat), kontaktZeilen(r, cfg, haus, kontaktantwort.Haushalt)...) {
-			if z.zahl > 0 {
-				z.seite, z.knopf = z.seite+"?weiter", ""
-				offen = append(offen, z)
-			}
-		}
-		writePage(w, http.StatusOK, dieselbeRest(r, cfg, offen, said, problem))
+		writePage(w, http.StatusOK, dieselbeRest(r, cfg, said, problem)) // every question answered right here (owner 2026-11-09: no click-through)
 	}
 }
 
-// dieselbeRest is the page: the contacts with a question (offen), then
-// what belongs to none, the outcome, the questions, the first pairs.
-func dieselbeRest(r *http.Request, cfg StartConfig, offen []kontaktZeile, said, problem string) *strings.Builder {
+// dieselbeRest is the page: the outcome, every „Ist das …?“ and the first
+// pairs, each answered in place; the next ones follow after an answer.
+func dieselbeRest(r *http.Request, cfg StartConfig, said, problem string) *strings.Builder {
 	t := func(id texte.ID) string { return html.EscapeString(texte.T(id)) }
 	b := kontakteHead(r, cfg, texte.T(texte.Dieselbe), "", texte.T(texte.Dieselbe))
 	b.WriteString(dieselbeStyle + "<h1>" + t(texte.Dieselbe) + "</h1>" + gesagt(said, problem))
-	if len(offen) > 0 { // the rest (pairs of nobody's) once the list is done
-		kontakteListe(b, offen, texte.KontakteLeer)
-		return b
-	}
 	fragen, paare := cfg.Gesichter.Fragen(), cfg.Gesichter.Paare()
 	b.WriteString(istFragen(cfg, fragen, DieselbePath))
 	if len(paare)+len(fragen) == 0 {

@@ -835,14 +835,15 @@ test('Dieselbe Person? on the contact takes a Nein', async ({ page }, info) => {
   await expect(page).toHaveURL(/\/kontakte\/privat\/k0$/);
   await expect(paare).toHaveCount(n - 1);
   await page.screenshot({ path: info.outputPath('dieselbe-nein-411.png'), fullPage: true });
-  // the task's address lists the contacts with something open (owner 2026-11-09); a row opens one, its question on top
+  // the task's address asks every question right there, no click-through (owner 2026-11-09)
   await page.goto('/kontakte/dieselbe');
-  const zeile = page.locator('.kontakte li a[href*="?weiter"]').first();
-  await expect(zeile.locator('.anzahl')).toBeVisible();
-  await zeile.click();
-  await expect(page).toHaveURL(/\/kontakte\/(privat\/)?[a-z0-9]+\?weiter$/);
+  await expect(page).toHaveURL(/\/kontakte\/dieselbe$/);
+  const offen = page.locator('section.paar');
+  const vorher = await offen.count();
+  expect(vorher).toBeGreaterThan(0);
+  await offen.first().getByRole('button', { name: 'Nein' }).click();
+  await expect(page).toHaveURL(/\/kontakte\/dieselbe/);
   await expect(page.locator('section.paar').first()).toBeVisible();
-  await expect(page.getByRole('link', { name: '‹ Zurück zur Liste' })).toBeVisible();
 });
 
 // owner 2026-11-06: a contact's picture is a suggestion, never an answer — „Ist das …?“ shows it
