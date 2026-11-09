@@ -104,7 +104,7 @@ func TestKontaktFormularV2(t *testing.T) {
 	// Alle übernehmen: not the removal, not the message
 	antworteAuf(cfg, "/kontakte/h1", f.ID, url.Values{"aktion": {"alle"}})
 	card := dav.Objects()["/homes/haushalt-kontakte/h1.vcf"]
-	mustContain(t, card, "TEL;TYPE=WORK,PREF:0711 1234567", "TEL;TYPE=CELL:+49 151 23456789", "EMAIL:anna@example.org", "ADR:;;Lindenweg 3;München;;70173;", "PHOTO;ENCODING=b;TYPE=JPEG:/9j/", "BDAY:--0308")
+	mustContain(t, card, "TEL;TYPE=WORK,PREF:+49 711 1234567", "TEL;TYPE=CELL:+49 151 23456789", "EMAIL:anna@example.org", "ADR:;;Lindenweg 3;München;;70173;", "PHOTO;ENCODING=b;TYPE=JPEG:/9j/", "BDAY:--0308")
 	mustNotContain(t, card, "NOTE", "Grüße")
 	if m := regexp.MustCompile(`PHOTO;ENCODING=b;TYPE=JPEG:([A-Za-z0-9+/=\r\n ]+)`).FindStringSubmatch(card); m == nil {
 		t.Error("no photo")

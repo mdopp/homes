@@ -149,7 +149,9 @@ budget connectors 15140 $connectors   # one client per service, with its fake: 1
 # kontakt_entfernen for Dokumente's kontakte_aufraeumen.py (haushalt/firmenkontakte.go)
 # 2026-11-09, owner approved 2026-11-09: handy_firmen, firm cards from the key owner's own phone contacts for kontakte_nachlesen
 # (household 12,849 -> 12,898): the Haushalt tool handy_firmen (haushalt/firmenkontakte.go), the card shared with firmenkontakte
-budget household 12900 $household      # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-09, OWNER APPROVAL PENDING: Telefonnummern einheitlich (household 12,898 -> 13,019): haushalt.Telefon, a number in
+# DIN 5008's international form with the German area codes' table, and the Haushalt tool telefon_vereinheitlichen (haushalt/telefon.go)
+budget household 13020 $household     # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one

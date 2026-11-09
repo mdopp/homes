@@ -281,6 +281,7 @@ func ergaenzenOnce(ctx context.Context, c *caldav.Client, cc string, a map[strin
 	if err != nil {
 		return "", err
 	}
+	v.telefon, _ = Telefon(v.telefon, cc) // compared by its digits (samePhone), written in the household's form
 	all, partial, err := c.Cards(ctx)
 	if err != nil {
 		return "", err
