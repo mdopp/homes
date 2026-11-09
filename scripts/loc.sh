@@ -116,7 +116,9 @@ budget cmd 1448 cmd/homes             # homes' wiring: 1,018 with the demo then
 # written line by line over the version read (caldav/korrektur.go), N, ORG, TITLE and the numbers' kinds read
 # 2026-11-08, owner approved 2026-11-08: Kontakt-Formular v2 (15,006 -> 15,120): caldav reads an e-mail's kind and
 # the main number and address (PREF=1, 3.0 TYPE=PREF) and writes them as the card's version does, the contact's photo and the note
-budget connectors 15121 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
+# 2026-11-09, OWNER APPROVAL PENDING: Firmenkontakte aufräumen (15,120 -> 15,138): a card's PRODID says whether it is
+# still as Homes wrote it, and a card removed over the ETag read (carddav.go AsWritten, RemoveCard)
+budget connectors 15140 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
 # 2026-11-04, internal/jsonfile (47 lines, 50 of cap) from household's cap to shared's: it
 # replaces nine copies of a save, 62 of their lines in household
 # 2026-11-05, owner 2026-11-05 yes: Immich for the contacts (9,583 -> 9,874):
@@ -143,7 +145,9 @@ budget connectors 15121 $connectors   # one client per service, with its fake: 1
 # 2026-11-08, owner approved 2026-11-08: the owner's answer wins over a background run that read before it (12,520 -> 12,560): gesichter
 # 2026-11-09, owner approved 2026-11-09: the teaser on the apex host and Zugang anfragen (household 12,557 -> 12,741): internal/zugang,
 # the requests kept with a salted hash of the address, the file as the throttle's memory (one per address an hour, twenty a day)
-budget household 12800 $household      # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-09, OWNER APPROVAL PENDING: Firmenkontakte aufräumen (12,756 -> 12,851): the Haushalt tools firmenkontakte and
+# kontakt_entfernen for Dokumente's kontakte_aufraeumen.py (haushalt/firmenkontakte.go)
+budget household 12860 $household      # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one

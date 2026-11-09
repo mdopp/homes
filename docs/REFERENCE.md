@@ -1339,6 +1339,17 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     given field `angelegt`, `ergaenzt`, `vorhanden`, `abweichend` or
     `abgelehnt`. It writes back only over the ETag it read; a phone's edit
     in between is read again once.
+    `firmenkontakte()` and `kontakt_entfernen(kennung)` (owner 2026-11-09,
+    for Dokumente's `kontakte_aufraeumen.py`: one firm made twice becomes
+    one). `firmenkontakte` answers a German line, then one JSON line
+    `{"kontakte": [{"kennung", "name", "org", "telefon", "email", "iban",
+    "anschrift": [{strasse, plz, ort, land}], "notiz", "von_hand"}],
+    "teilweise"}`, every `CATEGORIES:Firma` card; `von_hand` is a card no
+    longer carrying Homes' PRODID (a phone that edits a card writes its
+    own). `kontakt_entfernen` deletes one such card over the ETag it read,
+    only when it is a firm card and still as Homes wrote it; anything else
+    is refused with the reason. The caller carries the values first with
+    `kontakt_ergaenzen`.
     No other tool changes a contact: until identity per person (below), the
     Bote writes with one account over every address book it can read, and a
     changed card on someone's phone cannot be taken back the way a new one
