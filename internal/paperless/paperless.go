@@ -65,15 +65,15 @@ func (c *Client) get(ctx context.Context, p string, q url.Values, v any) error {
 	return c.getN(ctx, p, q, v, maxBody)
 }
 
-// getN is get reading at most limit bytes of the answer.
-func (c *Client) getN(ctx context.Context, p string, q url.Values, v any, limit int64) error {
+// open is the answer to a GET of one API path, 200 or an error.
+func (c *Client) open(ctx context.Context, p string, q url.Values) (*http.Response, error) {
 	u := strings.TrimRight(c.URL, "/") + p + "?" + q.Encode()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
-		return errors.New("Paperless: Adresse unbrauchbar")
+		return nil, errors.New("Paperless: Adresse unbrauchbar")
 	}
 	req.Header.Set("Authorization", "Token "+c.Token)
-	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Accept", "application/json") // a download answers its file all the same
 	h := defaultHTTP
 	if c.HTTP != nil {
 		hc := *c.HTTP
@@ -82,12 +82,22 @@ func (c *Client) getN(ctx context.Context, p string, q url.Values, v any, limit 
 	}
 	resp, err := h.Do(req)
 	if err != nil {
-		return c.scrub(fmt.Errorf("Paperless nicht erreichbar: %w", err))
+		return nil, c.scrub(fmt.Errorf("Paperless nicht erreichbar: %w", err))
+	}
+	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+		return nil, &ErrStatus{resp.StatusCode} // the body stays here: it may echo what we sent
+	}
+	return resp, nil
+}
+
+// getN is get reading at most limit bytes of the answer.
+func (c *Client) getN(ctx context.Context, p string, q url.Values, v any, limit int64) error {
+	resp, err := c.open(ctx, p, q)
+	if err != nil {
+		return err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return &ErrStatus{resp.StatusCode} // the body stays here: it may echo what we sent
-	}
 	if err := json.NewDecoder(io.LimitReader(resp.Body, limit)).Decode(v); err != nil {
 		return c.scrub(fmt.Errorf("Paperless: Antwort unlesbar: %w", err))
 	}

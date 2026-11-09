@@ -4,6 +4,7 @@
 // ordering (-created, id),
 // custom_field_query (AND, OR, NOT; exact, icontains, gt, exists), text,
 // correspondent__name__icontains, tags__id__all, document_type__id__in,
+// GET /api/documents/<id>/download/ (a PDF of its title),
 // GET /api/custom_fields/ (a select's options), GET /api/correspondents/,
 // /api/tags/ and /api/document_types/ with id__in (all of them with
 // document_count). A query or text matches title and content,
@@ -456,6 +457,15 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 		}
 		json.NewEncoder(w).Encode(map[string]any{"count": len(results), "next": nil, "previous": nil, "results": results})
 	default:
+		if id, ok := strings.CutSuffix(strings.TrimPrefix(r.URL.Path, "/api/documents/"), "/download/"); ok {
+			for _, d := range s.docs {
+				if strconv.Itoa(d.ID) == id { // a PDF that is its title
+					w.Header().Set("Content-Type", "application/pdf")
+					w.Write([]byte("%PDF-1.4 " + d.Title))
+					return
+				}
+			}
+		}
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte(`{"detail":"Nicht gefunden."}`))
 	}

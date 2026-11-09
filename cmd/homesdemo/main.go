@@ -189,6 +189,7 @@ func main() {
 	doku.Docs = demoPaperless()                                                        // the search, the Bereiche, Zuletzt abgelegt (owner 2026-11-06)
 	mux.HandleFunc("/dokumente", pages.Dokumente(doku))
 	mux.HandleFunc(pages.DokumenteSuchePath, pages.DokumenteSuche(doku))
+	mux.HandleFunc(pages.DokumenteSteuerPath, pages.DokumenteSteuer(doku))
 	mux.HandleFunc("/willkommen", pages.Willkommen(cfg))
 	store, err := devices.Open(dir)
 	if err == nil { // haus#172: pairing and removing a phone, end to end

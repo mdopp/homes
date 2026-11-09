@@ -187,6 +187,11 @@ func (c *Client) eintraege(ctx context.Context, o *Ordnung, q url.Values, max in
 		for _, cf := range d.Custom {
 			if f, ok := o.feldID[cf.Field]; ok && cf.Value != nil {
 				if s := feldWert(f.DataType, cf.Value); s != "" {
+					for _, x := range f.Extra.Options { // a select's option by its label
+						if x.ID == s {
+							s = x.Label
+						}
+					}
 					e.Felder[f.Name] = s
 				}
 			}

@@ -586,6 +586,17 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     Paperless 3's `text` search over title and OCR text. A row says date,
     sender, type and its key field and opens the document in Paperless
     (`/dokumente/<id>`); answers are kept a minute.
+    The chip *Für die Steuer* (owner 2026-11-09) is `/dokumente/steuer`:
+    the documents dokumente's ordnen tagged `steuerlich`, of one year
+    (`?jahr=`, last year by default; their field *Steuerjahr*, else the
+    year they were made), switched with ‹ ›, one card per *Steuer-Art*
+    with the sum of their *Betrag* and, for §35a, *davon Lohnkosten*.
+    *Für den Steuerberater herunterladen* (`?jahr=…&zip=1`) is a ZIP of
+    their files, a folder per Steuer-Art, each fetched with a GET of
+    `/api/documents/<id>/download/` (the client stays GET-only, so not
+    Paperless' POST bulk download), and `Steuer-<jahr>.csv` (Datum;
+    Absender; Titel; Steuer-Art; Betrag; Lohnkosten; Datei, with a BOM);
+    a file Paperless does not hand out is a row that says so.
     *Scannen* (haus#76, laib#568) reads Laib's `laib_scan status` (the scan
     service's status file) and says its state in a word: *Bereit*, *Scannt*
     with the page, *Nach Blatt n abgebrochen* with where the rest goes in,

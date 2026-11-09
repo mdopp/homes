@@ -161,7 +161,8 @@ func dokFinden(r *http.Request, cfg StartConfig) (string, cards.Card) {
 		return `<li><a href="` + html.EscapeString(href) + `">` + text + "</a></li>"
 	}
 	none := dokSuche{}
-	b.WriteString("<ul class=chips>" + chip(none.link("nur", "versicherungen"), texte.T("dok.versicherungen"), 0) + chip(none.link("nur", "garantie"), texte.T("dok.garantie"), 0) + "</ul>")
+	b.WriteString("<ul class=chips>" + chip(none.link("nur", "versicherungen"), texte.T("dok.versicherungen"), 0) + chip(none.link("nur", "garantie"), texte.T("dok.garantie"), 0) +
+		chip(DokumenteSteuerPath, texte.T("dok.steuer"), 0) + "</ul>")
 	if len(o.Bereiche) > 0 {
 		b.WriteString("<ul class=bereiche>")
 		for _, g := range o.Bereiche {

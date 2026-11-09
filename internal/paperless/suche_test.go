@@ -81,7 +81,7 @@ func TestFinde(t *testing.T) {
 	}
 	got, _ := c.Finde(ctx, Filter{Text: "4711", Max: 20})
 	if e := got[0]; e.Art != "Rechnung" || e.Correspondent != "Stadtwerke Musterstadt" || e.Felder["Rechnungsnummer"] != "RE-2026-4711" ||
-		e.Felder["Betrag"] != "84,50 €" || e.Felder["Person"] != "opt-Anna" || !slices.Equal(e.Tags, []string{"Haus"}) || e.Created.Format("02.01.2006") != "20.10.2026" {
+		e.Felder["Betrag"] != "84,50 €" || e.Felder["Person"] != "Anna" || !slices.Equal(e.Tags, []string{"Haus"}) || e.Created.Format("02.01.2006") != "20.10.2026" {
 		t.Errorf("the row's fields: %+v", e)
 	}
 	for name, c2 := range map[string]struct {
