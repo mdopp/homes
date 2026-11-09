@@ -18,8 +18,7 @@ import (
 // named in Immich that no contact has (Neuanlegen). The phone's next
 // upload brings each back, and the hourly run links it like any contact.
 
-// maxNeu is how many new contacts one run asks for.
-const maxNeu = 20
+const maxNeu = 20 // new contacts one run asks for
 
 // HandyAenderung is one change for the owner's phone: UID "" a new
 // contact of Vorname and Nachname with the face Bild (a JPEG; nil none);
