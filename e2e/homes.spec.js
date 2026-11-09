@@ -838,7 +838,14 @@ test('Dieselbe Person? on the contact takes a Nein', async ({ page }, info) => {
   // the task's address asks every question right there, no click-through (owner 2026-11-09)
   await page.goto('/kontakte/dieselbe');
   await expect(page).toHaveURL(/\/kontakte\/dieselbe$/);
-  const offen = page.locator('section.paar:not(.frage)');
+  // „Wer ist das?“ (owner 2026-11-09): unnamed faces to name, above the pairs, each its field and two buttons
+  const wer = page.locator('section.paar.wer');
+  expect(await wer.count()).toBeGreaterThan(0);
+  await expect(wer.first().getByRole('textbox', { name: 'Name' })).toBeVisible();
+  await expect(wer.first().getByRole('button', { name: 'Kenne ich nicht' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
+  await page.screenshot({ path: info.outputPath('wer-ist-das-411.png'), fullPage: true });
+  const offen = page.locator('section.paar:not(.frage):not(.wer)');
   const vorher = await offen.count();
   expect(vorher).toBeGreaterThan(0);
   await offen.first().getByRole('button', { name: 'Nein' }).click();
