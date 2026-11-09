@@ -466,6 +466,34 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     merged into it by the next run) and *Kenne ich nicht* (kept,
     `unbekannt`: never offered again). Not counted in the task: unnamed
     faces never run out.
+  - *Wer steht wem nahe* (owner 2026-11-09; `/kontakte/netz`, linked from
+    Kontakte; *Steht nahe* on each contact's page, its five closest; the
+    key's owner only, anyone else is sent to Kontakte): who is close to
+    whom in the key owner's photos and phone books, among everyone in
+    them, not only the owner. After the hourly run, at most once a day,
+    `internal/netz` reads every photo again (`POST /api/search/metadata`,
+    `withExif`, `withPeople`, `page`/`nextPage`, 500 a page; hidden
+    persons left out), keeps the photos with a person as a table in
+    `immich-netz.json` (asset id, the instant of `dateTimeOriginal`, lat/lng,
+    city, person ids) and rebuilds every tie from it. An event is a day
+    (the house's zone) at one place (a cell of about 1 km, else the
+    city, else the day alone); a pair counts once per event, weighed
+    1/(n−1) for n named persons there and halved every four years, plus
+    0.15 per distinct year; a tie from photos shows from two days on.
+    The order multiplies that by 0.25 + 0.75·(shared events / √(events A
+    · events B)), so a child on every photo is not close to all. The phone
+    books (the household's and the owner's Handy-Kontakte, firm cards
+    aside) add *gleiche Adresse* (+1.5), *gleiche Firma* (+0.4) and a
+    relation the phone wrote (+3: `RELATED`, iOS's `X-ABRELATEDNAMES` with
+    its `X-ABLabel`, Android's `X-ANDROID-CUSTOM` relation; by UID or
+    name), a contact being its Immich person's node (`zuordnung`). The
+    page draws the middle (`?mitte=`, the owner's card by the key's
+    e-mail by default) and its 30 first in three rings (*Mehr zeigen*:
+    60), thin lines for ties among them, each node a link to the middle;
+    under it the list with the reasons in raw numbers. *Ausblenden* (not
+    shown) and *Nicht berechnen* (taken out of the photos before any tie)
+    are kept per key owner in `immich-netz-verborgen.json`; *Ausgeblendet*
+    lists both with *Zurückholen*.
   - *Automatisch zurück* (owner 2026-11-09): a person renamed in Immich
     renames its Haushalts-Kontakt (N and FN, written as an accepted
     correction is). `zuordnung` notes both names as last seen or written

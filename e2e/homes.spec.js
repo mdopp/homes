@@ -638,7 +638,7 @@ test('Standortverlauf, connected, leads with the timeline and ends with a quiet 
 // Felder geprüft?"): with every fold open, the page is no wider than the
 // screen, a field to type in has room, a button is big enough for a
 // finger, and no text runs out of its box.
-const PAGES = ['/start', '/raeume', '/raeume/light.kueche', '/medien', '/energie', '/energie?zeitraum=jahr', '/kalender', '/kalender/verwalten', '/kontakte', '/kontakte/h3', '/kontakte/privat', '/kontakte/privat/k0', '/kontakte/dieselbe',
+const PAGES = ['/start', '/raeume', '/raeume/light.kueche', '/medien', '/energie', '/energie?zeitraum=jahr', '/kalender', '/kalender/verwalten', '/kontakte', '/kontakte/h3', '/kontakte/privat', '/kontakte/privat/k0', '/kontakte/dieselbe', '/kontakte/netz',
   '/notizen', '/notizen?tag=kochen', '/notizen/einkaufsliste.md', '/notizen/markdown.md', '/notizen/einkaufsliste.md?bearbeiten=1', '/mehr', '/musik', '/platte', '/discogs', '/aktivierungswort', '/aufgaben', '/dokumente', '/dokumente/suche?q=strom', '/dokumente/suche?nur=versicherungen', '/willkommen', '/einrichten/fotos', '/box/geraete', '/pair-device', '/podcasts', '/gesehen', '/standort',
   '/daten-sichern', '/netzlaufwerk', '/box', '/box/aufgaben', '/box/auslastung', '/box/haushalt', '/box/personen', '/box/module', '/adresse',
   '/einkauf', '/einkauf?liste=liste-baumarkt', '/einkauf?liste=liste-musik', '/einkauf/rezepte', '/einkauf/rezepte?n=rezepte%2Flasagne.md', '/notizen/rezepte/lasagne.md'];
@@ -795,6 +795,46 @@ test('Kontakte lists the address book, the search filters while typing, a row op
   await expect(page).toHaveURL(/\/kontakte$/);
   await page.goto('/kalender');
   await expect(page.getByText('Neue Termine und Änderungen machst du auf dem Handy')).toBeVisible();
+});
+
+// owner 2026-11-09: „Wer steht wem nahe“ — who stands close to whom in the key owner's photos and phone
+// books: a radial picture around one person, a node puts itself in the middle, the list with reasons
+// under it, Ausblenden and back; on a contact „Steht nahe“
+test('Wer steht wem nahe: the picture fits a phone, a node moves the middle, a row hides and comes back', async ({ page }, info) => {
+  await page.setViewportSize({ width: 411, height: 900 });
+  await page.goto('/kontakte');
+  await page.getByRole('link', { name: 'Wer steht wem nahe' }).click();
+  await expect(page).toHaveURL(/\/kontakte\/netz$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Wer steht wem nahe');
+  const bild = page.getByRole('img', { name: 'Wer Anna Beispiel nahe steht' });
+  await expect(bild).toBeVisible();
+  expect((await bild.boundingBox()).width).toBeLessThanOrEqual(411);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
+  const zeilen = page.locator('.netzliste ol > li');
+  expect(await zeilen.count()).toBeGreaterThan(5);
+  await expect(zeilen.first()).toContainText('Ben Beispiel');
+  await expect(zeilen.first()).toContainText('Partner/in (Telefonbuch)');
+  await expect(zeilen.first()).toContainText(/\d+ Tage auf deinen Fotos seit 20\d\d/);
+  await page.screenshot({ path: info.outputPath('netz-411.png'), fullPage: true });
+  await bild.getByRole('link', { name: 'Ben Beispiel in die Mitte' }).click();
+  await expect(page).toHaveURL(/mitte=/);
+  await expect(page.getByRole('img', { name: 'Wer Ben Beispiel nahe steht' })).toBeVisible();
+  await expect(zeilen.first()).toContainText('Partner/in von Anna Beispiel (Telefonbuch)');
+  const paul = zeilen.filter({ hasText: 'Paul Weber' });
+  await paul.getByRole('button', { name: 'Ausblenden' }).click();
+  await expect(page.getByText('Paul Weber ist ausgeblendet.')).toBeVisible();
+  await expect(zeilen.filter({ hasText: 'Paul Weber' })).toHaveCount(0);
+  const weg = page.locator('section.netzliste', { has: page.getByRole('heading', { name: 'Ausgeblendet' }) });
+  await expect(weg).toContainText('Paul Weber');
+  await page.screenshot({ path: info.outputPath('netz-ausgeblendet-411.png'), fullPage: true });
+  await weg.getByRole('button', { name: 'Zurückholen' }).click();
+  await expect(page.getByText('Paul Weber ist wieder da.')).toBeVisible();
+  await expect(zeilen.filter({ hasText: 'Paul Weber' })).toHaveCount(1);
+  await page.goto('/kontakte/h1');
+  const nahe = page.locator('section.karte', { has: page.getByRole('heading', { name: 'Steht nahe' }) });
+  await expect(nahe.locator('li')).toHaveCount(5);
+  await expect(nahe.getByRole('link', { name: 'Anna Beispiel' })).toHaveAttribute('href', '/kontakte/h0');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
 });
 
 // owner 2026-11-06: Immich's people are no longer offered as contacts; every contact is a person in

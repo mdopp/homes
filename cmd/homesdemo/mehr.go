@@ -25,6 +25,7 @@ import (
 	"github.com/mdopp/homes/internal/immich"
 	"github.com/mdopp/homes/internal/immich/immichfake"
 	"github.com/mdopp/homes/internal/napi"
+	"github.com/mdopp/homes/internal/netz"
 	"github.com/mdopp/homes/internal/pages"
 	"github.com/mdopp/homes/internal/samba"
 )
@@ -88,12 +89,18 @@ func mehrSeiten(mux *http.ServeMux, cfg pages.StartConfig, dav *davfake.Server, 
 		if k[2] != "" {
 			card += "EMAIL:" + k[2] + "\r\n"
 		}
+		if i == 0 { // „Wer steht wem nahe“ (owner 2026-11-09): a relation as an iPhone writes it
+			card += "item1.X-ABRELATEDNAMES:Ben Beispiel\r\nitem1.X-ABLabel:_$!<Partner>!$_\r\n"
+		}
 		if i == 1 { // Kontakt prüfen lassen (owner 2026-11-08): an address with its number first, as the owner found one
 			card += "N:Beispiel;Ben;;;\r\nEMAIL;TYPE=HOME:ben@example.org\r\nADR;TYPE=HOME:;;7 Gartenstraße;Stuttgart;;70173;Deutschland\r\n"
 		}
 		dav.Put("/homes/haushalt-kontakte/h"+strconv.Itoa(i)+".vcf", card+"END:VCARD\r\n")
 	}
 	cfg.Gesichter = demoGesichter(dir, cfg.Contacts) // Anna's key: Meine Kontakte, each a person in Immich (owner 2026-11-06)
+	cfg.Netz = &netz.Netz{G: cfg.Gesichter}          // „Wer steht wem nahe“ from her photos (owner 2026-11-09)
+	cfg.Netz.Rechnen(context.Background())
+	mux.HandleFunc(pages.NetzPath, pages.NetzSeite(cfg))
 	// Kontakt prüfen lassen (owner 2026-11-07): the review pages here, the page without a login on a listener of its own, as on the box
 	cfg.DNS, cfg.KontaktURL = demoDNS{}, "http://"+*kontaktAddr // the store is main's, shared with Deine Aufgaben
 	mux.HandleFunc(pages.PruefenPath, pages.Pruefen(cfg))
@@ -207,7 +214,36 @@ func demoGesichter(dir string, kontakte *caldav.Client) *gesichter.Gesichter {
 	g.Kontaktbilder(context.Background())
 	g.Kontaktbilder(context.Background())
 	g.Vorschlagen(context.Background())
+	demoFotos(fake)
 	return g
+}
+
+// demoFotos are Anna's photos for „Wer steht wem nahe“ (owner 2026-11-09):
+// the family, the grandparents, friends in pairs, two big parties, over
+// ten years.
+func demoFotos(fake *immichfake.Server) {
+	for i, n := range []string{"Paul Weber", "Mia Weber", "Jonas Klein", "Sophie Klein", "Lukas Braun", "Emma Braun", "Felix Wolf", "Nora Wolf"} {
+		fake.Person("f"+strconv.Itoa(i), n, "1", false, nil)
+	}
+	gruppen := []struct {
+		tage int
+		wer  []string
+	}{{12, []string{"Anna Beispiel", "Ben Beispiel", "Clara Beispiel"}}, {6, []string{"Anna Beispiel", "Ben Beispiel"}},
+		{5, []string{"Anna Beispiel", "Oma Hilde", "Opa Karl"}}, {4, []string{"Ben Beispiel", "Paul Weber", "Mia Weber"}},
+		{3, []string{"Anna Beispiel", "Paul Weber", "Mia Weber", "Jonas Klein", "Sophie Klein"}}, {3, []string{"Clara Beispiel", "Lena Schmidt"}},
+		{2, []string{"Anna Beispiel", "Tante Ruth"}}, {3, []string{"Ben Beispiel", "Lukas Braun", "Emma Braun"}}, {2, []string{"Oma Hilde", "Tante Ruth"}},
+		{2, []string{"Anna Beispiel", "Ben Beispiel", "Clara Beispiel", "Felix Wolf", "Nora Wolf", "Lukas Braun", "Emma Braun", "Paul Weber", "Mia Weber", "Jonas Klein", "Sophie Klein"}}}
+	tag := time.Date(2016, 3, 5, 12, 0, 0, 0, time.UTC)
+	for _, g := range gruppen {
+		var wer []string
+		for _, n := range g.wer {
+			wer = append(wer, fake.ID(n))
+		}
+		for range g.tage {
+			tag = tag.AddDate(0, 0, 47)
+			fake.Bibliothek = append(fake.Bibliothek, immichfake.Foto{ID: "n" + tag.Format("20060102"), Wann: tag.Format(time.RFC3339), Stadt: "Stuttgart", Wer: wer})
+		}
+	}
 }
 
 func demoGesicht(c color.RGBA) []byte {

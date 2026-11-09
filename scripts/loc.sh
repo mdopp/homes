@@ -26,7 +26,7 @@ bad=0
 p() { for x in "$@"; do printf 'internal/%s ' "$x"; done; }
 connectors=$(p abs bote caldav discogs ha immich jellyfin judge laib musicbrainz paperless qmd reitti samba werkstatt)
 shared=$(p abruf app assistent cards code128 jsonfile markdown mcpserver modul namen texte)
-household=$(p ansicht devices dokumente einkauf einrichten energie favoriten gesehen gesichter haushalt kontaktantwort library merken musik notes papierkorb podcasts schalter takeout usage zugang)
+household=$(p ansicht devices dokumente einkauf einrichten energie favoriten gesehen gesichter haushalt kontaktantwort library merken musik netz notes papierkorb podcasts schalter takeout usage zugang)
 
 budget() { # budget <name> <cap> <dir…>
   name=$1 cap=$2; shift 2
@@ -67,7 +67,9 @@ budget() { # budget <name> <cap> <dir…>
 # Haushalt · Meine · Fragen n · Antworten n and the path back on every Kontakte page (kontakte_nav.go), the actions at the top
 # 2026-11-09, owner approved 2026-11-09: the teaser on the apex host and Zugang anfragen (pages 17,753 -> 18,023): the public
 # page on the shared listener told apart by Host, the request's form, throttle and Danke, the admins' /zugang and the rows on Start (teaser.go)
-budget pages 18100 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-09, owner approved 2026-11-09: Wer steht wem nahe (pages 18,100 -> 18,350; 18,315 used): kontakte_netz.go,
+# „Steht nahe“ on the contact page, the link on Kontakte
+budget pages 18350 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -118,7 +120,9 @@ budget cmd 1448 cmd/homes             # homes' wiring: 1,018 with the demo then
 # the main number and address (PREF=1, 3.0 TYPE=PREF) and writes them as the card's version does, the contact's photo and the note
 # 2026-11-09, owner approved 2026-11-09: Firmenkontakte aufräumen (15,120 -> 15,138): a card's PRODID says whether it is
 # still as Homes wrote it, and a card removed over the ETag read (carddav.go AsWritten, RemoveCard)
-budget connectors 15140 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
+# 2026-11-09, owner approved 2026-11-09: Wer steht wem nahe (connectors 15,140 -> 15,220; 15,202 used): immich.Aufnahmen,
+# the photos with their people page by page, and its fake
+budget connectors 15220 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
 # 2026-11-04, internal/jsonfile (47 lines, 50 of cap) from household's cap to shared's: it
 # replaces nine copies of a save, 62 of their lines in household
 # 2026-11-05, owner 2026-11-05 yes: Immich for the contacts (9,583 -> 9,874):
@@ -155,7 +159,9 @@ budget connectors 15140 $connectors   # one client per service, with its fake: 1
 # contacts (household 13,020 -> 13,200; 13,194 used): gesichter/wer.go, abgleich.go folgen, dieselbe.go and umfeld.go
 # 2026-11-09, owner approved 2026-11-09: Immich names to the owner's phone (new contact, rename) (household 13,200 -> 13,330):
 # gesichter/handy.go (Neuanlegen), folgen asking the phone, kontaktantwort.Store.Handy
-budget household 13330 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-09, owner approved 2026-11-09: Wer steht wem nahe (household 13,330 -> 14,100; 14,036 used): internal/netz,
+# the contact net from the key owner's photos and phone books
+budget household 14100 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one

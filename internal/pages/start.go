@@ -31,6 +31,7 @@ import (
 	"github.com/mdopp/homes/internal/laib"
 	"github.com/mdopp/homes/internal/modul"
 	"github.com/mdopp/homes/internal/napi"
+	kontaktnetz "github.com/mdopp/homes/internal/netz"
 	"github.com/mdopp/homes/internal/notes"
 	"github.com/mdopp/homes/internal/paperless"
 	"github.com/mdopp/homes/internal/podcasts"
@@ -116,6 +117,7 @@ type StartConfig struct {
 	// Gesichter is Immich for the contacts (owner 2026-11-05): their „Fotos“,
 	// a face for a card without a picture, the suggestions; nil: none of it
 	Gesichter *gesichter.Gesichter
+	Netz      *kontaktnetz.Netz // „Wer steht wem nahe“, the key owner's (owner 2026-11-09); nil: none
 	// Antworten is Kontakt prüfen lassen (owner 2026-11-07): the links and
 	// the answers waiting for their review; DNS checks an answer's e-mail
 	// domains (net.DefaultResolver). nil: no such pages

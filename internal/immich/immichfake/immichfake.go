@@ -5,7 +5,7 @@
 // /api/people/<id>/thumbnail, which it counts, …/statistics, POST
 // /api/people, PUT /api/people/<id>, POST /api/people/merge, GET
 // /api/search/person (faceless and hidden ones too), GET /api/users/me,
-// POST /api/search/metadata (personIds, over Bibliothek),
+// POST /api/search/metadata (personIds, page and nextPage, over Bibliothek),
 // and the photos Homes uploads: POST /api/assets (multipart, a duplicate
 // for bytes it has), GET /api/faces?id= (the faces Erkennen gives the
 // photo) and DELETE /api/assets.
@@ -59,11 +59,13 @@ type Server struct {
 	Bibliothek []Foto
 }
 
-// Foto is a photo of the library as /api/search/metadata finds it: when,
-// where, and who is in it (by person id).
+// Foto is a photo of the library as /api/search/metadata finds it: when
+// (an instant, both its localDateTime and its dateTimeOriginal), where
+// (Lat and Lng 0: none), and who is in it (by person id).
 type Foto struct {
-	Wann, Stadt, Land string
-	Wer               []string
+	ID, Wann, Stadt, Land string
+	Lat, Lng              float64
+	Wer                   []string
 }
 
 // asset is a photo Homes uploaded.
@@ -390,27 +392,38 @@ func btoi(b bool) int {
 	return 0
 }
 
-// umfeld is /api/search/metadata with personIds: the photos showing all
-// of them, newest first, size at most, with exifInfo and people.
+// umfeld is /api/search/metadata, with personIds the photos showing all
+// of them: newest first, page by page of size, with exifInfo and people.
 func (s *Server) umfeld(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		PersonIds []string `json:"personIds"`
-		Size      int      `json:"size"`
+		PersonIds  []string `json:"personIds"`
+		Size, Page int
 	}
 	json.NewDecoder(r.Body).Decode(&body)
-	items := []map[string]any{}
+	size, page := max(body.Size, 1), max(body.Page, 1)
+	items, n := []map[string]any{}, 0
 	for _, f := range s.Bibliothek {
-		fehlt := slices.ContainsFunc(body.PersonIds, func(id string) bool { return !slices.Contains(f.Wer, id) })
-		if fehlt || len(items) >= max(body.Size, 1) {
+		if slices.ContainsFunc(body.PersonIds, func(id string) bool { return !slices.Contains(f.Wer, id) }) {
 			continue
 		}
-		var leute []map[string]any
+		if n++; n <= (page-1)*size || n > page*size {
+			continue
+		}
+		leute := []map[string]any{}
 		for _, id := range f.Wer {
 			if p := s.find(id); p != nil {
-				leute = append(leute, map[string]any{"id": p.ID, "name": p.Name})
+				leute = append(leute, map[string]any{"id": p.ID, "name": p.Name, "isHidden": p.Hidden})
 			}
 		}
-		items = append(items, map[string]any{"localDateTime": f.Wann, "exifInfo": map[string]string{"city": f.Stadt, "country": f.Land}, "people": leute})
+		exif := map[string]any{"city": f.Stadt, "country": f.Land, "dateTimeOriginal": f.Wann, "latitude": nil, "longitude": nil}
+		if f.Lat != 0 || f.Lng != 0 {
+			exif["latitude"], exif["longitude"] = f.Lat, f.Lng
+		}
+		items = append(items, map[string]any{"id": f.ID, "localDateTime": f.Wann, "exifInfo": exif, "people": leute})
 	}
-	json.NewEncoder(w).Encode(map[string]any{"assets": map[string]any{"items": items, "count": len(items), "nextPage": nil}})
+	var next any
+	if n > page*size {
+		next = strconv.Itoa(page + 1)
+	}
+	json.NewEncoder(w).Encode(map[string]any{"assets": map[string]any{"items": items, "count": len(items), "nextPage": next}})
 }

@@ -53,7 +53,7 @@ func Kontakte(cfg StartConfig) http.HandlerFunc {
 		var err error
 		fetch(r, func(ctx context.Context) { all, _, err = cfg.Contacts.Contacts(ctx) })
 		b := kontakteHead(r, cfg, "Kontakte", KontaktePath)
-		b.WriteString(kontakteStyle + "<h1>Kontakte</h1>")
+		b.WriteString(kontakteStyle + "<h1>Kontakte</h1>" + netzEinstieg(r, cfg))
 		if err != nil {
 			log.Printf("homes: kontakte page: %v", err)
 			b.WriteString("<p class=k>" + saysNoContacts + "</p>")
