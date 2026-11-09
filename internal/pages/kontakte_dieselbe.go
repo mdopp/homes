@@ -67,7 +67,7 @@ func dieselbeRest(r *http.Request, cfg StartConfig, said, problem string) *strin
 	b := kontakteHead(r, cfg, texte.T(texte.Dieselbe), "", texte.T(texte.Dieselbe))
 	b.WriteString(dieselbeStyle + "<h1>" + t(texte.Dieselbe) + "</h1>" + gesagt(said, problem))
 	fragen, paare, wer := cfg.Gesichter.Fragen(), cfg.Gesichter.Paare(), cfg.Gesichter.Wer()
-	b.WriteString(istFragen(cfg, fragen, DieselbePath) + werKarten(cfg, wer, DieselbePath))
+	b.WriteString(istFragen(cfg, fragen, DieselbePath) + werKarten(r, cfg, wer, DieselbePath))
 	if len(paare)+len(fragen)+len(wer) == 0 {
 		b.WriteString("<p class=k>" + t(texte.DieselbeLeer) + "</p>")
 	} else if len(paare) > 0 && len(fragen)+len(wer) > 0 {
