@@ -161,7 +161,7 @@ func TestKontaktPruefenFromTheLinkToTheAddressBook(t *testing.T) {
 		`<span class=vorher>+49 151 23456789 (mobil)</span> → <span class=nachher>+49 151 99999999 (mobil)</span>`,
 		`0711 1234567 (geschäftlich)</span> <span class=k>(neu)`, "Neuer Weg 2, 12345 Stadt, Deutschland", "12.04.", "Inhaberin",
 		`<form method=post action="/kontakte/h1"><input type=hidden name=id value="`+id+`">`, "Ausgewählte übernehmen", "Alle übernehmen", "Verwerfen")
-	before(t, body, "+49 151 23456789</a>", "<h2>Antwort auf deinen Link</h2>") // the contact first, then what waits
+	before(t, body, "<h2>Antwort auf deinen Link</h2>", "+49 151 23456789</a>") // what waits first, then the contact
 	mustNotContain(t, frag(Kontakt(cfg), "GET", "/kontakte/h1", "ben", "family", nil).Body.String(), "Antwort auf deinen Link")
 	if rec := frag(Kontakt(cfg), "POST", "/kontakte/h1", "ben", "family", url.Values{"id": {id}, "aktion": {"alle"}}); !strings.Contains(rec.Body.String(), "Diese Antwort gibt es nicht") {
 		t.Errorf("ben decides anna's review: %d", rec.Code)
@@ -295,9 +295,9 @@ func TestWhoMayStartAndWhereAHandyKontaktGoes(t *testing.T) {
 	}
 	list := frag(MeineKontakte(cfg), "GET", MeineKontaktePath, "anna", "family", nil).Body.String()
 	mustContain(t, list, `<a href=/kontakte/privat aria-current=page>Meine</a>`, `<a href="/kontakte/privat/3789r1-2B4D">Oma &lt;b&gt;Hilde&lt;/b&gt;</a>`,
-		`<form method=post action=/kontakte/pruefen class=teilen data-teilen><input type=hidden name=buch value=privat><input type=hidden name=uid value="3789r1-2B4D"><button aria-label="Link teilen: Oma &lt;b&gt;Hilde&lt;/b&gt; prüfen lassen"`)
+		`<form method=post action=/kontakte/pruefen class=teilen data-teilen><input type=hidden name=buch value=privat><input type=hidden name=uid value="3789r1-2B4D"><button aria-label="Daten von Oma &lt;b&gt;Hilde&lt;/b&gt; prüfen lassen"`)
 	seite := frag(MeineKontakte(cfg), "GET", "/kontakte/privat/3789r1-2B4D", "anna", "family", nil).Body.String()
-	mustContain(t, seite, `<a href=/kontakte>Kontakte</a> › <a href="/kontakte/privat">Meine</a> › <span>Oma &lt;b&gt;Hilde&lt;/b&gt;</span></nav>`, ">Link teilen</button>", "0711 445566")
+	mustContain(t, seite, `<a href=/kontakte>Kontakte</a> › <a href="/kontakte/privat">Meine</a> › <span>Oma &lt;b&gt;Hilde&lt;/b&gt;</span></nav>`, ">Daten prüfen lassen</button>", "0711 445566")
 	mustNotContain(t, seite, "Fotos") // not the Immich key's owner
 	token := startLink(t, cfg, "privat", "3789r1-2B4D", "family")
 	frag(KontaktServer(cfg), "POST", "/"+token, "", "", url.Values{"vorname": {"Hilde"}, "nachname": {"Oma"}, "tel": {"0711 445577"}, "tel-art": {"privat"}, "aktion": {"senden"}})
@@ -315,20 +315,20 @@ func TestWhoMayStartAndWhereAHandyKontaktGoes(t *testing.T) {
 	}
 }
 
-// owner 2026-11-08: „Link teilen“ stands right under the contact's name,
+// owner 2026-11-08: „Daten prüfen lassen“ stands right under the contact's name,
 // for an admin on a house contact, with the path back; the list has the
 // search at its top and an icon per row, the same form; no family member
 // sees one on a house contact.
 func TestKontakteActionsAtTheTop(t *testing.T) {
 	cfg, _ := pruefenCfg(t)
 	body := frag(Kontakt(cfg), "GET", "/kontakte/h1", "anna", "family,admins", nil).Body.String()
-	mustContain(t, body, `<a href=/kontakte>Kontakte</a> › <span>Anna Beispiel</span></nav>`, `data-laeuft="Erstellt den Link …" data-kopiert="Link kopiert" data-nochmal="Jetzt teilen">Link teilen</button>`)
-	before(t, body, "<h1>Anna Beispiel</h1><div class=oben>", `>Link teilen</button>`)
-	before(t, body, `>Link teilen</button>`, "+49 151 23456789")
+	mustContain(t, body, `<a href=/kontakte>Kontakte</a> › <span>Anna Beispiel</span></nav>`, `data-laeuft="Erstellt den Link …" data-kopiert="Link kopiert" data-nochmal="Jetzt teilen">Daten prüfen lassen</button>`)
+	before(t, body, "<h1>Anna Beispiel</h1><div class=oben>", `>Daten prüfen lassen</button>`)
+	before(t, body, `>Daten prüfen lassen</button>`, "+49 151 23456789")
 	mustNotContain(t, body, "Link erstellen")
 	list := frag(Kontakte(cfg), "GET", KontaktePath, "anna", "family,admins", nil).Body.String()
 	before(t, list, "id=kontakte-suche", ">Anna Beispiel<")
-	before(t, list, ">Anna Beispiel<", `aria-label="Link teilen: Anna Beispiel prüfen lassen"`)
+	before(t, list, ">Anna Beispiel<", `aria-label="Daten von Anna Beispiel prüfen lassen"`)
 	mustNotContain(t, frag(Kontakte(cfg), "GET", KontaktePath, "anna", "family", nil).Body.String(), "class=teilen data-teilen>")
 	mustNotContain(t, frag(Kontakt(cfg), "GET", "/kontakte/h1", "anna", "family", nil).Body.String(), "class=teilen data-teilen>")
 }

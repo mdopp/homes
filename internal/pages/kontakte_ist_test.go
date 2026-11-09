@@ -53,7 +53,7 @@ func TestIstDas(t *testing.T) {
 	cfg, fake := istConfig(t)
 	mustContain(t, as(MeineKontakte, cfg, MeineKontaktePath, "anna", "anna@box.test").Body.String(), `<a href="/kontakte/privat/m">Mama <span class=anzahl aria-label="1 offen">1</span></a>`,
 		`<a href="/kontakte/privat/t">Tina <span class=anzahl aria-label="1 offen">1</span></a>`)
-	if rec := as(Dieselbe, cfg, DieselbePath, "anna", "anna@box.test"); rec.Code != 303 || rec.Header().Get("Location") != "/kontakte/privat/m" {
+	if rec := as(Dieselbe, cfg, DieselbePath, "anna", "anna@box.test"); rec.Code != 303 || rec.Header().Get("Location") != "/kontakte/privat/m?weiter" {
 		t.Fatalf("the task: %d %q", rec.Code, rec.Header().Get("Location"))
 	}
 	body := as(MeineKontakte, cfg, "/kontakte/privat/m", "anna", "anna@box.test").Body.String()

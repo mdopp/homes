@@ -89,7 +89,7 @@ func TestDieselbeAufDemKontakt(t *testing.T) {
 	cfg, fake := dieselbeConfig(t, "a|Anna||")
 	list := as(Kontakte, cfg, KontaktePath, "anna", "anna@box.test").Body.String()
 	mustContain(t, list, `<a href="/kontakte/a">Anna <span class=anzahl aria-label="3 offen">3</span></a>`, `<a href="/kontakte/x">Xaver</a>`)
-	if rec := as(Dieselbe, cfg, DieselbePath, "anna", "anna@box.test"); rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/kontakte/a" {
+	if rec := as(Dieselbe, cfg, DieselbePath, "anna", "anna@box.test"); rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/kontakte/a?weiter" {
 		t.Fatalf("the task: %d %q", rec.Code, rec.Header().Get("Location"))
 	}
 	body := as(Kontakt, cfg, "/kontakte/a", "anna", "anna@box.test").Body.String()

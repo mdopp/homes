@@ -762,7 +762,7 @@ test('Kontakte lists the address book, the search filters while typing, a row op
   expect((await page.getByRole('searchbox').boundingBox()).y).toBeLessThan((await rows.first().boundingBox()).y);
   await expect(page.getByRole('button', { name: 'Suchen' })).toHaveCount(0); // it filters while typing
   // each row: its share icon (anna is an admin), and what waits about it as a count
-  await expect(rows.getByRole('button', { name: /^Link teilen: .* prüfen lassen$/ })).toHaveCount(9);
+  await expect(rows.getByRole('button', { name: /^Daten von .* prüfen lassen$/ })).toHaveCount(9);
   await expect(rows.filter({ hasText: 'Oma Hilde' }).locator('.anzahl')).toBeVisible();
   await expect(page.getByText('Neue Kontakte und Änderungen machst du auf dem Handy')).toBeHidden();
   await page.getByText('Wie das funktioniert').click();
@@ -786,7 +786,7 @@ test('Kontakte lists the address book, the search filters while typing, a row op
   await expect(page.locator('nav.segmente a[aria-current]')).toHaveText('Haushalt');
   const oben = page.locator('.oben a, .oben button');
   await expect(oben.first()).toBeVisible();
-  await expect(page.locator('.oben').getByRole('button', { name: 'Link teilen' })).toBeVisible();
+  await expect(page.locator('.oben').getByRole('button', { name: 'Daten prüfen lassen' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Dieselbe Person?' })).toBeVisible(); // its questions on it, under its fields
   expect((await oben.last().boundingBox()).y).toBeLessThan((await page.locator('.karte').first().boundingBox()).y); // its links before its fields
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
@@ -812,7 +812,7 @@ test('Meine Kontakte: the own Handy-Kontakte, each with its page and its person 
   await expect(page).toHaveURL(/\/kontakte\/privat\/k1$/);
   await expect(page.locator('nav.pfad')).toHaveText('Kontakte › Meine › Opa Karl');
   await expect(page.locator('.oben').getByRole('link', { name: 'Fotos in Immich' })).toHaveAttribute('href', 'https://photos.example/people/p-karl');
-  await expect(page.locator('.oben').getByRole('button', { name: 'Link teilen' })).toBeVisible();
+  await expect(page.locator('.oben').getByRole('button', { name: 'Daten prüfen lassen' })).toBeVisible();
 });
 
 // owner 2026-11-08 („alles auf dem Kontakt, damit weniger Listen“): „Dieselbe Person?“ — faces Immich
@@ -1076,18 +1076,18 @@ for (const scheme of ['dark', 'light']) {
 // contact checks and corrects their own fields on a page without a login (its own host and
 // listener, kontakt.<domain>), the link dies on the answer, and the review shows each field
 // before → after with the checks; only what is ticked is written
-// owner 2026-11-08: „nicht Link erstellen und dann teilen, sondern direkt Link teilen“ — one tap
+// owner 2026-11-08: „nicht Link erstellen und dann teilen, sondern direkt Daten prüfen lassen“ — one tap
 // makes the link and opens the phone's share sheet with the prepared message
 test('Kontakt prüfen lassen: link, the public form, the review', async ({ page, browser }, info) => {
   await page.setViewportSize({ width: 411, height: 900 });
   await page.addInitScript(() => { navigator.share = (d) => { window.geteilt = d.text; return Promise.resolve(); }; });
   await page.goto('/kontakte/h6');
-  await page.locator('.oben').getByRole('button', { name: 'Link teilen' }).click();
+  await page.locator('.oben').getByRole('button', { name: 'Daten prüfen lassen' }).click();
   await page.waitForFunction(() => window.geteilt);
   const text = await page.evaluate(() => window.geteilt);
   expect(text).toContain('Hallo Oma,');
   const link = text.match(/http:\/\/127\.0\.0\.1:8652\/[A-Za-z0-9_-]{43}/)[0];
-  await expect(page.locator('.oben').getByRole('button', { name: 'Link teilen' })).toBeEnabled();
+  await expect(page.locator('.oben').getByRole('button', { name: 'Daten prüfen lassen' })).toBeEnabled();
   await expect(page).toHaveURL(/\/kontakte\/h6$/);
 
   // the contact, without a login, in a browser of their own
@@ -1151,7 +1151,7 @@ test('Kontakt prüfen lassen: formats, address, removal, photo, message', async 
   await page.addInitScript(() => { Object.defineProperty(Navigator.prototype, 'share', { value: undefined, configurable: true }); });
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('/kontakte');
-  const knopf = page.locator('.kontakte li', { hasText: 'Ben Beispiel' }).getByRole('button', { name: 'Link teilen: Ben Beispiel prüfen lassen' });
+  const knopf = page.locator('.kontakte li', { hasText: 'Ben Beispiel' }).getByRole('button', { name: 'Daten von Ben Beispiel prüfen lassen' });
   await knopf.click();
   await expect(knopf).toHaveText('Link kopiert');
   const link = (await page.evaluate(() => navigator.clipboard.readText())).match(/http:\/\/127\.0\.0\.1:8652\/[A-Za-z0-9_-]{43}/)[0];

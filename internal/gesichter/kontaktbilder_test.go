@@ -215,3 +215,25 @@ func TestKontaktbilderGrenzen(t *testing.T) {
 		t.Fatalf("a picture gone stayed: %v", fake.Fotos())
 	}
 }
+
+// A Ja whose contact person Immich merged away before (a stale mapping from
+// an earlier answer) makes the face's person the contact's, instead of
+// „nicht zusammengeführt“ and the question coming back.
+func TestKontaktbildJaNachAlterZusammenfuehrung(t *testing.T) {
+	g, fake, _, uhr, _ := bilderBox(t)
+	g.Kontaktbilder(t.Context())
+	*uhr = uhr.Add(time.Hour)
+	g.Kontaktbilder(t.Context())
+	mama := fake.ID("Mama")
+	if _, err := g.Immich.Zusammenfuehren(t.Context(), "p-ole", []string{mama}); err != nil || fake.ID("Mama") != "" {
+		t.Fatalf("setup: %v", err)
+	}
+	name, err := g.Bestaetigen(t.Context(), "privat/m", "u7", "ja")
+	if err != nil || name != "Mama" || g.stand.Zuordnung["privat/m"].ID != "u7" || g.stand.Kontaktbilder["privat/m"].Stand != bildJa {
+		t.Fatalf("ja after an old merge: %q %v %+v", name, err, g.stand.Kontaktbilder["privat/m"])
+	}
+	g.Kontaktbilder(t.Context())
+	if len(g.Fragen()) != 0 && slices.ContainsFunc(g.Fragen(), func(f Frage) bool { return f.Key == "privat/m" }) {
+		t.Fatal("asked again")
+	}
+}

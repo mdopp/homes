@@ -67,7 +67,7 @@ func Dieselbe(cfg StartConfig) http.HandlerFunc {
 		o, n := offenFuer(r, cfg), len(meine)
 		for i, ct := range append(meine, haus...) {
 			if buch := map[bool]string{true: kontaktantwort.Privat, false: kontaktantwort.Haushalt}[i < n]; r.Method != http.MethodPost && o.zahl(cfg, buch, ct.UID, kontaktName(ct)) > 0 {
-				http.Redirect(w, r, kontaktPfad(buch, ct.UID), http.StatusSeeOther)
+				http.Redirect(w, r, kontaktPfad(buch, ct.UID)+"?weiter", http.StatusSeeOther)
 				return
 			}
 		}

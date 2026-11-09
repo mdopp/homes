@@ -82,7 +82,7 @@ func kontaktPfad(buch, uid string) string {
 	return cards.ContactPage(uid)
 }
 
-// kontaktSeite is a contact of buch: its links and „Link teilen“ at the
+// kontaktSeite is a contact of buch: its links and „Daten prüfen lassen“ at the
 // top, its fields, then what waits about it (kontaktOffen); seg its list.
 func kontaktSeite(w http.ResponseWriter, r *http.Request, cfg StartConfig, ct caldav.Contact, buch, seg, spruenge string, e entschieden) {
 	name := kontaktName(ct)
@@ -114,7 +114,10 @@ func kontaktSeite(w http.ResponseWriter, r *http.Request, cfg StartConfig, ct ca
 			c.Add(a, "Adresse")
 		}
 	}
+	if r.URL.Query().Has("weiter") { // from the task „Personen in Immich prüfen“: on to the next contact
+		b.WriteString(`<p class=weiter><a href="` + DieselbePath + `">` + wort(texte.DieselbeWeiter) + `</a></p>`)
+	}
+	kontaktOffen(b, r, cfg, buch, ct.UID, name, r.URL.RequestURI(), e) // what waits first, the card after
 	b.WriteString(c.HTML())
-	kontaktOffen(b, r, cfg, buch, ct.UID, name, r.URL.EscapedPath(), e)
 	writePage(w, http.StatusOK, b)
 }

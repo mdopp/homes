@@ -320,8 +320,14 @@ func (g *Gesichter) Bestaetigen(ctx context.Context, key, person, antwort string
 	switch antwort {
 	case "ja":
 		var weg []string
-		if weg, err = g.verschmelzen(ctx, person, []string{z.ID}); err == nil && len(weg) == 0 {
-			b.Stand, err = bildWartet, ErrNichtZusammen // one is gone: Immich is asked again
+		if weg, err = g.verschmelzen(ctx, person, []string{z.ID}); err == nil && len(weg) == 0 && g.fort(ctx, z.ID) && !g.fort(ctx, person) {
+			b.Stand = bildJa // the contact's person was merged away before: the Ja makes person the contact's
+			g.mu.Lock()
+			g.stand.Zuordnung[key] = zuordnung{ID: person, Name: z.Name}
+			g.beantworten([]string{key}, []string{z.ID})
+			g.mu.Unlock()
+		} else if err == nil && len(weg) == 0 {
+			b.Stand, err = bildWartet, ErrNichtZusammen // the face's person is gone: Immich is asked again
 		} else if err == nil {
 			b.Stand = bildJa
 		}
@@ -348,4 +354,11 @@ func (g *Gesichter) Bestaetigen(ctx context.Context, key, person, antwort string
 	g.stand.Kontaktbilder[key] = b
 	g.beantworten([]string{key}, nil)
 	return cmp.Or(b.Name, z.Name), errors.Join(err, g.save())
+}
+
+// fort: Immich no longer has person id (merged away or deleted).
+func (g *Gesichter) fort(ctx context.Context, id string) bool {
+	_, err := g.Immich.Fotos(ctx, id)
+	var a immich.Antwort
+	return errors.As(err, &a) && (a.Code == 400 || a.Code == 404)
 }

@@ -26,7 +26,7 @@ const kontakteBuchstaben = 16
 
 // kontaktZeile is one contact in the list: its name, its page, the first
 // number or e-mail to tap, what the search finds it by, what waits about
-// it and its „Link teilen“.
+// it and its „Daten prüfen lassen“.
 type kontaktZeile struct {
 	name, seite, ziel, zielText, suche, knopf string
 	zahl                                      int
@@ -39,7 +39,7 @@ type kontaktZeile struct {
 // change them is folded away at the end; Radicale not answering is
 // Kontakt's plain line (haus#33). Above the list the area's segments
 // (kontakte_nav.go) and the search; on a row what waits about it and,
-// for an admin, „Link teilen“.
+// for an admin, „Daten prüfen lassen“.
 func Kontakte(cfg StartConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !showOnly(w, r, "Die Kontakte") {
@@ -68,7 +68,7 @@ func Kontakte(cfg StartConfig) http.HandlerFunc {
 
 // kontaktZeilen are the contacts of buch as rows, by name as the family
 // reads it, each leading to its page, with how many things wait about it
-// and its „Link teilen“.
+// and its „Daten prüfen lassen“.
 func kontaktZeilen(r *http.Request, cfg StartConfig, all []caldav.Contact, buch string) []kontaktZeile {
 	var out []kontaktZeile
 	o := offenFuer(r, cfg)

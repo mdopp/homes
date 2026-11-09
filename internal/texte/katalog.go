@@ -143,6 +143,7 @@ const (
 	DieselbeGemerkt      ID = "dieselbe.gemerkt"     // „Nein“ kept
 	DieselbeHinten       ID = "dieselbe.hinten"      // skipped
 	DieselbeWeg          ID = "dieselbe.weg"         // the pair is no longer offered
+	DieselbeWeiter       ID = "dieselbe.weiter"      // on to the next contact with a question
 	DieselbeNichtGemacht ID = "dieselbe.nicht"       // Immich merged neither: one is gone
 	DieselbeStumm        ID = "dieselbe.stumm"       // Immich did not answer
 	DieselbeOrte         ID = "dieselbe.orte"        // under a face: „%s“ the places, then the years
@@ -166,6 +167,7 @@ const (
 	PruefenErstelltLaeuft ID = "pruefen.erstellen.laeuft"
 	PruefenText           ID = "pruefen.text"        // the prepared message: the first name, the link
 	PruefenTeilen         ID = "pruefen.teilen"      // the contact's button: the link made and shared
+	PruefenWozu           ID = "pruefen.wozu"        // under it: what the link does
 	PruefenTeilenFuer     ID = "pruefen.teilen-fuer" // a row's icon, for a screen reader: „%s“ the name
 	PruefenNochmal        ID = "pruefen.nochmal"     // the link made, the share sheet needs one more tap
 	KontaktAntwort        ID = "kontakt.antwort"     // the answer's heading on the contact
@@ -446,6 +448,7 @@ var de = map[ID]string{
 	"dieselbe.zusammen":         "Zusammengeführt: Die Fotos gehören jetzt zu %s.",
 	"dieselbe.gemerkt":          "Gemerkt: Nach diesen beiden fragt Homes nicht wieder.",
 	"dieselbe.hinten":           "Übersprungen: Dieser Vorschlag kommt am Ende wieder.",
+	"dieselbe.weiter":           "Weiter zur nächsten Person ›",
 	"dieselbe.weg":              "Diesen Vorschlag gibt es nicht mehr. Hier sind die aktuellen.",
 	"dieselbe.nicht":            "Immich hat die beiden nicht zusammengeführt, weil es eine davon nicht mehr gibt. Nichts wurde geändert.",
 	"dieselbe.stumm":            "Immich hat gerade nicht geantwortet, nichts wurde zusammengeführt. Versuch es gleich noch einmal.",
@@ -590,11 +593,12 @@ var de = map[ID]string{
 	"dok.kuendbar":               "kündbar bis %s",
 	"dok.termin":                 "Kündigungstermin %s",
 	"pruefen.erstellen.laeuft":   "Erstellt den Link …",
-	"pruefen.teilen-fuer":        "Link teilen: %s prüfen lassen",
+	"pruefen.teilen-fuer":        "Daten von %s prüfen lassen",
 	"pruefen.nochmal":            "Jetzt teilen",
 	"kontakt.antwort":            "Antwort auf deinen Link",
 	"pruefen.text":               "Hallo %s, ich möchte deine Kontaktdaten in unserem Adressbuch aktuell halten. Magst du kurz prüfen, ob alles stimmt? Der Link gilt 14 Tage und nur einmal: %s",
-	"pruefen.teilen":             "Link teilen",
+	"pruefen.teilen":             "Daten prüfen lassen",
+	"pruefen.wozu":               "%s bekommt einen Link und bestätigt Telefon, Adresse und Co. selbst.",
 	"pruefen.kopiert":            "Link kopiert",
 	"pruefen.weg":                "Diesen Kontakt gibt es nicht mehr.",
 	"pruefen.nicht":              "Der Link ließ sich nicht erstellen. Versuch es gleich noch einmal; hilft das nicht, sag dem Admin Bescheid.",
