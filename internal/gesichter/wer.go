@@ -19,13 +19,13 @@ import (
 // nicht“ is kept, and that face is never offered again.
 
 const (
-	werN          = 5  // persons offered
-	werKandidaten = 15 // unnamed persons kept to choose from
+	werN, werMinFotos = 5, 5 // persons offered; the photos one is in at least (owner 2026-11-09: no stranger in the back)
+	werKandidaten     = 15   // unnamed persons kept to choose from
 )
 
 // Wer are the unnamed persons to name, at most werN: in the most photos
 // first, then most often beside named persons, then at the most recurring
-// places; none without a face or a photo, nor one the owner does not know.
+// places; none without a face or in fewer than werMinFotos photos, nor one the owner does not know.
 func (g *Gesichter) Wer() []Seite {
 	if g == nil || g.Immich == nil {
 		return nil
@@ -41,7 +41,7 @@ func (g *Gesichter) Wer() []Seite {
 		if z, ok := st.Fotos[p.ID]; ok {
 			n = z.N
 		}
-		if s := st.seite(p.ID, "", n, st.Bilder[p.ID].JPEG); !nie && !g.weg[p.ID] && s.zeigbar() {
+		if s := st.seite(p.ID, "", n, st.Bilder[p.ID].JPEG); !nie && !g.weg[p.ID] && s.Fotos >= werMinFotos && s.zeigbar() {
 			out = append(out, s)
 		}
 	}
