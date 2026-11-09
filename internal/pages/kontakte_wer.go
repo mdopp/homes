@@ -6,30 +6,39 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/mdopp/homes/internal/caldav"
 	"github.com/mdopp/homes/internal/gesichter"
 	"github.com/mdopp/homes/internal/texte"
 )
 
-// „Wer ist das?“ (owner 2026-11-09): on „Dieselbe Person?“, up to five
-// faces Immich sees often and knows no name for (gesichter.Wer), each with
-// its photos, places and company, a name field with Speichern (the name
-// goes to Immich) and Kenne ich nicht (never asked again).
+// „Wer ist das?“ (owner 2026-11-09): on „Dieselbe Person?“, up to five faces Immich sees often and
+// knows no name for (gesichter.Wer), each with its photos, places and company, a name field (it suggests
+// the household's people, firms not) with Speichern (to Immich) and Kenne ich nicht (never asked again).
 
 // werKarten is the section, posted to action; "" without a face to name.
-func werKarten(cfg StartConfig, wer []gesichter.Seite, action string) string {
+func werKarten(r *http.Request, cfg StartConfig, wer []gesichter.Seite, action string) string {
 	if len(wer) == 0 {
 		return ""
 	}
 	t := func(id texte.ID) string { return html.EscapeString(texte.T(id)) }
 	var b strings.Builder
-	b.WriteString("<h2>" + t(texte.WerIstDas) + "</h2><p class=k>" + t(texte.WerHinweis) + "</p>")
+	var all []caldav.Contact
+	if cfg.Contacts != nil {
+		fetch(r, func(ctx context.Context) { all, _, _ = cfg.Contacts.Contacts(ctx) })
+	}
+	for _, c := range all {
+		if c.Name != "" && !c.IsFirm() {
+			b.WriteString(`<option value="` + html.EscapeString(c.Name) + `">`)
+		}
+	}
+	b.WriteString("</datalist><h2>" + t(texte.WerIstDas) + "</h2><p class=k>" + t(texte.WerHinweis) + "</p>")
 	for _, s := range wer {
 		b.WriteString(`<section class="paar wer">` + dieselbeGesicht(cfg, s) + `<form method=post action="` + html.EscapeString(action) +
-			`"><input type=hidden name=wer value="` + html.EscapeString(s.ID) + `"><input name=name required maxlength=120 autocomplete=off aria-label="` + t(texte.WerName) + `" placeholder="` + t(texte.WerName) +
+			`"><input type=hidden name=wer value="` + html.EscapeString(s.ID) + `"><input name=name list=wernamen required maxlength=120 autocomplete=off aria-label="` + t(texte.WerName) + `" placeholder="` + t(texte.WerName) +
 			`"><button name=antwort value=ja data-laeuft="` + t(texte.WerSpeichernLaeuft) + `">` + t(texte.WerSpeichern) +
 			`</button><button name=antwort value=nein class=leise formnovalidate data-laeuft="` + t(texte.WerUnbekanntLauft) + `">` + t(texte.WerUnbekannt) + `</button></form></section>`)
 	}
-	return b.String()
+	return "<datalist id=wernamen>" + b.String()
 }
 
 // werGesagt are the answers about a face as the page says them.
