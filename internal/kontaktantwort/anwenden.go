@@ -1,10 +1,12 @@
 package kontaktantwort
 
 import (
+	"cmp"
 	"context"
 	"errors"
 
 	"github.com/mdopp/homes/internal/caldav"
+	"github.com/mdopp/homes/internal/haushalt"
 )
 
 // Stand is the review's answer per change: taken (alle, or the numbers in
@@ -30,8 +32,9 @@ func Stand(f Frage, alle bool, nimm []int) []string {
 // into its card in Radicale, over the version it reads: each one written
 // is Uebernommen, one whose field had changed meanwhile Uebersprungen.
 // A card gone meanwhile is ErrWeg, with every taken change Uebersprungen.
-// A Handy-Kontakt's are left Angenommen for the phone.
-func Uebernehmen(ctx context.Context, dav *caldav.Client, f Frage, stand []string) ([]string, error) {
+// A Handy-Kontakt's are left Angenommen for the phone. A number is written
+// in the household's form (haushalt.Telefon; land is the house's calling code).
+func Uebernehmen(ctx context.Context, dav *caldav.Client, f Frage, stand []string, land string) ([]string, error) {
 	if f.Buch != Haushalt {
 		return stand, nil
 	}
@@ -42,6 +45,11 @@ func Uebernehmen(ctx context.Context, dav *caldav.Client, f Frage, stand []strin
 	ks, nr := Korrekturen(f)
 	if len(ks) == 0 {
 		return stand, nil
+	}
+	for i, k := range ks {
+		if k.Prop == "TEL" {
+			ks[i].Neu, _ = haushalt.Telefon(k.Neu, cmp.Or(land, haushalt.DefaultCountry))
+		}
 	}
 	out := append([]string(nil), stand...)
 	done, err := dav.CorrectShared(ctx, f.UID, ks)

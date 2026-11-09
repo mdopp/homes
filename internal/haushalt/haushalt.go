@@ -425,10 +425,10 @@ func Tools(cfg Config) []mcpserver.Tool {
 			},
 			mcpserver.Tool{
 				Name:        "kontakt_anlegen",
-				Description: "Legt einen Haushalts-Kontakt an, den die Telefone synchronisieren; ändert nie einen bestehenden.",
+				Description: "Legt einen Haushalts-Kontakt an, den die Telefone synchronisieren; ändert nie einen bestehenden. Die Nummer wird als +49 541 564890 geschrieben.",
 				Schema: obj(map[string]any{"name": str("Der ganze Name, wie er im Adressbuch stehen soll"), "telefon": str("optional: Telefonnummer, z. B. +49 170 1234567"),
 					"email": str("optional: E-Mail-Adresse"), "geburtstag": str("optional: JJJJ-MM-TT, oder --MM-TT ohne Jahr")}, "name"),
-				Call: func(ctx context.Context, a map[string]any) (string, error) { return kontaktAnlegen(ctx, c, a) },
+				Call: func(ctx context.Context, a map[string]any) (string, error) { return kontaktAnlegen(ctx, c, cc, a) },
 			},
 			mcpserver.Tool{
 				Name: "kontakt_ergaenzen",
@@ -466,6 +466,13 @@ func Tools(cfg Config) []mcpserver.Tool {
 					"vorher seine Werte mit kontakt_ergaenzen in den bleibenden Kontakt übernehmen. Andere Kontakte entfernt es nie.",
 				Schema: obj(map[string]any{"kennung": str("Die Kennung des Kontakts, wie firmenkontakte sie nennt")}, "kennung"),
 				Call:   func(ctx context.Context, a map[string]any) (string, error) { return kontaktEntfernen(ctx, c, a) },
+			},
+			mcpserver.Tool{
+				Name: "telefon_vereinheitlichen",
+				Description: "Schreibt alle Nummern der Haushalts-Kontakte einheitlich (+49 541 564890), auch in von Hand bearbeiteten; die Art (Handy, Arbeit, Fax) bleibt. " +
+					"Ohne apply nur ein Probelauf: die Liste „Name: alt → neu“. Eine Nummer, die nicht eindeutig lesbar ist, bleibt und steht unter „Unklar“.",
+				Schema: obj(map[string]any{"apply": map[string]any{"type": "boolean", "description": "true schreibt; ohne: nur zeigen, was sich ändern würde"}}),
+				Call:   func(ctx context.Context, a map[string]any) (string, error) { return vereinheitlichen(ctx, c, cc, a) },
 			},
 		)
 		plainFrom(from, "Radicale")
@@ -1102,7 +1109,7 @@ func kontaktLesen(ctx context.Context, c *caldav.Client, cc, pub string, a map[s
 	return strings.TrimRight(b.String(), "\n") + more, nil
 }
 
-func kontaktAnlegen(ctx context.Context, c *caldav.Client, a map[string]any) (string, error) {
+func kontaktAnlegen(ctx context.Context, c *caldav.Client, cc string, a map[string]any) (string, error) {
 	ct := caldav.Contact{Name: oneLine(mcpserver.Str(a, "name"))}
 	if ct.Name == "" {
 		return "", errors.New("name fehlt")
@@ -1114,6 +1121,7 @@ func kontaktAnlegen(ctx context.Context, c *caldav.Client, a map[string]any) (st
 		if !phoneRE.MatchString(p) || len(digits(p)) < 3 {
 			return "", fmt.Errorf("telefon: %q ist keine Telefonnummer (Ziffern, +, Leerzeichen, -, /)", cut(p, 40))
 		}
+		p, _ = Telefon(p, cc)
 		ct.Phones = []string{p}
 	}
 	if e := mcpserver.Str(a, "email"); e != "" {

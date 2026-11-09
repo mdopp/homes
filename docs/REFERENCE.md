@@ -1358,6 +1358,24 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     nobody else's book; only firms (category Firma, an FN that is its ORG,
     or an ORG without a person's N), without their notes; no owner known:
     an empty list. Read only.
+    `telefon_vereinheitlichen(apply?)` (owner 2026-11-09): every number of
+    the household's cards in one form, DIN 5008 international
+    (`+49 541 564890`, `+49 800 41001516`, `+49 151 23456789`), hand-edited
+    cards too (household data, not a person's own book); each `TEL` line
+    keeps its parameters (`TYPE=CELL`, `WORK`, `FAX`). The area code is set
+    apart only where Homes knows it for sure (`haushalt.Telefon`: mobile
+    15x–17x, 0180x, 0700/0800/0900, the two- and three-digit areas, four
+    digits for any other area outside 03…); an area in 03… is
+    `+49 <rest>` unsplit. A number that is not a German one Homes reads for
+    sure (another country, no area code, letters, a length no such number
+    has) stays as written and is listed under „Unklar“. Without `apply`
+    (or `false`) a dry run: a German count, then „Neu:“ lines
+    `<Name>: <alt> → <neu>` and „Unklar:“ lines; with `apply: true` the same,
+    each card written line by line over the version read, a card that could
+    not be written under „Nicht geschrieben:“. `kontakt_anlegen`,
+    `kontakt_ergaenzen` and an accepted number of „Kontakt prüfen lassen“
+    on a household card write the same form; numbers are compared by their
+    digits (`International`), so a new form never makes a second line.
     No other tool changes a contact: until identity per person (below), the
     Bote writes with one account over every address book it can read, and a
     changed card on someone's phone cannot be taken back the way a new one

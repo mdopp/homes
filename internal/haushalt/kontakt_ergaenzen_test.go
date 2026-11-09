@@ -118,7 +118,7 @@ func TestKontaktErgaenzenFills(t *testing.T) {
 	}
 	_, vcf := onlyCard(t, s)
 	vcf = strings.ReplaceAll(vcf, "\r\n ", "")
-	for _, want := range []string{"TEL:030 1234567\r\n", "TEL:+49 30 7654321\r\n", "EMAIL:rechnung@stadtwerke.example\r\n", "X-IBAN:DE89370400440532013000\r\n",
+	for _, want := range []string{"TEL:+49 30 1234567\r\n", "TEL:+49 30 7654321\r\n", "EMAIL:rechnung@stadtwerke.example\r\n", "X-IBAN:DE89370400440532013000\r\n",
 		"Ansprechpartner: Herr Max Beispiel"} {
 		if !strings.Contains(vcf, want) {
 			t.Fatalf("card lacks %q:\n%s", want, vcf)
@@ -282,7 +282,7 @@ func TestKontaktErgaenzenRace(t *testing.T) {
 	if e.Status != "ergaenzt" || e.Felder["telefon"] != "ergaenzt" || s.fake.RaceOnPut != "" {
 		t.Fatalf("%+v, race left %q", e, s.fake.RaceOnPut)
 	}
-	if _, vcf := onlyCard(t, s); !strings.Contains(vcf, "TEL:030 1234567") {
+	if _, vcf := onlyCard(t, s); !strings.Contains(vcf, "TEL:+49 30 1234567") {
 		t.Fatalf("not written after the race:\n%s", vcf)
 	}
 }

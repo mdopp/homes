@@ -162,7 +162,9 @@ func antwortEntscheiden(r *http.Request, cfg StartConfig, f kontaktantwort.Frage
 		stand = kontaktantwort.Stand(f, false, nil)
 	}
 	var err error
-	fetch(r, func(ctx context.Context) { stand, err = kontaktantwort.Uebernehmen(ctx, cfg.Contacts, f, stand) })
+	fetch(r, func(ctx context.Context) {
+		stand, err = kontaktantwort.Uebernehmen(ctx, cfg.Contacts, f, stand, cfg.PhoneCountry)
+	})
 	problem := ""
 	switch {
 	case errors.Is(err, kontaktantwort.ErrWeg):
