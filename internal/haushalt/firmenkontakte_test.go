@@ -76,3 +76,38 @@ func TestKontaktEntfernenOnlyHomesOwnFirmCards(t *testing.T) {
 		t.Fatalf("Homes' card amended once is still its own and gone; the phone's stays: %+v", l)
 	}
 }
+
+// handy_firmen (owner 2026-11-09): the firms of the Immich key owner's own
+// phone contacts, never a person, never another person's book, nothing
+// while no owner is known.
+func TestHandyFirmenOnlyTheKeyOwnersFirms(t *testing.T) {
+	for _, wessen := range []string{"", "anna"} {
+		s := newSetup(t, want{contacts: true, wessen: wessen})
+		for _, p := range []string{"anna", "berta"} {
+			s.fake.AddAddressBook("/"+p+"/handy-kontakte/", "Handy-Kontakte")
+		}
+		s.fake.Put("/anna/handy-kontakte/w.vcf", "BEGIN:VCARD\r\nVERSION:3.0\r\nUID:w\r\nFN:Wienkämper\r\nORG:Wienkämper\r\n"+
+			"TEL:0541 123456\r\nADR;TYPE=WORK:;;Hafenstraße 12;Osnabrück;;49090;DE\r\nNOTE:privat\r\nEND:VCARD\r\n")
+		s.fake.Put("/anna/handy-kontakte/o.vcf", "BEGIN:VCARD\r\nVERSION:3.0\r\nUID:o\r\nFN:Otto Muster\r\nN:Muster;Otto;;;\r\n"+
+			"ORG:Wienkämper\r\nTEL:0170 1111111\r\nEND:VCARD\r\n")
+		s.fake.Put("/berta/handy-kontakte/b.vcf", "BEGIN:VCARD\r\nVERSION:3.0\r\nUID:b\r\nFN:Bäckerei Korn\r\nORG:Bäckerei Korn\r\nEND:VCARD\r\n")
+		text, isErr := call(t, s.h, "handy_firmen", map[string]any{})
+		var l firmenListe
+		if isErr || json.Unmarshal([]byte(text[strings.LastIndex(text, "\n")+1:]), &l) != nil {
+			t.Fatalf("handy_firmen: %q", text)
+		}
+		if wessen == "" {
+			if len(l.Kontakte) != 0 {
+				t.Fatalf("no owner known: nothing, got %+v", l)
+			}
+			continue
+		}
+		if len(l.Kontakte) != 1 {
+			t.Fatalf("want Anna's one firm, not Otto at the firm nor Berta's book: %+v", l)
+		}
+		k := l.Kontakte[0]
+		if k.Name != "Wienkämper" || len(k.Telefon) != 1 || k.Telefon[0] != "0541 123456" || len(k.Anschrift) != 1 || k.Anschrift[0]["plz"] != "49090" || k.Notiz != "" {
+			t.Fatalf("the firm whole, without the owner's note: %+v", k)
+		}
+	}
+}

@@ -502,9 +502,10 @@ func main() {
 		domain: einrichten.Domain(os.Getenv("HOMES_PUBLIC_URL")), archive: archive, gesichter: gesichter.FromEnv(dataDir),
 		antworten: &kontaktantwort.Store{Path: filepath.Join(dataDir, kontaktantwort.Datei)}, kontaktURL: os.Getenv("HOMES_KONTAKT_URL"),
 		teaserHost: os.Getenv("HOMES_TEASER_HOST"), teaserPerson: os.Getenv("HOMES_TEASER_PERSON"), zugang: &zugang.Store{Path: filepath.Join(dataDir, zugang.Datei)}}
-	st.napi.Antworten = st.antworten // the phone's accepted corrections of its own contacts
-	start := st                      // what the list is built from again once Laib says what runs (dienstePflegen)
-	st.napi.Module = logModule(&st)  // HOMES_MODULE_AUS takes what it switches off out of st
+	st.napi.Antworten = st.antworten   // the phone's accepted corrections of its own contacts
+	st.hh.Wessen = st.gesichter.Wessen // handy_firmen: the Immich key owner's own phone contacts, nobody else's
+	start := st                        // what the list is built from again once Laib says what runs (dienstePflegen)
+	st.napi.Module = logModule(&st)    // HOMES_MODULE_AUS takes what it switches off out of st
 	st.napi.Einrichtung = einrichtung(st, devices.Gekoppelt(store), jellyfin.KeyFromEnv())
 	// the counter stops only once the server has: a page is counted after
 	// it is answered, so the last flush waits for the requests under way (#92)

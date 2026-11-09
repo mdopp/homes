@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
+	"strings"
 
 	"github.com/mdopp/homes/internal/caldav"
 	"github.com/mdopp/homes/internal/mcpserver"
@@ -35,18 +37,55 @@ func firmenkontakte(ctx context.Context, c *caldav.Client) (string, error) {
 	}
 	out := []firmKarte{}
 	for _, cd := range all {
-		if !cd.IsFirm() {
-			continue
+		if cd.IsFirm() {
+			out = append(out, karteVon(cd.Contact, !cd.AsWritten()))
 		}
-		k := firmKarte{Kennung: cd.UID, Name: cd.Name, Org: cd.Org, Telefon: cd.Phones, Email: cd.Emails, IBAN: cardIBANs(cd.Contact),
-			Anschrift: []map[string]string{}, Notiz: cd.Note, VonHand: !cd.AsWritten()}
-		for _, a := range cd.Postal {
-			k.Anschrift = append(k.Anschrift, map[string]string{"strasse": a.Street, "plz": a.Code, "ort": a.Locality, "land": a.Country})
-		}
-		out = append(out, k)
 	}
 	b, _ := json.Marshal(map[string]any{"kontakte": out, "teilweise": partial})
 	return fmt.Sprintf("%d Firmenkontakte.\n%s", len(out), b), nil
+}
+
+func karteVon(ct caldav.Contact, vonHand bool) firmKarte {
+	k := firmKarte{Kennung: ct.UID, Name: ct.Name, Org: ct.Org, Telefon: ct.Phones, Email: ct.Emails, IBAN: cardIBANs(ct),
+		Anschrift: []map[string]string{}, Notiz: ct.Note, VonHand: vonHand}
+	for _, a := range ct.Postal {
+		k.Anschrift = append(k.Anschrift, map[string]string{"strasse": a.Street, "plz": a.Code, "ort": a.Locality, "land": a.Country})
+	}
+	return k
+}
+
+// handyFirmen (owner 2026-11-09): the firms in the Immich key owner's own
+// phone contacts (/<login>/handy-kontakte/), for Dokumente's
+// kontakte_nachlesen.py; nobody else's book, nothing while no owner is known.
+// A firm is a card of the category Firma, or one whose FN is its ORG or that
+// names no person (N): a person at a firm is not one.
+func handyFirmen(ctx context.Context, c *caldav.Client, wessen func() string) (string, error) {
+	out, login := []firmKarte{}, ""
+	if wessen != nil {
+		login = wessen()
+	}
+	if login != "" {
+		cards, _, err := c.BookCards(ctx, "/"+url.PathEscape(login)+"/handy-kontakte/")
+		if err != nil {
+			return "", err
+		}
+		for _, cd := range cards {
+			root, err := caldav.Parse(cd.Data)
+			if err != nil {
+				continue
+			}
+			for _, ct := range caldav.Contacts(root) {
+				org := strings.TrimSpace(ct.Org)
+				if ct.IsFirm() || org != "" && (strings.EqualFold(strings.TrimSpace(ct.Name), org) || ct.Given == "" && ct.Family == "") {
+					k := karteVon(ct, false)
+					k.Notiz = "" // the owner's own notes stay on the phone
+					out = append(out, k)
+				}
+			}
+		}
+	}
+	b, _ := json.Marshal(map[string]any{"kontakte": out, "teilweise": false})
+	return fmt.Sprintf("%d Firmen in den Handy-Kontakten.\n%s", len(out), b), nil
 }
 
 // kontaktEntfernen removes one firm card Homes made and nobody changed since.

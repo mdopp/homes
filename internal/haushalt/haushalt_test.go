@@ -60,6 +60,7 @@ type want struct {
 	country                    string // HOMES_PHONE_COUNTRY; "" the default
 	noPublic                   bool   // no HOMES_PUBLIC_URL: no links to Homes' pages
 	noPaperlessPublic          bool   // no HOMES_PAPERLESS_PUBLIC_URL: Homes' document page is a 404
+	wessen                     string // the Immich key owner's login (handy_firmen); "" none known
 }
 
 const homesPublic = "https://homes.example"
@@ -114,6 +115,9 @@ func newSetup(t *testing.T, w want) setup {
 		s.llm = proxyfake.New("gemma-4-e4b")
 		t.Cleanup(s.llm.Close)
 		cfg.Judge = &judge.Client{URL: s.llm.Base(), Model: "gemma-4-e4b", Key: "model-key"}
+	}
+	if w.wessen != "" {
+		cfg.Wessen = func() string { return w.wessen }
 	}
 	s.h = Handler(cfg)
 	return s
@@ -255,7 +259,7 @@ func TestProtocolShape(t *testing.T) {
 func TestToolsOnlyWhatWorks(t *testing.T) {
 	cal := []string{"erinnerung_anlegen", "erinnerungen", "termin_anlegen", "termine"}
 	not := []string{"notiz_anlegen", "notiz_aus_link", "notiz_lesen", "notizen_mit_tag", "notizen_suchen"}
-	con := []string{"firmenkontakte", "kontakt_anlegen", "kontakt_entfernen", "kontakt_ergaenzen", "kontakt_lesen", "kontakte_suchen"}
+	con := []string{"firmenkontakte", "handy_firmen", "kontakt_anlegen", "kontakt_entfernen", "kontakt_ergaenzen", "kontakt_lesen", "kontakte_suchen"}
 	doc := []string{"dokumente_suchen", "vertraege_finden"}
 	join := func(ls ...[]string) []string {
 		var out []string

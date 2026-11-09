@@ -61,6 +61,9 @@ type Config struct {
 	PublicURL string
 	Version   string
 	Karte     Karte // the cards between Radicale and the phones' Homes account (napi)
+	// Wessen is the Immich key owner's login (gesichter), whose phone contacts
+	// handy_firmen reads; nil or "": none
+	Wessen func() string
 }
 
 // Karte is a vCard on its way to the phones (uid "": Homes adds the
@@ -449,6 +452,13 @@ func Tools(cfg Config) []mcpserver.Tool {
 					"mit kontakte (kennung, name, telefon, email, iban, anschrift, notiz, von_hand) und teilweise.",
 				Schema: obj(map[string]any{}),
 				Call:   func(ctx context.Context, a map[string]any) (string, error) { return firmenkontakte(ctx, c) },
+			},
+			mcpserver.Tool{
+				Name: "handy_firmen",
+				Description: "Listet die Firmen aus den eigenen Handy-Kontakten des Besitzers des Immich-Schlüssels (nur sein Buch, nur Firmen, ohne Notizen), " +
+					"für Dokumente: eine Zeile auf Deutsch, dann eine Zeile JSON mit kontakte (kennung, name, org, telefon, email, iban, anschrift).",
+				Schema: obj(map[string]any{}),
+				Call:   func(ctx context.Context, a map[string]any) (string, error) { return handyFirmen(ctx, c, cfg.Wessen) },
 			},
 			mcpserver.Tool{
 				Name: "kontakt_entfernen",
