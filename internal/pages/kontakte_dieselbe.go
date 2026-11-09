@@ -89,6 +89,10 @@ func immichAntwort(w http.ResponseWriter, r *http.Request, cfg StartConfig) (sai
 		return "", "", false
 	}
 	r.ParseForm()
+	if r.PostForm.Get("x") != "" && cfg.Netz != nil { // a relation's question (owner 2026-11-09)
+		said, problem = netzAntwort(r, cfg)
+		return said, problem, true
+	}
 	if wer := r.PostForm.Get("wer"); wer != "" {
 		said, problem = werAntwort(r, cfg, wer)
 		return said, problem, true

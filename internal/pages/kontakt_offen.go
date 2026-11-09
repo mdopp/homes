@@ -7,6 +7,7 @@ import (
 
 	"github.com/mdopp/homes/internal/gesichter"
 	"github.com/mdopp/homes/internal/kontaktantwort"
+	kontaktnetz "github.com/mdopp/homes/internal/netz"
 	"github.com/mdopp/homes/internal/texte"
 )
 
@@ -19,10 +20,11 @@ type wartet struct {
 	antworten map[string]kontaktantwort.Frage
 	fragen    map[string][]gesichter.Frage
 	paare     map[string][]gesichter.Paar
+	netz      map[string][]kontaktnetz.Frage // by node: „Wie steht X zu Y?“ (owner 2026-11-09)
 }
 
 func offenFuer(r *http.Request, cfg StartConfig) wartet {
-	o := wartet{map[string]kontaktantwort.Frage{}, map[string][]gesichter.Frage{}, map[string][]gesichter.Paar{}}
+	o := wartet{map[string]kontaktantwort.Frage{}, map[string][]gesichter.Frage{}, map[string][]gesichter.Paar{}, map[string][]kontaktnetz.Frage{}}
 	if cfg.pruefenAn() {
 		for _, f := range slices.Backward(cfg.Antworten.ZuPruefen(r.Header.Get("Remote-User"))) {
 			o.antworten[f.Buch+"/"+f.UID] = f
@@ -35,6 +37,11 @@ func offenFuer(r *http.Request, cfg StartConfig) wartet {
 		for _, p := range cfg.Gesichter.Paare() {
 			a, b := cfg.Gesichter.PersonSeite(p.A.ID), cfg.Gesichter.PersonSeite(p.B.ID)
 			o.paare[a], o.paare[b] = append(o.paare[a], p), append(o.paare[b], p)
+		}
+	}
+	if netzDa(r, cfg) {
+		for _, f := range cfg.Netz.Fragen() {
+			o.netz[f.X.ID], o.netz[f.Y.ID] = append(o.netz[f.X.ID], f), append(o.netz[f.Y.ID], f)
 		}
 	}
 	return o
@@ -50,7 +57,15 @@ func (o wartet) bei(cfg StartConfig, buch, uid, name string) (*kontaktantwort.Fr
 // zahl is how many things wait about the contact, its row's count.
 func (o wartet) zahl(cfg StartConfig, buch, uid, name string) int {
 	a, f, p := o.bei(cfg, buch, uid, name)
-	return len(f) + len(p) + map[bool]int{true: 1}[a != nil]
+	return len(f) + len(p) + map[bool]int{true: 1}[a != nil] + len(o.beziehungen(cfg, buch, uid))
+}
+
+// beziehungen are the relation questions about the contact uid of buch.
+func (o wartet) beziehungen(cfg StartConfig, buch, uid string) []kontaktnetz.Frage {
+	if len(o.netz) == 0 {
+		return nil
+	}
+	return o.netz[cfg.Netz.Von(buch+"/"+uid)]
 }
 
 // entschieden is what a POST to a contact's page ended with; antwort the
@@ -88,7 +103,8 @@ func kontaktPost(w http.ResponseWriter, r *http.Request, cfg StartConfig, nurZei
 // kontaktOffen writes the outcome of e and what waits about the contact,
 // each posted to its page (action).
 func kontaktOffen(b *strings.Builder, r *http.Request, cfg StartConfig, buch, uid, name, action string, e entschieden) {
-	antwort, fragen, paare := offenFuer(r, cfg).bei(cfg, buch, uid, name)
+	o := offenFuer(r, cfg)
+	antwort, fragen, paare := o.bei(cfg, buch, uid, name)
 	if e.antwort != nil {
 		antwort = e.antwort
 	}
@@ -101,4 +117,5 @@ func kontaktOffen(b *strings.Builder, r *http.Request, cfg StartConfig, buch, ui
 	for i, p := range paare {
 		b.WriteString(map[bool]string{true: "<h2>" + wort(texte.Dieselbe) + "</h2>"}[i == 0] + paarKarte(cfg, p, action))
 	}
+	b.WriteString(netzFragen(cfg, o.beziehungen(cfg, buch, uid), action))
 }

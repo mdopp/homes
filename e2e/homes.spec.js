@@ -837,6 +837,31 @@ test('Wer steht wem nahe: the picture fits a phone, a node moves the middle, a r
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
 });
 
+// owner 2026-11-09: „Frage, ähnlich wie bei den Fotos, auch den Beziehungsgrad ab. Mache gute Vorschläge
+// und ein Dropdown zur Auswahl.“ — Beziehungen klären: the suggestion chosen with its reason, Speichern
+// said on the page and shown as the tie's reason, the question gone; a contact's own questions on its page
+test('Beziehungen klären: the suggestion is chosen, Speichern keeps it, a contact asks its own', async ({ page }, info) => {
+  await page.setViewportSize({ width: 411, height: 900 });
+  await page.goto('/kontakte/netz');
+  await expect(page.getByRole('heading', { name: 'Beziehungen klären' })).toBeVisible();
+  const clara = page.locator('section.beziehung', { has: page.getByRole('heading', { name: 'Wie steht Clara Beispiel zu dir?' }) });
+  await expect(clara.getByLabel('Clara Beispiel ist …')).toHaveValue('kind');
+  await expect(clara).toContainText('Vorschlag, weil gleicher Nachname und gleiche Adresse, 30 Jahre Altersunterschied.');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
+  await clara.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: info.outputPath('beziehungen-411.png'), fullPage: true });
+  await clara.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.getByText('Gespeichert: Clara Beispiel ist Kind von dir.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Wie steht Clara Beispiel zu dir?' })).toHaveCount(0);
+  await expect(page.locator('.netzliste ol > li', { hasText: 'Clara Beispiel' })).toContainText('Kind (von dir angegeben)');
+  await page.goto('/kontakte/h2');
+  const ben = page.locator('section.beziehung', { has: page.getByRole('heading', { name: 'Wie steht Ben Beispiel zu Clara Beispiel?' }) });
+  await expect(ben.getByLabel('Ben Beispiel ist …')).toHaveValue('eltern');
+  await ben.getByRole('button', { name: 'Überspringen' }).click();
+  await expect(page.getByText('Übersprungen. Die Frage kommt später noch einmal.')).toBeVisible();
+  await expect(page).toHaveURL(/\/kontakte\/h2$/);
+});
+
 // owner 2026-11-06: Immich's people are no longer offered as contacts; every contact is a person in
 // Immich. owner 2026-11-08: each of the own Handy-Kontakte has its page, with Fotos to its person
 test('Meine Kontakte: the own Handy-Kontakte, each with its page and its person in Immich', async ({ page }, info) => {

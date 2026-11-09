@@ -49,7 +49,9 @@ func NetzSeite(cfg StartConfig) http.HandlerFunc {
 			return
 		}
 		said, problem := "", ""
-		if r.Method == http.MethodPost {
+		if r.Method == http.MethodPost && r.PostFormValue("x") != "" {
+			said, problem = netzAntwort(r, cfg)
+		} else if r.Method == http.MethodPost {
 			said, problem = netzVerbergen(r, cfg)
 		}
 		mitte, n := cmp.Or(r.FormValue("mitte"), cfg.Netz.Mitte()), netzZeigen
@@ -66,6 +68,9 @@ func NetzSeite(cfg StartConfig) http.HandlerFunc {
 			if len(vs) == n && n == netzZeigen {
 				b.WriteString(`<p class=weiter-in><a href="` + html.EscapeString(NetzPath+"?"+url.Values{"mitte": {mitte}, "mehr": {"1"}}.Encode()) + `">` + wort(texte.NetzMehr) + "</a></p>")
 			}
+		}
+		if fs := cfg.Netz.Fragen(); len(fs) > 0 { // Beziehungen klären (owner 2026-11-09)
+			b.WriteString(dieselbeStyle + netzFragen(cfg, fs[:min(len(fs), netzFragenJe)], netzMitte(mitte)))
 		}
 		b.WriteString(netzVerborgene(cfg, mitte) + wieDas(texte.NetzHinweis))
 		writePage(w, http.StatusOK, b)

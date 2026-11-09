@@ -61,7 +61,7 @@ func (n *Netz) telefonbuch(ctx context.Context) ([]kontakt, []Fest, string, erro
 	var out []kontakt
 	ich := ""
 	for _, k := range ks {
-		out = append(out, kontakt{k.key, strings.Join(strings.Fields(k.ct.Name), " "), personen[k.key]})
+		out = append(out, kontakt{k.key, strings.Join(strings.Fields(k.ct.Name), " "), personen[k.key], k.ct.Family, k.ct.Birthday, strassen(k.ct)})
 		for _, m := range k.ct.Emails {
 			if email != "" && strings.EqualFold(strings.TrimSpace(m), email) && (ich == "" || strings.HasPrefix(k.key, "haushalt/")) {
 				ich = k.key
@@ -212,6 +212,8 @@ func (n *Netz) Gruende(mitte string, k Kante) string {
 	defer n.mu.Unlock()
 	for _, f := range k.Fest {
 		switch {
+		case f.Gesagt:
+			out = append(out, gesagtGrund(mitte, f))
 		case f.Art != Beziehung:
 			out = append(out, texte.T(map[string]texte.ID{Adresse: texte.NetzAdresse, Firma: texte.NetzFirma}[f.Art]))
 		case f.Wie == "":
