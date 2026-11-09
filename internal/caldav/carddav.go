@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"slices"
 	"strings"
 )
 
@@ -222,4 +223,21 @@ func (c *Client) AmendCard(ctx context.Context, cd Card, add []string, note stri
 	}
 	_, err = c.rewrite(ctx, u, "text/vcard", cd.etag, cd.amended(add, note, utc(c.now())))
 	return err
+}
+
+// AsWritten says whether the card is still as Homes wrote it: Homes' PRODID
+// (a phone that edits a card writes its own).
+func (cd Card) AsWritten() bool { return slices.Contains(unfold(cd.data), "PRODID:"+prodID) }
+
+// RemoveCard deletes the card over the ETag it read (If-Match): a phone's
+// edit in between is ErrChanged.
+func (c *Client) RemoveCard(ctx context.Context, cd Card) error {
+	if cd.etag == "" || cd.href == "" {
+		return errors.New("Adressbuch: Radicale nennt für die Karte kein ETag; ohne entfernt Homes nichts")
+	}
+	u, err := c.resolve(cd.href)
+	if err != nil {
+		return err
+	}
+	return c.DeleteCard(ctx, u, cd.etag)
 }

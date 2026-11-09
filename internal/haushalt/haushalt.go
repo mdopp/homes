@@ -443,6 +443,20 @@ func Tools(cfg Config) []mcpserver.Tool {
 						"required": []string{"strasse", "plz", "ort"}}}, "firma"),
 				Call: func(ctx context.Context, a map[string]any) (string, error) { return kontaktErgaenzen(ctx, c, cc, a) },
 			},
+			mcpserver.Tool{
+				Name: "firmenkontakte",
+				Description: "Listet alle Firmenkontakte (Kategorie Firma) des Haushalts ganz, zum Aufräumen von Doppelten: eine Zeile auf Deutsch, dann eine Zeile JSON " +
+					"mit kontakte (kennung, name, telefon, email, iban, anschrift, notiz, von_hand) und teilweise.",
+				Schema: obj(map[string]any{}),
+				Call:   func(ctx context.Context, a map[string]any) (string, error) { return firmenkontakte(ctx, c) },
+			},
+			mcpserver.Tool{
+				Name: "kontakt_entfernen",
+				Description: "Entfernt einen Firmenkontakt, den Homes aus einem Dokument angelegt hat und den seither niemand bearbeitet hat; " +
+					"vorher seine Werte mit kontakt_ergaenzen in den bleibenden Kontakt übernehmen. Andere Kontakte entfernt es nie.",
+				Schema: obj(map[string]any{"kennung": str("Die Kennung des Kontakts, wie firmenkontakte sie nennt")}, "kennung"),
+				Call:   func(ctx context.Context, a map[string]any) (string, error) { return kontaktEntfernen(ctx, c, a) },
+			},
 		)
 		plainFrom(from, "Radicale")
 	}
