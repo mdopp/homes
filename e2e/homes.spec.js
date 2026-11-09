@@ -841,7 +841,7 @@ test('Dieselbe Person? on the contact takes a Nein', async ({ page }, info) => {
   // „Wer ist das?“ (owner 2026-11-09): unnamed faces to name, above the pairs, each its field and two buttons
   const wer = page.locator('section.paar.wer');
   expect(await wer.count()).toBeGreaterThan(0);
-  await expect(wer.first().getByRole('textbox', { name: 'Name' })).toBeVisible();
+  await expect(wer.first().getByRole('combobox', { name: 'Name' })).toBeVisible();
   await expect(wer.first().getByRole('button', { name: 'Kenne ich nicht' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
   await page.screenshot({ path: info.outputPath('wer-ist-das-411.png'), fullPage: true });
