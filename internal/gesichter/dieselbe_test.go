@@ -39,7 +39,7 @@ func zwillinge(t *testing.T) (*Gesichter, *immichfake.Server) {
 	}
 	g.mu.Lock()
 	g.laden()
-	g.stand.Zuordnung["haushalt/c"] = zuordnung{carla.ID, "Carla Berg", "1990-04-12", true}
+	g.stand.Zuordnung["haushalt/c"] = zuordnung{carla.ID, "Carla Berg", "1990-04-12", true, "Carla Berg"}
 	g.stand.Zuordnung["privat/d"] = zuordnung{ID: "d2", Name: "Dora"}
 	g.stand.Zuordnung["haushalt/a"] = zuordnung{ID: "a1", Name: "Anna Müller"}
 	g.mu.Unlock()
@@ -170,15 +170,22 @@ func paare(g *Gesichter) (out []string) {
 }
 
 // The pairs: the closest unnamed face first, each pair once, a favourite
-// never as the closest (Immich puts them first whatever their face); faces and photo counts kept; nothing merged by asking.
+// never as the closest (Immich puts them first whatever their face), two
+// named persons never (owner 2026-11-09: Anna and Ben are close, and two);
+// faces and photo counts kept; nothing merged by asking.
 func TestVorschlagen(t *testing.T) {
 	g, fake := naeheBox(t)
 	got := paare(g)
-	if len(got) == 0 || got[0] != "anna-u1" || slices.Contains(got, "ben-anna") || slices.ContainsFunc(got, func(s string) bool { return strings.HasSuffix(s, "-oma") }) {
+	if len(got) == 0 || got[0] != "anna-u1" || slices.ContainsFunc(got, func(s string) bool { return strings.HasSuffix(s, "-oma") }) {
 		t.Fatalf("%v", got)
 	}
-	if !slices.Contains(got, "anna-ben") || !slices.Contains(got, "carl-u3") {
+	if slices.Contains(got, "anna-ben") || slices.Contains(got, "ben-anna") || !slices.Contains(got, "carl-u3") {
 		t.Fatalf("%v", got)
+	}
+	for _, p := range g.Paare() {
+		if p.B.Name != "" {
+			t.Fatalf("two named persons offered: %+v", p)
+		}
 	}
 	p := g.Paare()[0]
 	if p.A.Name != "Anna" || p.B.Name != "" || p.A.Fotos != 100 || p.B.Fotos != 7 || p.B.Bild == nil {
@@ -193,11 +200,18 @@ func TestVorschlagen(t *testing.T) {
 	if fake.Abgerufen("u1") != n {
 		t.Fatal("the face again")
 	}
+	g.mu.Lock() // a pair kept from before (the closest asked earlier) is not offered either
+	g.stand.Naehe["anna"] = naehe{Kandidaten: []string{"ben", "u1"}, Geholt: g.now()}
+	g.stand.Andere["ben"] = immich.Person{ID: "ben", Name: "Ben"}
+	g.mu.Unlock()
+	if got := paare(g); slices.Contains(got, "anna-ben") || !slices.Contains(got, "anna-u1") {
+		t.Fatalf("kept: %v", got)
+	}
 }
 
 // „Nein“ keeps the pair away, also for a Homes started anew; „Überspringen“
-// puts it last; „Ja“ merges into the named one, two named ones into the
-// one with more photos, and the contacts follow; a pair not offered is
+// puts it last; „Ja“ merges the unnamed face into the named one, whose
+// contact keeps it; a pair not offered (two named ones among them) is
 // refused; without person.merge the answer says so.
 func TestAntworten(t *testing.T) {
 	g, fake := naeheBox(t)
@@ -213,25 +227,24 @@ func TestAntworten(t *testing.T) {
 	if got := paare(g); got[len(got)-1] != first {
 		t.Fatalf("skipped not last: %v", got)
 	}
-	if _, err := g.Antworten(t.Context(), "anna", "carl", "ja"); !errors.Is(err, ErrKeinPaar) {
-		t.Fatalf("not offered: %v", err)
+	for _, ab := range [][2]string{{"anna", "carl"}, {"ben", "anna"}} {
+		if _, err := g.Antworten(t.Context(), ab[0], ab[1], "ja"); !errors.Is(err, ErrKeinPaar) {
+			t.Fatalf("not offered %v: %v", ab, err)
+		}
 	}
 	g.mu.Lock()
-	g.stand.Zuordnung["haushalt/b"] = zuordnung{ID: "ben", Name: "Ben"}
+	g.stand.Zuordnung["haushalt/c"] = zuordnung{ID: "carl", Name: "Carl"}
 	g.mu.Unlock()
-	if name, err := g.Antworten(t.Context(), "ben", "anna", "ja"); err != nil || name != "Anna" {
+	if name, err := g.Antworten(t.Context(), "u3", "carl", "ja"); err != nil || name != "Carl" {
 		t.Fatalf("%q %v", name, err)
 	}
-	if name, err := g.Antworten(t.Context(), "carl", "u3", "ja"); err != nil || name != "Carl" {
-		t.Fatalf("%q %v", name, err)
-	}
-	if got := fmt.Sprint(fake.Merges()); got != "[[anna ben] [carl u3]]" {
+	if got := fmt.Sprint(fake.Merges()); got != "[[carl u3]]" {
 		t.Fatal(got)
 	}
-	if z := g.stand.Zuordnung["haushalt/b"]; z.ID != "anna" {
-		t.Fatalf("the contact did not follow: %+v", z)
+	if z := g.stand.Zuordnung["haushalt/c"]; z.ID != "carl" {
+		t.Fatalf("the contact lost its person: %+v", z)
 	}
-	if slices.ContainsFunc(paare(g), func(s string) bool { return s == "anna-ben" || s == "carl-u3" }) {
+	if slices.Contains(paare(g), "carl-u3") {
 		t.Fatal("a merged pair is still offered")
 	}
 	g.Auffrischen(t.Context())

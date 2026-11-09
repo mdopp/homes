@@ -19,7 +19,7 @@ type Contact struct {
 	// Given and Family are N's first two parts; Company is ORG's first,
 	// Title TITLE (Kontakt prüfen lassen edits them)
 	Given, Family, Company, Title string
-	Nickname                      string
+	Nickname, Rev                 string // Rev is REV as written: when the card last changed
 	Org                           string
 	Phones                        []string
 	// PhoneKinds are the numbers' kinds, in the same order: mobil, privat,
@@ -237,6 +237,8 @@ func Contacts(root *Component) []Contact {
 				ct.Name = v
 			case "NICKNAME":
 				ct.Nickname = v
+			case "REV":
+				ct.Rev = strings.TrimSpace(v)
 			case "ORG":
 				ct.Org = orgParts(p.Value)
 				ct.Company = strings.TrimSpace(parts(p.Value)[0])

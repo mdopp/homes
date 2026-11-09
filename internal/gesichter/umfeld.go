@@ -35,6 +35,10 @@ type umfeld struct {
 	Bis    int       `json:"bis,omitempty"`
 	Mit    []string  `json:"mit,omitempty"` // the named persons most often in the same photos
 	Geholt time.Time `json:"geholt"`
+	// MitFotos are the photos with a named other person, Wieder the places
+	// of more than one photo: what ranks „Wer ist das?“ (wer.go)
+	MitFotos int `json:"mitFotos,omitempty"`
+	Wieder   int `json:"wieder,omitempty"`
 }
 
 // Umfelder reads the places and company of every person the pairs and
@@ -60,6 +64,9 @@ func (g *Gesichter) Umfelder(ctx context.Context) error {
 		gezeigt[f.Person.ID] = true
 	}
 	g.mu.Lock()
+	for _, p := range g.stand.Ohne { // „Wer ist das?“'s candidates
+		gezeigt[p.ID] = true
+	}
 	maps.DeleteFunc(g.stand.Umfeld, func(id string, _ umfeld) bool { return !gezeigt[id] })
 	darf := g.darf("asset.read")
 	g.mu.Unlock()
@@ -104,13 +111,18 @@ func zusammenfassen(id string, fotos []immich.Foto) umfeld {
 		if j, err := strconv.Atoi(f.Wann[:min(4, len(f.Wann))]); err == nil && j > 0 {
 			u.Von, u.Bis = cmp.Or(min(u.Von, j), j), max(u.Bis, j)
 		}
+		benannt := false
 		for _, p := range f.Personen {
 			if name := strings.TrimSpace(p.Name); name != "" && p.ID != id {
-				mit[name]++
+				mit[name], benannt = mit[name]+1, true
 			}
 		}
+		u.MitFotos += btoi(benannt)
 	}
-	return umfeld{Orte: haeufigste(orte), Von: u.Von, Bis: u.Bis, Mit: haeufigste(mit)}
+	for _, n := range orte {
+		u.Wieder += btoi(n > 1)
+	}
+	return umfeld{Orte: haeufigste(orte), Von: u.Von, Bis: u.Bis, Mit: haeufigste(mit), MitFotos: u.MitFotos, Wieder: u.Wieder}
 }
 
 // haeufigste are the umfeldN keys of n counted most, a tie by name.

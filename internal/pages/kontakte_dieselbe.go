@@ -1,6 +1,7 @@
 package pages
 
 import (
+	"cmp"
 	"context"
 	"encoding/base64"
 	"errors"
@@ -32,7 +33,7 @@ const (
 )
 
 const dieselbeStyle = `<style>.paar{margin:18px 0 0;padding:14px;border-radius:16px;background:var(--card)}.paar .zwei{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0}.paar figure{margin:0;text-align:center;min-width:0}.paar img,.paar .ohne{display:block;width:96px;height:96px;margin:0 auto 8px;border-radius:50%;object-fit:cover;background:var(--track)}
-.paar figure>a{display:block}.paar figcaption{overflow-wrap:anywhere}.paar figcaption b{display:block}.paar figcaption i,.paar figcaption span,.paar figcaption small{display:block;color:var(--muted);font-size:.85rem}.paar figcaption small{font-size:.78rem;margin-top:2px}.paar form{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}.paar form button{flex:1 1 auto}.paar form button.leise{flex:0 0 auto}</style>`
+.paar figure>a{display:block}.paar figcaption{overflow-wrap:anywhere}.paar figcaption b{display:block}.paar figcaption i,.paar figcaption span,.paar figcaption small{display:block;color:var(--muted);font-size:.85rem}.paar figcaption small{font-size:.78rem;margin-top:2px}.paar form{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}.paar form button{flex:1 1 auto}.paar form button.leise{flex:0 0 auto}.paar form input{flex:1 1 100%;min-width:0;min-height:44px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--edge);border-radius:10px;padding:0 12px}</style>`
 
 // Dieselbe is the task's address, and the answers to what is left (POST
 // as on a contact's page, immichAntwort).
@@ -65,10 +66,12 @@ func dieselbeRest(r *http.Request, cfg StartConfig, said, problem string) *strin
 	t := func(id texte.ID) string { return html.EscapeString(texte.T(id)) }
 	b := kontakteHead(r, cfg, texte.T(texte.Dieselbe), "", texte.T(texte.Dieselbe))
 	b.WriteString(dieselbeStyle + "<h1>" + t(texte.Dieselbe) + "</h1>" + gesagt(said, problem))
-	fragen, paare := cfg.Gesichter.Fragen(), cfg.Gesichter.Paare()
-	b.WriteString(istFragen(cfg, fragen, DieselbePath))
-	if len(paare)+len(fragen) == 0 {
+	fragen, paare, wer := cfg.Gesichter.Fragen(), cfg.Gesichter.Paare(), cfg.Gesichter.Wer()
+	b.WriteString(istFragen(cfg, fragen, DieselbePath) + werKarten(cfg, wer, DieselbePath))
+	if len(paare)+len(fragen)+len(wer) == 0 {
 		b.WriteString("<p class=k>" + t(texte.DieselbeLeer) + "</p>")
+	} else if len(paare) > 0 && len(fragen)+len(wer) > 0 {
+		b.WriteString("<h2>" + t(texte.Dieselbe) + "</h2>")
 	}
 	for _, p := range paare[:min(len(paare), dieselbeJeSeite)] {
 		b.WriteString(paarKarte(cfg, p, DieselbePath))
@@ -86,6 +89,10 @@ func immichAntwort(w http.ResponseWriter, r *http.Request, cfg StartConfig) (sai
 		return "", "", false
 	}
 	r.ParseForm()
+	if wer := r.PostForm.Get("wer"); wer != "" {
+		said, problem = werAntwort(r, cfg, wer)
+		return said, problem, true
+	}
 	antwort, kontakt := r.PostForm.Get("antwort"), r.PostForm.Get("kontakt")
 	if erlaubt := map[bool][]string{false: {"ja", "nein", "spaeter"}, true: {"ja", "nein", "keinfoto"}}[kontakt != ""]; !slices.Contains(erlaubt, antwort) {
 		http.Error(w, "Ja, Nein oder Überspringen? Die Antwort fehlt.", http.StatusBadRequest)
@@ -122,8 +129,8 @@ func dieselbeAntworten(ctx context.Context, antwort string, antworten func(conte
 		log.Printf("homes: dieselbe person: %v", err)
 		return "", texte.T(gesagt["stumm"])
 	case antwort == "ja":
-		log.Printf("homes: dieselbe person: merged into %q", name)
-		return fmt.Sprintf(texte.T(texte.DieselbeZusammen), name), ""
+		log.Printf("homes: dieselbe person: ja, %q", name)
+		return fmt.Sprintf(texte.T(cmp.Or(gesagt["ja"], texte.DieselbeZusammen)), name), ""
 	}
 	return texte.T(gesagt[antwort]), ""
 }
@@ -173,6 +180,9 @@ func dieselbeGesicht(cfg StartConfig, s gesichter.Seite) string {
 	}
 	if len(s.Mit) > 0 {
 		name += "<small>" + html.EscapeString(fmt.Sprintf(texte.T(texte.DieselbeMit), strings.Join(s.Mit, ", "))) + "</small>"
+	}
+	if buch, uid, ok := strings.Cut(s.Kontakt, "/"); ok { // to correct it there (owner 2026-11-09)
+		name += `<small><a href="` + html.EscapeString(kontaktPfad(buch, uid)) + `" aria-label="` + html.EscapeString(fmt.Sprintf(texte.T(texte.DieselbeKontaktVon), s.Name)) + `">` + html.EscapeString(texte.T(texte.DieselbeKontakt)) + `</a></small>`
 	}
 	return "<figure>" + bild + "<figcaption>" + name + "</figcaption></figure>"
 }

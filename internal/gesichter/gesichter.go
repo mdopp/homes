@@ -6,7 +6,9 @@
 // Abgleichen): the Haushalts-Kontakte and the key owner's own
 // Handy-Kontakte. Homes makes one where Immich has none of that name, and
 // keeps the name and birthday of the ones it made; it never deletes,
-// hides or renames another. The owner names a face in Immich, Immich
+// hides or renames another, but for a name the owner gives on „Wer ist
+// das?“ (wer.go). A person renamed in Immich renames its
+// Haushalts-Kontakt (abgleich.go, folgen). The owner names a face in Immich, Immich
 // offers the person of that name, the owner merges: the faces come from
 // Immich itself.
 //
@@ -126,15 +128,22 @@ type stand struct {
 	Kontaktbilder map[string]kontaktbild `json:"kontaktbilder,omitempty"`
 	// Umfeld is, by person shown on „Dieselbe Person?“, its places and company (umfeld.go)
 	Umfeld map[string]umfeld `json:"umfeld,omitempty"`
+	// Ohne are the unnamed persons „Wer ist das?“ chooses from (wer.go),
+	// Unbekannt those the owner does not know, by id
+	Ohne      []immich.Person      `json:"ohne,omitempty"`
+	Unbekannt map[string]time.Time `json:"unbekannt,omitempty"`
 }
 
 // zuordnung is a contact's Immich person; Eigen: Homes made it, so Homes
-// keeps its name and birthday.
+// keeps its name and birthday. Name is the contact's name and Immich the
+// person's, each as Homes last saw or wrote it ("" not yet): what tells
+// which side was renamed (abgleich.go, folgen).
 type zuordnung struct {
 	ID         string `json:"id"`
 	Name       string `json:"name"`
 	Geburtstag string `json:"geburtstag,omitempty"`
 	Eigen      bool   `json:"eigen,omitempty"`
+	Immich     string `json:"immich,omitempty"`
 }
 
 type bild struct {
@@ -171,7 +180,7 @@ func (g *Gesichter) laden() {
 	}
 	st := &g.stand
 	st.Zuordnung, st.Naehe, st.Andere, st.Fotos, st.Nein, st.Spaeter = leer(st.Zuordnung), leer(st.Naehe), leer(st.Andere), leer(st.Fotos), leer(st.Nein), leer(st.Spaeter)
-	st.Kontaktbilder, st.Umfeld = leer(st.Kontaktbilder), leer(st.Umfeld)
+	st.Kontaktbilder, st.Umfeld, st.Unbekannt = leer(st.Kontaktbilder), leer(st.Umfeld), leer(st.Unbekannt)
 }
 
 func leer[V any](m map[string]V) map[string]V {
@@ -302,12 +311,14 @@ func (g *Gesichter) darf(recht string) bool {
 
 // Auffrischen asks Immich for its named people, and fetches the face of
 // each that has none kept, a changed one, or one older than BildTTL; a
-// face Immich has not is left out. Faces of people gone are dropped.
+// face Immich has not is left out. Faces of people gone are dropped. The
+// first werKandidaten unnamed ones the owner knows (wer.go) are kept, with
+// their faces.
 func (g *Gesichter) Auffrischen(ctx context.Context) error {
 	if g == nil || g.Immich == nil {
 		return nil
 	}
-	people, err := g.Immich.People(ctx)
+	people, ohne, err := g.Immich.People(ctx)
 	if err != nil {
 		return err
 	}
@@ -322,9 +333,11 @@ func (g *Gesichter) Auffrischen(ctx context.Context) error {
 		g.stand.Rechte = rechte
 	}
 	alt := g.stand.Bilder
+	ohne = slices.DeleteFunc(ohne, func(p immich.Person) bool { _, nie := g.stand.Unbekannt[p.ID]; return nie || g.weg[p.ID] })
+	ohne = ohne[:min(len(ohne), werKandidaten)]
 	g.mu.Unlock()
 	neu := map[string]bild{}
-	for _, p := range people {
+	for _, p := range slices.Concat(people, ohne) {
 		b, ok := alt[p.ID]
 		if !ok || b.Stand != p.Stand || g.now().Sub(b.Geholt) > BildTTL {
 			if roh, err := g.Immich.Gesicht(ctx, p.ID); err == nil {
@@ -346,7 +359,7 @@ func (g *Gesichter) Auffrischen(ctx context.Context) error {
 			neu[id] = b
 		}
 	}
-	g.stand.Personen, g.stand.Bilder = slices.DeleteFunc(people, func(p immich.Person) bool { return g.weg[p.ID] }), neu
+	g.stand.Personen, g.stand.Bilder, g.stand.Ohne = slices.DeleteFunc(people, func(p immich.Person) bool { return g.weg[p.ID] }), neu, ohne
 	return g.save()
 }
 

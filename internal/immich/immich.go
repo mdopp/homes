@@ -57,24 +57,26 @@ func FromEnv() *Client {
 // maxSeiten bounds the people read: 500 a page, 10,000 in all.
 const maxSeiten = 20
 
-// People are the named people Immich does not hide, every page of them.
-func (c *Client) People(ctx context.Context) ([]Person, error) {
-	var out []Person
+// People are the people Immich does not hide, every page of them: the
+// named, and the unnamed (ohne) in Immich's order, the most faces first.
+func (c *Client) People(ctx context.Context) (named, ohne []Person, err error) {
 	for page := 1; page <= maxSeiten; page++ {
 		ps, next, err := c.seite(ctx, url.Values{"size": {"500"}, "page": {fmt.Sprint(page)}})
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		for _, p := range ps {
 			if strings.TrimSpace(p.Name) != "" {
-				out = append(out, p)
+				named = append(named, p)
+			} else {
+				ohne = append(ohne, p)
 			}
 		}
 		if !next {
 			break
 		}
 	}
-	return out, nil
+	return named, ohne, nil
 }
 
 // seite is one page of GET /api/people, hidden ones left out: the

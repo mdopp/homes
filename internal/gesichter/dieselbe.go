@@ -22,10 +22,12 @@ import (
 //
 //   - Zusammenfuehren, in the hourly run: the named, unhidden persons of
 //     one name (namen.Plain) become the one with the most photos.
-//   - „Dieselbe Person?“: for each named person, the kandidaten persons
-//     whose face Immich holds closest (closestPersonId: an order, no
-//     distance), asked in the background (Vorschlagen), shown as pairs
-//     (Paare), answered by the owner (Antworten). A „Nein“ is kept.
+//   - „Dieselbe Person?“: for each named person, the kandidaten unnamed
+//     persons whose face Immich holds closest (closestPersonId: an order,
+//     no distance), asked in the background (Vorschlagen), shown as pairs
+//     (Paare), answered by the owner (Antworten). A „Nein“ is kept. Two
+//     named persons are never a pair: the owner told them apart (owner
+//     2026-11-09).
 
 const (
 	maxVerschmelzen = 50 // persons merged away in one run
@@ -222,8 +224,9 @@ func (g *Gesichter) verschmelzen(ctx context.Context, ziel string, quellen []str
 }
 
 // Vorschlagen asks Immich, for at most maxNaehe named persons not asked
-// for naeheTTL, which kandidaten faces are closest, and fetches the faces
-// and photo counts the pairs show, at most maxNachladen.
+// for naeheTTL, which kandidaten unnamed faces are closest, and fetches
+// the faces and photo counts the pairs and „Wer ist das?“ show, at most
+// maxNachladen.
 func (g *Gesichter) Vorschlagen(ctx context.Context) error {
 	if g == nil || g.Immich == nil {
 		return nil
@@ -251,7 +254,7 @@ func (g *Gesichter) Vorschlagen(ctx context.Context) error {
 		}
 		n := naehe{Geholt: g.now()}
 		for _, q := range ps {
-			if q.ID != p.ID && !q.Favorit && len(n.Kandidaten) < kandidaten {
+			if q.ID != p.ID && !q.Favorit && strings.TrimSpace(q.Name) == "" && len(n.Kandidaten) < kandidaten {
 				n.Kandidaten, andere[q.ID] = append(n.Kandidaten, q.ID), q
 			}
 		}
@@ -280,7 +283,11 @@ func (g *Gesichter) Vorschlagen(ctx context.Context) error {
 		}
 	}
 	maps.DeleteFunc(st.Andere, func(id string, _ immich.Person) bool { return !gezeigt[id] })
-	fehlen := slices.Sorted(maps.Keys(gezeigt))
+	var fehlen []string // „Wer ist das?“'s photos counted first
+	for _, p := range st.Ohne {
+		fehlen = append(fehlen, p.ID)
+	}
+	fehlen = append(fehlen, slices.Sorted(maps.Keys(gezeigt))...)
 	g.mu.Unlock()
 	g.nachladen(ctx, fehlen)
 	g.mu.Lock()
@@ -334,6 +341,9 @@ type Seite struct {
 	Orte     []string
 	Von, Bis int
 	Mit      []string
+	// Kontakt is a named person's contact, its key in Zuordnung
+	// ("haushalt/<uid>", "privat/<uid>"); "" none
+	Kontakt string
 }
 
 // zeigbar: s can be asked about, a face to show and photos, or not counted.
@@ -346,10 +356,16 @@ type Paar struct{ A, B Seite }
 // Key is the pair's name in Nein and Spaeter, the same either way round.
 func (p Paar) Key() string { return paarKey(p.A.ID, p.B.ID) }
 
-// seite is person id as a page shows it, with its places and company.
+// seite is person id as a page shows it, with its places and company, and
+// when named its contact (the least key of those it has).
 func (st stand) seite(id, name string, fotos int, bild []byte) Seite {
-	u := st.Umfeld[id]
-	return Seite{ID: id, Name: name, Fotos: fotos, Bild: bild, Orte: u.Orte, Von: u.Von, Bis: u.Bis, Mit: u.Mit}
+	u, kontakt := st.Umfeld[id], ""
+	for k, z := range st.Zuordnung {
+		if z.ID == id && name != "" && (kontakt == "" || k < kontakt) {
+			kontakt = k
+		}
+	}
+	return Seite{ID: id, Name: name, Fotos: fotos, Bild: bild, Orte: u.Orte, Von: u.Von, Bis: u.Bis, Mit: u.Mit, Kontakt: kontakt}
 }
 
 // Offen is how many pairs and questions wait for person: the Immich key's
@@ -365,10 +381,9 @@ func paarKey(a, b string) string {
 	return min(a, b) + "|" + max(a, b)
 }
 
-// Paare are the pairs to ask about, the likeliest first: closest, more so
-// when each is among the other's closest, an unnamed face before a named
-// person; the skipped last, a „Nein“ never, nor one whose side has no face
-// kept (a valid JPEG) or no photo.
+// Paare are the pairs to ask about, a named person beside an unnamed
+// face, the closest first; the skipped last, a „Nein“ never, nor one
+// whose side has no face kept (a valid JPEG) or no photo.
 func (g *Gesichter) Paare() []Paar {
 	if g == nil || g.Immich == nil {
 		return nil
@@ -397,7 +412,8 @@ func (g *Gesichter) Paare() []Paar {
 	for _, a := range slices.Sorted(maps.Keys(st.Naehe)) {
 		for i, b := range st.Naehe[a].Kandidaten {
 			key := paarKey(a, b)
-			if _, nein := st.Nein[key]; nein || gesehen[key] || wer[b].ID == "" || wer[a].ID == "" || a == b {
+			_, nein := st.Nein[key]
+			if nein || gesehen[key] || wer[b].ID == "" || wer[a].ID == "" || a == b || strings.TrimSpace(wer[b].Name) != "" { // two named: two persons
 				continue
 			}
 			gesehen[key] = true
@@ -405,14 +421,7 @@ func (g *Gesichter) Paare() []Paar {
 			if !pa.zeigbar() || !pb.zeigbar() { // no face to show, or none in a photo: nothing to decide
 				continue
 			}
-			wert := 2 * (i + 1)
-			if slices.Contains(st.Naehe[b].Kandidaten, a) {
-				wert -= 2
-			}
-			if strings.TrimSpace(wer[b].Name) == "" {
-				wert--
-			}
-			out = append(out, kandidat{Paar{pa, pb}, wert})
+			out = append(out, kandidat{Paar{pa, pb}, i})
 		}
 	}
 	slices.SortStableFunc(out, func(x, y kandidat) int {
@@ -425,10 +434,9 @@ func (g *Gesichter) Paare() []Paar {
 	return paare
 }
 
-// Antworten takes the owner's answer to the pair a, b: "ja" merges B into
-// A when only A has a name, else the one with fewer photos into the other
-// (A when not counted), and answers the name kept; "nein" keeps the pair
-// from coming back; "spaeter" puts it last.
+// Antworten takes the owner's answer to the pair a, b: "ja" merges the
+// unnamed B into A and answers A's name; "nein" keeps the pair from coming
+// back; "spaeter" puts it last.
 func (g *Gesichter) Antworten(ctx context.Context, a, b, antwort string) (string, error) {
 	paare := g.Paare()
 	i := slices.IndexFunc(paare, func(p Paar) bool { return p.Key() == paarKey(a, b) })
@@ -448,11 +456,7 @@ func (g *Gesichter) Antworten(ctx context.Context, a, b, antwort string) (string
 	if antwort != "ja" {
 		return "", fmt.Errorf("gesichter: no answer %q", antwort)
 	}
-	ziel, quelle := p.A, p.B
-	if quelle.Name != "" && quelle.Fotos > ziel.Fotos && ziel.Fotos >= 0 {
-		ziel, quelle = quelle, ziel
-	}
-	weg, err := g.verschmelzen(ctx, ziel.ID, []string{quelle.ID})
+	weg, err := g.verschmelzen(ctx, p.A.ID, []string{p.B.ID})
 	var fehlt immich.FehltRecht
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -464,7 +468,7 @@ func (g *Gesichter) Antworten(ctx context.Context, a, b, antwort string) (string
 		delete(g.stand.Naehe, b)
 		err = ErrNichtZusammen
 	default:
-		return cmp.Or(ziel.Name, quelle.Name), err
+		return p.A.Name, err
 	}
 	return "", errors.Join(err, g.save())
 }
