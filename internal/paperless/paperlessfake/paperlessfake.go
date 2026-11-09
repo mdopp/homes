@@ -1,7 +1,7 @@
 // Package paperlessfake is a fake Paperless-ngx REST API for tests:
 // "Authorization: Token …", GET /api/documents/ with query, id__in,
 // page_size, page (and next), fields, original_filename__icontains and
-// ordering (-created, id),
+// ordering (-created, -added, id),
 // custom_field_query (AND, OR, NOT; exact, icontains, gt, exists), text,
 // correspondent__name__icontains, tags__id__all, document_type__id__in,
 // GET /api/custom_fields/ (a select's options), GET /api/correspondents/,
@@ -30,6 +30,7 @@ type Doc struct {
 	Content       string
 	Correspondent int    // 0: none
 	Created       string // as the API answers it: "2025-03-14" or an RFC 3339 time
+	Added         string // when it was filed, RFC 3339 as the API answers it
 	Tags          []int  // tag ids, as the API lists them
 	Modified      string // the last change, RFC 3339 as the API answers it; "": not said
 	// OriginalFileName is the name of the file Paperless consumed it from;
@@ -296,14 +297,6 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
 	case "/api/documents/":
 		needle := strings.ToLower(q.Get("query"))
-		var only map[int]bool
-		if v := q.Get("id__in"); v != "" {
-			only = map[int]bool{}
-			for _, x := range strings.Split(v, ",") {
-				id, _ := strconv.Atoi(x)
-				only[id] = true
-			}
-		}
 		named := strings.ToLower(q.Get("original_filename__icontains"))
 		anyOf := func(key string) map[int]bool {
 			if q.Get(key) == "" {
@@ -316,7 +309,7 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 			}
 			return m
 		}
-		ofType, withTag := anyOf("document_type__id__in"), anyOf("tags__id__in")
+		only, ofType, withTag := anyOf("id__in"), anyOf("document_type__id__in"), anyOf("tags__id__in")
 		var cfq any // custom_field_query, as Paperless 3 parses it (cfq)
 		if v := q.Get("custom_field_query"); v != "" {
 			if json.Unmarshal([]byte(v), &cfq) != nil || !s.cfqValid(cfq) {
@@ -355,8 +348,8 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		sort.SliceStable(hits, func(i, j int) bool { return hits[i].ID < hits[j].ID })
-		if q.Get("ordering") == "-created" {
-			sort.SliceStable(hits, func(i, j int) bool { return hits[i].Created > hits[j].Created })
+		if by := map[string]func(Doc) string{"-created": func(d Doc) string { return d.Created }, "-added": func(d Doc) string { return d.Added }}[q.Get("ordering")]; by != nil {
+			sort.SliceStable(hits, func(i, j int) bool { return by(hits[i]) > by(hits[j]) })
 		}
 		fields := map[string]bool{}
 		for _, f := range strings.Split(q.Get("fields"), ",") {
@@ -390,7 +383,7 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 			if q.Get("truncate_content") == "true" && utf8.RuneCountInString(content) > 550 {
 				content = string([]rune(content)[:550]) // as Paperless's serializer cuts it
 			}
-			m := map[string]any{"id": d.ID, "title": d.Title, "content": content, "created": d.Created, "correspondent": nil, "tags": tags, "modified": d.Modified}
+			m := map[string]any{"id": d.ID, "title": d.Title, "content": content, "created": d.Created, "added": d.Added, "correspondent": nil, "tags": tags, "modified": d.Modified}
 			if d.Correspondent != 0 {
 				m["correspondent"] = d.Correspondent
 			}

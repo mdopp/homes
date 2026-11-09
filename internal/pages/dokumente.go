@@ -232,13 +232,14 @@ func writeDokumente(w http.ResponseWriter, r *http.Request, cfg StartConfig, cod
 	writePage(w, code, b)
 }
 
-// zuletztAbgelegt is the five documents the archive got last, each to its
+// zuletztAbgelegt is the five documents the archive got last (Recent: by
+// when they were filed), each to its
 // page where Paperless opens; no rows when Paperless is silent.
 func zuletztAbgelegt(r *http.Request, cfg StartConfig, docs []paperless.Doc) cards.Card {
 	c, opens := cards.Card{Title: "Zuletzt abgelegt"}, cfg.paperlessOpens(r)
 	now, loc := cfg.clock()
 	for _, d := range docs {
-		detail := strings.Trim(d.Correspondent+" · "+map[bool]string{false: dayWord(d.Created, now, loc)}[d.Created.IsZero()], " ·")
+		detail := strings.Trim(d.Correspondent+" · "+map[bool]string{false: "abgelegt " + dayWord(d.Added, now, loc)}[d.Added.IsZero()], " ·")
 		c.AddLink(d.Title, detail, map[bool]string{true: cards.DocumentPages + strconv.Itoa(d.ID)}[opens]) // away from a LAN-only Paperless: no link
 	}
 	return c
