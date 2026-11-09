@@ -1350,6 +1350,14 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     only when it is a firm card and still as Homes wrote it; anything else
     is refused with the reason. The caller carries the values first with
     `kontakt_ergaenzen`.
+    `handy_firmen()` (owner approved 2026-11-09, for Dokumente's
+    `kontakte_nachlesen.py`: a household firm card's empty phone, e-mail
+    and address from the owner's own phone): the same JSON line as
+    `firmenkontakte`, over the Immich key owner's own Handy-Kontakte
+    (`/<login>/handy-kontakte/`, the login gesichter's `Wessen` names) and
+    nobody else's book; only firms (category Firma, an FN that is its ORG,
+    or an ORG without a person's N), without their notes; no owner known:
+    an empty list. Read only.
     No other tool changes a contact: until identity per person (below), the
     Bote writes with one account over every address book it can read, and a
     changed card on someone's phone cannot be taken back the way a new one
