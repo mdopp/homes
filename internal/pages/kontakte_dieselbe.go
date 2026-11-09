@@ -64,23 +64,27 @@ func Dieselbe(cfg StartConfig) http.HandlerFunc {
 				meine, _ = meineKontakte(ctx, cfg, r.Header.Get("Remote-User"))
 			})
 		}
-		o, n := offenFuer(r, cfg), len(meine)
-		for i, ct := range append(meine, haus...) {
-			if buch := map[bool]string{true: kontaktantwort.Privat, false: kontaktantwort.Haushalt}[i < n]; r.Method != http.MethodPost && o.zahl(cfg, buch, ct.UID, kontaktName(ct)) > 0 {
-				http.Redirect(w, r, kontaktPfad(buch, ct.UID)+"?weiter", http.StatusSeeOther)
-				return
+		var offen []kontaktZeile // the contacts with a question, a list to work through (owner 2026-11-09)
+		for _, z := range append(kontaktZeilen(r, cfg, meine, kontaktantwort.Privat), kontaktZeilen(r, cfg, haus, kontaktantwort.Haushalt)...) {
+			if z.zahl > 0 {
+				z.seite, z.knopf = z.seite+"?weiter", ""
+				offen = append(offen, z)
 			}
 		}
-		writePage(w, http.StatusOK, dieselbeRest(r, cfg, said, problem))
+		writePage(w, http.StatusOK, dieselbeRest(r, cfg, offen, said, problem))
 	}
 }
 
-// dieselbeRest is the page once no contact has a question left: what
-// belongs to none, the outcome, the questions, the first pairs.
-func dieselbeRest(r *http.Request, cfg StartConfig, said, problem string) *strings.Builder {
+// dieselbeRest is the page: the contacts with a question (offen), then
+// what belongs to none, the outcome, the questions, the first pairs.
+func dieselbeRest(r *http.Request, cfg StartConfig, offen []kontaktZeile, said, problem string) *strings.Builder {
 	t := func(id texte.ID) string { return html.EscapeString(texte.T(id)) }
 	b := kontakteHead(r, cfg, texte.T(texte.Dieselbe), "", texte.T(texte.Dieselbe))
 	b.WriteString(dieselbeStyle + "<h1>" + t(texte.Dieselbe) + "</h1>" + gesagt(said, problem))
+	if len(offen) > 0 { // the rest (pairs of nobody's) once the list is done
+		kontakteListe(b, offen, texte.KontakteLeer)
+		return b
+	}
 	fragen, paare := cfg.Gesichter.Fragen(), cfg.Gesichter.Paare()
 	b.WriteString(istFragen(cfg, fragen, DieselbePath))
 	if len(paare)+len(fragen) == 0 {

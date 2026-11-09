@@ -143,7 +143,7 @@ const (
 	DieselbeGemerkt      ID = "dieselbe.gemerkt"     // „Nein“ kept
 	DieselbeHinten       ID = "dieselbe.hinten"      // skipped
 	DieselbeWeg          ID = "dieselbe.weg"         // the pair is no longer offered
-	DieselbeWeiter       ID = "dieselbe.weiter"      // on to the next contact with a question
+	DieselbeWeiter       ID = "dieselbe.weiter"      // back to the list of contacts with a question
 	DieselbeNichtGemacht ID = "dieselbe.nicht"       // Immich merged neither: one is gone
 	DieselbeStumm        ID = "dieselbe.stumm"       // Immich did not answer
 	DieselbeOrte         ID = "dieselbe.orte"        // under a face: „%s“ the places, then the years
@@ -448,7 +448,7 @@ var de = map[ID]string{
 	"dieselbe.zusammen":         "Zusammengeführt: Die Fotos gehören jetzt zu %s.",
 	"dieselbe.gemerkt":          "Gemerkt: Nach diesen beiden fragt Homes nicht wieder.",
 	"dieselbe.hinten":           "Übersprungen: Dieser Vorschlag kommt am Ende wieder.",
-	"dieselbe.weiter":           "Weiter zur nächsten Person ›",
+	"dieselbe.weiter":           "‹ Zurück zur Liste",
 	"dieselbe.weg":              "Diesen Vorschlag gibt es nicht mehr. Hier sind die aktuellen.",
 	"dieselbe.nicht":            "Immich hat die beiden nicht zusammengeführt, weil es eine davon nicht mehr gibt. Nichts wurde geändert.",
 	"dieselbe.stumm":            "Immich hat gerade nicht geantwortet, nichts wurde zusammengeführt. Versuch es gleich noch einmal.",
