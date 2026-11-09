@@ -176,18 +176,24 @@ func TestMaxBody(t *testing.T) {
 	}
 }
 
-// haus#10: the document widget lists the newest documents, not a search.
+// haus#10: the document widget lists the newest documents, not a search;
+// newest is when Paperless filed it, not the letter's own date (document
+// 641, 2026-11-09: mailed in today with an older date, it never showed).
 func TestRecent(t *testing.T) {
 	fake := paperlessfake.New(token)
 	defer fake.Close()
-	fake.Add(paperlessfake.Doc{ID: 1, Title: "Alt", Created: "2020-01-01"}, paperlessfake.Doc{ID: 2, Title: "Neu", Created: "2026-09-30"})
+	fake.Add(paperlessfake.Doc{ID: 1, Title: "Alt", Created: "2026-09-30", Added: "2026-10-01T08:00:00+02:00"},
+		paperlessfake.Doc{ID: 2, Title: "Neu abgelegt", Created: "2026-08-14", Added: "2026-11-09T10:15:42.123456+01:00"})
 	c := &Client{URL: fake.URL, Token: token}
 	docs, err := c.Recent(context.Background(), 1)
-	if err != nil || len(docs) != 1 || docs[0].Title != "Neu" || docs[0].Link != "" {
+	if err != nil || len(docs) != 1 || docs[0].Title != "Neu abgelegt" || docs[0].Link != "" {
 		t.Fatalf("%+v %v", docs, err)
 	}
+	if want := time.Date(2026, 11, 9, 9, 15, 42, 123456000, time.UTC); !docs[0].Added.Equal(want) || docs[0].Created.Format("2006-01-02") != "2026-08-14" {
+		t.Errorf("added %v, created %v", docs[0].Added, docs[0].Created)
+	}
 	q := fake.Seen()[0].URL.Query()
-	if q.Has("query") || q.Get("ordering") != "-created" || q.Get("page_size") != "1" || strings.Contains(q.Get("fields"), "content") {
+	if q.Has("query") || q.Get("ordering") != "-added" || !strings.Contains(q.Get("fields"), "added") || q.Get("page_size") != "1" || strings.Contains(q.Get("fields"), "content") {
 		t.Fatalf("request: %s", fake.Seen()[0].URL)
 	}
 }

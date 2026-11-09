@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mdopp/homes/internal/napi"
 	"github.com/mdopp/homes/internal/paperless"
@@ -71,11 +72,17 @@ func TestDokumenteShowsTheWaysIn(t *testing.T) {
 	t.Cleanup(fake.Close)
 	fake.Correspondent(1, "Strom AG")
 	for i, title := range []string{"Rechnung Oktober", "Brief", "Vertrag", "Bescheid", "Quittung", "Alt"} {
-		fake.Add(paperlessfake.Doc{ID: i + 1, Title: title, Created: "2026-10-0" + string(rune('9'-i)), Correspondent: 1})
+		fake.Add(paperlessfake.Doc{ID: i + 1, Title: title, Created: "2026-10-0" + string(rune('9'-i)), Added: "2026-11-0" + string(rune('9'-i)) + "T10:00:00+01:00", Correspondent: 1})
 	}
+	// document 641 (2026-11-09): mailed in today, its letter dated weeks ago; it is the newest filed
+	fake.Add(paperlessfake.Doc{ID: 641, Title: "Rechnung Rollladen", Created: "2026-08-14", Added: "2026-11-09T12:30:00+01:00"})
 	cfg.Docs, cfg.PaperlessLANOnly = &paperless.Client{URL: fake.URL, Token: "pl"}, true
+	cfg.Now, cfg.Loc = func() time.Time { return time.Date(2026, 11, 9, 18, 0, 0, 0, time.UTC) }, time.UTC
 	home = getDokumente(cfg, "/dokumente", map[string]string{"X-Forwarded-For": "192.168.1.23"}).Body.String()
-	mustContain(t, home, "<h2 id=karte-zuletzt-abgelegt>Zuletzt abgelegt</h2>", `<a href="/dokumente/1">Rechnung Oktober</a>`, "Strom AG · ")
+	mustContain(t, home, "<h2 id=karte-zuletzt-abgelegt>Zuletzt abgelegt</h2>", `<a href="/dokumente/641">Rechnung Rollladen</a>`, "abgelegt heute",
+		`<a href="/dokumente/1">Rechnung Oktober</a>`, "Strom AG · abgelegt heute", "Strom AG · abgelegt gestern", "Strom AG · abgelegt Fr 06.11.")
+	mustNotContain(t, home, "14.08.", "Quittung") // not the letter's date; the sixth filed is not among the five
+	before(t, home, "Rechnung Rollladen", "Rechnung Oktober")
 	if strings.Count(home[strings.Index(home, "Zuletzt abgelegt"):], "<li>") != 5 {
 		t.Errorf("not five:\n%s", home)
 	}

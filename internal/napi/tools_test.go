@@ -88,8 +88,8 @@ func toolsWith(t *testing.T, w which) tools {
 		s.docs = paperlessfake.New("pl-token")
 		t.Cleanup(s.docs.Close)
 		s.docs.Correspondent(3, "Stadtwerke")
-		s.docs.Add(paperlessfake.Doc{ID: 1, Title: "Mietvertrag", Created: "2024-01-02"},
-			paperlessfake.Doc{ID: 2, Title: "Stromrechnung", Correspondent: 3, Created: "2026-09-30"})
+		s.docs.Add(paperlessfake.Doc{ID: 1, Title: "Mietvertrag", Created: "2024-01-02", Added: "2024-01-03T09:00:00+01:00"},
+			paperlessfake.Doc{ID: 2, Title: "Stromrechnung", Correspondent: 3, Created: "2026-09-30", Added: "2026-10-01T09:00:00+02:00"})
 		hh.Documents = &paperless.Client{URL: s.docs.URL, Token: "pl-token", PublicURL: "https://paperless.example"}
 	}
 	if w.notes {
@@ -326,7 +326,8 @@ func TestContactDocumentAndNoteRows(t *testing.T) {
 		t.Fatalf("no correspondent is no key: %v", ds[1])
 	}
 	last := s.docs.Seen()[0].URL.Query()
-	if last.Get("ordering") != "-created" || last.Has("query") {
+	// the newest filed (document 641, 2026-11-09), not the newest letter date
+	if last.Get("ordering") != "-added" || last.Has("query") {
 		t.Fatalf("the newest, not a search: %v", last)
 	}
 

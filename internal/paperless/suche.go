@@ -197,6 +197,11 @@ func (c *Client) eintraege(ctx context.Context, o *Ordnung, q url.Values, max in
 	return out, nil
 }
 
+// ohneLigaturen is a word as OCR reads it when it drops a ligature
+// („Herkenhoff“ read as „Herkenho“, document 641, 2026-11-09): Finde also
+// asks for that, merged by id.
+var ohneLigaturen = strings.NewReplacer("ffi", "", "ffl", "", "ff", "", "fi", "", "fl", "")
+
 // Filter is what the family asks for; every part set narrows.
 type Filter struct {
 	Text       string    // title, text, sender, the Nummern
@@ -259,9 +264,10 @@ func (c *Client) Finde(ctx context.Context, f Filter) ([]Eintrag, error) {
 			return false
 		}})
 	}
-	for _, k := range []string{"correspondent__name__icontains", "text"} {
+	sender, ocr := "correspondent__name__icontains", ohneLigaturen.Replace(text)
+	for _, kw := range slices.Compact([][2]string{{sender, text}, {sender, ocr}, {"text", text}, {"text", ocr}}) {
 		q := with()
-		q.Set(k, text)
+		q.Set(kw[0], kw[1])
 		asks = append(asks, ask{q, f.Max, nil})
 	}
 	found := make([][]Eintrag, len(asks))

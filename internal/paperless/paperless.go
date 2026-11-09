@@ -34,6 +34,7 @@ type Doc struct {
 	Title         string
 	Correspondent string    // "": none, or not readable
 	Created       time.Time // zero: unknown
+	Added         time.Time // when Paperless filed it; zero: unknown
 	Link          string    // Paperless's own page for it; "" without PublicURL
 	Tags          []string  // the tags' names, as the document lists them
 	// Start is the beginning of its text as Paperless lists it (it cuts
@@ -108,9 +109,10 @@ func (c *Client) Search(ctx context.Context, q string, max int) ([]Doc, int, err
 	return c.list(ctx, url.Values{"query": {q}}, max, shown)
 }
 
-// Recent lists the max newest documents, by the date they were created.
+// Recent lists the max documents Paperless filed last (by when they were
+// added, not their own date: a letter of last month filed today is new).
 func (c *Client) Recent(ctx context.Context, max int) ([]Doc, error) {
-	docs, _, err := c.list(ctx, url.Values{"ordering": {"-created"}}, max, shown)
+	docs, _, err := c.list(ctx, url.Values{"ordering": {"-added"}}, max, shown)
 	return docs, err
 }
 
@@ -122,13 +124,14 @@ type apiDoc struct {
 	Correspondent *int   `json:"correspondent"`
 	Created       string `json:"created"`
 	CreatedDate   string `json:"created_date"`
+	Added         string `json:"added"`
 	Tags          []int  `json:"tags"`
 	Content       string `json:"content"`
 	Modified      string `json:"modified"`
 }
 
 // shown are the fields a hit shows: not the OCR text
-const shown = "id,title,correspondent,created,created_date,tags"
+const shown = "id,title,correspondent,created,created_date,added,tags"
 
 // list asks for documents with q (a search or an order), at most max;
 // fields is what it reads of each.
@@ -182,7 +185,7 @@ func (c *Client) named(ctx context.Context, rs []apiDoc) []Doc {
 				}
 			}
 		}
-		d.Link = c.Page(r.ID)
+		d.Added, d.Link = modified(r.Added), c.Page(r.ID)
 		out = append(out, d)
 	}
 	return out
@@ -251,11 +254,9 @@ func (c *Client) Stamps(ctx context.Context) ([]Stamp, error) {
 	}
 }
 
+// modified is an RFC 3339 time as the API answers it; zero when it is none.
 func modified(s string) time.Time {
-	t, err := time.Parse(time.RFC3339Nano, s)
-	if err != nil {
-		return time.Time{}
-	}
+	t, _ := time.Parse(time.RFC3339Nano, s)
 	return t
 }
 
@@ -341,17 +342,13 @@ func (c *Client) names(ctx context.Context, path string, ids map[int]bool) map[i
 		list = append(list, id)
 	}
 	sort.Ints(list)
-	strs := make([]string, len(list))
-	for i, id := range list {
-		strs[i] = strconv.Itoa(id)
-	}
 	var page struct {
 		Results []struct {
 			ID   int    `json:"id"`
 			Name string `json:"name"`
 		} `json:"results"`
 	}
-	if err := c.get(ctx, path, url.Values{"id__in": {strings.Join(strs, ",")}, "page_size": {strconv.Itoa(len(list))}}, &page); err != nil {
+	if err := c.get(ctx, path, url.Values{"id__in": {idList(list)}, "page_size": {strconv.Itoa(len(list))}}, &page); err != nil {
 		return out
 	}
 	for _, r := range page.Results {

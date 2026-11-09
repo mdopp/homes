@@ -127,3 +127,30 @@ func TestFindeFails(t *testing.T) {
 		t.Error("no error")
 	}
 }
+
+// Document 641 (2026-11-09): OCR dropped the ligature, the text says
+// „Rollladen Herkenho GmbH“; a search for „Herkenhoff“ finds it, and the
+// spelled-out one as well, each once. A word without ff, fi or fl asks
+// only once.
+func TestFindeOhneLigatur(t *testing.T) {
+	f, c := sucheFake(t)
+	f.Add(paperlessfake.Doc{ID: 641, Title: "Fwd: Rechnung_R-261241", DocumentType: 1, Content: "Rollladen Herkenho GmbH, Rechnung R-261241"},
+		paperlessfake.Doc{ID: 642, Title: "Angebot", Content: "Rollladen Herkenhoff GmbH"})
+	got, err := c.Finde(context.Background(), Filter{Text: "Herkenhoff", Max: 10})
+	if err != nil || !slices.Equal(ids(got), []int{642, 641}) {
+		t.Fatalf("%v %v", ids(got), err)
+	}
+	asked := map[string]int{}
+	for _, r := range f.Seen() {
+		asked[r.URL.Query().Get("text")]++
+	}
+	if asked["Herkenhoff"] != 1 || asked["Herkenho"] != 1 {
+		t.Errorf("text asked: %v", asked)
+	}
+	if got, _ := c.Finde(context.Background(), Filter{Text: "Rollladen", Max: 10}); len(got) != 2 {
+		t.Errorf("%v", ids(got))
+	}
+	if s := ohneLigaturen.Replace("Auflauf Schiff Effizienz"); s != "Auauf Schi Ezienz" {
+		t.Errorf("%q", s)
+	}
+}
