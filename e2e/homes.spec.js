@@ -825,7 +825,7 @@ test('Dieselbe Person? on the contact takes a Nein', async ({ page }, info) => {
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
   const paare = page.locator('section.paar:not(.frage)');
   const n = await paare.count();
-  expect(n).toBeGreaterThan(1);
+  expect(n).toBe(1); // only the closest face per person (owner 2026-11-09)
   await expect(paare.first()).toContainText('Oma Hilde');
   await expect(paare.first()).toContainText('ohne Namen');
   await expect(paare.first()).toContainText('412 Fotos');
