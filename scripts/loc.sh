@@ -69,7 +69,9 @@ budget() { # budget <name> <cap> <dir…>
 # page on the shared listener told apart by Host, the request's form, throttle and Danke, the admins' /zugang and the rows on Start (teaser.go)
 # 2026-11-09, owner approved 2026-11-09: Wer steht wem nahe (pages 18,100 -> 18,350; 18,315 used): kontakte_netz.go,
 # „Steht nahe“ on the contact page, the link on Kontakte
-budget pages 18350 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-09, owner approved 2026-11-09: Beziehungen klären (pages 18,350 -> 18,480; 18,446 used): the questions on
+# /kontakte/netz and on the contact page
+budget pages 18480 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -161,7 +163,9 @@ budget connectors 15220 $connectors   # one client per service, with its fake: 1
 # gesichter/handy.go (Neuanlegen), folgen asking the phone, kontaktantwort.Store.Handy
 # 2026-11-09, owner approved 2026-11-09: Wer steht wem nahe (household 13,330 -> 14,100; 14,036 used): internal/netz,
 # the contact net from the key owner's photos and phone books
-budget household 14100 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-09, owner approved 2026-11-09: Beziehungen klären (household 14,100 -> 14,420; 14,374 used): netz's
+# suggestions, answers and their RELATED lines
+budget household 14420 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one

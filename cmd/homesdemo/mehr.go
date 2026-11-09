@@ -95,6 +95,12 @@ func mehrSeiten(mux *http.ServeMux, cfg pages.StartConfig, dav *davfake.Server, 
 		if i == 1 { // Kontakt prüfen lassen (owner 2026-11-08): an address with its number first, as the owner found one
 			card += "N:Beispiel;Ben;;;\r\nEMAIL;TYPE=HOME:ben@example.org\r\nADR;TYPE=HOME:;;7 Gartenstraße;Stuttgart;;70173;Deutschland\r\n"
 		}
+		if i <= 2 { // Beziehungen klären (owner 2026-11-09): one address and the birthdays, so Clara is suggested as Anna's and Ben's Kind
+			card += "BDAY:" + []string{"1984-04-12", "1982-09-30", "2014-02-03"}[i] + "\r\n"
+			if i != 1 {
+				card += "ADR;TYPE=HOME:;;7 Gartenstraße;Stuttgart;;70173;Deutschland\r\n"
+			}
+		}
 		dav.Put("/homes/haushalt-kontakte/h"+strconv.Itoa(i)+".vcf", card+"END:VCARD\r\n")
 	}
 	cfg.Gesichter = demoGesichter(dir, cfg.Contacts) // Anna's key: Meine Kontakte, each a person in Immich (owner 2026-11-06)

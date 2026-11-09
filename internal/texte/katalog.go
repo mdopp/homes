@@ -174,35 +174,59 @@ const (
 	WerUnbekannt       ID = "wer-ist-das.unbekannt" // „Kenne ich nicht“
 	WerUnbekanntLauft  ID = "wer-ist-das.unbekannt.laeuft"
 	// „Wer steht wem nahe“ (owner 2026-11-09): the contact net, for the Immich key's owner
-	Netz               ID = "netz"         // the page, its link on Kontakte
-	NetzNahe           ID = "netz.nahe"    // the section on a contact's page
-	NetzLeer           ID = "netz.leer"    // nothing computed yet
-	NetzKeine          ID = "netz.keine"   // this person has no tie shown
-	NetzBild           ID = "netz.bild"    // the picture's label: „%s“ the centre
-	NetzMehr           ID = "netz.mehr"    // widens the picture
-	NetzMitte          ID = "netz.mitte"   // a row's link that makes it the centre: „%s“ the name
-	NetzKontakt        ID = "netz.kontakt" // a row's link to its contact
-	NetzAus            ID = "netz.aus"     // Ausblenden, and pressed
-	NetzAusLaeuft      ID = "netz.aus.laeuft"
-	NetzNicht          ID = "netz.nicht" // Nicht berechnen, and pressed
-	NetzNichtLaeuft    ID = "netz.nicht.laeuft"
-	NetzZurueck        ID = "netz.zurueck" // restore, and pressed
-	NetzZurueckLaeuft  ID = "netz.zurueck.laeuft"
-	NetzVerborgen      ID = "netz.verborgen"       // the list „Ausgeblendet“
-	NetzNichtArt       ID = "netz.verborgen.nicht" // a row there that is not computed
-	NetzGesagtAus      ID = "netz.gesagt.aus"      // „%s“ the name
-	NetzGesagtNicht    ID = "netz.gesagt.nicht"    // „%s“ the name
-	NetzGesagtZurueck  ID = "netz.gesagt.zurueck"  // „%s“ the name
-	NetzFehler         ID = "netz.fehler"          // the choice was not kept
-	NetzHinweis        ID = "netz.hinweis"         // how it is computed, folded away
-	NetzFotos          ID = "netz.fotos"           // a reason: „%s“ the days, „%d“ the first year
-	NetzAdresse        ID = "netz.adresse"         // a reason: the same postal address
-	NetzFirma          ID = "netz.firma"           // a reason: the same company
-	NetzBeziehung      ID = "netz.beziehung"       // a reason: „%s“ the relation the centre's card names
-	NetzBeziehungVon   ID = "netz.beziehung.von"   // a reason: „%s“ the relation, „%s“ whose card names it
-	NetzVerwandt       ID = "netz.verwandt"        // a reason: a relation without a kind
-	WerGenannt         ID = "wer-ist-das.genannt"  // saved: „%s“ is the name
-	WerGemerkt         ID = "wer-ist-das.gemerkt"  // „Kenne ich nicht“ kept
+	Netz              ID = "netz"         // the page, its link on Kontakte
+	NetzNahe          ID = "netz.nahe"    // the section on a contact's page
+	NetzLeer          ID = "netz.leer"    // nothing computed yet
+	NetzKeine         ID = "netz.keine"   // this person has no tie shown
+	NetzBild          ID = "netz.bild"    // the picture's label: „%s“ the centre
+	NetzMehr          ID = "netz.mehr"    // widens the picture
+	NetzMitte         ID = "netz.mitte"   // a row's link that makes it the centre: „%s“ the name
+	NetzKontakt       ID = "netz.kontakt" // a row's link to its contact
+	NetzAus           ID = "netz.aus"     // Ausblenden, and pressed
+	NetzAusLaeuft     ID = "netz.aus.laeuft"
+	NetzNicht         ID = "netz.nicht" // Nicht berechnen, and pressed
+	NetzNichtLaeuft   ID = "netz.nicht.laeuft"
+	NetzZurueck       ID = "netz.zurueck" // restore, and pressed
+	NetzZurueckLaeuft ID = "netz.zurueck.laeuft"
+	NetzVerborgen     ID = "netz.verborgen"       // the list „Ausgeblendet“
+	NetzNichtArt      ID = "netz.verborgen.nicht" // a row there that is not computed
+	NetzGesagtAus     ID = "netz.gesagt.aus"      // „%s“ the name
+	NetzGesagtNicht   ID = "netz.gesagt.nicht"    // „%s“ the name
+	NetzGesagtZurueck ID = "netz.gesagt.zurueck"  // „%s“ the name
+	NetzFehler        ID = "netz.fehler"          // the choice was not kept
+	NetzHinweis       ID = "netz.hinweis"         // how it is computed, folded away
+	NetzFotos         ID = "netz.fotos"           // a reason: „%s“ the days, „%d“ the first year
+	NetzAdresse       ID = "netz.adresse"         // a reason: the same postal address
+	NetzFirma         ID = "netz.firma"           // a reason: the same company
+	NetzBeziehung     ID = "netz.beziehung"       // a reason: „%s“ the relation the centre's card names
+	NetzBeziehungVon  ID = "netz.beziehung.von"   // a reason: „%s“ the relation, „%s“ whose card names it
+	NetzVerwandt      ID = "netz.verwandt"        // a reason: a relation without a kind
+	// Beziehungen klären (owner 2026-11-09): the questions, their suggestions, the answers; the kinds are netz.art.<kind>
+	NetzGesagt         ID = "netz.gesagt"       // a reason: „%s“ the kind the owner gave
+	NetzWeilFamilie    ID = "netz.weil.familie" // a suggestion's reason
+	NetzWeilJahre      ID = "netz.weil.jahre"   // „%d“ the years between their birthdays
+	NetzWeilName       ID = "netz.weil.name"    // „%s“ the name's first word (Oma, Opa, Tante, Onkel)
+	NetzWeilNachbar    ID = "netz.weil.nachbar" // a suggestion's reason
+	NetzWeilFotos      ID = "netz.weil.fotos"   // „%s“ the photo days
+	NetzFragen         ID = "netz.fragen"       // the section „Beziehungen klären“
+	NetzFrage          ID = "netz.frage"        // „%s“ X, „%s“ Y
+	NetzFrageDir       ID = "netz.frage.dir"    // Y when it is the key owner: „dir“
+	NetzIst            ID = "netz.ist"          // the choice's label: „%s“ X
+	NetzWaehlen        ID = "netz.waehlen"      // the empty choice
+	NetzVorschlag      ID = "netz.vorschlag"    // „%s“ the suggestion's reason
+	NetzSpeichern      ID = "netz.speichern"    // and pressed
+	NetzSpeichernLauft ID = "netz.speichern.laeuft"
+	NetzKeineBez       ID = "netz.keine-beziehung" // and pressed
+	NetzKeineBezLauft  ID = "netz.keine-beziehung.laeuft"
+	NetzSpaeter        ID = "netz.spaeter" // Überspringen, and pressed
+	NetzSpaeterLauft   ID = "netz.spaeter.laeuft"
+	NetzOhneWahl       ID = "netz.ohne-wahl"      // Speichern without a kind chosen
+	NetzGesagtArt      ID = "netz.gesagt.art"     // „%s“ X, „%s“ the kind, „%s“ Y
+	NetzGesagtKeine    ID = "netz.gesagt.keine"   // „Keine Beziehung“ kept
+	NetzGesagtSpaeter  ID = "netz.gesagt.spaeter" // skipped
+	NetzNichtImBuch    ID = "netz.nicht-im-buch"  // kept, but the address book not written
+	WerGenannt         ID = "wer-ist-das.genannt" // saved: „%s“ is the name
+	WerGemerkt         ID = "wer-ist-das.gemerkt" // „Kenne ich nicht“ kept
 	WerOhneName        ID = "wer-ist-das.ohne-name"
 	WerStumm           ID = "wer-ist-das.stumm"
 	DieselbeKontakt    ID = "dieselbe.kontakt"     // under a named face: its contact's page
@@ -548,6 +572,47 @@ var de = map[ID]string{
 	"netz.beziehung":               "%s (Telefonbuch)",
 	"netz.beziehung.von":           "%s von %s (Telefonbuch)",
 	"netz.verwandt":                "im Telefonbuch verknüpft",
+	"netz.gesagt":                  "%s (von dir angegeben)",
+	"netz.weil.familie":            "gleicher Nachname und gleiche Adresse",
+	"netz.weil.jahre":              "%d Jahre Altersunterschied",
+	"netz.weil.name":               "„%s“ im Namen",
+	"netz.weil.nachbar":            "gleiche Straße, anderes Haus",
+	"netz.weil.fotos":              "%s zusammen auf deinen Fotos, kein Zeichen von Familie",
+	"netz.fragen":                  "Beziehungen klären",
+	"netz.frage":                   "Wie steht %s zu %s?",
+	"netz.frage.dir":               "dir",
+	"netz.ist":                     "%s ist …",
+	"netz.waehlen":                 "Bitte wählen",
+	"netz.vorschlag":               "Vorschlag, weil %s.",
+	"netz.speichern":               "Speichern",
+	"netz.speichern.laeuft":        "Speichert …",
+	"netz.keine-beziehung":         "Keine Beziehung",
+	"netz.keine-beziehung.laeuft":  "Merkt es sich …",
+	"netz.spaeter":                 "Überspringen",
+	"netz.spaeter.laeuft":          "Legt es nach hinten …",
+	"netz.ohne-wahl":               "Bitte wähle zuerst, wie die beiden zueinander stehen.",
+	"netz.gesagt.art":              "Gespeichert: %s ist %s von %s.",
+	"netz.gesagt.keine":            "Gemerkt: keine Beziehung. Homes fragt danach nicht wieder.",
+	"netz.gesagt.spaeter":          "Übersprungen. Die Frage kommt später noch einmal.",
+	"netz.nicht-im-buch":           "Ins Adressbuch konnte Homes es gerade nicht schreiben; hier ist es gespeichert.",
+	// the kinds a question offers (netz.Arten): „X ist <kind> von Y“
+	"netz.art.partner":         "Partner/in",
+	"netz.art.eltern":          "Mutter/Vater (Eltern)",
+	"netz.art.kind":            "Kind",
+	"netz.art.geschwister":     "Geschwister",
+	"netz.art.grosseltern":     "Großeltern",
+	"netz.art.enkel":           "Enkel/in",
+	"netz.art.onkel":           "Onkel/Tante",
+	"netz.art.neffe":           "Neffe/Nichte",
+	"netz.art.cousin":          "Cousin/e",
+	"netz.art.schwiegereltern": "Schwiegereltern",
+	"netz.art.schwiegerkind":   "Schwiegerkind",
+	"netz.art.schwager":        "Schwager/Schwägerin",
+	"netz.art.freund":          "Freund/in",
+	"netz.art.kollege":         "Kollege/Kollegin",
+	"netz.art.nachbar":         "Nachbar/in",
+	"netz.art.bekannt":         "Bekannte/r",
+	"netz.art.verwandt":        "Sonstige verwandt",
 	// a relation's kind as phones write it (netz.label): vCard's RELATED TYPE, iOS's labels, Android's types
 	"netz.rel.spouse":       "Ehepartner/in",
 	"netz.rel.partner":      "Partner/in",

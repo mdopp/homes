@@ -99,3 +99,41 @@ func TestNetzLeer(t *testing.T) {
 	mustContain(t, body, "Noch keine Verbindungen.")
 	mustNotContain(t, body, "<svg class=netzbild")
 }
+
+// Beziehungen klären (owner 2026-11-09): the net's page asks about each
+// tie without a relation, the owner as „dir“, with both faces, the kinds
+// and nothing chosen without a reason; Speichern without a choice is
+// refused and said, a kind is said, shown as the tie's reason and written
+// into both household cards; on a contact's page its own questions, its
+// row's count with them, answered right there; nobody else sees any.
+func TestNetzBeziehungenKlaeren(t *testing.T) {
+	cfg := netzConfig(t)
+	body := as(NetzSeite, cfg, NetzPath, "anna", "anna@box.test").Body.String()
+	mustContain(t, body, "<h2>Beziehungen klären</h2>", "<h3>Wie steht Ben zu dir?</h3>", "<h3>Wie steht Carla zu dir?</h3>", `<h3>Wie steht Ben zu Carla?</h3>`,
+		`<input type=hidden name=x value="p-ben"><input type=hidden name=y value="p-anna"><label>Ben ist …<select name=art required><option value="">Bitte wählen</option><option value="partner">Partner/in</option><option value="eltern">Mutter/Vater (Eltern)</option>`,
+		`<option value="verwandt">Sonstige verwandt</option></select></label><button name=antwort value=ja data-laeuft="Speichert …">Speichern</button>`,
+		`<button name=antwort value=spaeter class=leise formnovalidate data-laeuft="Legt es nach hinten …">Überspringen</button>`)
+	mustNotContain(t, body, " selected>", "Vorschlag, weil", "Wie steht Dora")
+	post := func(h http.HandlerFunc, pfad string, v url.Values) string {
+		return antworteBei(h, pfad, "anna", v).Body.String()
+	}
+	mustContain(t, post(NetzSeite(cfg), NetzPath, url.Values{"x": {"p-ben"}, "y": {"p-anna"}, "antwort": {"ja"}}), "Bitte wähle zuerst")
+	body = post(NetzSeite(cfg), NetzPath, url.Values{"x": {"p-ben"}, "y": {"p-anna"}, "antwort": {"ja"}, "art": {"partner"}})
+	mustContain(t, body, "Gespeichert: Ben ist Partner/in von dir.", "Partner/in (von dir angegeben)")
+	mustNotContain(t, body, "Wie steht Ben zu dir?")
+	mustContain(t, post(NetzSeite(cfg), NetzPath, url.Values{"x": {"p-ben"}, "y": {"p-anna"}, "antwort": {"keine"}}), "Diesen Vorschlag gibt es nicht mehr")
+	cards, _, _ := cfg.Contacts.Cards(t.Context())
+	for _, c := range cards {
+		if want := map[string]string{"a": "RELATED;TYPE=spouse:urn:uuid:b", "b": "RELATED;TYPE=spouse:urn:uuid:a"}[c.UID]; !strings.Contains(c.Text(), want) {
+			t.Errorf("card %s:\n%s", c.UID, c.Text())
+		}
+	}
+	mustContain(t, as(Kontakte, cfg, KontaktePath, "anna", "anna@box.test").Body.String(), "<span class=anzahl")
+	body = as(Kontakt, cfg, "/kontakte/b", "anna", "anna@box.test").Body.String()
+	mustContain(t, body, "<h3>Wie steht Ben zu Carla?</h3>", `<form method=post action="/kontakte/b">`)
+	mustNotContain(t, body, "Wie steht Carla zu dir?")
+	body = post(Kontakt(cfg), "/kontakte/b", url.Values{"x": {"p-ben"}, "y": {"p-carla"}, "antwort": {"keine"}})
+	mustContain(t, body, "Gemerkt: keine Beziehung.")
+	mustNotContain(t, body, "Wie steht Ben zu Carla?")
+	mustNotContain(t, as(Kontakt, cfg, "/kontakte/b", "ben", "ben@box.test").Body.String(), "Beziehungen klären")
+}

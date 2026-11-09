@@ -19,8 +19,8 @@ import (
 
 // Korrektur is one accepted change of a card's field: Prop is N-GIVEN,
 // N-FAMILY (FN follows them), TEL, EMAIL, ADR, BDAY, ORG (its first part),
-// TITLE, PHOTO (Bild, a JPEG, replaces the card's) or NOTE (Neu is added
-// to it); Alt "" adds, Neu "" removes. For ADR the values are AltAdr and
+// TITLE, PHOTO (Bild, a JPEG, replaces the card's), NOTE (Neu is added
+// to it) or RELATED (Neu added, Art its TYPE); Alt "" adds, Neu "" removes. For ADR the values are AltAdr and
 // NeuAdr; for BDAY JJJJ-MM-TT or --MM-TT; for TEL and EMAIL Art is the new
 // kind (mobil, privat, geschaeftlich, andere; "" keeps the line's) and
 // Haupt whether it is the main one (nil keeps it; the main one is the
@@ -133,8 +133,24 @@ func korrigiert(body []string, k Korrektur) ([]string, bool) {
 		return korrigiertFoto(body, k.Bild)
 	case "NOTE":
 		return korrigiertNotiz(body, strings.TrimSpace(k.Neu))
+	case "RELATED":
+		return korrigiertBeziehung(body, k)
 	}
 	return body, false
+}
+
+// korrigiertBeziehung adds a relation (owner 2026-11-09, netz): RELATED;TYPE=Art, Neu its other (a
+// urn:uuid:, else a name as text); one to the same other already there counts as written, none is changed.
+func korrigiertBeziehung(body []string, k Korrektur) ([]string, bool) {
+	neu := strings.TrimSpace(k.Neu)
+	text := map[bool]string{true: ";VALUE=text"}[!strings.HasPrefix(neu, "urn:uuid:")]
+	switch {
+	case k.Alt != "" || neu == "" || k.Art == "":
+		return body, false
+	case find(body, "RELATED", func(p Prop) bool { return strings.EqualFold(UnescapeText(p.Value), neu) }) >= 0:
+		return body, true
+	}
+	return append(body, "RELATED;TYPE="+k.Art+text+":"+EscapeText(neu)), true
 }
 
 // korrigiertFoto is body with its own pictures replaced by the JPEG bild.
