@@ -52,8 +52,8 @@ func wieDas(saetze ...texte.ID) string {
 
 // The segments are a row of words, the current underlined in the accent;
 // they wrap at a phone's width rather than scroll. The path is small. A
-// row's „Link teilen“ is a quiet icon at its right end.
-const kontakteNavStyle = `<style>.oben form.teilen{margin-top:10px}.kontakte li:has(form.teilen){padding-right:56px}.kontakte li .anzahl{margin-left:6px}.kontakte li form.teilen{position:absolute;right:4px;top:0;bottom:0;align-items:center}.kontakte li form.teilen button{min-width:44px;padding:0;justify-content:center;display:inline-flex;align-items:center;background:none;color:var(--muted)}.segmente{display:flex;flex-wrap:wrap;gap:0 20px;margin:18px 0 0;border-bottom:1px solid var(--line)}
+// row's „Daten prüfen lassen“ is a quiet icon at its right end.
+const kontakteNavStyle = `<style>.oben form.teilen{margin-top:10px}.wozu{display:block;margin-top:4px;color:var(--muted);font-size:.85em}.kontakte li:has(form.teilen){padding-right:56px}.kontakte li .anzahl{margin-left:6px}.kontakte li form.teilen{position:absolute;right:4px;top:0;bottom:0;align-items:center}.kontakte li form.teilen button{min-width:44px;padding:0;justify-content:center;display:inline-flex;align-items:center;background:none;color:var(--muted)}.segmente{display:flex;flex-wrap:wrap;gap:0 20px;margin:18px 0 0;border-bottom:1px solid var(--line)}
 .segmente a{display:inline-flex;align-items:center;gap:2px;min-height:44px;margin-bottom:-1px;border-bottom:2px solid transparent;color:var(--muted);text-decoration:none;font-size:.95rem}
 .segmente a[aria-current]{color:var(--ink);font-weight:600;border-color:var(--accent)}.pfad{margin:6px 0 -20px;font-size:.85rem;color:var(--muted);overflow-wrap:anywhere}.pfad a{display:inline-flex;align-items:center;min-height:44px;color:var(--muted)}
 .oben{display:flex;flex-wrap:wrap;gap:0 18px}.oben .weiter-in{margin-top:10px}.wie{margin:26px 0 0;color:var(--muted)}</style>`

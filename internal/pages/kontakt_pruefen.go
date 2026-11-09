@@ -41,12 +41,13 @@ func pruefenKnopf(r *http.Request, cfg StartConfig, buch, uid, name string, klei
 	if !cfg.pruefenAn() || uid == "" || buch == kontaktantwort.Haushalt && !isAdmin(r) {
 		return ""
 	}
-	innen, label := wort(texte.PruefenTeilen), ""
+	innen, label, wozu := wort(texte.PruefenTeilen), "", `<small class=wozu>`+html.EscapeString(fmt.Sprintf(texte.T(texte.PruefenWozu), name))+`</small>`
 	if klein {
-		innen, label = teilenSymbol, ` aria-label="`+html.EscapeString(fmt.Sprintf(texte.T(texte.PruefenTeilenFuer), name))+`"`
+		fuer := html.EscapeString(fmt.Sprintf(texte.T(texte.PruefenTeilenFuer), name))
+		innen, label, wozu = teilenSymbol, ` aria-label="`+fuer+`" title="`+fuer+`"`, ""
 	}
 	return `<form method=post action=` + PruefenPath + ` class=teilen data-teilen><input type=hidden name=buch value=` + buch + `><input type=hidden name=uid value="` + html.EscapeString(uid) +
-		`"><button` + label + ` data-laeuft="` + wort(texte.PruefenErstelltLaeuft) + `" data-kopiert="` + wort(texte.PruefenKopiert) + `" data-nochmal="` + wort(texte.PruefenNochmal) + `">` + innen + `</button></form>`
+		`"><button` + label + ` data-laeuft="` + wort(texte.PruefenErstelltLaeuft) + `" data-kopiert="` + wort(texte.PruefenKopiert) + `" data-nochmal="` + wort(texte.PruefenNochmal) + `">` + innen + `</button>` + wozu + `</form>`
 }
 
 const teilenSymbol = `<svg viewBox="0 0 24 24" width=20 height=20 aria-hidden=true fill=none stroke=currentColor stroke-width=2 stroke-linecap=round><circle cx=18 cy=5 r=3 /><circle cx=6 cy=12 r=3 /><circle cx=18 cy=19 r=3 /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>`
