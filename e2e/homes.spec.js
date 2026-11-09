@@ -1139,9 +1139,9 @@ test('Kontakt prüfen lassen: link, the public form, the review', async ({ page,
   await expect(page.getByText('3 Änderungen ins Adressbuch geschrieben')).toBeVisible();
   await expect(zeilen.filter({ hasText: 'hilde@nowhere.example' })).toContainText('nicht übernommen');
   await page.screenshot({ path: info.outputPath('kontakt-antwort-entschieden-411.png'), fullPage: true });
-  await expect(page.locator('.karte').first()).toContainText('0171 2345678'); // the card as written, on the same page
+  await expect(page.locator('.karte').first()).toContainText('+49 171 2345678'); // the card as written (the household's form), on the same page
   await page.goto('/kontakte/h6');
-  await expect(page.locator('body')).toContainText('0171 2345678');
+  await expect(page.locator('body')).toContainText('+49 171 2345678');
   await expect(page.locator('body')).not.toContainText('nowhere.example');
 });
 
@@ -1241,7 +1241,7 @@ test('Kontakt prüfen lassen: formats, address, removal, photo, message', async 
   await expect(notiz).toContainText('nicht übernommen');
   await page.screenshot({ path: info.outputPath('kontakt-v2-entschieden-411.png'), fullPage: true });
   await page.goto('/kontakte/h1');
-  await expect(page.locator('body')).toContainText('0711 2345678');
+  await expect(page.locator('body')).toContainText('+49 711 2345678');
   await expect(page.locator('body')).toContainText('Gartenstraße 9');
   await expect(page.locator('body')).toContainText('+49 160 9876543');
 });
