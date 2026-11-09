@@ -7,8 +7,8 @@ import (
 	"github.com/mdopp/homes/internal/immich/immichfake"
 )
 
-// People reads every page, and leaves out the unnamed and the hidden.
-func TestPeopleEveryPageNamedOnly(t *testing.T) {
+// People reads every page, the unnamed apart, and leaves out the hidden.
+func TestPeopleEveryPage(t *testing.T) {
 	fake := immichfake.New("key")
 	defer fake.Close()
 	for i := range 1203 {
@@ -16,11 +16,11 @@ func TestPeopleEveryPageNamedOnly(t *testing.T) {
 	}
 	fake.Person("leer", " ", "", false, nil)
 	fake.Person("weg", "Versteckt", "", true, nil)
-	ps, err := (&Client{URL: fake.URL, Key: "key"}).People(t.Context())
-	if err != nil || len(ps) != 1203 || ps[1202].Name != "Person 1202" {
-		t.Fatalf("%d people, %v", len(ps), err)
+	ps, ohne, err := (&Client{URL: fake.URL, Key: "key"}).People(t.Context())
+	if err != nil || len(ps) != 1203 || ps[1202].Name != "Person 1202" || len(ohne) != 1 || ohne[0].ID != "leer" {
+		t.Fatalf("%d people, unnamed %v, %v", len(ps), ohne, err)
 	}
-	if _, err := (&Client{URL: fake.URL, Key: "falsch"}).People(t.Context()); err == nil {
+	if _, _, err := (&Client{URL: fake.URL, Key: "falsch"}).People(t.Context()); err == nil {
 		t.Fatal("a refused key is no error")
 	}
 }

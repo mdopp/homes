@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/mdopp/homes/internal/caldav"
 	"github.com/mdopp/homes/internal/immich"
@@ -13,10 +14,11 @@ import (
 )
 
 // kontakt is one contact as Immich gets it; foto its picture, a JPEG (the
-// owner's own Handy-Kontakte only).
+// owner's own Handy-Kontakte only); given, family and rev its N and REV.
 type kontakt struct {
 	key, name, geburtstag string
 	foto                  []byte
+	given, family, rev    string
 }
 
 // kontakte are the Haushalts-Kontakte and the key owner's own
@@ -30,7 +32,7 @@ func (g *Gesichter) kontakte(ctx context.Context) (out []kontakt, ok bool, err e
 	add := func(prefix string, cts []caldav.Contact) {
 		for _, ct := range cts {
 			if name := strings.Join(strings.Fields(ct.Name), " "); name != "" && ct.UID != "" && !ct.IsFirm() {
-				out = append(out, kontakt{prefix + ct.UID, name, geburtstag(ct.Birthday, g.now().Format("2006-01-02")), nil})
+				out = append(out, kontakt{prefix + ct.UID, name, geburtstag(ct.Birthday, g.now().Format("2006-01-02")), nil, ct.Given, ct.Family, ct.Rev})
 			}
 		}
 	}
@@ -66,8 +68,9 @@ func geburtstag(b, heute string) string {
 // Abgleichen gives every contact an Immich person of its name, at most
 // maxAufrufe calls a run (the rest in the next): the one it has (a person
 // Homes made follows the contact's name and birthday), else one Immich
-// has of that name, else a new one. Nothing else in Immich changes; a
-// contact gone loses only its line in Zuordnung.
+// has of that name, else a new one; a Haushalts-Kontakt first takes the
+// name its person got in Immich (folgen). Nothing else in Immich changes;
+// a contact gone loses only its line in Zuordnung.
 func (g *Gesichter) Abgleichen(ctx context.Context) error {
 	if g == nil || g.Immich == nil || g.Kontakte == nil {
 		return nil
@@ -78,15 +81,20 @@ func (g *Gesichter) Abgleichen(ctx context.Context) error {
 	}
 	g.mu.Lock()
 	g.laden()
-	alt, seit := g.stand.Zuordnung, g.zug
+	alt, seit, personen := g.stand.Zuordnung, g.zug, map[string]immich.Person{}
+	for _, p := range g.stand.Personen {
+		personen[p.ID] = p
+	}
 	g.mu.Unlock()
 	neu, aufrufe := map[string]zuordnung{}, 0
 	for _, k := range ks {
 		z := alt[k.key]
 		if aufrufe < maxAufrufe && err == nil {
-			var n int
-			z, n, err = g.zuordnen(ctx, k, z, neu)
-			aufrufe += n
+			var n, m int
+			if k, z, n, err = g.folgen(ctx, k, z, personen[z.ID]); err == nil {
+				z, m, err = g.zuordnen(ctx, k, z, neu)
+			}
+			aufrufe += n + m
 		}
 		if z.ID != "" {
 			neu[k.key] = z
@@ -109,6 +117,60 @@ func (g *Gesichter) Abgleichen(ctx context.Context) error {
 	return err
 }
 
+// folgen gives a Haushalts-Kontakt k the name its person p got in Immich
+// (owner 2026-11-09, „Automatisch zurück“): when p's name is not the one
+// Homes last saw (z.Immich) and k's is still the one it last had (z.Name),
+// or both changed and Immich's is the later (updatedAt over the card's
+// REV). N and FN are written as an owner's correction is (CorrectShared),
+// and z notes the name on both sides, so nothing goes back. A card changed
+// meanwhile waits for the next run. A Handy-Kontakt is the phone's: Homes
+// writes none (laib ADR 0029). n is the calls it took.
+func (g *Gesichter) folgen(ctx context.Context, k kontakt, z zuordnung, p immich.Person) (_ kontakt, _ zuordnung, n int, err error) {
+	neu := strings.Join(strings.Fields(p.Name), " ")
+	if neu == "" || p.ID != z.ID {
+		return k, z, 0, nil
+	}
+	if z.Immich == "" || namen.Plain(neu) == namen.Plain(z.Immich) {
+		z.Immich = neu
+		return k, z, 0, nil
+	}
+	uid, haushalt := strings.CutPrefix(k.key, "haushalt/")
+	if !haushalt || (k.name != z.Name && !zeit(p.Stand).After(zeit(k.rev))) {
+		return k, z, 0, nil
+	}
+	family, given := k.family, k.given
+	if family+given == "" {
+		family, given = nameTeile(k.name)
+	}
+	nf, ng := nameTeile(neu)
+	done, err := g.Kontakte.CorrectShared(ctx, uid, []caldav.Korrektur{{Prop: "N-FAMILY", Alt: family, Neu: nf}, {Prop: "N-GIVEN", Alt: given, Neu: ng}})
+	if err != nil || slices.Contains(done, false) {
+		return k, z, 1, err
+	}
+	k.name, z.Name, z.Immich = neu, neu, neu
+	return k, z, 1, nil
+}
+
+// nameTeile are a name's family and given names as a card's N has them
+// when only FN was written: the last word the family name.
+func nameTeile(name string) (family, given string) {
+	ws := strings.Fields(name)
+	if len(ws) < 2 {
+		return name, ""
+	}
+	return ws[len(ws)-1], strings.Join(ws[:len(ws)-1], " ")
+}
+
+// zeit is a REV or an updatedAt as a time; zero unknown.
+func zeit(s string) time.Time {
+	for _, f := range []string{time.RFC3339Nano, "20060102T150405Z", "2006-01-02"} {
+		if t, err := time.Parse(f, strings.TrimSpace(s)); err == nil {
+			return t
+		}
+	}
+	return time.Time{}
+}
+
 // zuordnen is k's person and how many calls it took: z kept or followed,
 // else one of k's name made in this run or in Immich, else a new one.
 func (g *Gesichter) zuordnen(ctx context.Context, k kontakt, z zuordnung, neu map[string]zuordnung) (zuordnung, int, error) {
@@ -119,7 +181,7 @@ func (g *Gesichter) zuordnen(ctx context.Context, k kontakt, z zuordnung, neu ma
 		err := g.Immich.Aendern(ctx, z.ID, k.name, k.geburtstag)
 		var a immich.Antwort
 		if err == nil {
-			return zuordnung{z.ID, k.name, k.geburtstag, true}, n, nil
+			return zuordnung{z.ID, k.name, k.geburtstag, true, k.name}, n, nil
 		}
 		if !errors.As(err, &a) || a.Code != 400 { // 400: merged away or deleted in Immich
 			return z, n, err
@@ -144,5 +206,5 @@ func (g *Gesichter) zuordnen(ctx context.Context, k kontakt, z zuordnung, neu ma
 	}
 	n++
 	p, err := g.Immich.Anlegen(ctx, k.name, k.geburtstag)
-	return zuordnung{p.ID, k.name, k.geburtstag, true}, n, err
+	return zuordnung{p.ID, k.name, k.geburtstag, true, k.name}, n, err
 }

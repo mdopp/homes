@@ -426,16 +426,17 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     made at the box.
   - *Dieselbe Person?* (on the contact of either person, see above; what
     belongs to no contact at `/kontakte/dieselbe`; the key's owner only):
-    pairs of persons whose faces Immich holds close. The hourly run asks, for at most 40 named persons
+    pairs of a named person and an unnamed face Immich holds close (two
+    named persons never: the owner told them apart, 2026-11-09). The
+    hourly run asks, for at most 40 named persons
     not asked for a day, `GET /api/people?closestPersonId=<id>` (Immich
     gives an order, no distance, and puts favourites first: they are read
-    past and never offered) and keeps the 3 closest, their small faces and
-    photo counts; the page never asks Immich. The likeliest first: the
-    closest, more so when each is among the other's closest, an unnamed
-    face before a named person; skipped ones last. Each pair shows both
-    faces, the names or *ohne Namen*, the photo counts, and *Ja, dieselbe
-    Person* (POST: merged into the named one, two named into the one with
-    more photos; the contacts' lines follow), *Nein* (kept in
+    past and never offered) and keeps the 3 closest unnamed ones, their
+    small faces and photo counts; the page never asks Immich. The closest
+    first, skipped ones last. Each pair shows both faces, the name or
+    *ohne Namen*, the photo counts, a quiet *Kontakt* under a named face
+    whose person a contact has (its page, to correct it there), and *Ja,
+    dieselbe Person* (POST: the face merged into the named person), *Nein* (kept in
     `immich-gesichter.json`, `nein`: the pair never comes back) and
     *Überspringen* (last). Only a pair on offer is merged; a pair gone,
     Immich not answering or a missing `person.merge` is said where it was asked.
@@ -453,6 +454,24 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     task, „N Personen in Immich prüfen“, on Deine Aufgaben, Mehr and in
     the app (`/napi/einrichtung`, `immich-pruefen`), gone by itself once
     none is.
+  - *Wer ist das?* (owner 2026-11-09; on `/kontakte/dieselbe` above the
+    pairs, the key's owner only): at most five unnamed faces to name. The
+    hourly run keeps the first 15 unnamed persons in Immich's order (the
+    most faces first, „Kenne ich nicht“ left out) with their faces
+    (`ohne`), counts their photos and reads their places and company with
+    the pairs'. Ranked by photos, then by photos beside a named person,
+    then by places of more than one photo. Each shows its face, photos,
+    *Orte*, *Auch dabei*, a name field, *Speichern* (`PUT
+    /api/people/<id>`, `person.update`; a person of that name already is
+    merged into it by the next run) and *Kenne ich nicht* (kept,
+    `unbekannt`: never offered again). Not counted in the task: unnamed
+    faces never run out.
+  - *Automatisch zurück* (owner 2026-11-09): a person renamed in Immich
+    renames its Haushalts-Kontakt (N and FN, written as an accepted
+    correction is). `zuordnung` notes both names as last seen or written
+    (`name`, `immich`), so neither side is written back; both renamed
+    since: the later wins, Immich's `updatedAt` against the card's `REV`.
+    The owner's own Handy-Kontakte are the phone's mirror and not written.
   - *Ist das …?* (owner 2026-11-06: a contact's picture is a suggestion,
     never an answer; on the contact's page, before the pairs): the hourly run
     uploads, at most 10 a run, the picture (vCard PHOTO, a JPEG) of each of
