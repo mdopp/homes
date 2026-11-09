@@ -225,6 +225,25 @@ const (
 	NetzGesagtKeine    ID = "netz.gesagt.keine"   // „Keine Beziehung“ kept
 	NetzGesagtSpaeter  ID = "netz.gesagt.spaeter" // skipped
 	NetzNichtImBuch    ID = "netz.nicht-im-buch"  // kept, but the address book not written
+	// Änderbar (owner 2026-11-09): a contact's relations, the task, the form's section
+	NetzAufgabe        ID = "netz.aufgabe" // „%s“ how many: „3 Beziehungen“
+	NetzAufgabeWarum   ID = "netz.aufgabe.warum"
+	NetzBeziehungen    ID = "netz.beziehungen" // the section on a contact's page
+	NetzEntfernen      ID = "netz.entfernen"   // and pressed
+	NetzEntfernenLauf  ID = "netz.entfernen.laeuft"
+	NetzVergessen      ID = "netz.vergessen" // a „Keine Beziehung“ forgotten, and pressed
+	NetzVergessenLauf  ID = "netz.vergessen.laeuft"
+	NetzGesagtWeg      ID = "netz.gesagt.weg"       // „%s“ and „%s“ the two: taken away
+	NetzGesagtVergess  ID = "netz.gesagt.vergessen" // forgotten
+	NetzTelefonbuch    ID = "netz.telefonbuch"      // a relation's source: „%s“ the kind
+	ArtBeziehung       ID = "art.beziehung"         // the review's field
+	FrageBeziehungen   ID = "frage.beziehungen"     // the form's section
+	FrageBezHinweis    ID = "frage.beziehungen.hinweis"
+	FrageBezIst        ID = "frage.beziehung.ist" // „%s“ the other
+	FrageBezName       ID = "frage.beziehung.name"
+	FrageBezArt        ID = "frage.beziehung.art"
+	FrageBezLoeschen   ID = "frage.beziehung.loeschen"
+	FrageBezOhneArt    ID = "frage.beziehung.ohne-art"
 	WerGenannt         ID = "wer-ist-das.genannt" // saved: „%s“ is the name
 	WerGemerkt         ID = "wer-ist-das.gemerkt" // „Kenne ich nicht“ kept
 	WerOhneName        ID = "wer-ist-das.ohne-name"
@@ -595,6 +614,24 @@ var de = map[ID]string{
 	"netz.gesagt.keine":            "Gemerkt: keine Beziehung. Homes fragt danach nicht wieder.",
 	"netz.gesagt.spaeter":          "Übersprungen. Die Frage kommt später noch einmal.",
 	"netz.nicht-im-buch":           "Ins Adressbuch konnte Homes es gerade nicht schreiben; hier ist es gespeichert.",
+	"netz.aufgabe":                 "%s klären",
+	"netz.aufgabe.warum":           "Homes fragt, wie die Menschen auf deinen Fotos zueinander stehen. Deine Antwort kommt ins Adressbuch.",
+	"netz.beziehungen":             "Beziehungen",
+	"netz.entfernen":               "Entfernen",
+	"netz.entfernen.laeuft":        "Entfernt …",
+	"netz.vergessen":               "Vergessen",
+	"netz.vergessen.laeuft":        "Vergisst …",
+	"netz.gesagt.weg":              "Entfernt: %s und %s stehen in keiner Beziehung. Homes fragt danach nicht wieder.",
+	"netz.gesagt.vergessen":        "Vergessen. Homes fragt vielleicht später wieder danach.",
+	"netz.telefonbuch":             "%s (Telefonbuch)",
+	"art.beziehung":                "Beziehung",
+	"frage.beziehungen":            "Beziehungen",
+	"frage.beziehungen.hinweis":    "So bist du mit diesen Menschen eingetragen. Stimmt etwas nicht, ändere es; fehlt jemand, trag ihn ein.",
+	"frage.beziehung.ist":          "%s ist für dich",
+	"frage.beziehung.name":         "Weitere Person (Name)",
+	"frage.beziehung.art":          "ist für dich",
+	"frage.beziehung.loeschen":     "Beziehung entfernen",
+	"frage.beziehung.ohne-art":     "Bitte wähle, was diese Person für dich ist.",
 	// the kinds a question offers (netz.Arten): „X ist <kind> von Y“
 	"netz.art.partner":         "Partner/in",
 	"netz.art.eltern":          "Mutter/Vater (Eltern)",

@@ -1,0 +1,102 @@
+package netz
+
+import (
+	"slices"
+	"strings"
+	"testing"
+
+	"github.com/mdopp/homes/internal/caldav"
+	"github.com/mdopp/homes/internal/gesichter"
+)
+
+func bezuegeVon(bs []Bezug) (out []string) {
+	for _, b := range bs {
+		out = append(out, b.Mit.Name+"="+b.Art+"|"+b.Wie+map[bool]string{true: "|gesagt"}[b.Gesagt])
+	}
+	return out
+}
+
+// owner 2026-11-09: „inkl. Änderbarkeit“ — a node's relations from both
+// ends, the phone books' seen from the other side too; an answer changes
+// one (the household cards' RELATED rewritten, line by line), Keine takes
+// it away (the lines go), "" forgets the answer and the phone book is back.
+func TestAendern(t *testing.T) {
+	n, _, _ := netzBox(t)
+	if got := bezuegeVon(n.Beziehungen("p-ben")); !slices.Equal(got, []string{"Anna Berg=partner|Partner/in"}) {
+		t.Fatalf("ben: %v", got)
+	}
+	if got := bezuegeVon(n.Beziehungen("p-anna")); len(got) != 2 || got[0] != "Ben Berg=partner|Ehepartner/in" || !strings.HasPrefix(got[1], "Fritz Kurz=") {
+		t.Fatalf("anna: %v", got)
+	}
+	karte := func(uid string) string {
+		cards, _, _ := n.G.Kontakte.Cards(t.Context())
+		return cards[slices.IndexFunc(cards, func(c caldav.Card) bool { return c.UID == uid })].Text()
+	}
+	for _, c := range []struct{ art, want, a string }{
+		{"freund", "Ben Berg=freund|Freund/in|gesagt", "RELATED;TYPE=friend:urn:uuid:b\r\n"},
+		{"partner", "Ben Berg=partner|Partner/in|gesagt", "RELATED;TYPE=spouse:urn:uuid:b\r\n"},
+		{Keine, "Ben Berg=keine|Keine Beziehung|gesagt", ""},
+	} {
+		x, y, err := n.Aendern("p-ben", "p-anna", c.art)
+		if err == nil {
+			err = n.Eintragen(t.Context(), x, y, c.art)
+		}
+		if got := bezuegeVon(n.Beziehungen("p-anna")); err != nil || got[0] != c.want {
+			t.Fatalf("%s: %v %v", c.art, got, err)
+		}
+		a := karte("a")
+		if strings.Count(a, "\nRELATED") != map[bool]int{true: 1}[c.a != ""] || !strings.Contains(a, c.a) || strings.Count(karte("b"), "\nRELATED") != strings.Count(a, "\nRELATED") {
+			t.Fatalf("%s: the cards:\n%s\n%s", c.art, a, karte("b"))
+		}
+	}
+	if _, _, err := n.Aendern("p-ben", "p-anna", ""); err != nil || bezuegeVon(n.Beziehungen("p-ben"))[0] != "Anna Berg=partner|Partner/in" {
+		t.Fatalf("forgotten: %v %v", err, n.Beziehungen("p-ben"))
+	}
+	if _, _, err := n.Aendern("p-ben", "p-nobody", "freund"); err != ErrKeineFrage {
+		t.Fatalf("no such node: %v", err)
+	}
+}
+
+// The key owner's own phone contact gets a relation through the phone
+// (owner 2026-11-09), by name; Keine asks the phone to take it away.
+func TestEintragenAufsHandy(t *testing.T) {
+	n, _, _ := netzBox(t)
+	var got []gesichter.HandyAenderung
+	n.G.Handy = func(wer string, a gesichter.HandyAenderung) error {
+		if wer == "anna" {
+			got = append(got, a)
+		}
+		return nil
+	}
+	fritz, _ := n.Person("p-fritz")
+	kim, _ := n.Person("p-kim")
+	n.Eintragen(t.Context(), kim, fritz, "neffe")
+	n.Eintragen(t.Context(), kim, fritz, Keine)
+	want := []gesichter.HandyAenderung{{UID: "urn:uuid:k2", AltVorname: "Fritz Kurz", Mit: "Kim Berg", Art: "neffe"}, {UID: "urn:uuid:k2", AltVorname: "Fritz Kurz", Mit: "Kim Berg"}}
+	same := func(a, b gesichter.HandyAenderung) bool {
+		return a.UID == b.UID && a.AltVorname == b.AltVorname && a.Mit == b.Mit && a.Art == b.Art
+	}
+	if !strings.HasPrefix(fritz.Kontakt, "privat/") || !slices.EqualFunc(got, want, same) {
+		t.Fatalf("%q: %+v", fritz.Kontakt, got)
+	}
+}
+
+// A relation from a contact's form, taken by the key owner: its other
+// found by name, an answer then; anyone else's is refused. Offen counts
+// the questions for the key owner only.
+func TestUebernehmenUndOffen(t *testing.T) {
+	n, _, _ := netzBox(t)
+	carla := Knoten{Name: "Carla Wolf", Kontakt: "haushalt/c"}
+	if err := n.Uebernehmen(t.Context(), "ben", carla, Knoten{Name: "Anna Berg"}, "kollege"); err != ErrKeineFrage {
+		t.Fatalf("ben: %v", err)
+	}
+	if err := n.Uebernehmen(t.Context(), "anna", carla, Knoten{Name: "anna berg"}, "kollege"); err != nil {
+		t.Fatal(err)
+	}
+	if got := bezuegeVon(n.Beziehungen(n.Von("haushalt/c"))); !slices.Equal(got, []string{"Anna Berg=kollege|Kollege/Kollegin|gesagt"}) {
+		t.Fatalf("carla: %v", got)
+	}
+	if n.Offen("anna") != len(n.Fragen()) || n.Offen("anna") == 0 || n.Offen("ben") != 0 {
+		t.Fatalf("offen %d of %d, ben %d", n.Offen("anna"), len(n.Fragen()), n.Offen("ben"))
+	}
+}

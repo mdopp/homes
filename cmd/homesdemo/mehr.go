@@ -106,6 +106,9 @@ func mehrSeiten(mux *http.ServeMux, cfg pages.StartConfig, dav *davfake.Server, 
 	cfg.Gesichter = demoGesichter(dir, cfg.Contacts) // Anna's key: Meine Kontakte, each a person in Immich (owner 2026-11-06)
 	cfg.Netz = &netz.Netz{G: cfg.Gesichter}          // „Wer steht wem nahe“ from her photos (owner 2026-11-09)
 	cfg.Netz.Rechnen(context.Background())
+	if cfg.Einrichtung != nil { // its open relation questions on Deine Aufgaben (owner 2026-11-09)
+		cfg.Einrichtung.Netz = cfg.Netz.Offen
+	}
 	mux.HandleFunc(pages.NetzPath, pages.NetzSeite(cfg))
 	// Kontakt prüfen lassen (owner 2026-11-07): the review pages here, the page without a login on a listener of its own, as on the box
 	cfg.DNS, cfg.KontaktURL = demoDNS{}, "http://"+*kontaktAddr // the store is main's, shared with Deine Aufgaben

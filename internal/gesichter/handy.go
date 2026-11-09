@@ -23,11 +23,14 @@ const maxNeu = 20 // new contacts one run asks for
 // HandyAenderung is one change for the owner's phone: UID "" a new
 // contact of Vorname and Nachname with the face Bild (a JPEG; nil none);
 // else the contact's name from AltVorname, AltNachname to the new one.
+// With Mit (owner 2026-11-09, netz) a relation instead: on the contact
+// UID (named AltVorname) Mit is its Art, a kind of netz.Arten ("" none).
 type HandyAenderung struct {
 	UID                     string
 	AltVorname, AltNachname string
 	Vorname, Nachname       string
 	Bild                    []byte
+	Mit, Art                string
 }
 
 // Neuanlegen asks the owner's phone for a contact of each person named in

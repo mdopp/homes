@@ -20,7 +20,7 @@ import (
 // Korrektur is one accepted change of a card's field: Prop is N-GIVEN,
 // N-FAMILY (FN follows them), TEL, EMAIL, ADR, BDAY, ORG (its first part),
 // TITLE, PHOTO (Bild, a JPEG, replaces the card's), NOTE (Neu is added
-// to it) or RELATED (Neu added, Art its TYPE); Alt "" adds, Neu "" removes. For ADR the values are AltAdr and
+// to it) or RELATED (Art its TYPE, korrigiertBeziehung); Alt "" adds, Neu "" removes. For ADR the values are AltAdr and
 // NeuAdr; for BDAY JJJJ-MM-TT or --MM-TT; for TEL and EMAIL Art is the new
 // kind (mobil, privat, geschaeftlich, andere; "" keeps the line's) and
 // Haupt whether it is the main one (nil keeps it; the main one is the
@@ -139,15 +139,25 @@ func korrigiert(body []string, k Korrektur) ([]string, bool) {
 	return body, false
 }
 
-// korrigiertBeziehung adds a relation (owner 2026-11-09, netz): RELATED;TYPE=Art, Neu its other (a
-// urn:uuid:, else a name as text); one to the same other already there counts as written, none is changed.
+// korrigiertBeziehung writes a relation (owner 2026-11-09, netz): RELATED;TYPE=Art, Neu its other (a
+// urn:uuid:, else a name as text). Alt "" adds it, one to the same other already there counts as written;
+// Alt the same as Neu sets its TYPE, Neu "" takes Alt's lines away (owner 2026-11-09: änderbar); none is re-pointed.
 func korrigiertBeziehung(body []string, k Korrektur) ([]string, bool) {
-	neu := strings.TrimSpace(k.Neu)
+	alt, neu := strings.TrimSpace(k.Alt), strings.TrimSpace(k.Neu)
 	text := map[bool]string{true: ";VALUE=text"}[!strings.HasPrefix(neu, "urn:uuid:")]
+	von := func(v string) func(Prop) bool {
+		return func(p Prop) bool { return strings.EqualFold(UnescapeText(p.Value), v) }
+	}
 	switch {
-	case k.Alt != "" || neu == "" || k.Art == "":
+	case alt != "" && neu != "" && alt != neu, alt == "" && neu == "", neu != "" && k.Art == "":
 		return body, false
-	case find(body, "RELATED", func(p Prop) bool { return strings.EqualFold(UnescapeText(p.Value), neu) }) >= 0:
+	case alt == "" && find(body, "RELATED", von(neu)) >= 0:
+		return body, true
+	}
+	for i := find(body, "RELATED", von(alt)); alt != "" && i >= 0; i = find(body, "RELATED", von(alt)) {
+		body = append(body[:i:i], body[i+1:]...)
+	}
+	if neu == "" {
 		return body, true
 	}
 	return append(body, "RELATED;TYPE="+k.Art+text+":"+EscapeText(neu)), true

@@ -121,6 +121,8 @@ type Quellen struct {
 	// Immich is how many of the Immich key owner's questions are open
 	// („Dieselbe Person?“, „Ist das …?“) for person: 0 for anyone else; nil none
 	Immich func(person string) int
+	// Netz is how many relation questions („Wie steht X zu Y?“) are open for person, as Immich (owner 2026-11-09)
+	Netz func(person string) int
 }
 
 // ImmichPruefen is the key of the task of the open questions in Immich; it
@@ -130,25 +132,44 @@ const ImmichPruefen = "immich-pruefen"
 // ImmichPfad is where those questions are answered (pages.DieselbePath).
 const ImmichPfad = "/kontakte/dieselbe"
 
+// NetzKlaeren is the task of the open relation questions (owner
+// 2026-11-09), answered at NetzPfad (pages.NetzPath); no module either.
+const (
+	NetzKlaeren = "netz-klaeren"
+	NetzPfad    = "/kontakte/netz"
+)
+
 // Aufgabe is one module's setup for one person.
 type Aufgabe struct {
 	Modul, Titel, Warum string
+	Pfad                string // a question's: where it is answered
 	Einrichtung         *modul.Einrichtung
 	Erledigt            *Stand // nil while open
 }
 
 // Fragen are the person's questions to answer, each one task while it is
 // open and none once nothing is: today those in Immich, for the key's
-// owner only (owner 2026-11-07), the count as it is now. The task's
-// Modul is ImmichPruefen, done at ImmichPfad.
-func (q *Quellen) Fragen(person string) []Aufgabe {
-	if q == nil || q.Immich == nil || person == "" || !q.Module.An("fotos") {
+// owner only (owner 2026-11-07), the count as it is now; and the
+// relation questions of the net (owner 2026-11-09), NetzKlaeren.
+func (q *Quellen) Fragen(person string) (out []Aufgabe) {
+	if q == nil || person == "" || !q.Module.An("fotos") {
 		return nil
 	}
-	if n := q.Immich(person); n > 0 {
-		return []Aufgabe{{Modul: ImmichPruefen, Titel: fmt.Sprintf(texte.T(texte.DieselbeAufgabe), texte.Anzahl(n, "Person", "Personen")), Warum: texte.T(texte.DieselbeAufgabeWarum)}}
+	if n := zahl(q.Immich, person); n > 0 {
+		out = append(out, Aufgabe{Modul: ImmichPruefen, Titel: fmt.Sprintf(texte.T(texte.DieselbeAufgabe), texte.Anzahl(n, "Person", "Personen")), Warum: texte.T(texte.DieselbeAufgabeWarum), Pfad: ImmichPfad})
 	}
-	return nil
+	if n := zahl(q.Netz, person); n > 0 {
+		out = append(out, Aufgabe{Modul: NetzKlaeren, Titel: fmt.Sprintf(texte.T(texte.NetzAufgabe), texte.Anzahl(n, "Beziehung", "Beziehungen")), Warum: texte.T(texte.NetzAufgabeWarum), Pfad: NetzPfad})
+	}
+	return out
+}
+
+// zahl is f(person), 0 without f.
+func zahl(f func(string) int, person string) int {
+	if f == nil {
+		return 0
+	}
+	return f(person)
 }
 
 // Seite is where a task is done when its module has no page of its own.
@@ -300,7 +321,7 @@ func (q *Quellen) Napi(person string) Antwort {
 		out.Module = append(out.Module, n)
 	}
 	for _, a := range q.Fragen(person) { // a question is no module: an entry of its own, after them, only while open
-		web := q.Adresse + ImmichPfad
+		web := q.Adresse + a.Pfad
 		out.Module = append(out.Module, NapiModul{Name: a.Modul, Titel: a.Titel, Icon: "fotos", Web: web, NurWeb: true,
 			Aufgabe: &NapiAufgabe{Titel: a.Titel, Einrichten: web}})
 		out.Offen++
