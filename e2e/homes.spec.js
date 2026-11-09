@@ -838,7 +838,7 @@ test('Dieselbe Person? on the contact takes a Nein', async ({ page }, info) => {
   // the task's address asks every question right there, no click-through (owner 2026-11-09)
   await page.goto('/kontakte/dieselbe');
   await expect(page).toHaveURL(/\/kontakte\/dieselbe$/);
-  const offen = page.locator('section.paar');
+  const offen = page.locator('section.paar:not(.frage)');
   const vorher = await offen.count();
   expect(vorher).toBeGreaterThan(0);
   await offen.first().getByRole('button', { name: 'Nein' }).click();
@@ -1245,3 +1245,22 @@ test('Kontakt prüfen lassen: formats, address, removal, photo, message', async 
   await expect(page.locator('body')).toContainText('Gartenstraße 9');
   await expect(page.locator('body')).toContainText('+49 160 9876543');
 });
+
+// owner 2026-11-09: „ich kann nicht einmal einen Eintrag aufrufen aus der Liste“ — a tap on a row's name opens the contact
+for (const liste of ['/kontakte', '/kontakte/privat']) {
+  test(`a row of ${liste} opens its contact`, async ({ page }) => {
+    await page.setViewportSize({ width: 411, height: 900 });
+    await page.goto(liste);
+    const zeile = page.locator('.kontakte li').filter({ has: page.locator('a:not(.ruf)') }).first();
+    const name = zeile.locator('a:not(.ruf)').first();
+    const ziel = await name.getAttribute('href');
+    await name.click({ position: { x: 20, y: 10 } });
+    await expect(page).toHaveURL(new RegExp(ziel.replace(/[?]/g, '\\?') + '$'));
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    // the middle of the row opens it too, not only the name's letters
+    await page.goBack();
+    const box = await zeile.boundingBox();
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await expect(page).toHaveURL(new RegExp(ziel.replace(/[?]/g, '\\?') + '$'));
+  });
+}
