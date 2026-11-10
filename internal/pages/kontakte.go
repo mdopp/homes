@@ -13,6 +13,7 @@ import (
 
 	"github.com/mdopp/homes/internal/caldav"
 	"github.com/mdopp/homes/internal/cards"
+	"github.com/mdopp/homes/internal/haushalt"
 	"github.com/mdopp/homes/internal/kontaktantwort"
 	"github.com/mdopp/homes/internal/namen"
 	"github.com/mdopp/homes/internal/texte"
@@ -39,7 +40,7 @@ type kontaktZeile struct {
 // change them is folded away at the end; Radicale not answering is
 // Kontakt's plain line (haus#33). Above the list the area's segments
 // (kontakte_nav.go) and the search; on a row what waits about it and,
-// for an admin, „Daten prüfen lassen“.
+// for an admin, „Daten prüfen lassen“; above the search the groups, one to pick (?gruppe=).
 func Kontakte(cfg StartConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !showOnly(w, r, "Die Kontakte") {
@@ -60,7 +61,14 @@ func Kontakte(cfg StartConfig) http.HandlerFunc {
 			writePage(w, http.StatusOK, b)
 			return
 		}
-		kontakteListe(b, kontaktZeilen(r, cfg, all, kontaktantwort.Haushalt), texte.KontakteLeer)
+		leer, gruppe := texte.KontakteLeer, oneLine(r.URL.Query().Get("gruppe"))
+		if gs := haushalt.AlleGruppen(all); len(gs) > 0 { // Gruppen (owner 2026-11-10): one picked, its contacts alone
+			b.WriteString(gruppenStyle + `<ul class=chips aria-label="` + wort(texte.Gruppen) + `">` + gruppenChips(append([]string{""}, gs...), gruppe, false) + "</ul>")
+		}
+		if gruppe != "" {
+			leer, all = texte.GruppenLeer, slices.DeleteFunc(all, func(ct caldav.Contact) bool { return !haushalt.InGruppe(ct, gruppe) })
+		}
+		kontakteListe(b, kontaktZeilen(r, cfg, all, kontaktantwort.Haushalt), leer)
 		b.WriteString(wieDas(texte.KontakteBearbeiten))
 		writePage(w, http.StatusOK, b)
 	}

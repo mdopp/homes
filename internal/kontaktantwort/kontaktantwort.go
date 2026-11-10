@@ -111,6 +111,10 @@ func (s *Store) now() time.Time {
 
 // load reads the store and drops what is over: a link not answered after
 // its time, an answer decided (and, for the phone, written) Aufbewahren ago.
+// The form asked for relations from 2026-11-09 to 2026-11-10 (homes#330);
+// such a change in a link's answer is dropped here, so a pending answer
+// still loads and its review shows the rest. Store.Handy's relations (no
+// Hash) are the phone's and stay.
 func (s *Store) load() ([]Frage, error) {
 	b, err := os.ReadFile(s.Path)
 	if errors.Is(err, os.ErrNotExist) {
@@ -122,6 +126,11 @@ func (s *Store) load() ([]Frage, error) {
 	var all []Frage
 	if err := json.Unmarshal(b, &all); err != nil {
 		return nil, err
+	}
+	for i, f := range all { // a link's answer from before the cut keeps no relation (owner 2026-11-10, ADR 0002)
+		if f.Hash != "" {
+			all[i].Aenderungen = slices.DeleteFunc(f.Aenderungen, func(a Aenderung) bool { return a.Art == "beziehung" })
+		}
 	}
 	now := s.now()
 	return slices.DeleteFunc(all, func(f Frage) bool {

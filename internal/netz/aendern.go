@@ -2,11 +2,9 @@ package netz
 
 import (
 	"cmp"
-	"context"
 	"slices"
 	"strings"
 
-	"github.com/mdopp/homes/internal/namen"
 	"github.com/mdopp/homes/internal/texte"
 )
 
@@ -107,7 +105,7 @@ func Kurz(art string) string {
 }
 
 // Aendern keeps the key owner's answer about x and y given on a contact's
-// page or taken from a contact's form, whether asked or not: x is art of y
+// page, whether asked or not: x is art of y
 // (a kind, Keine, Fremd), or "" forgets it. The two as nodes.
 func (n *Netz) Aendern(x, y, art string) (Knoten, Knoten, error) {
 	n.mu.Lock()
@@ -120,34 +118,6 @@ func (n *Netz) Aendern(x, y, art string) (Knoten, Knoten, error) {
 		return kx, ky, ErrKeineFrage
 	}
 	return kx, ky, n.merken(wer, x, y, art)
-}
-
-// Uebernehmen takes a relation from a contact's form: on ich's contact
-// mit is art ("" none any more). mit without a node is found by its name;
-// with both nodes it is an answer (Aendern), else it goes into ich's card
-// alone. Only the key owner's (wer).
-func (n *Netz) Uebernehmen(ctx context.Context, wer string, ich, mit Knoten, art string) error {
-	if n == nil || wer == "" || wer != n.G.Wessen() {
-		return ErrKeineFrage
-	}
-	art = cmp.Or(art, Keine)
-	n.mu.Lock()
-	n.laden()
-	for id, k := range n.knoten {
-		if mit.ID == "" && namen.Plain(k.Name) == namen.Plain(mit.Name) {
-			mit.ID = id
-		}
-	}
-	ich.ID = cmp.Or(ich.ID, n.von[ich.Kontakt])
-	n.mu.Unlock()
-	if ich.ID != "" && mit.ID != "" {
-		x, y, err := n.Aendern(mit.ID, ich.ID, art)
-		if err != nil {
-			return err
-		}
-		mit, ich = x, y
-	}
-	return n.Eintragen(ctx, mit, ich, art)
 }
 
 // Offen is how many relation questions wait for person: the key owner's;

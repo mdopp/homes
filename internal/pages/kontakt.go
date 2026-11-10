@@ -48,7 +48,7 @@ func Kontakt(cfg StartConfig) http.HandlerFunc {
 				kontaktSprung(w, r, cfg, ct, kontaktName(ct), was)
 				return
 			}
-			kontaktSeite(w, r, cfg, ct, kontaktantwort.Haushalt, KontaktePath, kontaktSpruenge(cfg, ct), e)
+			kontaktSeite(w, r, cfg, ct, kontaktantwort.Haushalt, KontaktePath, kontaktSpruenge(cfg, ct), kontaktGruppen(r, ct, haushalt.AlleGruppen(all)), e)
 			return
 		}
 		kontaktWeg(w, r, cfg, e, kontaktantwort.Haushalt, uid, "Diesen Kontakt gibt es nicht.")
@@ -66,7 +66,7 @@ func kontaktWeg(w http.ResponseWriter, r *http.Request, cfg StartConfig, e entsc
 		missing{http.StatusNotFound, say, "Kontakt", KontaktePath, "Kontakte"}.write(w, r, cfg)
 		return
 	}
-	kontaktSeite(w, r, cfg, caldav.Contact{UID: uid, Name: f.Name()}, buch, "", "", e)
+	kontaktSeite(w, r, cfg, caldav.Contact{UID: uid, Name: f.Name()}, buch, "", "", "", e)
 }
 
 // kontaktName is a contact's name as the family reads it.
@@ -83,8 +83,8 @@ func kontaktPfad(buch, uid string) string {
 }
 
 // kontaktSeite is a contact of buch: its links and „Daten prüfen lassen“ at the
-// top, its fields, then what waits about it (kontaktOffen); seg its list.
-func kontaktSeite(w http.ResponseWriter, r *http.Request, cfg StartConfig, ct caldav.Contact, buch, seg, spruenge string, e entschieden) {
+// top, what waits about it (kontaktOffen), its fields and gruppenTeil (kontaktGruppen); seg its list.
+func kontaktSeite(w http.ResponseWriter, r *http.Request, cfg StartConfig, ct caldav.Contact, buch, seg, spruenge, gruppenTeil string, e entschieden) {
 	name := kontaktName(ct)
 	weg := []string{name}
 	if buch == kontaktantwort.Privat {
@@ -118,6 +118,6 @@ func kontaktSeite(w http.ResponseWriter, r *http.Request, cfg StartConfig, ct ca
 		b.WriteString(`<p class=weiter><a href="` + DieselbePath + `">` + wort(texte.DieselbeWeiter) + `</a></p>`)
 	}
 	kontaktOffen(b, r, cfg, buch, ct.UID, name, r.URL.RequestURI(), e) // what waits first, the card after
-	b.WriteString(c.HTML() + netzNahe(r, cfg, buch, ct.UID) + netzBeziehungen(r, cfg, buch, ct.UID, r.URL.RequestURI()))
+	b.WriteString(c.HTML() + gruppenTeil + netzNahe(r, cfg, buch, ct.UID) + netzBeziehungen(r, cfg, buch, ct.UID, r.URL.RequestURI()))
 	writePage(w, http.StatusOK, b)
 }

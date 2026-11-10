@@ -42,6 +42,30 @@ func TestCorrectedChangesAndRemovesARelation(t *testing.T) {
 	}
 }
 
+// owner 2026-11-10: „Gruppen“ — CATEGORIES is a list: a group is added to the card's first line or as
+// a new one, taken out of the line that holds it; every other value (escaped commas, Firma) and line
+// stays; one there already or gone already counts as written, Alt and Neu together or neither is none.
+func TestCorrectedAddsAndRemovesOneGroup(t *testing.T) {
+	card := strings.Replace(korrekturCard, "NOTE:bleibt\r\n", "NOTE:bleibt\r\nCATEGORIES:Firma,Kicker\\, Renegades\r\nCATEGORIES:Stammtisch\r\n", 1)
+	ks := []Korrektur{{Prop: "CATEGORIES", Neu: "Chor"}, {Prop: "CATEGORIES", Neu: "stammtisch"}, {Prop: "CATEGORIES", Alt: "Kicker, Renegades"},
+		{Prop: "CATEGORIES", Alt: "Stammtisch"}, {Prop: "CATEGORIES", Alt: "Golf"}, {Prop: "CATEGORIES", Alt: "Chor", Neu: "Kor"}, {Prop: "CATEGORIES"}}
+	got, done := Corrected(card, "k1", ks, "20261110T100000Z")
+	if want := []bool{true, true, true, true, true, false, false}; !slices.Equal(done, want) {
+		t.Errorf("done %v, want %v", done, want)
+	}
+	if strings.Count(got, "CATEGORIES") != 1 || !strings.Contains(got, "CATEGORIES:Firma,Chor\r\n") {
+		t.Errorf("the groups:\n%s", got)
+	}
+	got, done = Corrected(korrekturCard, "k1", []Korrektur{{Prop: "CATEGORIES", Neu: "Kicker, Renegades"}}, "20261110T100000Z")
+	root, err := Parse(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cs := Contacts(root)[0].Categories; !done[0] || !slices.Equal(cs, []string{"Kicker, Renegades"}) {
+		t.Errorf("a new line: %q\n%s", cs, got)
+	}
+}
+
 func TestCorrectedChangesOnlyTheLinesOfTheTakenFields(t *testing.T) {
 	ks := []Korrektur{
 		{Prop: "N-FAMILY", Alt: "Beispiel", Neu: "Muster"},

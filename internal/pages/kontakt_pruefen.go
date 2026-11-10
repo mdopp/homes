@@ -17,7 +17,6 @@ import (
 
 	"github.com/mdopp/homes/internal/haushalt"
 	"github.com/mdopp/homes/internal/kontaktantwort"
-	kontaktnetz "github.com/mdopp/homes/internal/netz"
 	"github.com/mdopp/homes/internal/texte"
 )
 
@@ -105,9 +104,6 @@ func Pruefen(cfg StartConfig) http.HandlerFunc {
 			return
 		}
 		f := kontaktantwort.FelderVon(all[i])
-		if netzDa(r, cfg) { // the key owner's link asks for the relations too (owner 2026-11-09)
-			f.Netz, f.Beziehungen = true, formBeziehungen(cfg, buch+"/"+uid)
-		}
 		von, _, _ := strings.Cut(strings.TrimSpace(r.Header.Get("Remote-Name")), " ")
 		token, frage, err := cfg.Antworten.Neu(r.Header.Get("Remote-User"), von, buch, uid, f)
 		if err != nil {
@@ -168,9 +164,6 @@ func antwortEntscheiden(r *http.Request, cfg StartConfig, f kontaktantwort.Frage
 	var err error
 	fetch(r, func(ctx context.Context) {
 		stand, err = kontaktantwort.Uebernehmen(ctx, cfg.Contacts, f, stand, cfg.PhoneCountry)
-		if err == nil || errors.Is(err, kontaktantwort.ErrWeg) {
-			netzUebernehmen(ctx, cfg, f, stand)
-		}
 	})
 	problem := ""
 	switch {
@@ -211,7 +204,7 @@ func antwortEntscheiden(r *http.Request, cfg StartConfig, f kontaktantwort.Frage
 // artText is a field's name as the review says it.
 var artText = map[string]texte.ID{"vorname": texte.ArtVorname, "nachname": texte.ArtNachname, "telefon": texte.ArtTelefon, "mail": texte.ArtMail,
 	"adresse": texte.ArtAdresse, "geburtstag": texte.ArtGeburtstag, "firma": texte.ArtFirma, "position": texte.ArtPosition, "foto": texte.ArtFoto,
-	"notiz": texte.ArtNotiz, "beziehung": texte.ArtBeziehung}
+	"notiz": texte.ArtNotiz}
 
 // nummerArt is a number's or an e-mail address's kind as the family says it.
 var nummerArt = map[string]texte.ID{"mobil": texte.NummerMobil, "privat": texte.NummerPrivat, "geschaeftlich": texte.NummerGeschaeftlich,
@@ -245,8 +238,6 @@ func wertText(a kontaktantwort.Aenderung, v, art string, main bool) string {
 		return nummerText(v, art, main, texte.FrageHauptNummer)
 	case a.Art == "mail":
 		return nummerText(v, art, main, texte.FrageHauptMail)
-	case a.Art == "beziehung" && v != "": // owner 2026-11-09: „Hilde Beispiel: Mutter/Vater“
-		return v + ": " + kontaktnetz.Kurz(art)
 	}
 	return v
 }

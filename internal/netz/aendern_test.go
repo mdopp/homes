@@ -81,21 +81,9 @@ func TestEintragenAufsHandy(t *testing.T) {
 	}
 }
 
-// A relation from a contact's form, taken by the key owner: its other
-// found by name, an answer then; anyone else's is refused. Offen counts
-// the questions for the key owner only.
-func TestUebernehmenUndOffen(t *testing.T) {
+// Offen counts the questions for the key owner only.
+func TestOffen(t *testing.T) {
 	n, _, _ := netzBox(t)
-	carla := Knoten{Name: "Carla Wolf", Kontakt: "haushalt/c"}
-	if err := n.Uebernehmen(t.Context(), "ben", carla, Knoten{Name: "Anna Berg"}, "kollege"); err != ErrKeineFrage {
-		t.Fatalf("ben: %v", err)
-	}
-	if err := n.Uebernehmen(t.Context(), "anna", carla, Knoten{Name: "anna berg"}, "kollege"); err != nil {
-		t.Fatal(err)
-	}
-	if got := bezuegeVon(n.Beziehungen(n.Von("haushalt/c"))); !slices.Equal(got, []string{"Anna Berg=kollege|Kollege/Kollegin|gesagt"}) {
-		t.Fatalf("carla: %v", got)
-	}
 	if n.Offen("anna") != len(n.Fragen()) || n.Offen("anna") == 0 || n.Offen("ben") != 0 {
 		t.Fatalf("offen %d of %d, ben %d", n.Offen("anna"), len(n.Fragen()), n.Offen("ben"))
 	}
