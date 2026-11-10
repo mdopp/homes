@@ -33,8 +33,8 @@ func (c Config) kann(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	k := c.kannMit(c.wuensche(r.Context()))
-	if uid, ok := c.uid(r); ok && c.Archiv[uid] { // „Dein Archiv“, the person's own: the ETag is theirs too
-		k.App.Mehr = append(k.App.Mehr[:len(k.App.Mehr):len(k.App.Mehr)], "archiv") // a copy: the list's stays
+	if uid, ok := c.uid(r); ok && c.Eigen != nil { // the person's own (Dein Archiv, the Dokumente-Adresse): the ETag is theirs too
+		c.Eigen(uid, &k)
 	}
 	body, err := json.Marshal(k)
 	if err != nil {

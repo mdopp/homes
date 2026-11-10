@@ -294,6 +294,16 @@ type Kann struct {
 	Version int        `json:"version"`
 	Module  []KannEins `json:"module"`
 	App     Angebot    `json:"app"`
+	// DokumenteAdresse is the person's own address for documents,
+	// <login>+doc+@<domain> (owner 2026-11-10): the app copies <login>+doc+
+	// and the person types the sender after the +; "" (left out): none
+	DokumenteAdresse string `json:"dokumente_adresse,omitempty"`
+}
+
+// MehrDazu adds a person's own Mehr rows to k, in a list of its own, so
+// the list the box's answer shares stays as it is.
+func (k *Kann) MehrDazu(keys ...string) {
+	k.App.Mehr = append(k.App.Mehr[:len(k.App.Mehr):len(k.App.Mehr)], keys...)
 }
 
 // KannEins is one module as the app reads it. Bietet is its offer, on or

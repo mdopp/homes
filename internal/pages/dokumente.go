@@ -224,10 +224,10 @@ func writeDokumente(w http.ResponseWriter, r *http.Request, cfg StartConfig, cod
 			`<p class="k gewaehlt" role=status></p><div class=danach><label for=titel>Titel (wenn du magst)</label><input id=titel type=text name=filename maxlength=80 autocomplete=off placeholder="z. B. Stromrechnung Oktober">` +
 			`<button type=submit data-laeuft="Lädt hoch …">Ablegen</button></div><p class=k>` + html.EscapeString(saysUploadHow) + `</p></form>`)
 	}
-	if cfg.DocumentsMail != "" { // the person's own address first (owner 2026-11-10, laib templates/paperless): theirs; the household's: Dokumente sorts
+	if cfg.DocumentsMail != "" { // the person's own address first (owner 2026-11-10, laib templates/paperless): theirs; the household's: Dokumente sorts; „Dokumente-Adresse kopieren“ copies <login>+doc+
 		eigen := html.EscapeString(strings.ToLower(r.Header.Get("Remote-User")) + "+doc@" + cfg.DocumentsMail[strings.LastIndex(cfg.DocumentsMail, "@")+1:])
 		addr := html.EscapeString(cfg.DocumentsMail)
-		b.WriteString(`<p class=k>Oder per Mail an deine Adresse <a href="mailto:` + eigen + `">` + eigen + `</a>: es gehört dir. Für den Haushalt an <a href="mailto:` + addr + `">` + addr + `</a>. ` + html.EscapeString(saysMailHow) + `</p>`)
+		b.WriteString(`<p class=k>Oder per Mail an deine Adresse <a href="mailto:` + eigen + `">` + eigen + `</a>: es gehört dir. <button type=button class=leise data-kopie="` + eigen[:strings.LastIndex(eigen, "@")] + `+" onclick="navigator.clipboard.writeText(this.dataset.kopie).then(()=>{this.textContent='Kopiert'})">Dokumente-Adresse kopieren</button> – hinter dem + den Absender anhängen. Für den Haushalt an <a href="mailto:` + addr + `">` + addr + `</a>. ` + html.EscapeString(saysMailHow) + `</p>`)
 	}
 	b.WriteString(zuletzt.HTML() + scanning)
 	writePage(w, code, b)

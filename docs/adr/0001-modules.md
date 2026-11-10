@@ -261,7 +261,14 @@ The keys the app knows today are:
 | `teilen` | `merken` (text), `dokument` (images), `standort-import` (GPX/GeoJSON), `musik` (songs and ZIPs) |
 | `konto` | `kontakte`, `kalender` |
 | `sicherung` | `whatsapp`, `signal`, `sms`, `kontakte` |
-| `mehr` | `daten-sichern`, `standortverlauf`, `archiv` (per person: only to a device whose person has a message archive) |
+| `mehr` | `daten-sichern`, `standortverlauf`, `archiv` (per person: only to a device whose person has a message archive), `dokumente-adresse` (per person, with the household's documents address: „Dokumente-Adresse kopieren“) |
+
+Beside `app`, a person's device also gets `dokumente_adresse` (owner
+2026-11-10), with `dokumente-adresse` in `mehr`: the person's own address
+for documents, `<login>+doc+@<domain>`. The app copies the part before the
+`@`, `<login>+doc+`, and the person types the sender after the `+`; laib's
+`templates/paperless` files the mail as theirs. Left out when the box has no
+documents address (`HOMES_DOCUMENTS_MAIL`) or the login fits no address.
 
 **Compatibility rules:**
 

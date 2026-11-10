@@ -286,4 +286,7 @@ func TestDokumenteShowsTheViewersOwnAddress(t *testing.T) {
 	body := getDokumente(cfg, "/dokumente", map[string]string{"Remote-User": "Anna"}).Body.String()
 	before(t, body, `href="mailto:anna+doc@box.test"`, `href="mailto:dokumente@box.test"`)
 	mustContain(t, body, "es gehört dir")
+	// „Dokumente-Adresse kopieren“ (owner 2026-11-10): <login>+doc+, the sender typed after the +
+	before(t, body, `href="mailto:anna+doc@box.test"`, `data-kopie="anna+doc+"`)
+	mustContain(t, body, ">Dokumente-Adresse kopieren</button> – hinter dem + den Absender anhängen.")
 }

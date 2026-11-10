@@ -165,24 +165,35 @@ func TestKannETagFollowsTheWish(t *testing.T) {
 	}
 }
 
-// „Dein Archiv“ in the app (owner 2026-11-10): /napi/kann's mehr says
-// "archiv" to a device whose person has an archive, and to no other.
-func TestKannSaysArchivToItsPersonOnly(t *testing.T) {
+// The person's own in /napi/kann (owner 2026-11-10): what Eigen adds goes
+// to that person's device only, and never into the list another device gets.
+func TestKannSaysTheOwnToItsPersonOnly(t *testing.T) {
 	l, err := modul.Bauen([]modul.Modul{{Name: "geraete", Titel: "Geräte", Backend: "home-assistant", App: modul.Angebot{Widgets: []string{"geraet"}}}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	who := map[string]string{"dev1": "anna", "dev2": "ben"}
-	h := Handler(Config{Module: l, Validate: StaticValidator([]string{"dev1", "dev2"}), Archiv: map[string]bool{"anna": true},
+	h := Handler(Config{Module: l, Validate: StaticValidator([]string{"dev1", "dev2"}),
+		Eigen: func(uid string, k *modul.Kann) {
+			if uid == "anna" {
+				k.MehrDazu("archiv", "dokumente-adresse")
+				k.DokumenteAdresse = "anna+doc+@example.org"
+			}
+		},
 		Whoami: func(b string) (string, bool) { u, ok := who[b]; return u, ok }})
-	for dev, want := range map[string]bool{"dev1": true, "dev2": false} {
+	for _, dev := range []string{"dev1", "dev2", "dev1", "dev2"} {
 		code, body := raw(t, h, "GET", "/napi/kann", dev, "")
-		var out struct{ App struct{ Mehr []string } }
+		var out struct {
+			App              struct{ Mehr []string }
+			DokumenteAdresse string `json:"dokumente_adresse"`
+		}
 		if code != 200 || json.Unmarshal([]byte(body), &out) != nil {
 			t.Fatalf("%s: GET /napi/kann → %d %s", dev, code, body)
 		}
-		if got := slices.Contains(out.App.Mehr, "archiv"); got != want {
-			t.Errorf("%s (%s): mehr has archiv %v, want %v", dev, who[dev], got, want)
+		anna := dev == "dev1"
+		if slices.Contains(out.App.Mehr, "archiv") != anna || slices.Contains(out.App.Mehr, "dokumente-adresse") != anna ||
+			(out.DokumenteAdresse == "anna+doc+@example.org") != anna || !anna && strings.Contains(body, "dokumente_adresse") {
+			t.Errorf("%s (%s): %s", dev, who[dev], body)
 		}
 	}
 }
