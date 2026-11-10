@@ -261,7 +261,7 @@ The keys the app knows today are:
 | `teilen` | `merken` (text), `dokument` (images), `standort-import` (GPX/GeoJSON), `musik` (songs and ZIPs) |
 | `konto` | `kontakte`, `kalender` |
 | `sicherung` | `whatsapp`, `signal`, `sms`, `kontakte` |
-| `mehr` | `daten-sichern`, `standortverlauf` |
+| `mehr` | `daten-sichern`, `standortverlauf`, `archiv` (per person: only to a device whose person has a message archive) |
 
 **Compatibility rules:**
 

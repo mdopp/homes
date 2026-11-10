@@ -670,6 +670,8 @@ var de = map[ID]string{
 	// „So hängt alles zusammen“ (owner 2026-11-05): the page, its web's nodes ("knoten.<…>", a word and a line under it), its moments ("<…>" and "<…>.so")
 	"zusammen.titel":                    "So hängt alles zusammen",
 	"zusammen.mehr":                     "Von der Rechnung zum Anruf: was deine Daten miteinander können",
+	"archiv.titel":                      "Dein Archiv",
+	"archiv.mehr":                       "Deine Nachrichten, Kontakte und Mails, gesichert und durchsuchbar",
 	"zusammen.kurz":                     "Kontakte, Dokumente, Nachrichten und Termine kennen einander. Das macht vieles leichter.",
 	"zusammen.bild":                     "In der Mitte ein Haushalts-Kontakt, verbunden mit Dokumenten, Nachrichten, Terminen, Bank, Telefonbuch und seinen Fotos; drumherum Zeitleiste, Musik und Geräte.",
 	"zusammen.mitte":                    "Haushalts-",

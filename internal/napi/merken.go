@@ -76,10 +76,7 @@ func (c Config) merken(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), merkenWait)
 	defer cancel()
 	// a song or an album goes on the music wish list, not into a note
-	person := ""
-	if bearer, ok := bearerOf(r); ok && c.Whoami != nil {
-		person, _ = c.Whoami(bearer)
-	}
+	person, _ := c.uid(r)
 	if res, ok, err := h.Podcasts.AusLink(ctx, person, link); ok { // a podcast is subscribed, not kept
 		if err != nil {
 			code := http.StatusBadRequest

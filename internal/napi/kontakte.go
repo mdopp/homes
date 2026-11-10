@@ -62,8 +62,7 @@ func (k *kontakte) post(w http.ResponseWriter, r *http.Request) {
 		fehler(w, http.StatusForbidden, saysNoPerson)
 		return
 	}
-	ct := strings.ToLower(strings.TrimSpace(strings.Split(r.Header.Get("Content-Type"), ";")[0]))
-	if ct != "text/vcard" && ct != "text/x-vcard" {
+	if ct := strings.ToLower(strings.TrimSpace(strings.Split(r.Header.Get("Content-Type"), ";")[0])); ct != "text/vcard" && ct != "text/x-vcard" {
 		fehler(w, http.StatusUnsupportedMediaType, saysKontakteType)
 		return
 	}

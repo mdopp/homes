@@ -32,7 +32,11 @@ func (c Config) kann(w http.ResponseWriter, r *http.Request) {
 		noSuchPath(w, r)
 		return
 	}
-	body, err := json.Marshal(c.kannMit(c.wuensche(r.Context())))
+	k := c.kannMit(c.wuensche(r.Context()))
+	if uid, ok := c.uid(r); ok && c.Archiv[uid] { // „Dein Archiv“, the person's own: the ETag is theirs too
+		k.App.Mehr = append(k.App.Mehr[:len(k.App.Mehr):len(k.App.Mehr)], "archiv") // a copy: the list's stays
+	}
+	body, err := json.Marshal(k)
 	if err != nil {
 		fail(w, err)
 		return
@@ -102,8 +106,7 @@ func (c Config) anfordern(w http.ResponseWriter, r *http.Request) {
 		answer(w, http.StatusServiceUnavailable, map[string]any{"ok": false, "error": texte.T(texte.AnfordernKeinLaib)})
 		return
 	case m.Anfordern(ws):
-		bearer, _ := bearerOf(r)
-		uid, _ := c.Whoami(bearer)
+		uid, _ := c.uid(r)
 		ctx, cancel := context.WithTimeout(r.Context(), wishWait)
 		_, err := c.Laib.Wuenschen(ctx, m.Name, m.Titel, uid)
 		cancel()
