@@ -81,6 +81,29 @@ func TestEintragenAufsHandy(t *testing.T) {
 	}
 }
 
+// A household contact and the key owner's phone contact: only the phone
+// gets the relation; the household card, which the family reads, does not
+// name the phone contact (owner 2026-11-10: „Das Leck bitte schließen“).
+func TestEintragenPrivatBleibtPrivat(t *testing.T) {
+	n, _, _ := netzBox(t)
+	var got []gesichter.HandyAenderung
+	n.G.Handy = func(_ string, a gesichter.HandyAenderung) error { got = append(got, a); return nil }
+	anna, _ := n.Person("p-anna")
+	fritz, _ := n.Person("p-fritz")
+	if err := n.Eintragen(t.Context(), fritz, anna, "freund"); err != nil {
+		t.Fatal(err)
+	}
+	cards, _, _ := n.G.Kontakte.Cards(t.Context())
+	for _, c := range cards {
+		if strings.Contains(c.Text(), "Fritz Kurz") {
+			t.Fatalf("household card %s names the phone contact:\n%s", c.UID, c.Text())
+		}
+	}
+	if len(got) != 1 || got[0].Mit != "Anna Beispiel" && got[0].Mit != anna.Name {
+		t.Fatalf("phone: %+v", got)
+	}
+}
+
 // Offen counts the questions for the key owner only.
 func TestOffen(t *testing.T) {
 	n, _, _ := netzBox(t)
