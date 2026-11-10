@@ -24,6 +24,7 @@ import (
 
 	"github.com/mdopp/homes/internal/caldav"
 	"github.com/mdopp/homes/internal/kontaktantwort"
+	kontaktnetz "github.com/mdopp/homes/internal/netz"
 	"github.com/mdopp/homes/internal/texte"
 )
 
@@ -356,8 +357,19 @@ func frageNachher(r *http.Request, vorher kontaktantwort.Felder, now time.Time) 
 	for i := range min(len(str), kontaktantwort.GrenzeJeArt) {
 		f.Adressen = append(f.Adressen, kontaktantwort.Adresse{Strasse: str[i], Hausnummer: at(pf["adr-nr"], i), PLZ: at(pf["adr-plz"], i), Ort: at(pf["adr-ort"], i), Land: at(pf["adr-land"], i)})
 	}
+	bez := pf["bez-art"]
+	for i, name := range pf["bez-name"][:min(len(pf["bez-name"]), kontaktantwort.GrenzeJeArt)] { // owner 2026-11-09, a kind of the net's or none
+		f.Beziehungen = append(f.Beziehungen, kontaktantwort.Beziehung{Name: name, Art: map[bool]string{true: at(bez, i)}[slices.Contains(kontaktnetz.Arten, at(bez, i))]})
+	}
 	f = kontaktantwort.Sauber(f)
 	st := frageStand{f: f, weg: map[string]bool{}, fehler: map[string]string{}}
+	for i := range f.Beziehungen { // one shown keeps its name; a new one needs its kind
+		if i < len(vorher.Beziehungen) {
+			f.Beziehungen[i].Name = vorher.Beziehungen[i].Name
+		} else if f.Beziehungen[i].Name != "" && f.Beziehungen[i].Art == "" {
+			st.fehler["bez."+strconv.Itoa(i)] = texte.T(texte.FrageBezOhneArt)
+		}
+	}
 	geb, ok := tag(pf.Get("geb-tag"), pf.Get("geb-monat"), pf.Get("geb-jahr"))
 	st.f.Geburtstag, f.Geburtstag = geb, geb
 	if !ok {
@@ -365,7 +377,7 @@ func frageNachher(r *http.Request, vorher kontaktantwort.Felder, now time.Time) 
 	} else if h := kontaktantwort.Geburtstag(geb, now); geb != "" && geb != vorher.Geburtstag && h != "" {
 		st.fehler["geb"] = h
 	}
-	f.Telefone, f.Mails, f.Adressen = slices.Clone(f.Telefone), slices.Clone(f.Mails), slices.Clone(f.Adressen)
+	f.Telefone, f.Mails, f.Adressen, f.Beziehungen = slices.Clone(f.Telefone), slices.Clone(f.Mails), slices.Clone(f.Adressen), slices.Clone(f.Beziehungen)
 	for _, w := range pf["weg"] {
 		was, nr, _ := strings.Cut(w, ".")
 		i, err := strconv.Atoi(nr)
@@ -377,6 +389,8 @@ func frageNachher(r *http.Request, vorher kontaktantwort.Felder, now time.Time) 
 			f.Mails[i] = kontaktantwort.Mail{}
 		case was == "adr" && i < min(len(f.Adressen), len(vorher.Adressen)):
 			f.Adressen[i] = kontaktantwort.Adresse{}
+		case was == "bez" && i < min(len(f.Beziehungen), len(vorher.Beziehungen)):
+			f.Beziehungen[i] = kontaktantwort.Beziehung{}
 		default:
 			continue
 		}
@@ -564,6 +578,10 @@ func frageForm(token string, fr kontaktantwort.Frage, st frageStand, problem str
 	in("firma", "firma", texte.T(texte.ArtFirma), f.Firma, "maxlength=200 autocomplete=organization")
 	in("position", "position", texte.T(texte.ArtPosition), f.Position, "maxlength=200 autocomplete=organization-title")
 	zu()
+	if alt.Netz { // the relations recorded for them (owner 2026-11-09), from their view: „Hilde ist für dich: Mutter/Vater“
+		frageBeziehungen(&b, f, alt, st, in, reihe, weg)
+		ro = ""
+	}
 	auf(texte.T(texte.FrageFoto))
 	in("foto", "foto", texte.T(texte.FrageFotoWahl), "", `type=file accept="image/jpeg,image/png,image/heic,image/heif,image/webp" data-fehler="`+wort(texte.FrageFotoKeins)+`"`)
 	b.WriteString(`<img id=foto-bild alt="" hidden>`)
@@ -576,6 +594,38 @@ func frageForm(token string, fr kontaktantwort.Frage, st frageStand, problem str
 		`<button name=aktion value=stimmt class=zweit data-laeuft="` + wort(texte.FrageSendet) + `">` + wort(texte.FrageStimmt) + `</button></p></form>`)
 	b.WriteString(`<p class=k>` + html.EscapeString(fmt.Sprintf(texte.T(texte.FrageBis), fr.Bis.Local().Format("02.01.2006"))) + `</p>`)
 	return b.String()
+}
+
+// frageBeziehungen is the form's „Beziehungen“: each relation recorded with
+// its kind to correct and its trash can, and one more by name and kind.
+func frageBeziehungen(b *strings.Builder, f, alt kontaktantwort.Felder, st frageStand, in func(name, key, label, value, extra string), reihe func(string), weg func(string, texte.ID)) {
+	b.WriteString(`<fieldset><legend>` + wort(texte.FrageBeziehungen) + `</legend><p class=k>` + wort(texte.FrageBezHinweis) + `</p>`)
+	for i, z := range liste(f.Beziehungen, len(alt.Beziehungen), func(z kontaktantwort.Beziehung) bool { return z.Name == "" }) {
+		n, label := strconv.Itoa(i), texte.T(texte.FrageBezArt)
+		reihe("bez." + n)
+		if i < len(alt.Beziehungen) {
+			label = fmt.Sprintf(texte.T(texte.FrageBezIst), alt.Beziehungen[i].Name)
+			b.WriteString(`<input type=hidden name=bez-name value="` + html.EscapeString(alt.Beziehungen[i].Name) + `">`)
+		} else {
+			in("bez-name", "bez-name."+n, texte.T(texte.FrageBezName), z.Name, "maxlength=200")
+		}
+		b.WriteString(`<label>` + html.EscapeString(label) + `<select name=bez-art><option value="">` + wort(texte.NetzWaehlen) + `</option>`)
+		for _, a := range kontaktnetz.Arten {
+			b.WriteString(`<option value=` + a + map[bool]string{true: " selected"}[a == z.Art] + `>` + html.EscapeString(kontaktnetz.Wort(a)) + `</option>`)
+		}
+		b.WriteString(`</select>`)
+		if msg := st.fehler["bez."+n]; msg != "" {
+			b.WriteString(`<span class=fehler>` + html.EscapeString(msg) + `</span>`)
+		}
+		b.WriteString(`</label>`)
+		if i < len(alt.Beziehungen) {
+			b.WriteString(`<div class=wahlen>`)
+			weg("bez."+n, texte.FrageBezLoeschen)
+			b.WriteString(`</div>`)
+		}
+		b.WriteString(`</div>`)
+	}
+	b.WriteString(`</fieldset>`)
 }
 
 // liste is the rows of a list as the form shows them: the card's n, the

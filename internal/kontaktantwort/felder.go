@@ -1,6 +1,7 @@
 package kontaktantwort
 
 import (
+	"cmp"
 	"encoding/json"
 	"slices"
 	"strings"
@@ -135,6 +136,18 @@ type Felder struct {
 	Position   string    `json:"position,omitempty"`
 	Foto       []byte    `json:"-"` // an answer's photo, a JPEG Foto made
 	Nachricht  string    `json:"-"` // an answer's message
+	// Beziehungen (owner 2026-11-09: „mache es zum Teil des Kontaktformulars“): the relations recorded
+	// for the contact, asked when Netz (the key owner's link); in an answer by place, as the lists above
+	Beziehungen []Beziehung `json:"beziehungen,omitempty"`
+	Netz        bool        `json:"netz,omitempty"`
+}
+
+// Beziehung is a relation from the contact's view: Name is their Art (a
+// kind of netz.Arten); Mit the other's node in the net, kept, never shown.
+type Beziehung struct {
+	Name string `json:"name"`
+	Art  string `json:"art"`
+	Mit  string `json:"mit,omitempty"`
 }
 
 // Name is the name as a list shows it: first and last, else the company.
@@ -217,6 +230,9 @@ func Sauber(f Felder) Felder {
 		haupt = haupt || m.Haupt
 		out.Mails = append(out.Mails, Mail{a, art(m.Art, MailArten), m.Haupt})
 	}
+	for _, z := range f.Beziehungen[:min(len(f.Beziehungen), GrenzeJeArt)] {
+		out.Beziehungen = append(out.Beziehungen, Beziehung{Name: eineZeile(z.Name), Art: eineZeile(z.Art)})
+	}
 	for _, a := range f.Adressen[:min(len(f.Adressen), GrenzeJeArt)] {
 		x := Adresse{Strasse: eineZeile(a.Strasse), Hausnummer: eineZeile(a.Hausnummer), PLZ: eineZeile(a.PLZ), Ort: eineZeile(a.Ort), Land: eineZeile(a.Land)}.geteilt()
 		x.Wie = ""
@@ -244,7 +260,7 @@ func nachricht(s string) string {
 // it is the main one before and after; the photo is Bild, the message
 // (Art notiz) Nachher.
 type Aenderung struct {
-	Art            string   `json:"art"` // vorname | nachname | telefon | mail | adresse | geburtstag | firma | position | foto | notiz
+	Art            string   `json:"art"` // vorname | nachname | telefon | mail | adresse | geburtstag | firma | position | foto | notiz | beziehung
 	Vorher         string   `json:"vorher,omitempty"`
 	Nachher        string   `json:"nachher,omitempty"`
 	VorherArt      string   `json:"vorher_art,omitempty"`
@@ -256,6 +272,7 @@ type Aenderung struct {
 	Bild           []byte   `json:"bild,omitempty"`     // a JPEG of at most FotoKante pixels
 	Hinweise       []string `json:"hinweise,omitempty"` // what the checks found
 	Stand          string   `json:"stand,omitempty"`
+	Mit            string   `json:"mit,omitempty"` // a relation's other in the net ("" one added by name)
 }
 
 // Entfernen says whether the change takes a field away (owner 2026-11-08:
@@ -286,6 +303,7 @@ func Vergleich(vorher, nachher Felder) []Aenderung {
 	einzeln("geburtstag", vorher.Geburtstag, nachher.Geburtstag, true)
 	einzeln("firma", vorher.Firma, nachher.Firma, true)
 	einzeln("position", vorher.Position, nachher.Position, true)
+	out = append(out, beziehungen(vorher.Beziehungen, nachher.Beziehungen)...)
 	if len(nachher.Foto) > 0 {
 		out = append(out, Aenderung{Art: "foto", Bild: nachher.Foto})
 	}
@@ -372,6 +390,23 @@ func adressen(vorher, nachher []Adresse) []Aenderung {
 	return out
 }
 
+// beziehungen compares the relations place by place: one shown keeps its
+// name (none: taken away), its kind may change; a new one needs both and
+// is none when its name is there already.
+func beziehungen(vorher, nachher []Beziehung) (out []Aenderung) {
+	for i := range max(len(vorher), len(nachher)) {
+		v, n := at(vorher, i), at(nachher, i)
+		if i < len(vorher) && n.Name != "" {
+			n = Beziehung{Name: v.Name, Art: cmp.Or(n.Art, v.Art)}
+		}
+		if v.Name == n.Name && v.Art == n.Art || i >= len(vorher) && (n.Art == "" || slices.ContainsFunc(vorher, func(b Beziehung) bool { return strings.EqualFold(b.Name, n.Name) })) {
+			continue
+		}
+		out = append(out, Aenderung{Art: "beziehung", Vorher: v.Name, Nachher: n.Name, VorherArt: v.Art, NachherArt: map[bool]string{true: n.Art}[n.Name != ""], Mit: v.Mit})
+	}
+	return out
+}
+
 func ziffern(s string) string {
 	var b strings.Builder
 	for i, r := range strings.TrimSpace(s) {
@@ -393,7 +428,7 @@ func Korrekturen(f Frage) ([]caldav.Korrektur, []int) {
 	var ks []caldav.Korrektur
 	var nr []int
 	for i, a := range f.Aenderungen {
-		if a.Stand != Angenommen {
+		if a.Stand != Angenommen || davProp[a.Art] == "" { // a relation is the net's (pages)
 			continue
 		}
 		k := caldav.Korrektur{Prop: davProp[a.Art], Alt: a.Vorher, Neu: a.Nachher, Bild: a.Bild}

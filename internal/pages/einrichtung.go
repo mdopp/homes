@@ -118,7 +118,7 @@ func einrichtung(r *http.Request, cfg StartConfig) []aufgabe {
 		out = append(out, aufgabe{titel: a.Titel, warum: a.Warum, href: einrichtenHref(a.Modul), erledigt: a.Erledigt != nil})
 	}
 	for _, a := range cfg.Einrichtung.Fragen(user) { // the key owner's questions in Immich, while open
-		out = append(out, aufgabe{titel: a.Titel, warum: a.Warum, href: DieselbePath, frage: true})
+		out = append(out, aufgabe{titel: a.Titel, warum: a.Warum, href: a.Pfad, frage: true})
 	}
 	if cfg.Antworten != nil { // Kontakt prüfen lassen: the answers waiting for the review (owner 2026-11-07)
 		if n := len(cfg.Antworten.ZuPruefen(user)); n > 0 {

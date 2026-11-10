@@ -14,7 +14,7 @@ const korrekturCard = "BEGIN:VCARD\r\nVERSION:3.0\r\nUID:k1\r\nFN:Anna Beispiel\
 
 // A relation (owner 2026-11-09, netz) is added with its TYPE, the other by
 // its UID or as a name in text; the same other twice is written once, and
-// one is never changed or removed.
+// one is never re-pointed to another.
 func TestCorrectedAddsARelationOnce(t *testing.T) {
 	ks := []Korrektur{{Prop: "RELATED", Neu: "urn:uuid:h2", Art: "child"}, {Prop: "RELATED", Neu: "Oma Hilde", Art: "kin"},
 		{Prop: "RELATED", Neu: "urn:uuid:h2", Art: "child"}, {Prop: "RELATED", Alt: "urn:uuid:h2", Neu: "urn:uuid:h3"}}
@@ -23,6 +23,21 @@ func TestCorrectedAddsARelationOnce(t *testing.T) {
 		t.Errorf("done %v, want %v", done, want)
 	}
 	if strings.Count(got, "RELATED") != 2 || !strings.Contains(got, "RELATED;TYPE=child:urn:uuid:h2\r\n") || !strings.Contains(got, "RELATED;TYPE=kin;VALUE=text:Oma Hilde\r\n") {
+		t.Errorf("the relations:\n%s", got)
+	}
+}
+
+// owner 2026-11-09: „inkl. Änderbarkeit“ — a relation's TYPE is set again (Alt the same as Neu), a
+// relation taken away (Neu "") goes with every line to that other, one taken away already counts as written.
+func TestCorrectedChangesAndRemovesARelation(t *testing.T) {
+	card := strings.Replace(korrekturCard, "NOTE:bleibt\r\n", "NOTE:bleibt\r\nRELATED;TYPE=friend:urn:uuid:h2\r\nRELATED;TYPE=kin;VALUE=text:Oma Hilde\r\nRELATED;VALUE=text:oma hilde\r\n", 1)
+	ks := []Korrektur{{Prop: "RELATED", Alt: "urn:uuid:h2", Neu: "urn:uuid:h2", Art: "spouse"}, {Prop: "RELATED", Alt: "Oma Hilde"},
+		{Prop: "RELATED", Alt: "Opa Karl"}, {Prop: "RELATED", Alt: "urn:uuid:h2", Neu: "urn:uuid:h2"}}
+	got, done := Corrected(card, "k1", ks, "20261109T100000Z")
+	if want := []bool{true, true, true, false}; !slices.Equal(done, want) {
+		t.Errorf("done %v, want %v", done, want)
+	}
+	if strings.Count(got, "RELATED") != 1 || !strings.Contains(got, "RELATED;TYPE=spouse:urn:uuid:h2\r\n") {
 		t.Errorf("the relations:\n%s", got)
 	}
 }

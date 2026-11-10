@@ -13,6 +13,7 @@ import (
 	"unicode"
 
 	"github.com/mdopp/homes/internal/caldav"
+	"github.com/mdopp/homes/internal/gesichter"
 	"github.com/mdopp/homes/internal/jsonfile"
 	"github.com/mdopp/homes/internal/namen"
 	"github.com/mdopp/homes/internal/texte"
@@ -55,9 +56,6 @@ var related = map[string]string{"partner": "spouse", "eltern": "parent", "kind":
 
 // Wort is a kind as the family reads it (netz.art.<kind>).
 func Wort(art string) string { return texte.T(texte.ID("netz.art." + art)) }
-
-// kurzWort is Wort without its explanation in brackets: „Mutter/Vater“.
-func kurzWort(art string) string { w, _, _ := strings.Cut(Wort(art), " ("); return w }
 
 // antwort is the key owner's answer about a pair: X is Art of the other.
 type antwort struct {
@@ -165,7 +163,7 @@ func gesagtGrund(mitte string, f Fest) string {
 	if f.A != mitte {
 		art = cmp.Or(gegen[art], art)
 	}
-	return fmt.Sprintf(texte.T(texte.NetzGesagt), kurzWort(art))
+	return fmt.Sprintf(texte.T(texte.NetzGesagt), Kurz(art))
 }
 
 // Fragen are the open questions, the strongest tie first, the skipped
@@ -283,19 +281,30 @@ func (n *Netz) Beantworten(x, y, art string) (Frage, error) {
 		f.X, f.Y = f.Y, f.X
 		f.Ich = f.Y.ID == n.ich
 	}
+	return f, n.merken(wer, x, y, art)
+}
+
+// merken keeps wer's answer about x and y (x is art of y; "" forgets it)
+// and rebuilds; n.mu is held.
+func (n *Netz) merken(wer, x, y, art string) error {
 	if n.antworten[wer] == nil {
 		n.antworten[wer] = map[string]antwort{}
 	}
 	n.antworten[wer][paarKey(x, y)] = antwort{X: x, Art: art, Am: n.now()}
+	if art == "" {
+		delete(n.antworten[wer], paarKey(x, y))
+	}
 	n.bauen()
-	return f, jsonfile.Save(filepath.Join(n.G.Dir, antwortNam), n.antworten)
+	return jsonfile.Save(filepath.Join(n.G.Dir, antwortNam), n.antworten)
 }
 
-// Eintragen writes the kind art (X is that of Y) into the household's
-// cards of both as RELATED with its TYPE, the other by its card's UID,
-// else by name; a card of the key owner's phone is left to the phone.
+// Eintragen writes the kind art (X is that of Y; Keine: none any more)
+// into the cards of both: a household card's RELATED with its TYPE, the
+// other by its card's UID (a line by name to it goes), else by name; the
+// key owner's own phone contact through the phone (owner 2026-11-09,
+// gesichter.HandyAenderung), by name.
 func (n *Netz) Eintragen(ctx context.Context, x, y Knoten, art string) error {
-	if n.G.Kontakte == nil || !slices.Contains(Arten, art) {
+	if art != Keine && !slices.Contains(Arten, art) {
 		return nil
 	}
 	var errs []error
@@ -303,16 +312,21 @@ func (n *Netz) Eintragen(ctx context.Context, x, y Knoten, art string) error {
 		auf, mit Knoten
 		art      string
 	}{{y, x, art}, {x, y, cmp.Or(gegen[art], art)}} {
-		uid, ok := strings.CutPrefix(s.auf.Kontakt, "haushalt/")
-		if !ok {
-			continue
-		}
-		wert := s.mit.Name
+		buch, uid, _ := strings.Cut(s.auf.Kontakt, "/")
+		wert, typ := s.mit.Name, cmp.Or(related[s.art], "kin")
+		ks := []caldav.Korrektur{}
 		if u, ok := strings.CutPrefix(s.mit.Kontakt, "haushalt/"); ok {
 			wert = "urn:uuid:" + strings.TrimPrefix(u, "urn:uuid:")
+			ks = append(ks, caldav.Korrektur{Prop: "RELATED", Alt: s.mit.Name})
 		}
-		_, err := n.G.Kontakte.CorrectShared(ctx, uid, []caldav.Korrektur{{Prop: "RELATED", Neu: wert, Art: cmp.Or(related[s.art], "kin")}})
-		errs = append(errs, err)
+		neu := map[bool]string{true: wert}[art != Keine]
+		switch {
+		case buch == "haushalt" && n.G.Kontakte != nil:
+			_, err := n.G.Kontakte.CorrectShared(ctx, uid, append(ks, caldav.Korrektur{Prop: "RELATED", Alt: wert, Neu: neu, Art: typ}))
+			errs = append(errs, err)
+		case buch == "privat" && n.G.Handy != nil && n.G.Wessen() != "":
+			errs = append(errs, n.G.Handy(n.G.Wessen(), gesichter.HandyAenderung{UID: uid, AltVorname: s.auf.Name, Mit: s.mit.Name, Art: map[bool]string{true: s.art}[art != Keine]}))
+		}
 	}
 	return errors.Join(errs...)
 }
