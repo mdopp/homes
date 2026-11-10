@@ -146,3 +146,25 @@ func oder(a, b string) string {
 	}
 	return b
 }
+
+// Fremd (owner 2026-11-10: „die kennen sich nicht“) takes the tie out of
+// the net: neither end shows the other, and the pair is not asked again;
+// forgetting it brings the tie back.
+func TestFremd(t *testing.T) {
+	n, _, _ := netzBox(t)
+	nahe := func() bool {
+		return slices.ContainsFunc(n.Nahe("p-kim", 10), func(k Verbindung) bool { return k.Mit.ID == "p-ben" })
+	}
+	if !nahe() {
+		t.Fatal("kim–ben: no tie to start with")
+	}
+	if _, err := n.Beantworten("p-kim", "p-ben", Fremd); err != nil {
+		t.Fatal(err)
+	}
+	if nahe() || slices.ContainsFunc(fragenVon(n.Fragen()), func(s string) bool { return strings.Contains(s, "Ben") && strings.Contains(s, "Kim") }) {
+		t.Fatalf("fremd: still a tie or a question: %v", fragenVon(n.Fragen()))
+	}
+	if _, _, err := n.Aendern("p-kim", "p-ben", ""); err != nil || !nahe() {
+		t.Fatalf("forgotten: %v, tie back %v", err, nahe())
+	}
+}

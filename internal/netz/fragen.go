@@ -36,14 +36,15 @@ const (
 	freundTage = 5 // photo days from which a tie without a sign of family suggests Freund/in
 )
 
-// The answers that are no kind.
+// The answers that are no kind; Fremd (owner 2026-11-10): the two do not know each other, their tie leaves the net.
 const (
 	Keine   = "keine"
+	Fremd   = "fremd"
 	Spaeter = "spaeter"
 )
 
 // Arten are the kinds a question offers, in its order; „X ist <Art> von Y“.
-var Arten = []string{"partner", "eltern", "kind", "geschwister", "grosseltern", "enkel", "onkel", "neffe", "cousin",
+var Arten = []string{"partner", "expartner", "eltern", "kind", "geschwister", "grosseltern", "enkel", "onkel", "neffe", "cousin",
 	"schwiegereltern", "schwiegerkind", "schwager", "freund", "kollege", "nachbar", "bekannt", "verwandt"}
 
 // gegen is a kind seen from the other end; one not here is its own.
@@ -52,7 +53,7 @@ var gegen = map[string]string{"eltern": "kind", "kind": "eltern", "grosseltern":
 
 // related is a kind as vCard's RELATED TYPE (RFC 6350 6.6.6); kin the rest.
 var related = map[string]string{"partner": "spouse", "eltern": "parent", "kind": "child", "geschwister": "sibling",
-	"freund": "friend", "kollege": "colleague", "nachbar": "neighbor", "bekannt": "acquaintance"}
+	"expartner": "acquaintance", "freund": "friend", "kollege": "colleague", "nachbar": "neighbor", "bekannt": "acquaintance"}
 
 // Wort is a kind as the family reads it (netz.art.<kind>).
 func Wort(art string) string { return texte.T(texte.ID("netz.art." + art)) }
@@ -141,10 +142,13 @@ func (n *Netz) gesagtDazu(alle map[[2]string]*Kante, nicht map[string]bool) {
 			x, y = y, x
 		}
 		_, dx := n.knoten[x]
+		p := [2]string{min(x, y), max(x, y)}
+		if a.Art == Fremd {
+			delete(alle, p)
+		}
 		if _, dy := n.knoten[y]; !dx || !dy || nicht[x] || nicht[y] || !slices.Contains(Arten, a.Art) {
 			continue
 		}
-		p := [2]string{min(x, y), max(x, y)}
 		k := alle[p]
 		if k == nil {
 			k = &Kante{A: p[0], B: p[1]}
@@ -266,14 +270,14 @@ func (n *Netz) vorschlag(x, y string, k *Kante) (string, string) {
 }
 
 // Beantworten keeps the key owner's answer about x and y: a kind (x is
-// that of y), Keine or Spaeter; the question as it was asked, x first.
+// that of y), Keine, Fremd or Spaeter; the question as it was asked, x first.
 func (n *Netz) Beantworten(x, y, art string) (Frage, error) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	n.laden()
 	wer, fs := n.G.Wessen(), n.offen()
 	i := slices.IndexFunc(fs, func(f Frage) bool { return paarKey(f.X.ID, f.Y.ID) == paarKey(x, y) })
-	if wer == "" || i < 0 || art != Keine && art != Spaeter && !slices.Contains(Arten, art) {
+	if wer == "" || i < 0 || art != Keine && art != Fremd && art != Spaeter && !slices.Contains(Arten, art) {
 		return Frage{}, ErrKeineFrage
 	}
 	f := fs[i]
@@ -298,13 +302,14 @@ func (n *Netz) merken(wer, x, y, art string) error {
 	return jsonfile.Save(filepath.Join(n.G.Dir, antwortNam), n.antworten)
 }
 
-// Eintragen writes the kind art (X is that of Y; Keine: none any more)
+// Eintragen writes the kind art (X is that of Y; Keine, Fremd: none any more)
 // into the cards of both: a household card's RELATED with its TYPE, the
 // other by its card's UID (a line by name to it goes), else by name; the
 // key owner's own phone contact through the phone (owner 2026-11-09,
 // gesichter.HandyAenderung), by name.
 func (n *Netz) Eintragen(ctx context.Context, x, y Knoten, art string) error {
-	if art != Keine && !slices.Contains(Arten, art) {
+	weg := art == Keine || art == Fremd
+	if !weg && !slices.Contains(Arten, art) {
 		return nil
 	}
 	var errs []error
@@ -319,13 +324,13 @@ func (n *Netz) Eintragen(ctx context.Context, x, y Knoten, art string) error {
 			wert = "urn:uuid:" + strings.TrimPrefix(u, "urn:uuid:")
 			ks = append(ks, caldav.Korrektur{Prop: "RELATED", Alt: s.mit.Name})
 		}
-		neu := map[bool]string{true: wert}[art != Keine]
+		neu := map[bool]string{true: wert}[!weg]
 		switch {
 		case buch == "haushalt" && n.G.Kontakte != nil:
 			_, err := n.G.Kontakte.CorrectShared(ctx, uid, append(ks, caldav.Korrektur{Prop: "RELATED", Alt: wert, Neu: neu, Art: typ}))
 			errs = append(errs, err)
 		case buch == "privat" && n.G.Handy != nil && n.G.Wessen() != "":
-			errs = append(errs, n.G.Handy(n.G.Wessen(), gesichter.HandyAenderung{UID: uid, AltVorname: s.auf.Name, Mit: s.mit.Name, Art: map[bool]string{true: s.art}[art != Keine]}))
+			errs = append(errs, n.G.Handy(n.G.Wessen(), gesichter.HandyAenderung{UID: uid, AltVorname: s.auf.Name, Mit: s.mit.Name, Art: map[bool]string{true: s.art}[!weg]}))
 		}
 	}
 	return errors.Join(errs...)

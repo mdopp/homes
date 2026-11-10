@@ -223,6 +223,8 @@ const (
 	NetzOhneWahl       ID = "netz.ohne-wahl"      // Speichern without a kind chosen
 	NetzGesagtArt      ID = "netz.gesagt.art"     // „%s“ X, „%s“ the kind, „%s“ Y
 	NetzGesagtKeine    ID = "netz.gesagt.keine"   // „Keine Beziehung“ kept
+	NetzFremd          ID = "netz.fremd"          // the choice „Kennen sich nicht“ (netz.Fremd)
+	NetzGesagtFremd    ID = "netz.gesagt.fremd"   // Fremd kept
 	NetzGesagtSpaeter  ID = "netz.gesagt.spaeter" // skipped
 	NetzNichtImBuch    ID = "netz.nicht-im-buch"  // kept, but the address book not written
 	// Änderbar (owner 2026-11-09): a contact's relations, the task, the form's section
@@ -612,6 +614,8 @@ var de = map[ID]string{
 	"netz.ohne-wahl":               "Bitte wähle zuerst, wie die beiden zueinander stehen.",
 	"netz.gesagt.art":              "Gespeichert: %s ist %s von %s.",
 	"netz.gesagt.keine":            "Gemerkt: keine Beziehung. Homes fragt danach nicht wieder.",
+	"netz.fremd":                   "Kennen sich nicht",
+	"netz.gesagt.fremd":            "Gemerkt: Die beiden kennen sich nicht. Homes zeigt keine Verbindung mehr zwischen ihnen und fragt nicht wieder.",
 	"netz.gesagt.spaeter":          "Übersprungen. Die Frage kommt später noch einmal.",
 	"netz.nicht-im-buch":           "Ins Adressbuch konnte Homes es gerade nicht schreiben; hier ist es gespeichert.",
 	"netz.aufgabe":                 "%s klären",
@@ -634,6 +638,7 @@ var de = map[ID]string{
 	"frage.beziehung.ohne-art":     "Bitte wähle, was diese Person für dich ist.",
 	// the kinds a question offers (netz.Arten): „X ist <kind> von Y“
 	"netz.art.partner":         "Partner/in",
+	"netz.art.expartner":       "Ex-Partner/in",
 	"netz.art.eltern":          "Mutter/Vater (Eltern)",
 	"netz.art.kind":            "Kind",
 	"netz.art.geschwister":     "Geschwister",

@@ -110,8 +110,8 @@ func TestNetzBeziehungenKlaeren(t *testing.T) {
 	cfg := netzConfig(t)
 	body := as(NetzSeite, cfg, NetzPath, "anna", "anna@box.test").Body.String()
 	mustContain(t, body, "<h2>Beziehungen klären</h2>", "<h3>Wie steht Ben zu dir?</h3>", "<h3>Wie steht Carla zu dir?</h3>", `<h3>Wie steht Ben zu Carla?</h3>`,
-		`<input type=hidden name=x value="p-ben"><input type=hidden name=y value="p-anna"><label>Ben ist …<select name=art required><option value="">Bitte wählen</option><option value="partner">Partner/in</option><option value="eltern">Mutter/Vater (Eltern)</option>`,
-		`<option value="verwandt">Sonstige verwandt</option></select></label><button name=antwort value=ja data-laeuft="Speichert …">Speichern</button>`,
+		`<input type=hidden name=x value="p-ben"><input type=hidden name=y value="p-anna"><label>Ben ist …<select name=art required><option value="">Bitte wählen</option><option value="partner">Partner/in</option><option value="expartner">Ex-Partner/in</option><option value="eltern">Mutter/Vater (Eltern)</option>`,
+		`<option value="verwandt">Sonstige verwandt</option><option value="fremd">Kennen sich nicht</option></select></label><button name=antwort value=ja data-laeuft="Speichert …">Speichern</button>`,
 		`<button name=antwort value=spaeter class=leise formnovalidate data-laeuft="Legt es nach hinten …">Überspringen</button>`)
 	mustNotContain(t, body, " selected>", "Vorschlag, weil", "Wie steht Dora")
 	post := func(h http.HandlerFunc, pfad string, v url.Values) string {
