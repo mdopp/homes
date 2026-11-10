@@ -92,7 +92,7 @@ type Config struct {
 	Module *modul.Liste
 	// Einrichtung: each person's setup tasks (einrichtung.go); nil = 404
 	Einrichtung *einrichten.Quellen
-	Archiv      map[string]bool // the persons with a message archive: /napi/kann's mehr "archiv" to their devices
+	Eigen       func(uid string, k *modul.Kann) // what /napi/kann adds for the device's person: Dein Archiv, the Dokumente-Adresse
 }
 
 // refreshed is the event a /napi request counts as: its pattern's path,

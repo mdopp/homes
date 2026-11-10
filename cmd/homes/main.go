@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -212,6 +213,28 @@ func archivOf(s site) (map[string]bool, string) {
 	}
 	return wer, einrichten.Web("archiv", s.domain)
 }
+
+// eigenOf is what /napi/kann adds for one person: „archiv“ with a message
+// archive, as the pages' „Dein Archiv“; and with the household's documents
+// address (HOMES_DOCUMENTS_MAIL, laib's PAPERLESS_MAIL_FILTER_TO)
+// „dokumente-adresse“ and the person's own, <login>+doc+@<its domain>
+// (owner 2026-11-10), which laib's templates/paperless files as theirs.
+func eigenOf(s site) func(string, *modul.Kann) {
+	archiv, _ := archivOf(s)
+	_, domain, mail := strings.Cut(s.docsMail, "@")
+	return func(uid string, k *modul.Kann) {
+		if archiv[uid] {
+			k.MehrDazu("archiv")
+		}
+		if login := strings.ToLower(uid); mail && adressLogin.MatchString(login) {
+			k.MehrDazu("dokumente-adresse")
+			k.DokumenteAdresse = login + "+doc+@" + domain
+		}
+	}
+}
+
+// adressLogin is a login fit for an address, as laib's templates/paperless takes one.
+var adressLogin = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,62}$`)
 
 func familyMux(s site) *http.ServeMux {
 	pagesMux := http.NewServeMux()
@@ -522,12 +545,12 @@ func main() {
 		antworten: &kontaktantwort.Store{Path: filepath.Join(dataDir, kontaktantwort.Datei)}, kontaktURL: os.Getenv("HOMES_KONTAKT_URL"),
 		teaserHost: os.Getenv("HOMES_TEASER_HOST"), teaserPerson: os.Getenv("HOMES_TEASER_PERSON"), zugang: &zugang.Store{Path: filepath.Join(dataDir, zugang.Datei)}}
 	st.zuordnen = openZuordnen(filepath.Join(dataDir, "zuordnen.json"), hh.Token)
-	st.napi.Archiv, _ = archivOf(st)        // the app's „Dein Archiv“, as the pages'
 	st.napi.Antworten = st.antworten        // the phone's accepted corrections of its own contacts
 	st.hh.Wessen = st.gesichter.Wessen      // handy_firmen: the Immich key owner's own phone contacts, nobody else's
 	st.netz = netzVon(st.gesichter, hh.Loc) // the contact net after each hourly run, read from Immich once a day (owner 2026-11-09)
 	start := st                             // what the list is built from again once Laib says what runs (dienstePflegen)
 	st.napi.Module = logModule(&st)         // HOMES_MODULE_AUS takes what it switches off out of st
+	st.napi.Eigen = eigenOf(st)             // the app's „Dein Archiv“ and Dokumente-Adresse, once the modules are off as asked
 	st.napi.Einrichtung = einrichtung(st, devices.Gekoppelt(store), jellyfin.KeyFromEnv())
 	// the counter stops only once the server has: a page is counted after
 	// it is answered, so the last flush waits for the requests under way (#92)
