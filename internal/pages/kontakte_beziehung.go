@@ -69,6 +69,7 @@ func netzWahl(action string, x kontaktnetz.Knoten, y, art string) string {
 	for _, a := range kontaktnetz.Arten {
 		opts += `<option value="` + a + `"` + map[bool]string{true: " selected"}[a == art] + ">" + esc(kontaktnetz.Wort(a)) + "</option>"
 	}
+	opts += `<option value="` + kontaktnetz.Fremd + `"` + map[bool]string{true: " selected"}[art == kontaktnetz.Fremd] + ">" + wort(texte.NetzFremd) + "</option>"
 	return `<form method=post action="` + esc(action) + `"><input type=hidden name=x value="` + esc(x.ID) + `"><input type=hidden name=y value="` + esc(y) + `"><label>` +
 		esc(fmt.Sprintf(texte.T(texte.NetzIst), x.Name)) + `<select name=art required>` + opts + "</select></label>"
 }
@@ -97,7 +98,7 @@ func netzBeziehungen(r *http.Request, cfg StartConfig, buch, uid, action string)
 		if z.Gesagt {
 			herkunft = texte.NetzGesagt
 		}
-		if z.Art == kontaktnetz.Keine {
+		if z.Art == kontaktnetz.Keine || z.Art == kontaktnetz.Fremd {
 			weg = netzKnopf("vergessen", texte.NetzVergessen, texte.NetzVergessenLauf, " class=leise formnovalidate")
 		}
 		b.WriteString(`<article class="paar beziehung"><h3>` + html.EscapeString(z.Mit.Name) + `</h3><p class=k>` + html.EscapeString(fmt.Sprintf(texte.T(herkunft), z.Wie)) + "</p>" +
@@ -177,6 +178,10 @@ func netzAntwort(r *http.Request, cfg StartConfig) (said, problem string) {
 		said = fmt.Sprintf(texte.T(texte.NetzGesagtWeg), f.X.Name, f.Y.Name)
 	case art == kontaktnetz.Keine || art == kontaktnetz.Spaeter:
 		return texte.T(map[bool]texte.ID{true: texte.NetzGesagtKeine, false: texte.NetzGesagtSpaeter}[art == kontaktnetz.Keine]), ""
+	case art == kontaktnetz.Fremd && antwort != "aendern": // asked: no relation in a card to take away
+		return texte.T(texte.NetzGesagtFremd), ""
+	case art == kontaktnetz.Fremd:
+		said = texte.T(texte.NetzGesagtFremd)
 	default:
 		said = fmt.Sprintf(texte.T(texte.NetzGesagtArt), f.X.Name, kontaktnetz.Wort(art), netzDu(f))
 	}

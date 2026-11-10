@@ -96,8 +96,11 @@ func (n *Netz) Beziehungen(id string) []Bezug {
 // Kurz is a kind without its explanation in brackets: „Mutter/Vater“;
 // Keine „Keine Beziehung“.
 func Kurz(art string) string {
-	if art == Keine {
+	switch art {
+	case Keine:
 		return texte.T(texte.NetzKeineBez)
+	case Fremd:
+		return texte.T(texte.NetzFremd)
 	}
 	w, _, _ := strings.Cut(Wort(art), " (")
 	return w
@@ -105,7 +108,7 @@ func Kurz(art string) string {
 
 // Aendern keeps the key owner's answer about x and y given on a contact's
 // page or taken from a contact's form, whether asked or not: x is art of y
-// (a kind, Keine), or "" forgets it. The two as nodes.
+// (a kind, Keine, Fremd), or "" forgets it. The two as nodes.
 func (n *Netz) Aendern(x, y, art string) (Knoten, Knoten, error) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
@@ -113,7 +116,7 @@ func (n *Netz) Aendern(x, y, art string) (Knoten, Knoten, error) {
 	wer := n.G.Wessen()
 	kx, dx := n.knoten[x]
 	ky, dy := n.knoten[y]
-	if wer == "" || !dx || !dy || x == y || art != "" && art != Keine && !slices.Contains(Arten, art) {
+	if wer == "" || !dx || !dy || x == y || art != "" && art != Keine && art != Fremd && !slices.Contains(Arten, art) {
 		return kx, ky, ErrKeineFrage
 	}
 	return kx, ky, n.merken(wer, x, y, art)
