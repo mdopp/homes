@@ -22,7 +22,8 @@ import (
 const netzFragenJe = 5
 
 const netzFrageStyle = `<style>.beziehung h3{margin:0 0 10px;font-size:1rem}.beziehung>.k{margin:10px 0 0}.beziehung label{flex:1 1 100%;display:flex;flex-direction:column;gap:4px}
-.beziehung select{min-height:44px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--edge);border-radius:10px;padding:0 8px}.beziehung form .k{flex:1 1 100%;margin:0}</style>`
+.beziehung select,.bzeile select{min-height:44px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--edge);border-radius:10px;padding:0 8px}.beziehung form .k{flex:1 1 100%;margin:0}
+.bzeile label{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--edge)}.bzeile span{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}.bzeile small{display:block}.bzeile select{flex:0 0 46%}</style>`
 
 // netzFragen is the section of fs, each posted to action; "" without one.
 func netzFragen(cfg StartConfig, fs []kontaktnetz.Frage, action string) string {
@@ -61,14 +62,21 @@ func netzFrage(cfg StartConfig, f kontaktnetz.Frage, action string) string {
 // netzWahl opens the form about x and y, posted to action, with the kinds,
 // art chosen: „X ist …“.
 func netzWahl(action string, x kontaktnetz.Knoten, y, art string) string {
-	esc := html.EscapeString
-	opts := `<option value="">` + wort(texte.NetzWaehlen) + "</option>"
-	for _, a := range kontaktnetz.Arten {
-		opts += `<option value="` + a + `"` + map[bool]string{true: " selected"}[a == art] + ">" + esc(kontaktnetz.Wort(a)) + "</option>"
+	return `<form method=post action="` + html.EscapeString(action) + `"><input type=hidden name=x value="` + html.EscapeString(x.ID) + `"><input type=hidden name=y value="` + html.EscapeString(y) + `"><label>` +
+		html.EscapeString(fmt.Sprintf(texte.T(texte.NetzIst), x.Name)) + `<select name=art required><option value="">` + wort(texte.NetzWaehlen) + "</option>" + netzArten(art) + "</select></label>"
+}
+
+// netzArten are the kinds, Kennen sich nicht and extra as options, art chosen.
+func netzArten(art string, extra ...string) string {
+	var b strings.Builder
+	for _, w := range append(append(kontaktnetz.Arten[:len(kontaktnetz.Arten):len(kontaktnetz.Arten)], kontaktnetz.Fremd), extra...) {
+		text := kontaktnetz.Wort(w)
+		if id, ok := map[string]texte.ID{kontaktnetz.Fremd: texte.NetzFremd, kontaktnetz.Keine: texte.NetzKeineBez, "vergessen": texte.NetzVergessen}[w]; ok {
+			text = texte.T(id)
+		}
+		b.WriteString(`<option value="` + w + `"` + map[bool]string{true: " selected"}[w == art] + ">" + html.EscapeString(text) + "</option>")
 	}
-	opts += `<option value="` + kontaktnetz.Fremd + `"` + map[bool]string{true: " selected"}[art == kontaktnetz.Fremd] + ">" + wort(texte.NetzFremd) + "</option>"
-	return `<form method=post action="` + esc(action) + `"><input type=hidden name=x value="` + esc(x.ID) + `"><input type=hidden name=y value="` + esc(y) + `"><label>` +
-		esc(fmt.Sprintf(texte.T(texte.NetzIst), x.Name)) + `<select name=art required>` + opts + "</select></label>"
+	return b.String()
 }
 
 func netzKnopf(wert string, id, laeuft texte.ID, klasse string) string {
@@ -76,9 +84,8 @@ func netzKnopf(wert string, id, laeuft texte.ID, klasse string) string {
 }
 
 // netzBeziehungen is „Beziehungen“ on a contact's page (owner 2026-11-09:
-// „inkl. Änderbarkeit“), for the key's owner: each relation of the
-// contact, the owner's answers over the phone books', the kind to change
-// with Speichern, and Entfernen (a „Keine Beziehung“: Vergessen).
+// „inkl. Änderbarkeit“), for the key's owner: one line per relation, saved on choosing (owner
+// 2026-11-10); Keine Beziehung takes it out of the cards, Vergessen drops such an answer.
 func netzBeziehungen(r *http.Request, cfg StartConfig, buch, uid, action string) string {
 	if !netzDa(r, cfg) {
 		return ""
@@ -88,20 +95,21 @@ func netzBeziehungen(r *http.Request, cfg StartConfig, buch, uid, action string)
 	if len(bs) == 0 {
 		return ""
 	}
-	var b strings.Builder
-	b.WriteString(netzFrageStyle + "<h2>" + wort(texte.NetzBeziehungen) + "</h2>")
+	esc, b := html.EscapeString, strings.Builder{}
+	b.WriteString(netzFrageStyle + "<h2>" + wort(texte.NetzBeziehungen) + "</h2><div class=paar>")
 	for _, z := range bs {
-		herkunft, weg := texte.NetzTelefonbuch, netzKnopf("entfernen", texte.NetzEntfernen, texte.NetzEntfernenLauf, " class=leise formnovalidate")
-		if z.Gesagt {
-			herkunft = texte.NetzGesagt
-		}
+		extra, quelle := []string{kontaktnetz.Keine}, ""
 		if z.Art == kontaktnetz.Keine || z.Art == kontaktnetz.Fremd {
-			weg = netzKnopf("vergessen", texte.NetzVergessen, texte.NetzVergessenLauf, " class=leise formnovalidate")
+			extra = append(extra, "vergessen")
 		}
-		b.WriteString(`<article class="paar beziehung"><h3>` + html.EscapeString(z.Mit.Name) + `</h3><p class=k>` + html.EscapeString(fmt.Sprintf(texte.T(herkunft), z.Wie)) + "</p>" +
-			netzWahl(action, z.Mit, id, z.Art) + netzKnopf("aendern", texte.NetzSpeichern, texte.NetzSpeichernLauft, "") + weg + "</form></article>")
+		if !z.Gesagt {
+			quelle = " <small class=k>" + wort(texte.NetzTelefonbuch) + "</small>"
+		}
+		b.WriteString(`<form class=bzeile method=post action="` + esc(action) + `"><input type=hidden name=x value="` + esc(z.Mit.ID) + `"><input type=hidden name=y value="` + esc(id) +
+			`"><input type=hidden name=antwort value=aendern><label><span>` + esc(z.Mit.Name) + quelle + `</span><select name=art onchange="this.form.requestSubmit()">` + netzArten(z.Art, extra...) +
+			`</select></label><noscript><button>` + wort(texte.NetzSpeichern) + `</button></noscript></form>`)
 	}
-	return b.String()
+	return b.String() + "</div>"
 }
 
 // netzGesicht is a node as „Dieselbe Person?“ shows a face: its Immich
@@ -120,6 +128,9 @@ func netzGesicht(cfg StartConfig, k kontaktnetz.Knoten) string {
 // relation taken away, is written into the cards too, within dieselbeWait.
 func netzAntwort(r *http.Request, cfg StartConfig) (said, problem string) {
 	antwort := r.PostFormValue("antwort")
+	if w := map[string]string{kontaktnetz.Keine: "entfernen", "vergessen": "vergessen"}[r.PostFormValue("art")]; antwort == "aendern" && w != "" {
+		antwort = w // a relation's line: Keine Beziehung and Vergessen are choices there
+	}
 	art, ok := map[string]string{"ja": r.PostFormValue("art"), "keine": kontaktnetz.Keine, "spaeter": kontaktnetz.Spaeter,
 		"aendern": r.PostFormValue("art"), "entfernen": kontaktnetz.Keine, "vergessen": ""}[antwort]
 	if !ok || art == "" && antwort != "vergessen" {

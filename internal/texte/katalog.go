@@ -230,14 +230,11 @@ const (
 	// Änderbar (owner 2026-11-09): a contact's relations, the task
 	NetzAufgabe       ID = "netz.aufgabe" // „%s“ how many: „3 Beziehungen“
 	NetzAufgabeWarum  ID = "netz.aufgabe.warum"
-	NetzBeziehungen   ID = "netz.beziehungen" // the section on a contact's page
-	NetzEntfernen     ID = "netz.entfernen"   // and pressed
-	NetzEntfernenLauf ID = "netz.entfernen.laeuft"
-	NetzVergessen     ID = "netz.vergessen" // a „Keine Beziehung“ forgotten, and pressed
-	NetzVergessenLauf ID = "netz.vergessen.laeuft"
+	NetzBeziehungen   ID = "netz.beziehungen"      // the section on a contact's page
+	NetzVergessen     ID = "netz.vergessen"        // a „Keine Beziehung“ forgotten, and pressed
 	NetzGesagtWeg     ID = "netz.gesagt.weg"       // „%s“ and „%s“ the two: taken away
 	NetzGesagtVergess ID = "netz.gesagt.vergessen" // forgotten
-	NetzTelefonbuch   ID = "netz.telefonbuch"      // a relation's source: „%s“ the kind
+	NetzTelefonbuch   ID = "netz.telefonbuch"      // a relation's source, under its name
 	// Gruppen (owner 2026-11-10, ADR 0002): a contact's own groups, as the card's CATEGORIES
 	Gruppen            ID = "gruppen"           // the section on a contact's page, the filter on Kontakte
 	GruppenKeine       ID = "gruppen.keine"     // the contact is in none
@@ -631,13 +628,10 @@ var de = map[ID]string{
 	"netz.aufgabe":                 "%s klären",
 	"netz.aufgabe.warum":           "Homes fragt, wie die Menschen auf deinen Fotos zueinander stehen. Deine Antwort kommt ins Adressbuch.",
 	"netz.beziehungen":             "Beziehungen",
-	"netz.entfernen":               "Entfernen",
-	"netz.entfernen.laeuft":        "Entfernt …",
 	"netz.vergessen":               "Vergessen",
-	"netz.vergessen.laeuft":        "Vergisst …",
 	"netz.gesagt.weg":              "Entfernt: %s und %s stehen in keiner Beziehung. Homes fragt danach nicht wieder.",
 	"netz.gesagt.vergessen":        "Vergessen. Homes fragt vielleicht später wieder danach.",
-	"netz.telefonbuch":             "%s (Telefonbuch)",
+	"netz.telefonbuch":             "aus dem Telefonbuch",
 	"gruppen":                      "Gruppen",
 	"gruppen.keine":                "Noch in keiner Gruppe.",
 	"gruppen.alle":                 "Alle",
