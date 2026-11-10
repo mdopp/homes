@@ -263,6 +263,17 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     the end (*Wie das funktioniert*); Radicale not answering is *Die
     Kontakte lassen sich gerade nicht lesen.*, once. Immich's people are
     never offered as contacts (owner 2026-11-06).
+  - *Gruppen* (owner 2026-11-10, ADR 0002, `kontakt_gruppen.go`,
+    `haushalt.Gruppen`): the household's own groups („Stammtisch“,
+    „Kickermannschaft Renegades“; a person in several) are a shared card's
+    vCard `CATEGORIES` (Homes' `Firma` marker is none, kept and unshown).
+    Above the list, a chip per group used and *Alle*; `?gruppe=` lists that
+    group's contacts alone. A shared card's page shows its groups, each a
+    link to that list; for an admin (who corrects a shared card there, as
+    *Daten prüfen lassen*) each has its ✕, and *Zu Gruppe hinzufügen* takes
+    a name (the names used elsewhere offered, a new one makes a new group).
+    Each is one value added to or taken from `CATEGORIES` through
+    `caldav.CorrectShared`; every other value and line stays.
   - *Everything on the contact* (owner 2026-11-08: „Sollte alles Button auf
     dem Kontakt … damit weniger Listen“, `kontakt_offen.go`): a contact's
     page (`/kontakte/<uid>`, `/kontakte/privat/<uid>`) has its links

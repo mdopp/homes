@@ -909,6 +909,28 @@ test('Kontakt prüfen lassen: the form shows no relations', async ({ page, brows
   await ctx.close();
 });
 
+// owner 2026-11-10 (ADR 0002, „Gruppen“): a contact's groups as chips; an admin adds one from the
+// names used (or a new one) and takes one away, said on the page; Kontakte lists a group's contacts
+test('Gruppen: a contact joins and leaves a group, Kontakte picks by group', async ({ page }, info) => {
+  await page.setViewportSize({ width: 411, height: 900 });
+  await page.goto('/kontakte/h1');
+  const chips = page.locator('form ul.chips');
+  await expect(chips.getByRole('link', { name: 'Stammtisch', exact: true })).toBeVisible();
+  await page.getByLabel('Zu Gruppe hinzufügen').fill('Chor');
+  await page.getByRole('button', { name: 'Hinzufügen', exact: true }).click();
+  await expect(page.getByText('Hinzugefügt: „Chor“.')).toBeVisible();
+  await expect(chips.getByRole('link', { name: 'Chor', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
+  await page.screenshot({ path: info.outputPath('kontakt-gruppen-411.png'), fullPage: true });
+  await page.getByRole('button', { name: 'Aus „Stammtisch“ entfernen' }).click();
+  await expect(page.getByText('Aus „Stammtisch“ entfernt.')).toBeVisible();
+  await expect(chips.getByRole('link', { name: 'Stammtisch', exact: true })).toHaveCount(0);
+  await page.goto('/kontakte?gruppe=Chor');
+  await expect(page.getByRole('link', { name: 'Chor', exact: true })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('link', { name: /^Oma Hilde/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /^Anna Beispiel/ })).toHaveCount(0);
+});
+
 // owner 2026-11-06: Immich's people are no longer offered as contacts; every contact is a person in
 // Immich. owner 2026-11-08: each of the own Handy-Kontakte has its page, with Fotos to its person
 test('Meine Kontakte: the own Handy-Kontakte, each with its page and its person in Immich', async ({ page }, info) => {

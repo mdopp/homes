@@ -3,6 +3,7 @@ package caldav
 import (
 	"crypto/rand"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 )
@@ -74,12 +75,7 @@ const FirmCategory = "Firma"
 
 // IsFirm says whether the card carries CATEGORIES Firma.
 func (ct Contact) IsFirm() bool {
-	for _, c := range ct.Categories {
-		if strings.EqualFold(strings.TrimSpace(c), FirmCategory) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(ct.Categories, func(c string) bool { return strings.EqualFold(strings.TrimSpace(c), FirmCategory) })
 }
 
 // NewUUID is a random urn:uuid (RFC 4122 version 4), a card's UID.

@@ -101,6 +101,9 @@ func mehrSeiten(mux *http.ServeMux, cfg pages.StartConfig, dav *davfake.Server, 
 				card += "ADR;TYPE=HOME:;;7 Gartenstraße;Stuttgart;;70173;Deutschland\r\n"
 			}
 		}
+		if i <= 1 || i == 6 { // Gruppen (owner 2026-11-10): the household's own groups, a person in several
+			card += "CATEGORIES:" + []string{"Stammtisch,Kickermannschaft Renegades", "Stammtisch", "", "", "", "", "Chor"}[i] + "\r\n"
+		}
 		dav.Put("/homes/haushalt-kontakte/h"+strconv.Itoa(i)+".vcf", card+"END:VCARD\r\n")
 	}
 	cfg.Gesichter = demoGesichter(dir, cfg.Contacts) // Anna's key: Meine Kontakte, each a person in Immich (owner 2026-11-06)

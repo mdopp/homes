@@ -20,7 +20,7 @@ import (
 // Korrektur is one accepted change of a card's field: Prop is N-GIVEN,
 // N-FAMILY (FN follows them), TEL, EMAIL, ADR, BDAY, ORG (its first part),
 // TITLE, PHOTO (Bild, a JPEG, replaces the card's), NOTE (Neu is added
-// to it) or RELATED (Art its TYPE, korrigiertBeziehung); Alt "" adds, Neu "" removes. For ADR the values are AltAdr and
+// to it), RELATED (Art its TYPE, korrigiertBeziehung) or CATEGORIES (one group); Alt "" adds, Neu "" removes. For ADR the values are AltAdr and
 // NeuAdr; for BDAY JJJJ-MM-TT or --MM-TT; for TEL and EMAIL Art is the new
 // kind (mobil, privat, geschaeftlich, andere; "" keeps the line's) and
 // Haupt whether it is the main one (nil keeps it; the main one is the
@@ -49,7 +49,7 @@ func (c *Client) CorrectShared(ctx context.Context, uid string, ks []Korrektur) 
 			return nil, ErrNoCard
 		}
 		text, done := Corrected(at.Data, uid, ks, utc(c.now()))
-		if !anyTrue(done) {
+		if !slices.Contains(done, true) {
 			return done, nil
 		}
 		u, err := c.resolve(at.Collection + url.PathEscape(at.Name))
@@ -61,15 +61,6 @@ func (c *Client) CorrectShared(ctx context.Context, uid string, ks []Korrektur) 
 		}
 	}
 	return nil, ErrChanged
-}
-
-func anyTrue(bs []bool) bool {
-	for _, b := range bs {
-		if b {
-			return true
-		}
-	}
-	return false
 }
 
 // Corrected is data with ks written into the VCARD uid, and which of ks
@@ -89,7 +80,7 @@ func Corrected(data, uid string, ks []Korrektur, rev string) (string, []bool) {
 		for i, k := range ks {
 			body, done[i] = korrigiert(body, k)
 		}
-		if anyTrue(done) {
+		if slices.Contains(done, true) {
 			body = setLine(body, "REV", "REV:"+rev)
 		}
 		fold(&b, ls[0])
@@ -135,6 +126,8 @@ func korrigiert(body []string, k Korrektur) ([]string, bool) {
 		return korrigiertNotiz(body, strings.TrimSpace(k.Neu))
 	case "RELATED":
 		return korrigiertBeziehung(body, k)
+	case "CATEGORIES":
+		return korrigiertGruppe(body, strings.TrimSpace(k.Alt), strings.TrimSpace(k.Neu))
 	}
 	return body, false
 }
@@ -161,6 +154,32 @@ func korrigiertBeziehung(body []string, k Korrektur) ([]string, bool) {
 		return body, true
 	}
 	return append(body, "RELATED;TYPE="+k.Art+text+":"+EscapeText(neu)), true
+}
+
+// korrigiertGruppe adds the group neu to CATEGORIES or takes alt out of it (owner 2026-11-10: „Gruppen“),
+// one value of the list, every other value and line kept; one there already, or gone already, counts as written.
+func korrigiertGruppe(body []string, alt, neu string) ([]string, bool) {
+	gleich := func(c string) bool { return strings.EqualFold(strings.TrimSpace(c), alt+neu) }
+	i := find(body, "CATEGORIES", func(p Prop) bool { return slices.ContainsFunc(listParts(p.Value), gleich) })
+	if (alt == "") == (neu == "") || (i >= 0) == (neu != "") {
+		return body, (alt == "") != (neu == "")
+	}
+	if neu != "" {
+		if i = find(body, "CATEGORIES", alle); i < 0 {
+			return append(body, "CATEGORIES:"+EscapeText(neu)), true
+		}
+	}
+	p, _ := parseLine(body[i])
+	var vs []string
+	for _, c := range append(slices.DeleteFunc(listParts(p.Value), gleich), neu) {
+		if strings.TrimSpace(c) != "" {
+			vs = append(vs, EscapeText(c))
+		}
+	}
+	if len(vs) == 0 {
+		return append(body[:i:i], body[i+1:]...), true
+	}
+	return withValue(body, i, strings.Join(vs, ",")), true
 }
 
 // korrigiertFoto is body with its own pictures replaced by the JPEG bild.

@@ -67,7 +67,7 @@ func MeineKontakte(cfg StartConfig) http.HandlerFunc {
 						fotos = "<p class=weiter-in>" + immichLink(l, texte.T(texte.KontaktFotos), wort(texte.KontaktFotosKurz)) + "</p>"
 					}
 				}
-				kontaktSeite(w, r, cfg, ct, kontaktantwort.Privat, MeineKontaktePath, fotos, e)
+				kontaktSeite(w, r, cfg, ct, kontaktantwort.Privat, MeineKontaktePath, fotos, "", e)
 				return
 			}
 		}

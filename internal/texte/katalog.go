@@ -228,18 +228,36 @@ const (
 	NetzGesagtSpaeter  ID = "netz.gesagt.spaeter" // skipped
 	NetzNichtImBuch    ID = "netz.nicht-im-buch"  // kept, but the address book not written
 	// Änderbar (owner 2026-11-09): a contact's relations, the task
-	NetzAufgabe        ID = "netz.aufgabe" // „%s“ how many: „3 Beziehungen“
-	NetzAufgabeWarum   ID = "netz.aufgabe.warum"
-	NetzBeziehungen    ID = "netz.beziehungen" // the section on a contact's page
-	NetzEntfernen      ID = "netz.entfernen"   // and pressed
-	NetzEntfernenLauf  ID = "netz.entfernen.laeuft"
-	NetzVergessen      ID = "netz.vergessen" // a „Keine Beziehung“ forgotten, and pressed
-	NetzVergessenLauf  ID = "netz.vergessen.laeuft"
-	NetzGesagtWeg      ID = "netz.gesagt.weg"       // „%s“ and „%s“ the two: taken away
-	NetzGesagtVergess  ID = "netz.gesagt.vergessen" // forgotten
-	NetzTelefonbuch    ID = "netz.telefonbuch"      // a relation's source: „%s“ the kind
-	WerGenannt         ID = "wer-ist-das.genannt"   // saved: „%s“ is the name
-	WerGemerkt         ID = "wer-ist-das.gemerkt"   // „Kenne ich nicht“ kept
+	NetzAufgabe       ID = "netz.aufgabe" // „%s“ how many: „3 Beziehungen“
+	NetzAufgabeWarum  ID = "netz.aufgabe.warum"
+	NetzBeziehungen   ID = "netz.beziehungen" // the section on a contact's page
+	NetzEntfernen     ID = "netz.entfernen"   // and pressed
+	NetzEntfernenLauf ID = "netz.entfernen.laeuft"
+	NetzVergessen     ID = "netz.vergessen" // a „Keine Beziehung“ forgotten, and pressed
+	NetzVergessenLauf ID = "netz.vergessen.laeuft"
+	NetzGesagtWeg     ID = "netz.gesagt.weg"       // „%s“ and „%s“ the two: taken away
+	NetzGesagtVergess ID = "netz.gesagt.vergessen" // forgotten
+	NetzTelefonbuch   ID = "netz.telefonbuch"      // a relation's source: „%s“ the kind
+	// Gruppen (owner 2026-11-10, ADR 0002): a contact's own groups, as the card's CATEGORIES
+	Gruppen            ID = "gruppen"           // the section on a contact's page, the filter on Kontakte
+	GruppenKeine       ID = "gruppen.keine"     // the contact is in none
+	GruppenAlle        ID = "gruppen.alle"      // the filter's chip for every contact
+	GruppenLeer        ID = "gruppen.leer"      // nobody in the group chosen
+	GruppeDazu         ID = "gruppe.dazu"       // the field's label
+	GruppeBeispiel     ID = "gruppe.beispiel"   // its placeholder
+	GruppeDazuKnopf    ID = "gruppe.dazu.knopf" // and pressed
+	GruppeDazuLauf     ID = "gruppe.dazu.laeuft"
+	GruppeWeg          ID = "gruppe.weg" // a chip's ✕: „%s“ the group
+	GruppeWegLauf      ID = "gruppe.weg.laeuft"
+	GruppeDazuGesagt   ID = "gruppe.dazu.gesagt" // „%s“ the group
+	GruppeWegGesagt    ID = "gruppe.weg.gesagt"  // „%s“ the group
+	GruppeOhneName     ID = "gruppe.ohne-name"
+	GruppeZuLang       ID = "gruppe.zu-lang"
+	GruppeFirma        ID = "gruppe.firma" // „Firma“ is Homes' marker of a firm's card
+	GruppeNurAdmins    ID = "gruppe.nur-admins"
+	GruppeFehler       ID = "gruppe.fehler"
+	WerGenannt         ID = "wer-ist-das.genannt" // saved: „%s“ is the name
+	WerGemerkt         ID = "wer-ist-das.gemerkt" // „Kenne ich nicht“ kept
 	WerOhneName        ID = "wer-ist-das.ohne-name"
 	WerStumm           ID = "wer-ist-das.stumm"
 	DieselbeKontakt    ID = "dieselbe.kontakt"     // under a named face: its contact's page
@@ -620,6 +638,23 @@ var de = map[ID]string{
 	"netz.gesagt.weg":              "Entfernt: %s und %s stehen in keiner Beziehung. Homes fragt danach nicht wieder.",
 	"netz.gesagt.vergessen":        "Vergessen. Homes fragt vielleicht später wieder danach.",
 	"netz.telefonbuch":             "%s (Telefonbuch)",
+	"gruppen":                      "Gruppen",
+	"gruppen.keine":                "Noch in keiner Gruppe.",
+	"gruppen.alle":                 "Alle",
+	"gruppen.leer":                 "In dieser Gruppe ist niemand.",
+	"gruppe.dazu":                  "Zu Gruppe hinzufügen",
+	"gruppe.beispiel":              "z. B. Stammtisch",
+	"gruppe.dazu.knopf":            "Hinzufügen",
+	"gruppe.dazu.laeuft":           "Fügt hinzu …",
+	"gruppe.weg":                   "Aus „%s“ entfernen",
+	"gruppe.weg.laeuft":            "…",
+	"gruppe.dazu.gesagt":           "Hinzugefügt: „%s“.",
+	"gruppe.weg.gesagt":            "Aus „%s“ entfernt.",
+	"gruppe.ohne-name":             "Bitte gib den Namen der Gruppe ein.",
+	"gruppe.zu-lang":               "Der Name der Gruppe ist zu lang (höchstens 60 Zeichen).",
+	"gruppe.firma":                 "„Firma“ nutzt Homes schon für Firmen-Kontakte. Wähle bitte einen anderen Namen.",
+	"gruppe.nur-admins":            "Gruppen eines Haushalts-Kontakts ändert nur ein Admin.",
+	"gruppe.fehler":                "Ins Adressbuch konnte Homes es gerade nicht schreiben. Versuch es gleich noch einmal.",
 	"frage.beziehung.ist":          "%s ist für dich",
 	"frage.beziehung.name":         "Weitere Person (Name)",
 	"frage.beziehung.art":          "ist für dich",

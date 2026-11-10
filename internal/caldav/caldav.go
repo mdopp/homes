@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -318,15 +319,7 @@ func (c *Client) collectionsAt(ctx context.Context, home string, books, lists bo
 
 // Takes says whether the calendar holds that component.
 func (col Collection) Takes(comp string) bool {
-	if len(col.comps) == 0 {
-		return true
-	}
-	for _, c := range col.comps {
-		if c == comp {
-			return true
-		}
-	}
-	return false
+	return len(col.comps) == 0 || slices.Contains(col.comps, comp)
 }
 
 // kind is calendars or address books: what is configured, where the found
