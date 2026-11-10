@@ -92,6 +92,7 @@ type Config struct {
 	Module *modul.Liste
 	// Einrichtung: each person's setup tasks (einrichtung.go); nil = 404
 	Einrichtung *einrichten.Quellen
+	Archiv      map[string]bool // the persons with a message archive: /napi/kann's mehr "archiv" to their devices
 }
 
 // refreshed is the event a /napi request counts as: its pattern's path,
@@ -251,11 +252,9 @@ func Handler(c Config) http.Handler {
 	mux.HandleFunc("GET /napi/einrichtung", auth(c.einrichtung))       // the person's modules and their setup tasks
 	mux.HandleFunc("POST /napi/einrichtung/apps", auth(c.einrichtung)) // the phone's installed apps tick theirs
 	mux.HandleFunc("GET /napi/whoami", func(w http.ResponseWriter, r *http.Request) {
-		if bearer, ok := bearerOf(r); ok && c.Whoami != nil {
-			if uid, ok := c.Whoami(bearer); ok {
-				writeJSON(w, map[string]any{"uid": uid, "via": "homes"})
-				return
-			}
+		if uid, ok := c.uid(r); ok {
+			writeJSON(w, map[string]any{"uid": uid, "via": "homes"})
+			return
 		}
 		w.Header().Set("WWW-Authenticate", "Bearer")
 		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
@@ -338,6 +337,14 @@ func Gruppen(c Config) map[string][]modul.Route {
 func bearerOf(r *http.Request) (string, bool) {
 	b, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 	return b, ok && b != ""
+}
+
+// uid is the person behind the request's device; false without one.
+func (c Config) uid(r *http.Request) (string, bool) {
+	if bearer, ok := bearerOf(r); ok && c.Whoami != nil {
+		return c.Whoami(bearer)
+	}
+	return "", false
 }
 
 // noSuchPath is the one 404 of /napi: a path Homes does not serve, or whose

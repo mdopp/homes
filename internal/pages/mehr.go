@@ -28,6 +28,7 @@ var mehrSays = map[string]string{
 	"Daten sichern":           "Nachrichten, Kontakte, Mails und Termine in dein Archiv",
 	"Box":                     "Wie es der Box geht, für Admins",
 	texte.T("zusammen.titel"): texte.T("zusammen.mehr"),
+	texte.T("archiv.titel"):   texte.T("archiv.mehr"),
 }
 
 // einmalig are the pages a person sets up once and then rarely opens, and Box.

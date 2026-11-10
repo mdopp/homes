@@ -514,6 +514,7 @@ func main() {
 		domain: einrichten.Domain(os.Getenv("HOMES_PUBLIC_URL")), archive: archive, gesichter: gesichter.FromEnv(dataDir),
 		antworten: &kontaktantwort.Store{Path: filepath.Join(dataDir, kontaktantwort.Datei)}, kontaktURL: os.Getenv("HOMES_KONTAKT_URL"),
 		teaserHost: os.Getenv("HOMES_TEASER_HOST"), teaserPerson: os.Getenv("HOMES_TEASER_PERSON"), zugang: &zugang.Store{Path: filepath.Join(dataDir, zugang.Datei)}}
+	st.napi.Archiv, _ = archivOf(st)        // the app's „Dein Archiv“, as the pages'
 	st.napi.Antworten = st.antworten        // the phone's accepted corrections of its own contacts
 	st.hh.Wessen = st.gesichter.Wessen      // handy_firmen: the Immich key owner's own phone contacts, nobody else's
 	st.netz = netzVon(st.gesichter, hh.Loc) // the contact net after each hourly run, read from Immich once a day (owner 2026-11-09)

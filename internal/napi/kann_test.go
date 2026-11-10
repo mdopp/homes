@@ -3,6 +3,7 @@ package napi
 import (
 	"encoding/json"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -161,5 +162,27 @@ func TestKannETagFollowsTheWish(t *testing.T) {
 	_, after := kannOf(t, h)
 	if before == after {
 		t.Error("the answer did not change with the wish")
+	}
+}
+
+// „Dein Archiv“ in the app (owner 2026-11-10): /napi/kann's mehr says
+// "archiv" to a device whose person has an archive, and to no other.
+func TestKannSaysArchivToItsPersonOnly(t *testing.T) {
+	l, err := modul.Bauen([]modul.Modul{{Name: "geraete", Titel: "Geräte", Backend: "home-assistant", App: modul.Angebot{Widgets: []string{"geraet"}}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	who := map[string]string{"dev1": "anna", "dev2": "ben"}
+	h := Handler(Config{Module: l, Validate: StaticValidator([]string{"dev1", "dev2"}), Archiv: map[string]bool{"anna": true},
+		Whoami: func(b string) (string, bool) { u, ok := who[b]; return u, ok }})
+	for dev, want := range map[string]bool{"dev1": true, "dev2": false} {
+		code, body := raw(t, h, "GET", "/napi/kann", dev, "")
+		var out struct{ App struct{ Mehr []string } }
+		if code != 200 || json.Unmarshal([]byte(body), &out) != nil {
+			t.Fatalf("%s: GET /napi/kann → %d %s", dev, code, body)
+		}
+		if got := slices.Contains(out.App.Mehr, "archiv"); got != want {
+			t.Errorf("%s (%s): mehr has archiv %v, want %v", dev, who[dev], got, want)
+		}
 	}
 }

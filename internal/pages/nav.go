@@ -35,6 +35,7 @@ const (
 	iconNetzlaufwerk = `<rect x="3" y="5" width="18" height="6" rx="1.5"/><rect x="3" y="13" width="18" height="6" rx="1.5"/><path d="M7 8h.01M7 16h.01"/>`
 	iconAufgaben     = `<path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="3"/>`
 	iconZusammen     = `<circle cx="12" cy="12" r="3"/><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="20" r="2"/><path d="M6.5 7.5l3.3 2.8M17.5 7.5l-3.3 2.8M12 15v3"/>`
+	iconArchiv       = `<rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/>`
 	iconBox          = `<rect x="3" y="7" width="18" height="12" rx="2"/><path d="M3 11h18M8 15h2"/>`
 	abmeldenIcon     = `<path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l-4-4 4-4M6 12h10"/>`
 )
@@ -79,6 +80,9 @@ func kern(cfg StartConfig) []modul.Eintrag {
 		{Titel: "Deine Aufgaben", Pfad: aufgabenPath, Icon: iconAufgaben, Ort: modul.Mehr, Rang: 110,
 			Fuer: func(r *http.Request) bool { return angemeldet(r) && (cfg.Laib != nil || len(einrichtung(r, cfg)) > 0) }},
 		{Titel: texte.T("zusammen.titel"), Pfad: ZusammenPath, Icon: iconZusammen, Ort: modul.Mehr, Rang: 70}, // owner 2026-11-05
+		// the person's own archive, theirs only (owner 2026-11-10: „aus der App gibt es einen Link?“)
+		{Titel: texte.T("archiv.titel"), Pfad: cfg.ArchivURL + "/", Icon: iconArchiv, Ort: modul.Mehr, Rang: 75,
+			Fuer: func(r *http.Request) bool { return cfg.ArchivURL != "" && cfg.Archive[r.Header.Get("Remote-User")] }},
 		{Titel: "Box", Pfad: "/box", Icon: iconBox, Ort: modul.Mehr, Rang: 120, Fuer: isAdmin},
 	}
 }

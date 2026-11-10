@@ -1,6 +1,7 @@
 package napi
 
 import (
+	"cmp"
 	"context"
 	"net/http"
 	"sort"
@@ -114,10 +115,7 @@ const historyWait = 5 * time.Second
 // (energie.Added), read from HA's history at once; a counter whose
 // history fails or has no reading since midnight is left out.
 func (h *homeAPI) today(ctx context.Context, counters []energie.Counter) map[string]float64 {
-	loc := h.loc
-	if loc == nil {
-		loc = time.Local
-	}
+	loc := cmp.Or(h.loc, time.Local)
 	now := time.Now()
 	if h.now != nil {
 		now = h.now()

@@ -16,11 +16,7 @@ import (
 // the GET's. Without the tasks (a test's Config) both are a path Homes
 // does not serve.
 func (c Config) einrichtung(w http.ResponseWriter, r *http.Request) {
-	bearer, _ := bearerOf(r)
-	uid, ok := "", c.Whoami != nil
-	if ok {
-		uid, ok = c.Whoami(bearer)
-	}
+	uid, ok := c.uid(r)
 	if c.Einrichtung == nil || !ok {
 		noSuchPath(w, r)
 		return
