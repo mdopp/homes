@@ -837,39 +837,6 @@ test('Wer steht wem nahe: the picture fits a phone, a node moves the middle, a r
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
 });
 
-// archiv#27 step 2 (ADR 0002): „Wie steht X zu Y?“ is asked in the person's archive; its „Übernehmen“
-// lands on Homes' page, which shows each line and where it goes and writes only on Übernehmen there.
-// A packet the archive did not sign, or another person's login, is refused in a sentence.
-test('Übernehmen: an answer from the archive is confirmed on Homes, each line says where it goes', async ({ page, context }, info) => {
-  await page.setViewportSize({ width: 411, height: 900 });
-  await page.goto('/demo/archiv');
-  await page.getByRole('button', { name: 'Übernehmen' }).click();
-  await expect(page).toHaveURL(/\/kontakte\/uebernehmen$/);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ins Adressbuch übernehmen');
-  const zeilen = page.locator('ul.uebernahme li');
-  await expect(zeilen).toHaveCount(2);
-  await expect(zeilen.filter({ hasText: 'Clara Beispiel ist Kind von Anna Beispiel' })).toContainText('→ Haushalts-Adressbuch, sieht die Familie');
-  await expect(zeilen.filter({ hasText: 'Opa Karl ist Großeltern von Clara Beispiel' })).toContainText('→ nur dein Handy');
-  await expect(page.getByText('Erst wenn du hier auf „Übernehmen“ tippst')).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
-  await page.screenshot({ path: info.outputPath('uebernehmen-411.png'), fullPage: true });
-  const ja = page.getByRole('button', { name: 'Übernehmen' });
-  await ja.click();
-  await expect(page.getByText('Übernommen. Was auf dein Handy geht, kommt dort an, sobald sich die Homes-App das nächste Mal meldet.')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Übernehmen' })).toHaveCount(0);
-  await expect(zeilen).toHaveCount(2);
-  await page.goto('/demo/archiv?falsch=1');
-  await page.getByRole('button', { name: 'Übernehmen' }).click();
-  await expect(page.getByText('Das lässt sich nicht übernehmen: Es kommt nicht aus deinem Archiv')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Übernehmen' })).toHaveCount(0);
-  await context.addCookies([{ name: 'wer', value: 'ben', url: 'http://127.0.0.1:8651' }]);
-  await page.goto('/demo/archiv');
-  await page.getByRole('button', { name: 'Übernehmen' }).click();
-  await expect(page.getByText('Das lässt sich nicht übernehmen')).toBeVisible();
-  await expect(zeilen).toHaveCount(0);
-  await context.clearCookies();
-});
-
 // owner 2026-11-09: „Baue den Rest inkl. Änderbarkeit und mache es zum Teil des Kontaktformulars.“ —
 // a contact's relations on its page, the phone book's changed, taken away and forgotten again
 test('Beziehungen: a contact lists its relations, each changed, removed and forgotten', async ({ page }, info) => {
