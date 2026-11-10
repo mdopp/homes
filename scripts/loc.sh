@@ -71,7 +71,8 @@ budget() { # budget <name> <cap> <dir…>
 # „Steht nahe“ on the contact page, the link on Kontakte
 # 2026-11-09, owner approved 2026-11-09: Beziehungen klären (pages 18,350 -> 18,480; 18,446 used): the questions on
 # /kontakte/netz and on the contact page
-budget pages 18480 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-10, owner approved 2026-11-09: Beziehungen änderbar, aufs Handy, in Deine Aufgaben und im Kontaktformular (homes#330) (18,480 -> 18,600): edit/remove on the contact page, the form's Beziehungen section and its review
+budget pages 18600 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -124,7 +125,8 @@ budget cmd 1448 cmd/homes             # homes' wiring: 1,018 with the demo then
 # still as Homes wrote it, and a card removed over the ETag read (carddav.go AsWritten, RemoveCard)
 # 2026-11-09, owner approved 2026-11-09: Wer steht wem nahe (connectors 15,140 -> 15,220; 15,202 used): immich.Aufnahmen,
 # the photos with their people page by page, and its fake
-budget connectors 15220 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
+# 2026-11-10, owner approved 2026-11-09: Beziehungen änderbar, aufs Handy, in Deine Aufgaben und im Kontaktformular (homes#330) (15,220 -> 15,240): the relation in the phone-correction payload
+budget connectors 15240 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
 # 2026-11-04, internal/jsonfile (47 lines, 50 of cap) from household's cap to shared's: it
 # replaces nine copies of a save, 62 of their lines in household
 # 2026-11-05, owner 2026-11-05 yes: Immich for the contacts (9,583 -> 9,874):
@@ -165,7 +167,8 @@ budget connectors 15220 $connectors   # one client per service, with its fake: 1
 # the contact net from the key owner's photos and phone books
 # 2026-11-09, owner approved 2026-11-09: Beziehungen klären (household 14,100 -> 14,420; 14,374 used): netz's
 # suggestions, answers and their RELATED lines
-budget household 14420 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-10, owner approved 2026-11-09: Beziehungen änderbar, aufs Handy, in Deine Aufgaben und im Kontaktformular (homes#330) (14,420 -> 14,620): changing and removing answers, relations to the phone, the task count
+budget household 14620 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one
