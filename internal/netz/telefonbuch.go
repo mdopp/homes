@@ -61,7 +61,7 @@ func (n *Netz) telefonbuch(ctx context.Context) ([]kontakt, []Fest, string, erro
 	var out []kontakt
 	ich := ""
 	for _, k := range ks {
-		out = append(out, kontakt{k.key, strings.Join(strings.Fields(k.ct.Name), " "), personen[k.key], k.ct.Family, k.ct.Birthday, strassen(k.ct)})
+		out = append(out, kontakt{k.key, strings.Join(strings.Fields(k.ct.Name), " "), personen[k.key]})
 		for _, m := range k.ct.Emails {
 			if email != "" && strings.EqualFold(strings.TrimSpace(m), email) && (ich == "" || strings.HasPrefix(k.key, "haushalt/")) {
 				ich = k.key

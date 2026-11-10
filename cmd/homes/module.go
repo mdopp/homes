@@ -350,9 +350,6 @@ func einrichtung(s site, gekoppelt func(string) bool, jf *jellyfin.Client) *einr
 	if g := s.gesichter; g != nil { // the key owner's open questions in Immich, a task while there are any
 		q.Immich = g.Offen
 	}
-	if s.netz != nil { // the open relation questions, a task of their own (owner 2026-11-09)
-		q.Netz = s.netz.Offen
-	}
 	if s.hh.Einkauf != nil { // the app's launcher shortcuts: the shopping list, the timeline, the camera into Paperless
 		q.Ziele["einkauf"] = s.publicURL + pages.EinkaufPath
 	}

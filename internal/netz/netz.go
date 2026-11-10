@@ -73,15 +73,11 @@ type foto struct {
 }
 
 // kontakt is a contact of the phone books: its key (haushalt/<uid>,
-// privat/<uid>), name and Immich person ("" none); for the suggestions
-// (fragen.go) its family name, birthday and streets (strassen).
+// privat/<uid>), name and Immich person ("" none).
 type kontakt struct {
-	Key      string   `json:"k"`
-	Name     string   `json:"n"`
-	Person   string   `json:"p,omitempty"`
-	Family   string   `json:"f,omitempty"`
-	Geb      string   `json:"g,omitempty"`
-	Strassen []string `json:"s,omitempty"`
+	Key    string `json:"k"`
+	Name   string `json:"n"`
+	Person string `json:"p,omitempty"`
 }
 
 // Fest is a phone-book tie between two contacts' keys; for a relation,
@@ -103,7 +99,6 @@ type stand struct {
 	Kontakte []kontakt         `json:"kontakte"`
 	Fest     []Fest            `json:"fest"`
 	Ich      string            `json:"ich,omitempty"` // the key owner's own contact
-	Geb      map[string]string `json:"geb,omitempty"` // Immich's birthDate, by named person
 }
 
 // Knoten is a person: an Immich person (ID its id) or a contact without
@@ -133,7 +128,6 @@ type Netz struct {
 	st        stand
 	verborgen map[string]map[string]string  // by login, by node: Aus or Nicht
 	antworten map[string]map[string]antwort // by login, by pair (paarKey): fragen.go
-	merkmale  map[string]merkmale           // by node
 	knoten    map[string]Knoten
 	von       map[string]string // node by contact key
 	kanten    map[string][]*Kante
@@ -189,7 +183,7 @@ func (n *Netz) Rechnen(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	st := stand{Geholt: n.now(), Namen: map[string]string{}, Geb: map[string]string{}}
+	st := stand{Geholt: n.now(), Namen: map[string]string{}}
 	for _, a := range as {
 		f := foto{ID: a.ID, Lat: a.Exif.Lat, Lng: a.Exif.Lng, Stadt: strings.TrimSpace(a.Exif.Stadt)}
 		f.T, _ = time.Parse(time.RFC3339Nano, a.Exif.Zeit)
@@ -199,7 +193,6 @@ func (n *Netz) Rechnen(ctx context.Context) error {
 			}
 			if name := strings.Join(strings.Fields(p.Name), " "); name != "" && !p.Versteckt {
 				st.Namen[p.ID] = name
-				st.Geb[p.ID] = cmp.Or(p.Geburtstag, st.Geb[p.ID])
 			}
 		}
 		if len(f.Wer) > 0 && !f.T.IsZero() {
@@ -265,7 +258,6 @@ func (n *Netz) bauen() {
 	}
 	n.festDazu(alle, nicht)
 	n.gesagtDazu(alle, nicht)
-	n.merkmaleBauen()
 	for _, k := range alle {
 		n.kanten[k.A], n.kanten[k.B] = append(n.kanten[k.A], k), append(n.kanten[k.B], k)
 	}

@@ -3,7 +3,10 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"image"
@@ -28,6 +31,7 @@ import (
 	"github.com/mdopp/homes/internal/netz"
 	"github.com/mdopp/homes/internal/pages"
 	"github.com/mdopp/homes/internal/samba"
+	"github.com/mdopp/homes/internal/uebernahme"
 )
 
 // mehrSeiten mounts the Mehr pages the demo had left out (the Mehr audit,
@@ -109,10 +113,11 @@ func mehrSeiten(mux *http.ServeMux, cfg pages.StartConfig, dav *davfake.Server, 
 	cfg.Gesichter = demoGesichter(dir, cfg.Contacts) // Anna's key: Meine Kontakte, each a person in Immich (owner 2026-11-06)
 	cfg.Netz = &netz.Netz{G: cfg.Gesichter}          // „Wer steht wem nahe“ from her photos (owner 2026-11-09)
 	cfg.Netz.Rechnen(context.Background())
-	if cfg.Einrichtung != nil { // its open relation questions on Deine Aufgaben (owner 2026-11-09)
-		cfg.Einrichtung.Netz = cfg.Netz.Offen
-	}
 	mux.HandleFunc(pages.NetzPath, pages.NetzSeite(cfg))
+	// Ins Adressbuch übernehmen (archiv#27): /demo/archiv stands for Anna's archive, its „Übernehmen“ signed as the archive signs it
+	cfg.ArchivGeheim = map[string]string{"anna": "demo-archiv"}
+	mux.HandleFunc(pages.UebernehmenPath, pages.Uebernehmen(cfg))
+	mux.HandleFunc("/demo/archiv", demoArchiv)
 	// Kontakt prüfen lassen (owner 2026-11-07): the review pages here, the page without a login on a listener of its own, as on the box
 	cfg.DNS, cfg.KontaktURL = demoDNS{}, "http://"+*kontaktAddr // the store is main's, shared with Deine Aufgaben
 	mux.HandleFunc(pages.PruefenPath, pages.Pruefen(cfg))
@@ -272,4 +277,19 @@ func demoGesicht(c color.RGBA) []byte {
 	var b bytes.Buffer
 	jpeg.Encode(&b, img, nil)
 	return b.Bytes()
+}
+
+// demoArchiv is Anna's archive's „Übernehmen“ (archiv apps/archiv/uebernahme.go): Clara is Anna's
+// child, both in the household book; Opa Karl, only on Anna's phone, is Clara's grandparent.
+// ?falsch=1 signs with another secret.
+func demoArchiv(w http.ResponseWriter, r *http.Request) {
+	secret := map[bool]string{true: "falsch", false: "demo-archiv"}[r.URL.Query().Get("falsch") != ""]
+	b, _ := json.Marshal(uebernahme.Paket{Person: "anna", Bis: time.Now().Add(time.Hour), Zeilen: []uebernahme.Zeile{
+		{X: uebernahme.Ende{Name: "Clara Beispiel", Haushalt: "h2"}, Y: uebernahme.Ende{Name: "Anna Beispiel", Haushalt: "h0"}, Art: "kind"},
+		{X: uebernahme.Ende{Name: "Opa Karl", Handy: "k1"}, Y: uebernahme.Ende{Name: "Clara Beispiel"}, Art: "grosseltern"}}})
+	d := base64.RawURLEncoding.EncodeToString(b)
+	m := hmac.New(sha256.New, []byte(secret))
+	m.Write([]byte("archiv-uebernahme-1." + d))
+	fmt.Fprintf(w, `<!doctype html><meta charset=utf-8><title>Archiv</title><form method=post action="%s"><input type=hidden name=d value="%s"><input type=hidden name=s value="%s"><button>Übernehmen</button></form>`,
+		pages.UebernehmenPath, d, base64.RawURLEncoding.EncodeToString(m.Sum(nil)))
 }
