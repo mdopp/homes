@@ -1,18 +1,15 @@
 package pages
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"fmt"
 	"html"
 	"log"
 	"net/http"
-	"slices"
 	"strings"
 
 	"github.com/mdopp/homes/internal/gesichter"
-	"github.com/mdopp/homes/internal/kontaktantwort"
 	kontaktnetz "github.com/mdopp/homes/internal/netz"
 	"github.com/mdopp/homes/internal/texte"
 )
@@ -105,37 +102,6 @@ func netzBeziehungen(r *http.Request, cfg StartConfig, buch, uid, action string)
 			netzWahl(action, z.Mit, id, z.Art) + netzKnopf("aendern", texte.NetzSpeichern, texte.NetzSpeichernLauft, "") + weg + "</form></article>")
 	}
 	return b.String()
-}
-
-// formBeziehungen are the relations the form of the contact key shows
-// (owner 2026-11-09): only those recorded with a kind, the owner's answers
-// and the phone books', never a suggestion or a tie's strength (the page
-// is public behind its link).
-func formBeziehungen(cfg StartConfig, key string) (out []kontaktantwort.Beziehung) {
-	for _, z := range cfg.Netz.Beziehungen(cfg.Netz.Von(key)) {
-		if slices.Contains(kontaktnetz.Arten, z.Art) {
-			out = append(out, kontaktantwort.Beziehung{Name: z.Mit.Name, Art: z.Art, Mit: z.Mit.ID})
-		}
-	}
-	return out
-}
-
-// netzUebernehmen takes the relations of the contact's answer f its
-// review took (stand): each the key owner's answer and the cards' RELATED
-// (netz.Uebernehmen), then Uebernommen, else Uebersprungen.
-func netzUebernehmen(ctx context.Context, cfg StartConfig, f kontaktantwort.Frage, stand []string) {
-	for i, a := range f.Aenderungen {
-		if a.Art != "beziehung" || stand[i] != kontaktantwort.Angenommen {
-			continue
-		}
-		ich, mit := kontaktnetz.Knoten{Name: f.Name(), Kontakt: f.Buch + "/" + f.UID}, kontaktnetz.Knoten{ID: a.Mit, Name: cmp.Or(a.Nachher, a.Vorher)}
-		stand[i] = kontaktantwort.Uebersprungen
-		if err := cfg.Netz.Uebernehmen(ctx, f.Wer, ich, mit, a.NachherArt); err == nil {
-			stand[i] = kontaktantwort.Uebernommen
-		} else if !errors.Is(err, kontaktnetz.ErrKeineFrage) {
-			log.Printf("homes: kontakt-antwort %s: a relation not written: %v", f.ID, err)
-		}
-	}
 }
 
 // netzGesicht is a node as „Dieselbe Person?“ shows a face: its Immich

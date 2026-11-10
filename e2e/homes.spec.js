@@ -890,11 +890,9 @@ test('Beziehungen: a contact lists its relations, each changed, removed and forg
   await expect(page).toHaveURL(/\/kontakte\/h1$/);
 });
 
-// owner 2026-11-09: the relations are part of Kontakt prüfen lassen — the contact sees those recorded
-// for them, from their side („Anna Beispiel ist für dich“), never a suggestion; adds one by name and
-// kind (a name without its kind is said beside it); the review shows it before → after, Übernehmen
-// keeps it as the owner's answer, on the contact's page
-test('Kontakt prüfen lassen: the relations on the form, the review takes a new one', async ({ page, browser }, info) => {
+// owner 2026-11-10 (ADR 0002): the public form no longer shows how the household recorded the
+// contact's relations — the key owner's link has no „Beziehungen“ either
+test('Kontakt prüfen lassen: the form shows no relations', async ({ page, browser }) => {
   await page.setViewportSize({ width: 411, height: 900 });
   await page.addInitScript(() => { navigator.share = (d) => { window.geteilt = d.text; return Promise.resolve(); }; });
   await page.goto('/kontakte/h2');
@@ -905,27 +903,10 @@ test('Kontakt prüfen lassen: the relations on the form, the review takes a new 
   const kontakt = await ctx.newPage();
   kontakt.on('pageerror', (e) => errors.push(String(e)));
   await kontakt.goto(link);
-  const bez = kontakt.locator('fieldset', { has: kontakt.locator('legend', { hasText: 'Beziehungen' }) });
-  await expect(bez.getByLabel('Anna Beispiel ist für dich')).toHaveValue('eltern');
-  await expect(bez).not.toContainText('Vorschlag');
-  expect(await kontakt.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
-  await bez.getByLabel('Weitere Person (Name)').fill('Opa Karl');
-  await kontakt.getByRole('button', { name: 'Änderungen senden' }).click();
-  await expect(kontakt.getByText('Bitte wähle, was diese Person für dich ist.')).toBeVisible();
-  await kontakt.locator('fieldset', { has: kontakt.locator('legend', { hasText: 'Beziehungen' }) }).getByLabel(/^ist für dich/).first().selectOption('grosseltern') // the row with Opa Karl; an empty one follows;
-  await kontakt.screenshot({ path: info.outputPath('kontakt-formular-beziehungen-411.png'), fullPage: true });
-  await kontakt.getByRole('button', { name: 'Änderungen senden' }).click();
-  await expect(kontakt.getByRole('heading', { name: 'Danke!' })).toBeVisible();
+  await expect(kontakt.getByRole('button', { name: 'Änderungen senden' })).toBeVisible();
+  await expect(kontakt.locator('legend', { hasText: 'Beziehungen' })).toHaveCount(0);
+  await expect(kontakt.getByText('Anna Beispiel')).toHaveCount(0);
   await ctx.close();
-
-  await page.goto('/kontakte/h2');
-  const zeile = page.locator('.aenderung', { hasText: 'Opa Karl: Großeltern' });
-  await expect(zeile).toContainText('Beziehung');
-  await expect(zeile.locator('input')).toBeChecked();
-  await page.screenshot({ path: info.outputPath('kontakt-antwort-beziehung-411.png'), fullPage: true });
-  await page.getByRole('button', { name: 'Ausgewählte übernehmen' }).click();
-  await expect(zeile).toContainText('übernommen');
-  await expect(page.locator('article.beziehung', { has: page.getByRole('heading', { name: 'Opa Karl', exact: true }) })).toContainText('Großeltern (von dir angegeben)');
 });
 
 // owner 2026-11-06: Immich's people are no longer offered as contacts; every contact is a person in
