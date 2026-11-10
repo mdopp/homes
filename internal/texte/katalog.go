@@ -219,18 +219,6 @@ const (
 	NetzTelefonbuch   ID = "netz.telefonbuch"      // a relation's source, under its name
 	NetzImArchiv      ID = "netz.im-archiv"        // the link to the questions in the person's archive (archiv#27)
 	// Ins Adressbuch übernehmen (archiv#27 step 2, ADR 0002): an answer from the person's archive, confirmed here
-	Uebernehmen            ID = "uebernehmen"              // the page's title
-	UebernehmenWas         ID = "uebernehmen.was"          // what confirming does
-	UebernehmenIst         ID = "uebernehmen.ist"          // a line: „%s“ X, „%s“ the kind, „%s“ Y
-	UebernehmenHaushalt    ID = "uebernehmen.haushalt"     // where a line goes: both household cards
-	UebernehmenHandy       ID = "uebernehmen.handy"        // where a line goes: the person's phone only
-	UebernehmenJa          ID = "uebernehmen.ja"           // the button, and pressed
-	UebernehmenLaeuft      ID = "uebernehmen.ja.laeuft"    //
-	UebernehmenUngueltig   ID = "uebernehmen.ungueltig"    // not the person's archive's, or too old
-	UebernehmenFertig      ID = "uebernehmen.fertig"       // written
-	UebernehmenFertigHandy ID = "uebernehmen.fertig.handy" // and what goes to the phone, when
-	UebernehmenFehler      ID = "uebernehmen.fehler"       // not written
-	UebernehmenZurueck     ID = "uebernehmen.zurueck"      // the link back to the archive
 	// Gruppen (owner 2026-11-10, ADR 0002): a contact's own groups, as the card's CATEGORIES
 	Gruppen            ID = "gruppen"           // the section on a contact's page, the filter on Kontakte
 	GruppenKeine       ID = "gruppen.keine"     // the contact is in none
@@ -611,18 +599,6 @@ var de = map[ID]string{
 	"netz.gesagt.vergessen":        "Vergessen. Homes fragt vielleicht später wieder danach.",
 	"netz.telefonbuch":             "aus dem Telefonbuch",
 	"netz.im-archiv":               "Wie die Menschen zueinander stehen, klärst du jetzt in deinem Archiv",
-	"uebernehmen":                  "Ins Adressbuch übernehmen",
-	"uebernehmen.was":              "Das kommt aus deinem Archiv. Erst wenn du hier auf „Übernehmen“ tippst, schreibt Homes es ins Adressbuch.",
-	"uebernehmen.ist":              "%s ist %s von %s",
-	"uebernehmen.haushalt":         "Haushalts-Adressbuch, sieht die Familie",
-	"uebernehmen.handy":            "nur dein Handy",
-	"uebernehmen.ja":               "Übernehmen",
-	"uebernehmen.ja.laeuft":        "Schreibt ins Adressbuch …",
-	"uebernehmen.ungueltig":        "Das lässt sich nicht übernehmen: Es kommt nicht aus deinem Archiv, oder es ist älter als zwei Stunden. Tipp in deinem Archiv noch einmal auf „Übernehmen“.",
-	"uebernehmen.fertig":           "Übernommen.",
-	"uebernehmen.fertig.handy":     "Was auf dein Handy geht, kommt dort an, sobald sich die Homes-App das nächste Mal meldet.",
-	"uebernehmen.fehler":           "Ins Adressbuch konnte Homes das gerade nicht schreiben. Versuch es gleich noch einmal.",
-	"uebernehmen.zurueck":          "Zurück zu deinem Archiv",
 	"gruppen":                      "Gruppen",
 	"gruppen.keine":                "Noch in keiner Gruppe.",
 	"gruppen.alle":                 "Alle",

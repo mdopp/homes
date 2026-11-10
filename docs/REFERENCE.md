@@ -510,18 +510,22 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     links there (`<archiv>/tresor/umfeld`) for whom has an archive. A
     contact's *Beziehungen* still change in place.
   - *Ins Adressbuch übernehmen* (archiv#27 step 2, ADR 0002;
-    `/kontakte/uebernehmen`, `internal/uebernahme`): the archive's
-    *Übernehmen* posts a packet (`d`, `s`: HMAC-SHA256 with that person's
-    `HOMES_ARCHIV_SECRET_<PERSON>` over `archiv-uebernahme-1.` + `d`;
-    `person` the login, `bis` at most two hours ahead). The page shows each
-    line („Clara ist Kind von Anna“) and where it goes — *Haushalts-Adressbuch,
-    sieht die Familie* when both ends have a household card (both cards get
-    `RELATED` with the other's `urn:uuid:` and the kind seen from it), else
-    *nur dein Handy* (each end that is the person's phone contact gets the
-    relation by name through `/napi/kontakte/korrekturen`); a household card
-    never gets a name. Nothing is written until *Übernehmen* on this page
-    (POST `ja=1`, same origin only); another login, a packet not signed with
-    the person's archive secret or past `bis` is refused in a sentence, 400.
+    `POST /intern/uebernahme`, `internal/uebernahme`): no page. A tap on an
+    answer in the person's own open archive is their consent (owner
+    2026-11-10); the archive posts the line server to server, on Homes' own
+    port from the box (`http://host.containers.internal:8650`, laib's archiv
+    template `ARCHIV_HOMES_INTERN`), form fields `d`, `s`: HMAC-SHA256 with
+    the `HOMES_ARCHIV_SECRET_<PERSON>` of the person `d` names, over
+    `archiv-uebernahme-2.` + `d`; `am` within two minutes and not before
+    Homes started, each `nonce` once, `weg` takes the lines back (the
+    archive's *Rückgängig*). Both ends with a household card → both cards
+    get `RELATED` with the other's `urn:uuid:` and the kind seen from it;
+    else each end that is the person's phone contact gets the relation by
+    name through `/napi/kontakte/korrekturen`; a household card never gets
+    a name. Answers JSON `{"ok", "grund"}`: 200 written, 401 not a valid
+    packet of that person's archive or out of time, 409 already taken, 403
+    anything that came through the public route (`X-Homes-Proxy`,
+    `X-Forwarded-*`, `Remote-User`), 502 the book did not take it.
   - *Automatisch zurück* (owner 2026-11-09): a person renamed in Immich
     renames its Haushalts-Kontakt (N and FN, written as an accepted
     correction is). `zuordnung` notes both names as last seen or written

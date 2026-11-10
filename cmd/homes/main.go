@@ -48,6 +48,7 @@ import (
 	"github.com/mdopp/homes/internal/reitti"
 	"github.com/mdopp/homes/internal/samba"
 	"github.com/mdopp/homes/internal/schalter"
+	"github.com/mdopp/homes/internal/uebernahme"
 	"github.com/mdopp/homes/internal/usage"
 	"github.com/mdopp/homes/internal/werkstatt"
 	"github.com/mdopp/homes/internal/zugang"
@@ -119,6 +120,15 @@ func routes(s site) http.Handler {
 	// (laib ADR 0012 §4; the template publishes 8650 lan:false, the firewall keeps
 	// the LAN out). Not through Caddy: the route has no /mcp/ bypass.
 	mux.Handle("/mcp/haushalt", haushalt.Handler(s.hh))
+	// a relation the person answered in their own archive, posted by that archive from the box (archiv#27):
+	// like /mcp/haushalt not through Caddy, and Empfang refuses a request that came through the public route
+	if len(s.archive) > 0 {
+		geheim := map[string]string{}
+		for person, a := range s.archive {
+			geheim[person] = a.Secret
+		}
+		mux.Handle(uebernahme.Pfad, &uebernahme.Empfang{Geheim: geheim, Kontakte: s.hh.Contacts, Handy: s.antworten, Now: time.Now, Seit: time.Now()})
+	}
 	// counted behind the proxy secret: only what Caddy let through is a page view (haus#50)
 	mux.Handle("/", pages.RequireProxy(s.proxySecret, pages.Counted(s.usage, familyMux(s))))
 	return mux
@@ -162,10 +172,6 @@ func familyOf(s site) pages.StartConfig {
 		DocumentsMail: s.docsMail, PaperlessPublicURL: s.paperlessPublic, PaperlessLANOnly: s.paperlessLAN, Sicherung: s.napi.Sicherung,
 		Reitti: s.napi.Reitti, Module: s.napi.Module, Einrichtung: s.napi.Einrichtung, PhoneCountry: s.hh.PhoneCountry, Gesichter: s.gesichter, Netz: s.netz}
 	family.Archive, family.ArchivURL = archivOf(s)
-	family.ArchivGeheim = map[string]string{}
-	for person, a := range s.archive { // „Übernehmen“ from the person's archive (archiv#27)
-		family.ArchivGeheim[person] = a.Secret
-	}
 	family.Antworten, family.DNS, family.KontaktURL = s.antworten, net.DefaultResolver, s.kontaktURL
 	family.Zugang = s.zugang // the teaser's access requests, for the admins' Start and /zugang (owner 2026-11-08)
 	// the lists, the music wish list and the shelf, before any page takes its copy of family

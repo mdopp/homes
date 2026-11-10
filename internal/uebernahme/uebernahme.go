@@ -1,23 +1,23 @@
 // Package uebernahme writes a relation the person answered in their own
 // message archive (mdopp/archiv#27, homes ADR 0002) into the address
-// books, and only after the person confirmed it on Homes' page
-// (pages.Uebernehmen). The archive asks; Homes writes.
+// books. The person's tap in their own open archive is their consent
+// (owner 2026-11-10): the archive posts the line to Pfad at once, server to
+// server, and its Rückgängig takes it back the same way (weg). It comes
+// from the box (laib templates/archiv: ARCHIV_HOMES_INTERN, Homes' port on
+// host.containers.internal), never through Caddy: a request that came
+// through the public route (X-Homes-Proxy, a forwarded address or a
+// login) is refused. The body (archiv apps/archiv/uebernahme.go, version 2):
 //
-// The archive hands a packet in a POST body (archiv apps/archiv/uebernahme.go,
-// version 1):
+//	d = base64url(JSON {"person", "am", "nonce", "weg"?, "zeilen": [{"x", "y", "art"}]}), no padding
+//	s = base64url(HMAC-SHA256(<that person's archive secret>, "archiv-uebernahme-2." + d)), no padding
 //
-//	d = base64url(JSON {"person", "bis", "zeilen": [{"x", "y", "art"}]}), no padding
-//	s = base64url(HMAC-SHA256(<that archive's secret>, "archiv-uebernahme-1." + d)), no padding
-//
-// Lesen takes it only for the login named person, signed with that
-// person's archive secret (HOMES_ARCHIV_SECRET_<PERSON>), before bis and
-// no more than two hours ahead: nobody else, and no page without the
-// secret, can make one.
-//
-// Where a line goes (owner 2026-11-10: where the contact lives): both
-// ends with a household card → both household cards, each naming the
-// other by UID only; else → the person's own phone, on each end that is a
-// phone contact, by name. A household card never gets a name here.
+// s is checked with the secret of the person d names (HOMES_ARCHIV_SECRET_
+// <PERSON>): an archive writes only for its own person. am within gilt of
+// now and not before Homes started, each nonce once: no old or replayed
+// packet writes. Where a line goes (owner 2026-11-10: where the contact
+// lives): both ends with a household card → both household cards, each
+// naming the other by UID only; else → the person's own phone, on each end
+// that is a phone contact, by name. A household card never gets a name.
 package uebernahme
 
 import (
@@ -28,8 +28,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"log"
+	"net/http"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/mdopp/homes/internal/caldav"
@@ -39,8 +42,10 @@ import (
 )
 
 const (
-	version = "archiv-uebernahme-1."
-	gilt    = 2 * time.Hour
+	// Pfad is where the archive posts, on Homes' own port only.
+	Pfad    = "/intern/uebernahme"
+	version = "archiv-uebernahme-2."
+	gilt    = 2 * time.Minute
 	// Haushalt and Handy are where a line goes.
 	Haushalt = "haushalt"
 	Handy    = "handy"
@@ -63,25 +68,27 @@ type Zeile struct {
 // Paket is what the archive sent.
 type Paket struct {
 	Person string    `json:"person"`
-	Bis    time.Time `json:"bis"`
+	Am     time.Time `json:"am"`
+	Nonce  string    `json:"nonce"`
+	Weg    bool      `json:"weg,omitempty"`
 	Zeilen []Zeile   `json:"zeilen"`
 }
 
-// ErrUngueltig is a packet not signed for this person, too old, or without
-// a line Homes can write.
+// ErrUngueltig is a packet not signed for the person it names, out of
+// time, or without a line Homes can write.
 var ErrUngueltig = errors.New("uebernahme: kein gültiges Paket des Archivs")
 
-// Lesen checks d and s with secret for person at now.
-func Lesen(d, s, secret, person string, now time.Time) (Paket, error) {
-	m := hmac.New(sha256.New, []byte(secret))
+// Lesen checks d and s with the secret of the person d names, at now.
+func Lesen(d, s string, geheim map[string]string, now time.Time) (Paket, error) {
+	var p Paket
+	b, err := base64.RawURLEncoding.DecodeString(d)
+	if err != nil || json.Unmarshal(b, &p) != nil || p.Person == "" || geheim[p.Person] == "" {
+		return Paket{}, ErrUngueltig
+	}
+	m := hmac.New(sha256.New, []byte(geheim[p.Person]))
 	m.Write([]byte(version + d))
 	sig, err := base64.RawURLEncoding.DecodeString(s)
-	var p Paket
-	if secret == "" || person == "" || err != nil || !hmac.Equal(sig, m.Sum(nil)) {
-		return p, ErrUngueltig
-	}
-	b, err := base64.RawURLEncoding.DecodeString(d)
-	if err != nil || json.Unmarshal(b, &p) != nil || p.Person != person || !now.Before(p.Bis) || p.Bis.Sub(now) > gilt {
+	if err != nil || !hmac.Equal(sig, m.Sum(nil)) || len(p.Nonce) < 16 || now.Sub(p.Am) > gilt || p.Am.Sub(now) > gilt/4 {
 		return Paket{}, ErrUngueltig
 	}
 	p.Zeilen = slices.DeleteFunc(p.Zeilen, func(z Zeile) bool { return Wohin(z) == "" || !slices.Contains(netz.Arten, z.Art) })
@@ -102,10 +109,10 @@ func Wohin(z Zeile) string {
 	return ""
 }
 
-// Schreiben writes z: into both household cards (kontakte), or through
-// handy (the corrections the person's Homes app fetches) to wer's phone;
-// each end gets the other, the kind seen from it.
-func Schreiben(ctx context.Context, kontakte *caldav.Client, handy *kontaktantwort.Store, wer string, z Zeile) error {
+// Schreiben writes z (weg: takes it back): into both household cards
+// (kontakte), or through handy (the corrections the person's Homes app
+// fetches) to wer's phone; each end gets the other, the kind seen from it.
+func Schreiben(ctx context.Context, kontakte *caldav.Client, handy *kontaktantwort.Store, wer string, z Zeile, weg bool) error {
 	wohin := Wohin(z)
 	if wohin == Haushalt && kontakte == nil || wohin == Handy && handy == nil {
 		return ErrUngueltig
@@ -118,12 +125,85 @@ func Schreiben(ctx context.Context, kontakte *caldav.Client, handy *kontaktantwo
 		switch {
 		case wohin == Haushalt:
 			wert := "urn:uuid:" + strings.TrimPrefix(s.mit.Haushalt, "urn:uuid:")
-			_, err := kontakte.CorrectShared(ctx, s.auf.Haushalt, []caldav.Korrektur{{Prop: "RELATED", Alt: s.mit.Name}, // a line by name to the other goes
-				{Prop: "RELATED", Alt: wert, Neu: wert, Art: cmp.Or(netz.Related(s.art), "kin")}})
+			ks := []caldav.Korrektur{{Prop: "RELATED", Alt: s.mit.Name}, // a line by name to the other goes
+				{Prop: "RELATED", Alt: wert, Neu: wert, Art: cmp.Or(netz.Related(s.art), "kin")}}
+			if weg {
+				ks = []caldav.Korrektur{{Prop: "RELATED", Alt: wert}}
+			}
+			_, err := kontakte.CorrectShared(ctx, s.auf.Haushalt, ks)
 			errs = append(errs, err)
 		case s.auf.Handy != "":
-			errs = append(errs, handy.Handy(wer, gesichter.HandyAenderung{UID: s.auf.Handy, AltVorname: s.auf.Name, Mit: s.mit.Name, Art: s.art}))
+			art := map[bool]string{false: s.art}[weg] // no kind: the phone takes the relation away
+			errs = append(errs, handy.Handy(wer, gesichter.HandyAenderung{UID: s.auf.Handy, AltVorname: s.auf.Name, Mit: s.mit.Name, Art: art}))
 		}
 	}
 	return errors.Join(errs...)
+}
+
+// Empfang is Homes' end of the archive's write (Pfad): each archive's
+// secret by person, the household book and the phones' corrections.
+type Empfang struct {
+	Geheim   map[string]string
+	Kontakte *caldav.Client
+	Handy    *kontaktantwort.Store
+	Now      func() time.Time
+	Seit     time.Time // Homes' start: a packet made before it may have been taken already
+
+	mu      sync.Mutex
+	gesehen map[string]time.Time // the nonces taken, until their packet is out of time
+}
+
+// ServeHTTP takes one packet and says how it ended, as JSON.
+func (e *Empfang) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	antwort := func(code int, grund string) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(code)
+		json.NewEncoder(w).Encode(map[string]any{"ok": code == http.StatusOK, "grund": grund})
+	}
+	switch {
+	case r.Header.Get("X-Homes-Proxy") != "" || r.Header.Get("X-Forwarded-For") != "" || r.Header.Get("X-Forwarded-Host") != "" || r.Header.Get("Remote-User") != "":
+		antwort(http.StatusForbidden, "nur von der Box, nicht über die öffentliche Route")
+		return
+	case r.Method != http.MethodPost:
+		antwort(http.StatusMethodNotAllowed, "nur POST")
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
+	now := e.Now()
+	p, err := Lesen(r.PostFormValue("d"), r.PostFormValue("s"), e.Geheim, now)
+	if err != nil {
+		antwort(http.StatusUnauthorized, "kein gültiges Paket des Archivs")
+		return
+	}
+	if !e.neu(p, now) {
+		antwort(http.StatusConflict, "dieses Paket wurde schon genommen")
+		return
+	}
+	for _, z := range p.Zeilen {
+		if err := Schreiben(r.Context(), e.Kontakte, e.Handy, p.Person, z, p.Weg); err != nil {
+			log.Printf("homes: uebernahme: a line for %s not written: %v", p.Person, err)
+			antwort(http.StatusBadGateway, "ins Adressbuch ließ sich nicht schreiben")
+			return
+		}
+	}
+	antwort(http.StatusOK, "")
+}
+
+// neu takes p's nonce once; a packet made before Homes started is not new.
+func (e *Empfang) neu(p Paket, now time.Time) bool {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.gesehen == nil {
+		e.gesehen = map[string]time.Time{}
+	}
+	for n, bis := range e.gesehen {
+		if now.After(bis) {
+			delete(e.gesehen, n)
+		}
+	}
+	if _, da := e.gesehen[p.Nonce]; da || p.Am.Before(e.Seit) {
+		return false
+	}
+	e.gesehen[p.Nonce] = p.Am.Add(gilt)
+	return true
 }
