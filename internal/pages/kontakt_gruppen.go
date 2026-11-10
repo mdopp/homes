@@ -14,6 +14,7 @@ import (
 
 	"github.com/mdopp/homes/internal/caldav"
 	"github.com/mdopp/homes/internal/haushalt"
+	"github.com/mdopp/homes/internal/kontaktantwort"
 	"github.com/mdopp/homes/internal/texte"
 )
 
@@ -39,13 +40,13 @@ func kontaktGruppen(r *http.Request, ct caldav.Contact, alle []string) string {
 	if len(gs) == 0 && !darf {
 		return ""
 	}
-	uid := `<input type=hidden name=uid value="` + html.EscapeString(ct.UID) + `">`
+	ziel := ` action="` + html.EscapeString(kontaktPfad(kontaktantwort.Haushalt, ct.UID)) + `"><input type=hidden name=uid value="` + html.EscapeString(ct.UID) + `">`
 	b := gruppenStyle + "<h2>" + wort(texte.Gruppen) + "</h2>" + map[bool]string{true: "<p class=k>" + wort(texte.GruppenKeine) + "</p>"}[len(gs) == 0] +
-		`<form method=post>` + uid + `<ul class=chips>` + gruppenChips(gs, "", darf) + `</ul></form>`
+		`<form method=post` + ziel + `<ul class=chips>` + gruppenChips(gs, "", darf) + `</ul></form>`
 	if !darf {
 		return b
 	}
-	b += `<form method=post class=gruppe-dazu>` + uid + `<label>` + wort(texte.GruppeDazu) + `<input name=gruppe-dazu list=gruppen-namen required maxlength=` + fmt.Sprint(haushalt.GruppeMax) +
+	b += `<form method=post class=gruppe-dazu` + ziel + `<label>` + wort(texte.GruppeDazu) + `<input name=gruppe-dazu list=gruppen-namen required maxlength=` + fmt.Sprint(haushalt.GruppeMax) +
 		` autocomplete=off placeholder="` + wort(texte.GruppeBeispiel) + `"></label><datalist id=gruppen-namen>`
 	for _, g := range slices.DeleteFunc(alle, func(g string) bool { return haushalt.InGruppe(ct, g) }) {
 		b += `<option value="` + html.EscapeString(g) + `">`
@@ -62,9 +63,8 @@ func gruppeAendern(r *http.Request, cfg StartConfig) (said, problem string) {
 	weg := oneLine(r.PostForm.Get("gruppe-weg"))
 	k, nein := haushalt.GruppeKorrektur(oneLine(r.PostForm.Get("gruppe-dazu")), weg)
 	if !isAdmin(r) || cfg.Contacts == nil {
-		nein = texte.GruppeNurAdmins
-	}
-	if nein != "" {
+		return "", texte.T(texte.GruppeNurAdmins)
+	} else if nein != "" {
 		return "", texte.T(nein)
 	}
 	var done []bool

@@ -27,7 +27,7 @@ func TestKontaktGruppenShown(t *testing.T) {
 	cfg := StartConfig{Contacts: c}
 	_, body, _ := familyPage(t, Kontakt, cfg, "GET", "/kontakte/a", "admins")
 	mustContain(t, body, "<h2>Gruppen</h2>", `<a href="/kontakte?gruppe=Stammtisch">Stammtisch</a><button name=gruppe-weg value="Stammtisch" aria-label="Aus „Stammtisch“ entfernen"`,
-		`<input type=hidden name=uid value="a">`, `Zu Gruppe hinzufügen<input name=gruppe-dazu list=gruppen-namen required maxlength=60`, `<datalist id=gruppen-namen><option value="Chor"></datalist>`)
+		`<form method=post class=gruppe-dazu action="/kontakte/a"><input type=hidden name=uid value="a">`, `Zu Gruppe hinzufügen<input name=gruppe-dazu list=gruppen-namen required maxlength=60`, `<datalist id=gruppen-namen><option value="Chor"></datalist>`)
 	mustNotContain(t, body, ">Firma<", `value="Firma"`, `<option value="Stammtisch">`)
 	_, body, _ = familyPage(t, Kontakt, cfg, "GET", "/kontakte/a", "family")
 	mustContain(t, body, "<h2>Gruppen</h2>", `<a href="/kontakte?gruppe=Stammtisch">Stammtisch</a></li>`)
