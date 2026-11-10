@@ -137,3 +137,27 @@ func TestNetzBeziehungenKlaeren(t *testing.T) {
 	mustNotContain(t, body, "Wie steht Ben zu Carla?")
 	mustNotContain(t, as(Kontakt, cfg, "/kontakte/b", "ben", "ben@box.test").Body.String(), "Beziehungen klären")
 }
+
+// A contact's „Beziehungen“ (owner 2026-11-10: „Was ist los mit dem ux?“):
+// one line per relation, the kind chosen, saved on choosing; Keine
+// Beziehung is chosen when that was the answer and offers Vergessen;
+// choosing Keine Beziehung takes a kind out of the cards, Vergessen drops
+// the answer.
+func TestNetzBeziehungZeile(t *testing.T) {
+	cfg := netzConfig(t)
+	post := func(v url.Values) string { return antworteBei(Kontakt(cfg), "/kontakte/b", "anna", v).Body.String() }
+	post(url.Values{"x": {"p-ben"}, "y": {"p-anna"}, "antwort": {"ja"}, "art": {"partner"}})
+	post(url.Values{"x": {"p-ben"}, "y": {"p-carla"}, "antwort": {"keine"}})
+	body := as(Kontakt, cfg, "/kontakte/b", "anna", "anna@box.test").Body.String()
+	mustContain(t, body, `<input type=hidden name=antwort value=aendern><label><span>Anna</span><select name=art aria-label="Anna ist …" onchange="this.form.requestSubmit()"><option value="partner" selected>Partner/in</option>`,
+		`<option value="keine" selected>Keine Beziehung</option><option value="vergessen">Vergessen</option></select>`)
+	mustNotContain(t, body, "<span>Anna</span><small", "Bitte wählen</option><option value=\"partner\" selected")
+	mustContain(t, post(url.Values{"x": {"p-carla"}, "y": {"p-ben"}, "antwort": {"aendern"}, "art": {"vergessen"}}), "Vergessen")
+	body = post(url.Values{"x": {"p-anna"}, "y": {"p-ben"}, "antwort": {"aendern"}, "art": {"keine"}})
+	cards, _, _ := cfg.Contacts.Cards(t.Context())
+	for _, c := range cards {
+		if strings.Contains(c.Text(), "RELATED;TYPE=spouse") {
+			t.Errorf("Keine Beziehung left the relation in card %s:\n%s\n%s", c.UID, c.Text(), body)
+		}
+	}
+}

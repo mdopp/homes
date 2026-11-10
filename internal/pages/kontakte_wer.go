@@ -13,7 +13,7 @@ import (
 
 // „Wer ist das?“ (owner 2026-11-09): on „Dieselbe Person?“, up to five faces Immich sees often and
 // knows no name for (gesichter.Wer), each with its photos, places and company, a name field (it suggests
-// the household's people, firms not) with Speichern (to Immich) and Kenne ich nicht (never asked again).
+// the household's people and the owner's Handy-Kontakte, firms not) with Speichern (to Immich) and Kenne ich nicht (never asked again).
 
 // werKarten is the section, posted to action; "" without a face to name.
 func werKarten(r *http.Request, cfg StartConfig, wer []gesichter.Seite, action string) string {
@@ -22,12 +22,15 @@ func werKarten(r *http.Request, cfg StartConfig, wer []gesichter.Seite, action s
 	}
 	t := func(id texte.ID) string { return html.EscapeString(texte.T(id)) }
 	var b strings.Builder
-	var all []caldav.Contact
-	if cfg.Contacts != nil {
-		fetch(r, func(ctx context.Context) { all, _, _ = cfg.Contacts.Contacts(ctx) })
+	var all, eigene []caldav.Contact
+	if cfg.Contacts != nil { // the page is the key owner's alone (privatEigen): their Handy-Kontakte too (owner 2026-11-10)
+		fetch(r, func(ctx context.Context) { all, _, _ = cfg.Contacts.Contacts(ctx) },
+			func(ctx context.Context) { eigene, _ = meineKontakte(ctx, cfg, r.Header.Get("Remote-User")) })
 	}
-	for _, c := range all {
-		if c.Name != "" && !c.IsFirm() {
+	seen := map[string]bool{"": true}
+	for _, c := range append(all, eigene...) {
+		if !seen[c.Name] && !c.IsFirm() {
+			seen[c.Name] = true
 			b.WriteString(`<option value="` + html.EscapeString(c.Name) + `">`)
 		}
 	}

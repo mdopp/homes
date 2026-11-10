@@ -72,7 +72,8 @@ budget() { # budget <name> <cap> <dir…>
 # 2026-11-09, owner approved 2026-11-09: Beziehungen klären (pages 18,350 -> 18,480; 18,446 used): the questions on
 # /kontakte/netz and on the contact page
 # 2026-11-10, owner approved 2026-11-09: Beziehungen änderbar, aufs Handy, in Deine Aufgaben und im Kontaktformular (homes#330) (18,480 -> 18,600): edit/remove on the contact page, the form's Beziehungen section and its review
-budget pages 18600 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-10, owner approved 2026-11-10: Beziehungen als eine Zeile je Person, beim Wählen gespeichert, und Handy-Kontakte als Namensvorschläge bei Wer ist das? (pages 18,600 -> 18,620; 18,613 used); shrinks when the questions move to the archive (archiv#27)
+budget pages 18620 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
