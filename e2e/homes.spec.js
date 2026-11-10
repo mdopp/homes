@@ -1392,3 +1392,13 @@ for (const liste of ['/kontakte', '/kontakte/privat']) {
     await expect(page).toHaveURL(new RegExp(ziel.replace(/[?]/g, '\\?') + '$'));
   });
 }
+
+// owner 2026-11-10: „Dokumente-Adresse kopieren“ on Dokumente puts <login>+doc+ on the clipboard
+test('Dokumente: the person’s own address is copied as <login>+doc+', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/dokumente');
+  const knopf = page.getByRole('button', { name: 'Dokumente-Adresse kopieren' });
+  await knopf.click();
+  await expect(page.getByRole('button', { name: 'Kopiert' })).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('anna+doc+');
+});
