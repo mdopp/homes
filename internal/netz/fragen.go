@@ -303,10 +303,10 @@ func (n *Netz) merken(wer, x, y, art string) error {
 }
 
 // Eintragen writes the kind art (X is that of Y; Keine, Fremd: none any more)
-// into the cards of both: a household card's RELATED with its TYPE, the
-// other by its card's UID (a line by name to it goes), else by name; the
-// key owner's own phone contact through the phone (owner 2026-11-09,
-// gesichter.HandyAenderung), by name.
+// into the cards of both: a household card's RELATED with its TYPE and the
+// other household card's UID (a line by name to it goes); the key owner's
+// own phone contact through the phone (gesichter.HandyAenderung), by name.
+// A household card only ever names household contacts (owner 2026-11-10).
 func (n *Netz) Eintragen(ctx context.Context, x, y Knoten, art string) error {
 	weg := art == Keine || art == Fremd
 	if !weg && !slices.Contains(Arten, art) {
@@ -326,7 +326,7 @@ func (n *Netz) Eintragen(ctx context.Context, x, y Knoten, art string) error {
 		}
 		neu := map[bool]string{true: wert}[!weg]
 		switch {
-		case buch == "haushalt" && n.G.Kontakte != nil:
+		case buch == "haushalt" && n.G.Kontakte != nil && (weg || strings.HasPrefix(s.mit.Kontakt, "haushalt/")):
 			_, err := n.G.Kontakte.CorrectShared(ctx, uid, append(ks, caldav.Korrektur{Prop: "RELATED", Alt: wert, Neu: neu, Art: typ}))
 			errs = append(errs, err)
 		case buch == "privat" && n.G.Handy != nil && n.G.Wessen() != "":

@@ -85,7 +85,7 @@ func TestEintragen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if f, _ := n.Beantworten("p-kim", "p-anna", "kind"); n.Eintragen(t.Context(), f.X, f.Y, "kind") != nil { // kim has no card: anna's says her name
+	if f, _ := n.Beantworten("p-kim", "p-anna", "kind"); n.Eintragen(t.Context(), f.X, f.Y, "kind") != nil { // kim is no household contact: anna's card does not name her
 		t.Fatal("kim")
 	}
 	cards, _, _ := n.G.Kontakte.Cards(t.Context())
@@ -94,7 +94,7 @@ func TestEintragen(t *testing.T) {
 		text[c.UID] = c.Text()
 	}
 	if !strings.Contains(text["a"], "RELATED;TYPE=colleague:urn:uuid:c\r\n") || !strings.Contains(text["c"], "RELATED;TYPE=colleague:urn:uuid:a\r\n") ||
-		!strings.Contains(text["a"], "RELATED;TYPE=child;VALUE=text:Kim Berg\r\n") {
+		strings.Contains(text["a"], "Kim Berg") {
 		t.Fatalf("the cards:\n%s\n%s", text["a"], text["c"])
 	}
 	*jetzt = jetzt.Add(25 * time.Hour)
