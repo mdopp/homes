@@ -104,6 +104,7 @@ type site struct {
 	// whom Laib tells of a request (HOMES_TEASER_PERSON, box.yml notify.person) and the requests, in HOMES_DATA
 	teaserHost, teaserPerson string
 	zugang                   *zugang.Store
+	zuordnen                 *zuordnen // „Wem gehört dieser Scan?“ (laib DATA.md gap 6); nil without the Haushalt bearer
 }
 
 // routes is Homes' whole surface: /napi for the app, /mcp/haushalt for the
@@ -128,6 +129,9 @@ func routes(s site) http.Handler {
 			geheim[person] = a.Secret
 		}
 		mux.Handle(uebernahme.Pfad, &uebernahme.Empfang{Geheim: geheim, Kontakte: s.hh.Contacts, Handy: s.antworten, Now: time.Now, Seit: time.Now()})
+	}
+	if s.zuordnen != nil { // what Dokumente could not give anyone, posted from the box (zuordnen.go)
+		mux.Handle(zuordnenPfad, s.zuordnen)
 	}
 	// counted behind the proxy secret: only what Caddy let through is a page view (haus#50)
 	mux.Handle("/", pages.RequireProxy(s.proxySecret, pages.Counted(s.usage, familyMux(s))))
@@ -174,6 +178,9 @@ func familyOf(s site) pages.StartConfig {
 	family.Archive, family.ArchivURL = archivOf(s)
 	family.Antworten, family.DNS, family.KontaktURL = s.antworten, net.DefaultResolver, s.kontaktURL
 	family.Zugang = s.zugang // the teaser's access requests, for the admins' Start and /zugang (owner 2026-11-08)
+	if s.zuordnen != nil {
+		family.Zuordnen = s.zuordnen
+	}
 	// the lists, the music wish list and the shelf, before any page takes its copy of family
 	family.Einkauf, family.Wuensche = s.hh.Einkauf, s.hh.Wuensche
 	if s.hh.Wuensche != nil {
@@ -514,6 +521,7 @@ func main() {
 		domain: einrichten.Domain(os.Getenv("HOMES_PUBLIC_URL")), archive: archive, gesichter: gesichter.FromEnv(dataDir),
 		antworten: &kontaktantwort.Store{Path: filepath.Join(dataDir, kontaktantwort.Datei)}, kontaktURL: os.Getenv("HOMES_KONTAKT_URL"),
 		teaserHost: os.Getenv("HOMES_TEASER_HOST"), teaserPerson: os.Getenv("HOMES_TEASER_PERSON"), zugang: &zugang.Store{Path: filepath.Join(dataDir, zugang.Datei)}}
+	st.zuordnen = openZuordnen(filepath.Join(dataDir, "zuordnen.json"), hh.Token)
 	st.napi.Archiv, _ = archivOf(st)        // the app's „Dein Archiv“, as the pages'
 	st.napi.Antworten = st.antworten        // the phone's accepted corrections of its own contacts
 	st.hh.Wessen = st.gesichter.Wessen      // handy_firmen: the Immich key owner's own phone contacts, nobody else's

@@ -66,6 +66,7 @@ func Gruppen(cfg StartConfig) map[string][]modul.Route {
 	gs.add("dokumente", ScannenPath, Scannen(cfg))               // the scan orders to Laib (haus#76, laib#568)
 	gs.add("dokumente", TrennblattPath, Trennblatt(cfg))         // separator sheets to print, PATCH T (haus#161)
 	gs.add("dokumente", cards.DocumentPages, Dokument(cfg))
+	gs.add("dokumente", ZuordnenPath, ZuordnenSeite(cfg)) // the admins: whose a scan is (laib DATA.md gap 6)
 	musikGruppe(gs, cfg)
 	gs.add("podcasts", PodcastsPath, Podcasts(cfg))            // haus#123; off, its trace (modulAus)
 	gs.add("gesehen", GesehenPath, Gesehen(cfg))               // haus#152

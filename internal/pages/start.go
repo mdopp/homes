@@ -131,6 +131,7 @@ type StartConfig struct {
 	TeaserHost   string
 	TeaserPerson string
 	Zugang       *zugang.Store
+	Zuordnen     Zuordnen // „Wem gehört dieser Scan?“ (laib DATA.md gap 6); nil, no page
 }
 
 // backendWait is how long a page waits for any one backend: a slow one

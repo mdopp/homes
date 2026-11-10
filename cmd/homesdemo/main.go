@@ -14,6 +14,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"log"
 	"math"
@@ -187,7 +188,10 @@ func main() {
 	doku.Ablage, doku.DocumentsMail, doku.Module = napi.NewUploads(upload), "dokumente@example.org", demoModule(true)
 	doku.PaperlessPublicURL, doku.PaperlessLANOnly = "https://paperless.example", true // the archive's way in, at home only
 	doku.Docs = demoPaperless()                                                        // the search, the Bereiche, Zuletzt abgelegt (owner 2026-11-06)
+	doku.Zuordnen = &demoZuordnen{offen: []pages.Scan{{ID: 41, Zeichen: "z41", Absender: "Praxis Dr. Muster", Datum: "3. November 2026", Seiten: 2, Seit: "heute 09:14"}},
+		personen: []pages.Person{{Login: "anna", Name: "Anna"}, {Login: "ben", Name: "Ben"}}} // laib DATA.md gap 6
 	mux.HandleFunc("/dokumente", pages.Dokumente(doku))
+	mux.HandleFunc(pages.ZuordnenPath, pages.ZuordnenSeite(doku))
 	mux.HandleFunc(pages.DokumenteSuchePath, pages.DokumenteSuche(doku))
 	mux.HandleFunc("/willkommen", pages.Willkommen(cfg))
 	store, err := devices.Open(dir)
@@ -466,4 +470,29 @@ func (f *laibFake) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		text, isErr = `{"offen":1,"faellig":0,"aufgaben":[{"id":8,"titel":"Homes-App koppeln","warum":"Dann hast du das Haus auf dem Handy.","fuer":"alle","weg":{"seite":"/willkommen"}}]}`, false
 	}
 	json.NewEncoder(w).Encode(map[string]any{"result": map[string]any{"content": []map[string]string{{"text": text}}, "isError": isErr}})
+}
+
+// demoZuordnen is „Wem gehört dieser Scan?“ with one scan Dokumente could not give anyone.
+type demoZuordnen struct {
+	mu       sync.Mutex
+	offen    []pages.Scan
+	personen []pages.Person
+}
+
+func (z *demoZuordnen) Stand() ([]pages.Scan, []pages.Person) {
+	z.mu.Lock()
+	defer z.mu.Unlock()
+	return slices.Clone(z.offen), z.personen
+}
+
+func (z *demoZuordnen) Antworte(id int, zeichen, an, von string) error {
+	z.mu.Lock()
+	defer z.mu.Unlock()
+	for i, s := range z.offen {
+		if s.ID == id && s.Zeichen == zeichen {
+			z.offen[i].An = an
+			return nil
+		}
+	}
+	return errors.New("demo: no such scan")
 }

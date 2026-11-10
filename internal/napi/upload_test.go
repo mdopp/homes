@@ -497,3 +497,31 @@ func TestMusikFromThePhone(t *testing.T) {
 		t.Errorf("no inbox → %d", code)
 	}
 }
+
+// laib DATA.md, gap 6 (owner 2026-11-10): what a phone sends is its person's from the start. It goes into
+// von-<login>/, which Paperless makes a tag and Dokumente reads as whose it is; the family sees it only
+// when Dokumente finds it is the household's or the person shares it.
+func TestUploadIsTheDevicesPersons(t *testing.T) {
+	var calls []string
+	lb := fakeLaib(t, &calls)
+	t.Cleanup(lb.Close)
+	dir := t.TempDir()
+	h := Handler(Config{Laib: &laib.Client{URL: lb.URL, Token: "ops"}, Validate: StaticValidator([]string{"dev1", "dev2"}), UploadDir: dir,
+		Whoami: func(b string) (string, bool) { return map[string]string{"dev1": "anna", "dev2": "../ben"}[b], true }})
+	ct, body := multipartBody(t, part{name: "file", filename: "brief.pdf", ctype: "application/pdf", body: pdf})
+	if code, out := upload(t, h, "dev1", ct, body); code != 200 {
+		t.Fatalf("upload: %d %v", code, out)
+	}
+	fs := files(t, dir)
+	if len(fs) != 1 || !strings.HasPrefix(keys(fs)[0], "von-anna/brief-") {
+		t.Fatalf("into the person's folder: %v", keys(fs))
+	}
+	// a name that is no login never makes a folder of its own: the top, which Dokumente's sorting decides
+	ct, body = multipartBody(t, part{name: "file", filename: "zwei.pdf", ctype: "application/pdf", body: pdf})
+	if code, _ := upload(t, h, "dev2", ct, body); code != 200 {
+		t.Fatalf("upload: %d", code)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "..", "ben")); err == nil || len(files(t, dir)) != 2 {
+		t.Fatalf("outside the inbox, or lost: %v", keys(files(t, dir)))
+	}
+}

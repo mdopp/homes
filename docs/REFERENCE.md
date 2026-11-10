@@ -509,6 +509,21 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     moved into the person's archive (archiv#27 step 2, ADR 0002); the page
     links there (`<archiv>/tresor/umfeld`) for whom has an archive. A
     contact's *Beziehungen* still change in place.
+  - *Wem gehört dieser Scan?* (`/dokumente/zuordnen`, admins only; laib
+    docs/DATA.md gap 6): what Dokumente's sorting could not give to a
+    person or the household stays Dokumente's in Paperless, seen by no one
+    in the family. Dokumente posts the list server to server to Homes' own
+    port (`POST /intern/zuordnen`, `Authorization: Bearer
+    <HOMES_HAUSHALT_TOKEN>`, refused through Caddy; `{"offen": [{"id",
+    "zeichen", "absender", "datum", "seiten", "seit"}], "personen":
+    [{"login", "name"}]}`), kept in `HOMES_DATA/zuordnen.json`; the answer
+    is `{"antworten": [{"id", "zeichen", "an"}]}`, `an` a login or
+    `haushalt`, only for a scan still posted with the same `zeichen`
+    (Dokumente's mark of what is shown, so an answer counts only for what
+    the admin saw). The page shows the sender, the date, the pages and when
+    it came, a button per person and *Haushalt*; an answer says *Gemerkt*,
+    the scan then *Geht an …, sobald Dokumente das nächste Mal läuft*.
+    While any is unanswered, the admins' *Deine Aufgaben* lead with it.
   - *Ins Adressbuch übernehmen* (archiv#27 step 2, ADR 0002;
     `POST /intern/uebernahme`, `internal/uebernahme`): no page. A tap on an
     answer in the person's own open archive is their consent (owner
@@ -643,9 +658,14 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     Paperless, each only when its config is set. *Per E-Mail ablegen*, a
     `mailto:` to `HOMES_DOCUMENTS_MAIL` (one plain address, else no button)
     with the hint that the attachments are filed and the subject becomes
-    the title (Paperless fetches that mailbox itself, laib#521). *Dokument
-    ablegen*, a file or the phone's camera and an optional title, stored
-    into `HOMES_UPLOAD_DIR` exactly as the app's `/napi/upload` (same
+    the title (Paperless fetches that mailbox itself, laib#521); before it
+    the viewer's own address `<login>+doc@<that address's domain>`
+    (laib's paperless template makes a rule per person: what arrives there
+    is theirs). *Dokument ablegen*, a file or the phone's camera and an
+    optional title, stored into `HOMES_UPLOAD_DIR/von-<login>/` (the
+    signed-in person's; Paperless makes the folder a tag and Dokumente
+    gives the document to them, laib docs/DATA.md gap 6) exactly as the
+    app's `/napi/upload` (same
     types, caps, all-or-nothing staging; `napi.Uploads`), then back to the
     page with *Liegt in Paperless* or the reason in words. *In Paperless
     öffnen* to `HOMES_PAPERLESS_PUBLIC_URL` (*Weiter in*); with
@@ -1094,8 +1114,11 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   page that does not answer 502, no notes 404 — each `{"error": "<a
   German sentence>"}`. Up to 75 s (a page, then the house model).
 - The camera capture: `POST /napi/upload` (multipart, `file` parts, an
-  optional `filename`) stores into `HOMES_UPLOAD_DIR`, the share's folder
-  Paperless consumes; unset, 404. JPEG and PDF as the contract
+  optional `filename`) stores into `HOMES_UPLOAD_DIR/von-<login>/`, the
+  device's person's folder in the share's folder Paperless consumes (laib
+  docs/DATA.md gap 6: Paperless makes the folder a tag, Dokumente gives the
+  document to that person; a person name that is no login: the top folder,
+  whose documents Dokumente's sorting assigns); unset, 404. JPEG and PDF as the contract
   has them, and PNG, GIF and WebP beyond it (Paperless takes them), each
   only when its first bytes say so (else 415); 25 MB a file (413), 64 MB
   and 20 files a request. The name is the phone's, made plain (no

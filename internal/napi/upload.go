@@ -20,16 +20,12 @@ import (
 	"unicode"
 )
 
-// The camera capture (haus#10): the app posts a photo or a PDF it made
-// (CameraCaptureActivity.kt, ApiClient.uploadFile: multipart, a "filename"
-// part and a "file" part) and Homes puts it into HOMES_UPLOAD_DIR, the
-// share's folder Paperless consumes. A file appears there whole or not at
-// all: written aside under a name Paperless ignores (._*), then renamed to
-// its name with renameat2(RENAME_NOREPLACE), which never replaces an
-// existing file and which Paperless's inotify consumer sees (MOVED_TO; a
-// hard link fires only IN_CREATE). Where the kernel or the file system has
-// no RENAME_NOREPLACE, a hard link does the same, minus that event. A
-// request is stored all or nothing.
+// The camera capture (haus#10): the app posts a photo or PDF (ApiClient.uploadFile:
+// multipart, "filename" and "file") into HOMES_UPLOAD_DIR/von-<person>/, Paperless'
+// consume folder (laib DATA.md gap 6: theirs from the start). Whole or not at all:
+// written aside as ._* (Paperless ignores it), then renameat2(RENAME_NOREPLACE),
+// which never replaces a file and fires inotify's MOVED_TO; without it a hard
+// link, minus that event. A request is stored all or nothing.
 
 var (
 	uploadMaxFile  int64 = 25 << 20 // per file, the contract's 25 MB
@@ -45,15 +41,13 @@ var (
 // uploadMinFree is the room the share must have before an upload is read.
 func uploadMinFree() uint64 { return 2 * uint64(uploadMaxBody) }
 
-// uploadTypes are what Paperless consumes and the app may send, with the
-// extension Homes gives them. The bytes must say the same (sniffed); an
-// image/* outside this list (an SVG carries script) is 415.
+// uploadTypes are what Paperless consumes and the app may send, with Homes' extension; the
+// bytes must say the same (sniffed); an image/* outside this list (an SVG carries script) is 415.
 var uploadTypes = map[string]string{
 	"image/jpeg": ".jpg", "image/png": ".png", "image/gif": ".gif", "image/webp": ".webp", "application/pdf": ".pdf",
 }
 
-// what a file goes through on its way to the share; variables, so the tests
-// can make a disk fail or a name collide
+// what a file goes through on its way to the share; variables, so the tests can make a disk fail or a name collide
 var (
 	randHex = func(n int) string {
 		b := make([]byte, n)
@@ -78,9 +72,7 @@ type stageFile interface {
 // stagePrefix names a part written aside; Paperless ignores ._* files.
 const stagePrefix = "._homes-"
 
-// legacyStagePrefix is legacy: what the program staged as before the rename
-// (laib#1021). A part the stopped Haus left behind is swept with the rest;
-// ends with laib#1021 step 9.
+// legacyStagePrefix: what Haus staged as before the rename, swept too; ends with laib#1021 step 9.
 const legacyStagePrefix = "._haus-"
 
 // SweepUploads removes parts a stopped Homes (or Haus) left staged in dir.
@@ -108,7 +100,9 @@ func newUploads(dir string) *uploads {
 	return &uploads{dir: dir, slots: make(chan struct{}, uploadConcurrent)}
 }
 
-func (u *uploads) routes(gs gruppen) { gs.add("dokumente", "POST /napi/upload", u.upload) }
+func (u *uploads) routes(gs gruppen, uid func(*http.Request) (string, bool)) {
+	gs.add("dokumente", "POST /napi/upload", func(w http.ResponseWriter, r *http.Request) { p, _ := uid(r); u.upload(w, r, p) })
+}
 
 // the reasons a part is refused, each with its status
 type uploadErr struct {
@@ -145,8 +139,8 @@ func (d diskWriter) Write(p []byte) (int, error) {
 type staged struct{ tmp, name, ext string }
 
 // POST /napi/upload → {ok, id} for one file, {ok, files:[{ok, id}]} for several.
-func (u *uploads) upload(w http.ResponseWriter, r *http.Request) {
-	placed, code, reason := u.store(w, r)
+func (u *uploads) upload(w http.ResponseWriter, r *http.Request, person string) {
+	placed, code, reason := u.store(w, r, person)
 	if code != 0 {
 		refuse(w, code, reason)
 		return
@@ -169,16 +163,14 @@ type Uploads struct{ u *uploads }
 // NewUploads stores into dir, the share's consume folder.
 func NewUploads(dir string) *Uploads { return &Uploads{newUploads(dir)} }
 
-// Store reads r's multipart form ("file" parts, an optional "filename")
-// into the folder: the names it placed, or the status and the reason
-// (napi's words, "unsupported type", "busy" …) when nothing was stored.
-func (u *Uploads) Store(w http.ResponseWriter, r *http.Request) ([]string, int, string) {
-	return u.u.store(w, r)
+// Store reads r's multipart form ("file" parts, an optional "filename") into
+// person's folder: the names placed, or the status and napi's reason.
+func (u *Uploads) Store(w http.ResponseWriter, r *http.Request, person string) ([]string, int, string) {
+	return u.u.store(w, r, person)
 }
 
-// store is one upload request: the names placed, or a status and its
-// reason (code 0 when stored).
-func (u *uploads) store(w http.ResponseWriter, r *http.Request) ([]string, int, string) {
+// store is one upload request: the names placed, or a status and its reason (code 0 when stored).
+func (u *uploads) store(w http.ResponseWriter, r *http.Request, person string) ([]string, int, string) {
 	select {
 	case u.slots <- struct{}{}:
 		defer func() { <-u.slots }()
@@ -198,7 +190,7 @@ func (u *uploads) store(w http.ResponseWriter, r *http.Request) ([]string, int, 
 	if err != nil {
 		return nil, http.StatusBadRequest, "expected multipart/form-data"
 	}
-	root, err := os.OpenRoot(u.dir)
+	root, err := os.OpenRoot(inbox(u.dir, person))
 	if err != nil {
 		log.Printf("homes: upload: %v", err)
 		return nil, http.StatusServiceUnavailable, "upload_unavailable"
@@ -298,10 +290,18 @@ func (u *uploads) store(w http.ResponseWriter, r *http.Request) ([]string, int, 
 	return placed, 0, ""
 }
 
-// stage writes one file part aside, checked: an allowed type whose first
-// bytes are that type, not empty, not over the cap. tmp is set as soon as
-// a file exists, so the caller removes it whatever happens. The disk's
-// own errors come back as *diskErr.
+// inbox is person's von-<login>: Paperless makes it a tag, Dokumente gives the document to them by it
+func inbox(dir, person string) string {
+	if validPerson(person) {
+		dir += "/von-" + person
+		os.Mkdir(dir, 0o755) // there already: fine; not made: OpenRoot says so
+	}
+	return dir
+}
+
+// stage writes one file part aside, checked: an allowed type whose first bytes are that type,
+// not empty, not over the cap. tmp is set as soon as a file exists, so the caller removes it
+// whatever happens. The disk's own errors come back as *diskErr.
 func stage(root *os.Root, p *multipart.Part) (staged, error) {
 	ctype, _, _ := mime.ParseMediaType(p.Header.Get("Content-Type"))
 	ext, ok := uploadTypes[ctype]

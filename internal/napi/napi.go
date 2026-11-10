@@ -316,7 +316,7 @@ func Gruppen(c Config) map[string][]modul.Route {
 		t.routes(gs)
 	}
 	if c.UploadDir != "" { // the camera capture into the consume folder
-		newUploads(c.UploadDir).routes(gs)
+		newUploads(c.UploadDir).routes(gs, c.uid)
 	}
 	if c.MusicInbox != "" { // Teilen → Homes: songs and ZIPs into beets' inbox (haus#107), for the device's person
 		gs.add("musik", "POST /napi/musik", func(w http.ResponseWriter, r *http.Request) { musik.Hochladen(w, r, c.MusicInbox, c.Whoami) })
