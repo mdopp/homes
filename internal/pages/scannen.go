@@ -754,8 +754,8 @@ func stacks(r *http.Request, cfg StartConfig, all []laib.Stack) string {
 	return b.String()
 }
 
-// saysStackGone is a stack whose documents Paperless no longer has.
-const saysStackGone = "Davon ist nichts mehr in Paperless."
+// saysStackGone is a stack none of whose documents Homes sees: deleted, or a person's (laib DATA.md gap 6).
+const saysStackGone = "Davon ist für den Haushalt nichts in Paperless: gelöscht, oder es gehört jemandem selbst."
 
 // stackFoldScript keeps what a viewer opened or closed, per stack, in
 // their browser; it runs again after the page is fetched in place.

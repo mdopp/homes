@@ -365,6 +365,19 @@ test('Netzlaufwerk leads with the addresses once set up', async ({ page, request
   await expect(page.locator('details.aendern')).not.toHaveAttribute('open', '');
 });
 
+// laib DATA.md gap 6 (owner 2026-11-10): a scan Dokumente could not give anyone is seen by no one; an admin
+// says whose it is, seeing only the sender, the date and the pages. The tap answers at once and the page says what comes next.
+test('Wem gehört dieser Scan: an admin gives it to a person', async ({ page }, info) => {
+  await page.goto('/dokumente/zuordnen');
+  await expect(page.locator('h1')).toHaveText('Wem gehört dieser Scan?');
+  await expect(page.locator('section.karte h2')).toHaveText('Von Praxis Dr. Muster');
+  await expect(page.getByRole('button', { name: 'Haushalt (die ganze Familie)' })).toBeVisible();
+  await page.screenshot({ path: info.outputPath('dokumente-zuordnen.png'), fullPage: true });
+  await page.getByRole('button', { name: 'Ben' }).click();
+  await expect(page.locator('.gut')).toContainText('Gemerkt. Dokumente gibt es beim nächsten Durchgang weiter');
+  await expect(page.locator('.zustand')).toContainText('Geht an Ben');
+});
+
 // Owner 2026-11-04 (no link to Paperless on the web): the archive's way in leads, with its LAN-only line.
 test('Dokumente leads with Paperless, then filing, the title after a file', async ({ page }, info) => {
   await page.goto('/dokumente');
@@ -639,7 +652,7 @@ test('Standortverlauf, connected, leads with the timeline and ends with a quiet 
 // screen, a field to type in has room, a button is big enough for a
 // finger, and no text runs out of its box.
 const PAGES = ['/start', '/raeume', '/raeume/light.kueche', '/medien', '/energie', '/energie?zeitraum=jahr', '/kalender', '/kalender/verwalten', '/kontakte', '/kontakte/h3', '/kontakte/privat', '/kontakte/privat/k0', '/kontakte/dieselbe', '/kontakte/netz',
-  '/notizen', '/notizen?tag=kochen', '/notizen/einkaufsliste.md', '/notizen/markdown.md', '/notizen/einkaufsliste.md?bearbeiten=1', '/mehr', '/musik', '/platte', '/discogs', '/aktivierungswort', '/aufgaben', '/dokumente', '/dokumente/suche?q=strom', '/dokumente/suche?nur=versicherungen', '/willkommen', '/einrichten/fotos', '/box/geraete', '/pair-device', '/podcasts', '/gesehen', '/standort',
+  '/notizen', '/notizen?tag=kochen', '/notizen/einkaufsliste.md', '/notizen/markdown.md', '/notizen/einkaufsliste.md?bearbeiten=1', '/mehr', '/musik', '/platte', '/discogs', '/aktivierungswort', '/aufgaben', '/dokumente', '/dokumente/zuordnen', '/dokumente/suche?q=strom', '/dokumente/suche?nur=versicherungen', '/willkommen', '/einrichten/fotos', '/box/geraete', '/pair-device', '/podcasts', '/gesehen', '/standort',
   '/daten-sichern', '/netzlaufwerk', '/box', '/box/aufgaben', '/box/auslastung', '/box/haushalt', '/box/personen', '/box/module', '/adresse',
   '/einkauf', '/einkauf?liste=liste-baumarkt', '/einkauf?liste=liste-musik', '/einkauf/rezepte', '/einkauf/rezepte?n=rezepte%2Flasagne.md', '/notizen/rezepte/lasagne.md'];
 for (const path of PAGES) {

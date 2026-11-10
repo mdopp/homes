@@ -129,7 +129,8 @@ func TestDokumenteFilesIntoPaperlessInbox(t *testing.T) {
 	if rec.Code != http.StatusSeeOther {
 		t.Fatalf("%d %q %s", rec.Code, rec.Header().Get("Location"), rec.Body.String())
 	}
-	files, _ := filepath.Glob(filepath.Join(dir, "Stromrechnung Oktober-*.pdf"))
+	// the signed-in person's from the start (laib DATA.md gap 6): von-<login>/, a tag Dokumente reads
+	files, _ := filepath.Glob(filepath.Join(dir, "von-anna", "Stromrechnung Oktober-*.pdf"))
 	if len(files) != 1 {
 		es, _ := os.ReadDir(dir)
 		t.Fatalf("in the inbox: %v", es)
@@ -276,4 +277,13 @@ func TestFiledSendsToTheDocumentOrTheNewest(t *testing.T) {
 	if rec := getFiled(StartConfig{DocumentsMail: "d@box.test"}, "/dokumente/abgelegt/0a1b2c3d"); rec.Code != http.StatusNotFound {
 		t.Errorf("no address: %d", rec.Code)
 	}
+}
+
+// Each person's own address (owner 2026-11-10, laib templates/paperless): <login>+doc@ beside the
+// household's, the viewer's own first; what arrives there is theirs.
+func TestDokumenteShowsTheViewersOwnAddress(t *testing.T) {
+	_, cfg := dokumente(t)
+	body := getDokumente(cfg, "/dokumente", map[string]string{"Remote-User": "Anna"}).Body.String()
+	before(t, body, `href="mailto:anna+doc@box.test"`, `href="mailto:dokumente@box.test"`)
+	mustContain(t, body, "es gehört dir")
 }

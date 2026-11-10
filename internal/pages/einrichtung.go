@@ -125,6 +125,11 @@ func einrichtung(r *http.Request, cfg StartConfig) []aufgabe {
 			out = append(out, aufgabe{titel: antwortenAufgabe(n), warum: texte.T(texte.AntwortenAufgabeWarum), href: AntwortenPath, wichtig: true})
 		}
 	}
+	if cfg.Zuordnen != nil && isAdmin(r) { // laib DATA.md gap 6: what Dokumente could not give anyone, seen by no one until then
+		if n := offeneScans(cfg.Zuordnen); n > 0 {
+			out = append(out, aufgabe{titel: "Wem gehört dieser Scan?", stand: strconv.Itoa(n) + " offen", warum: "Bis du es sagst, sieht ihn niemand in der Familie.", href: ZuordnenPath, wichtig: true})
+		}
+	}
 	if cfg.Discogs != nil { // the household's Discogs app is there; each person connects their own
 		_, verbunden := cfg.Discogs.Konto(user)
 		out = append(out, aufgabe{titel: "Discogs verbinden", warum: "Dann weiß Homes, welche Platten du hast, und deine Wünsche kommen auf deine Wantlist.",

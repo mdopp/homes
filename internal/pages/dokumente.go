@@ -23,7 +23,7 @@ const DokumentePath = "/dokumente"
 const (
 	saysDocsLead     = "Briefe, Rechnungen, Verträge: alles, was aufgehoben werden soll, kommt ins Archiv des Hauses."
 	saysMailHow      = "Die Anhänge werden abgelegt, der Betreff wird der Titel."
-	saysUploadHow    = "Fotos und PDFs, bis 25 MB. Ohne Titel heißt es wie die Datei."
+	saysUploadHow    = "Fotos und PDFs, bis 25 MB. Ohne Titel heißt es wie die Datei. Es gehört dir; die Familie sieht es, wenn es ein Haushaltsdokument ist."
 	saysFiled        = "Liegt in Paperless und wird gerade gelesen (Texterkennung). Das dauert ein paar Minuten."
 	saysFiledMany    = " Dokumente liegen in Paperless und werden gerade gelesen (Texterkennung). Das dauert ein paar Minuten."
 	saysSeeFiled     = "Im Paperless ansehen"
@@ -92,7 +92,7 @@ func Dokumente(cfg StartConfig) http.HandlerFunc {
 				http.Error(w, "Das geht nur von Homes' eigener Seite.", http.StatusForbidden)
 				return
 			}
-			placed, code, why := cfg.Ablage.Store(w, r)
+			placed, code, why := cfg.Ablage.Store(w, r, r.Header.Get("Remote-User")) // theirs from the start (laib DATA.md gap 6)
 			if code != 0 {
 				log.Printf("homes: dokumente: upload by %s refused: %d %s", r.Header.Get("Remote-User"), code, why)
 				http.Redirect(w, r, DokumentePath+"?fehler="+url.QueryEscape(why), http.StatusSeeOther)
@@ -224,9 +224,10 @@ func writeDokumente(w http.ResponseWriter, r *http.Request, cfg StartConfig, cod
 			`<p class="k gewaehlt" role=status></p><div class=danach><label for=titel>Titel (wenn du magst)</label><input id=titel type=text name=filename maxlength=80 autocomplete=off placeholder="z. B. Stromrechnung Oktober">` +
 			`<button type=submit data-laeuft="Lädt hoch …">Ablegen</button></div><p class=k>` + html.EscapeString(saysUploadHow) + `</p></form>`)
 	}
-	if cfg.DocumentsMail != "" {
+	if cfg.DocumentsMail != "" { // the person's own address first (owner 2026-11-10, laib templates/paperless): theirs; the household's: Dokumente sorts
+		eigen := html.EscapeString(strings.ToLower(r.Header.Get("Remote-User")) + "+doc@" + cfg.DocumentsMail[strings.LastIndex(cfg.DocumentsMail, "@")+1:])
 		addr := html.EscapeString(cfg.DocumentsMail)
-		b.WriteString(`<p class=k>Oder per Mail an <a href="mailto:` + addr + `">` + addr + `</a>. ` + html.EscapeString(saysMailHow) + `</p>`)
+		b.WriteString(`<p class=k>Oder per Mail an deine Adresse <a href="mailto:` + eigen + `">` + eigen + `</a>: es gehört dir. Für den Haushalt an <a href="mailto:` + addr + `">` + addr + `</a>. ` + html.EscapeString(saysMailHow) + `</p>`)
 	}
 	b.WriteString(zuletzt.HTML() + scanning)
 	writePage(w, code, b)
