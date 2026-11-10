@@ -305,11 +305,8 @@ func (n *Netz) merken(wer, x, y, art string) error {
 // Eintragen writes the kind art (X is that of Y; Keine, Fremd: none any more)
 // into the cards of both: a household card's RELATED with its TYPE and the
 // other household card's UID (a line by name to it goes); the key owner's
-// own phone contact through the phone (owner 2026-11-09,
-// gesichter.HandyAenderung), by name. A household card never gets a
-// person who is not in the household book: the family would read the key
-// owner's phone contact or photo person (owner 2026-11-10: „Das Leck bitte
-// schließen“); taking such a line away still works.
+// own phone contact through the phone (gesichter.HandyAenderung), by name.
+// A household card only ever names household contacts (owner 2026-11-10).
 func (n *Netz) Eintragen(ctx context.Context, x, y Knoten, art string) error {
 	weg := art == Keine || art == Fremd
 	if !weg && !slices.Contains(Arten, art) {
