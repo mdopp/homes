@@ -201,40 +201,36 @@ const (
 	NetzBeziehung     ID = "netz.beziehung"       // a reason: „%s“ the relation the centre's card names
 	NetzBeziehungVon  ID = "netz.beziehung.von"   // a reason: „%s“ the relation, „%s“ whose card names it
 	NetzVerwandt      ID = "netz.verwandt"        // a reason: a relation without a kind
-	// Beziehungen klären (owner 2026-11-09): the questions, their suggestions, the answers; the kinds are netz.art.<kind>
-	NetzGesagt         ID = "netz.gesagt"       // a reason: „%s“ the kind the owner gave
-	NetzWeilFamilie    ID = "netz.weil.familie" // a suggestion's reason
-	NetzWeilJahre      ID = "netz.weil.jahre"   // „%d“ the years between their birthdays
-	NetzWeilName       ID = "netz.weil.name"    // „%s“ the name's first word (Oma, Opa, Tante, Onkel)
-	NetzWeilNachbar    ID = "netz.weil.nachbar" // a suggestion's reason
-	NetzWeilFotos      ID = "netz.weil.fotos"   // „%s“ the photo days
-	NetzFragen         ID = "netz.fragen"       // the section „Beziehungen klären“
-	NetzFrage          ID = "netz.frage"        // „%s“ X, „%s“ Y
-	NetzFrageDir       ID = "netz.frage.dir"    // Y when it is the key owner: „dir“
-	NetzIst            ID = "netz.ist"          // the choice's label: „%s“ X
-	NetzWaehlen        ID = "netz.waehlen"      // the empty choice
-	NetzVorschlag      ID = "netz.vorschlag"    // „%s“ the suggestion's reason
-	NetzSpeichern      ID = "netz.speichern"    // and pressed
-	NetzSpeichernLauft ID = "netz.speichern.laeuft"
-	NetzKeineBez       ID = "netz.keine-beziehung" // and pressed
-	NetzKeineBezLauft  ID = "netz.keine-beziehung.laeuft"
-	NetzSpaeter        ID = "netz.spaeter" // Überspringen, and pressed
-	NetzSpaeterLauft   ID = "netz.spaeter.laeuft"
-	NetzOhneWahl       ID = "netz.ohne-wahl"      // Speichern without a kind chosen
-	NetzGesagtArt      ID = "netz.gesagt.art"     // „%s“ X, „%s“ the kind, „%s“ Y
-	NetzGesagtKeine    ID = "netz.gesagt.keine"   // „Keine Beziehung“ kept
-	NetzFremd          ID = "netz.fremd"          // the choice „Kennen sich nicht“ (netz.Fremd)
-	NetzGesagtFremd    ID = "netz.gesagt.fremd"   // Fremd kept
-	NetzGesagtSpaeter  ID = "netz.gesagt.spaeter" // skipped
-	NetzNichtImBuch    ID = "netz.nicht-im-buch"  // kept, but the address book not written
-	// Änderbar (owner 2026-11-09): a contact's relations, the task
-	NetzAufgabe       ID = "netz.aufgabe" // „%s“ how many: „3 Beziehungen“
-	NetzAufgabeWarum  ID = "netz.aufgabe.warum"
+	// a contact's relations (owner 2026-11-09); the kinds are netz.art.<kind>
+	NetzGesagt      ID = "netz.gesagt"          // a reason: „%s“ the kind the owner gave
+	NetzIst         ID = "netz.ist"             // the choice's label: „%s“ X
+	NetzSpeichern   ID = "netz.speichern"       // and pressed
+	NetzKeineBez    ID = "netz.keine-beziehung" // and pressed
+	NetzOhneWahl    ID = "netz.ohne-wahl"       // Speichern without a kind chosen
+	NetzGesagtArt   ID = "netz.gesagt.art"      // „%s“ X, „%s“ the kind, „%s“ Y
+	NetzFremd       ID = "netz.fremd"           // the choice „Kennen sich nicht“ (netz.Fremd)
+	NetzGesagtFremd ID = "netz.gesagt.fremd"    // Fremd kept
+	NetzNichtImBuch ID = "netz.nicht-im-buch"   // kept, but the address book not written
+	// Änderbar (owner 2026-11-09): a contact's relations
 	NetzBeziehungen   ID = "netz.beziehungen"      // the section on a contact's page
 	NetzVergessen     ID = "netz.vergessen"        // a „Keine Beziehung“ forgotten, and pressed
 	NetzGesagtWeg     ID = "netz.gesagt.weg"       // „%s“ and „%s“ the two: taken away
 	NetzGesagtVergess ID = "netz.gesagt.vergessen" // forgotten
 	NetzTelefonbuch   ID = "netz.telefonbuch"      // a relation's source, under its name
+	NetzImArchiv      ID = "netz.im-archiv"        // the link to the questions in the person's archive (archiv#27)
+	// Ins Adressbuch übernehmen (archiv#27 step 2, ADR 0002): an answer from the person's archive, confirmed here
+	Uebernehmen            ID = "uebernehmen"              // the page's title
+	UebernehmenWas         ID = "uebernehmen.was"          // what confirming does
+	UebernehmenIst         ID = "uebernehmen.ist"          // a line: „%s“ X, „%s“ the kind, „%s“ Y
+	UebernehmenHaushalt    ID = "uebernehmen.haushalt"     // where a line goes: both household cards
+	UebernehmenHandy       ID = "uebernehmen.handy"        // where a line goes: the person's phone only
+	UebernehmenJa          ID = "uebernehmen.ja"           // the button, and pressed
+	UebernehmenLaeuft      ID = "uebernehmen.ja.laeuft"    //
+	UebernehmenUngueltig   ID = "uebernehmen.ungueltig"    // not the person's archive's, or too old
+	UebernehmenFertig      ID = "uebernehmen.fertig"       // written
+	UebernehmenFertigHandy ID = "uebernehmen.fertig.handy" // and what goes to the phone, when
+	UebernehmenFehler      ID = "uebernehmen.fehler"       // not written
+	UebernehmenZurueck     ID = "uebernehmen.zurueck"      // the link back to the archive
 	// Gruppen (owner 2026-11-10, ADR 0002): a contact's own groups, as the card's CATEGORIES
 	Gruppen            ID = "gruppen"           // the section on a contact's page, the filter on Kontakte
 	GruppenKeine       ID = "gruppen.keine"     // the contact is in none
@@ -601,37 +597,32 @@ var de = map[ID]string{
 	"netz.beziehung.von":           "%s von %s (Telefonbuch)",
 	"netz.verwandt":                "im Telefonbuch verknüpft",
 	"netz.gesagt":                  "%s (von dir angegeben)",
-	"netz.weil.familie":            "gleicher Nachname und gleiche Adresse",
-	"netz.weil.jahre":              "%d Jahre Altersunterschied",
-	"netz.weil.name":               "„%s“ im Namen",
-	"netz.weil.nachbar":            "gleiche Straße, anderes Haus",
-	"netz.weil.fotos":              "%s zusammen auf deinen Fotos, kein Zeichen von Familie",
-	"netz.fragen":                  "Beziehungen klären",
-	"netz.frage":                   "Wie steht %s zu %s?",
-	"netz.frage.dir":               "dir",
 	"netz.ist":                     "%s ist …",
-	"netz.waehlen":                 "Bitte wählen",
-	"netz.vorschlag":               "Vorschlag, weil %s.",
 	"netz.speichern":               "Speichern",
-	"netz.speichern.laeuft":        "Speichert …",
 	"netz.keine-beziehung":         "Keine Beziehung",
-	"netz.keine-beziehung.laeuft":  "Merkt es sich …",
-	"netz.spaeter":                 "Überspringen",
-	"netz.spaeter.laeuft":          "Legt es nach hinten …",
 	"netz.ohne-wahl":               "Bitte wähle zuerst, wie die beiden zueinander stehen.",
 	"netz.gesagt.art":              "Gespeichert: %s ist %s von %s.",
-	"netz.gesagt.keine":            "Gemerkt: keine Beziehung. Homes fragt danach nicht wieder.",
 	"netz.fremd":                   "Kennen sich nicht",
 	"netz.gesagt.fremd":            "Gemerkt: Die beiden kennen sich nicht. Homes zeigt keine Verbindung mehr zwischen ihnen und fragt nicht wieder.",
-	"netz.gesagt.spaeter":          "Übersprungen. Die Frage kommt später noch einmal.",
 	"netz.nicht-im-buch":           "Ins Adressbuch konnte Homes es gerade nicht schreiben; hier ist es gespeichert.",
-	"netz.aufgabe":                 "%s klären",
-	"netz.aufgabe.warum":           "Homes fragt, wie die Menschen auf deinen Fotos zueinander stehen. Deine Antwort kommt ins Adressbuch.",
 	"netz.beziehungen":             "Beziehungen",
 	"netz.vergessen":               "Vergessen",
 	"netz.gesagt.weg":              "Entfernt: %s und %s stehen in keiner Beziehung. Homes fragt danach nicht wieder.",
 	"netz.gesagt.vergessen":        "Vergessen. Homes fragt vielleicht später wieder danach.",
 	"netz.telefonbuch":             "aus dem Telefonbuch",
+	"netz.im-archiv":               "Wie die Menschen zueinander stehen, klärst du jetzt in deinem Archiv",
+	"uebernehmen":                  "Ins Adressbuch übernehmen",
+	"uebernehmen.was":              "Das kommt aus deinem Archiv. Erst wenn du hier auf „Übernehmen“ tippst, schreibt Homes es ins Adressbuch.",
+	"uebernehmen.ist":              "%s ist %s von %s",
+	"uebernehmen.haushalt":         "Haushalts-Adressbuch, sieht die Familie",
+	"uebernehmen.handy":            "nur dein Handy",
+	"uebernehmen.ja":               "Übernehmen",
+	"uebernehmen.ja.laeuft":        "Schreibt ins Adressbuch …",
+	"uebernehmen.ungueltig":        "Das lässt sich nicht übernehmen: Es kommt nicht aus deinem Archiv, oder es ist älter als zwei Stunden. Tipp in deinem Archiv noch einmal auf „Übernehmen“.",
+	"uebernehmen.fertig":           "Übernommen.",
+	"uebernehmen.fertig.handy":     "Was auf dein Handy geht, kommt dort an, sobald sich die Homes-App das nächste Mal meldet.",
+	"uebernehmen.fehler":           "Ins Adressbuch konnte Homes das gerade nicht schreiben. Versuch es gleich noch einmal.",
+	"uebernehmen.zurueck":          "Zurück zu deinem Archiv",
 	"gruppen":                      "Gruppen",
 	"gruppen.keine":                "Noch in keiner Gruppe.",
 	"gruppen.alle":                 "Alle",

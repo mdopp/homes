@@ -505,6 +505,23 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     shown) and *Nicht berechnen* (taken out of the photos before any tie)
     are kept per key owner in `immich-netz-verborgen.json`; *Ausgeblendet*
     lists both with *Zurückholen*.
+    The relation questions („Wie steht X zu Y?“) and their suggestions
+    moved into the person's archive (archiv#27 step 2, ADR 0002); the page
+    links there (`<archiv>/tresor/umfeld`) for whom has an archive. A
+    contact's *Beziehungen* still change in place.
+  - *Ins Adressbuch übernehmen* (archiv#27 step 2, ADR 0002;
+    `/kontakte/uebernehmen`, `internal/uebernahme`): the archive's
+    *Übernehmen* posts a packet (`d`, `s`: HMAC-SHA256 with that person's
+    `HOMES_ARCHIV_SECRET_<PERSON>` over `archiv-uebernahme-1.` + `d`;
+    `person` the login, `bis` at most two hours ahead). The page shows each
+    line („Clara ist Kind von Anna“) and where it goes — *Haushalts-Adressbuch,
+    sieht die Familie* when both ends have a household card (both cards get
+    `RELATED` with the other's `urn:uuid:` and the kind seen from it), else
+    *nur dein Handy* (each end that is the person's phone contact gets the
+    relation by name through `/napi/kontakte/korrekturen`); a household card
+    never gets a name. Nothing is written until *Übernehmen* on this page
+    (POST `ja=1`, same origin only); another login, a packet not signed with
+    the person's archive secret or past `bis` is refused in a sentence, 400.
   - *Automatisch zurück* (owner 2026-11-09): a person renamed in Immich
     renames its Haushalts-Kontakt (N and FN, written as an accepted
     correction is). `zuordnung` notes both names as last seen or written

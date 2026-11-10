@@ -69,8 +69,8 @@ func NetzSeite(cfg StartConfig) http.HandlerFunc {
 				b.WriteString(`<p class=weiter-in><a href="` + html.EscapeString(NetzPath+"?"+url.Values{"mitte": {mitte}, "mehr": {"1"}}.Encode()) + `">` + wort(texte.NetzMehr) + "</a></p>")
 			}
 		}
-		if fs := cfg.Netz.Fragen(); len(fs) > 0 { // Beziehungen klären (owner 2026-11-09)
-			b.WriteString(dieselbeStyle + netzFragen(cfg, fs[:min(len(fs), netzFragenJe)], netzMitte(mitte)))
+		if cfg.Archive[r.Header.Get("Remote-User")] { // the relation questions moved into the person's archive (archiv#27)
+			b.WriteString(`<p class=weiter-in><a href="` + html.EscapeString(cfg.ArchivURL+"/tresor/umfeld") + `">` + wort(texte.NetzImArchiv) + "</a></p>")
 		}
 		b.WriteString(netzVerborgene(cfg, mitte) + wieDas(texte.NetzHinweis))
 		writePage(w, http.StatusOK, b)

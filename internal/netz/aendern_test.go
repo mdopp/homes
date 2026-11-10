@@ -103,11 +103,3 @@ func TestEintragenPrivatBleibtPrivat(t *testing.T) {
 		t.Fatalf("phone: %+v", got)
 	}
 }
-
-// Offen counts the questions for the key owner only.
-func TestOffen(t *testing.T) {
-	n, _, _ := netzBox(t)
-	if n.Offen("anna") != len(n.Fragen()) || n.Offen("anna") == 0 || n.Offen("ben") != 0 {
-		t.Fatalf("offen %d of %d, ben %d", n.Offen("anna"), len(n.Fragen()), n.Offen("ben"))
-	}
-}

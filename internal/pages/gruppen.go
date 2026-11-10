@@ -48,6 +48,7 @@ func Gruppen(cfg StartConfig) map[string][]modul.Route {
 	gs.add("kontakte", MeineKontaktePath+"/", MeineKontakte(cfg)) // …/<uid>/fotos
 	gs.add("kontakte", DieselbePath, Dieselbe(cfg))               // „Dieselbe Person?“: faces Immich holds close, for the key's owner
 	gs.add("kontakte", NetzPath, NetzSeite(cfg))                  // „Wer steht wem nahe“, for the key's owner (owner 2026-11-09)
+	gs.add("kontakte", UebernehmenPath, Uebernehmen(cfg))         // an answer from the person's archive, confirmed (archiv#27)
 	gs.add("kontakte", PruefenPath, Pruefen(cfg))                 // Kontakt prüfen lassen: the link to a contact (owner 2026-11-07)
 	gs.add("kontakte", AntwortenPath, Antworten(cfg))             // its answers, before → after, taken or not
 	gs.add("kontakte", AntwortenPath+"/", Antworten(cfg))

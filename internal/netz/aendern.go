@@ -13,7 +13,7 @@ import (
 // owner's answers over the phone books', is listed on its contact's page
 // and changed or taken away there (Aendern, then Eintragen); the contact's
 // own form shows them and its answer, once taken, goes the same way
-// (Uebernehmen). Open questions count on Deine Aufgaben (Offen).
+// (Uebernehmen).
 
 // Bezug is a relation of a node: Mit is its Art (one of Arten, Keine
 // the owner's „none“, "" a phone book's label that is none of them); Wie
@@ -118,13 +118,4 @@ func (n *Netz) Aendern(x, y, art string) (Knoten, Knoten, error) {
 		return kx, ky, ErrKeineFrage
 	}
 	return kx, ky, n.merken(wer, x, y, art)
-}
-
-// Offen is how many relation questions wait for person: the key owner's;
-// 0 for anyone else (Deine Aufgaben).
-func (n *Netz) Offen(person string) int {
-	if n == nil || person == "" || n.G.Wessen() != person {
-		return 0
-	}
-	return len(n.Fragen())
 }

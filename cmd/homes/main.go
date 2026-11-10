@@ -162,6 +162,10 @@ func familyOf(s site) pages.StartConfig {
 		DocumentsMail: s.docsMail, PaperlessPublicURL: s.paperlessPublic, PaperlessLANOnly: s.paperlessLAN, Sicherung: s.napi.Sicherung,
 		Reitti: s.napi.Reitti, Module: s.napi.Module, Einrichtung: s.napi.Einrichtung, PhoneCountry: s.hh.PhoneCountry, Gesichter: s.gesichter, Netz: s.netz}
 	family.Archive, family.ArchivURL = archivOf(s)
+	family.ArchivGeheim = map[string]string{}
+	for person, a := range s.archive { // „Übernehmen“ from the person's archive (archiv#27)
+		family.ArchivGeheim[person] = a.Secret
+	}
 	family.Antworten, family.DNS, family.KontaktURL = s.antworten, net.DefaultResolver, s.kontaktURL
 	family.Zugang = s.zugang // the teaser's access requests, for the admins' Start and /zugang (owner 2026-11-08)
 	// the lists, the music wish list and the shelf, before any page takes its copy of family
