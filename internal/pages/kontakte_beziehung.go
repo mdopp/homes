@@ -106,7 +106,7 @@ func netzBeziehungen(r *http.Request, cfg StartConfig, buch, uid, action string)
 			quelle = " <small class=k>" + wort(texte.NetzTelefonbuch) + "</small>"
 		}
 		b.WriteString(`<form class=bzeile method=post action="` + esc(action) + `"><input type=hidden name=x value="` + esc(z.Mit.ID) + `"><input type=hidden name=y value="` + esc(id) +
-			`"><input type=hidden name=antwort value=aendern><label><span>` + esc(z.Mit.Name) + quelle + `</span><select name=art onchange="this.form.requestSubmit()">` + netzArten(z.Art, extra...) +
+			`"><input type=hidden name=antwort value=aendern><label><span>` + esc(z.Mit.Name) + quelle + `</span><select name=art aria-label="` + esc(fmt.Sprintf(texte.T(texte.NetzIst), z.Mit.Name)) + `" onchange="this.form.requestSubmit()">` + netzArten(z.Art, extra...) +
 			`</select></label><noscript><button>` + wort(texte.NetzSpeichern) + `</button></noscript></form>`)
 	}
 	return b.String() + "</div>"

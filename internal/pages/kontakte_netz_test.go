@@ -149,7 +149,7 @@ func TestNetzBeziehungZeile(t *testing.T) {
 	post(url.Values{"x": {"p-ben"}, "y": {"p-anna"}, "antwort": {"ja"}, "art": {"partner"}})
 	post(url.Values{"x": {"p-ben"}, "y": {"p-carla"}, "antwort": {"keine"}})
 	body := as(Kontakt, cfg, "/kontakte/b", "anna", "anna@box.test").Body.String()
-	mustContain(t, body, `<input type=hidden name=antwort value=aendern><label><span>Anna</span><select name=art onchange="this.form.requestSubmit()"><option value="partner" selected>Partner/in</option>`,
+	mustContain(t, body, `<input type=hidden name=antwort value=aendern><label><span>Anna</span><select name=art aria-label="Anna ist …" onchange="this.form.requestSubmit()"><option value="partner" selected>Partner/in</option>`,
 		`<option value="keine" selected>Keine Beziehung</option><option value="vergessen">Vergessen</option></select>`)
 	mustNotContain(t, body, "<span>Anna</span><small", "Bitte wählen</option><option value=\"partner\" selected")
 	mustContain(t, post(url.Values{"x": {"p-carla"}, "y": {"p-ben"}, "antwort": {"aendern"}, "art": {"vergessen"}}), "Vergessen")
