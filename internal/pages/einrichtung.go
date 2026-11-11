@@ -65,7 +65,7 @@ func mitLaibs(r *http.Request, cfg StartConfig, as []aufgabe, la laib.Aufgaben) 
 	var mine []aufgabe
 	for _, t := range la.Aufgaben {
 		own := t.Fuer == "person:"+user
-		if !own && t.Fuer != "alle" {
+		if !own && t.Fuer != "alle" || cfg.Samba != nil && t.Weg != nil && t.Weg.Seite == netzlaufwerkPath { // laib#1168: Homes' own password task, same file, at once
 			continue
 		}
 		a := aufgabe{titel: t.Titel, warum: t.Warum, wichtig: own, erledigt: t.Erledigt != nil}

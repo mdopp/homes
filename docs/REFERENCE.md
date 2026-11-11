@@ -154,7 +154,10 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   and shrinks to a quiet „Auf einem weiteren Gerät einrichten“ at the
   bottom once done; a module without a page has `/einrichten/<name>`.
   *Deine Aufgaben* (`/aufgaben`) lists them with Homes' other tasks
-  (Netzlaufwerk-Passwort, Discogs) and Laib's for the person; the number
+  (Netzlaufwerk-Passwort, Discogs) and Laib's for the person (one a check
+  raised, laib#1168: Vaultwarden's second factor, the network-drive
+  password; Laib's task with the way `/netzlaufwerk` is left out where
+  Homes shows its own from the same file); the number
   open stands beside its heading, beside *Mehr* in the bar, beside
   *Aufgaben* in Mehr's list and in its row on `/mehr` — Homes' own, plus
   Laib's once a page has read Laib's list (never asked for the counter).
