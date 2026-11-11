@@ -349,10 +349,10 @@ async function above(page, a, b) {
 test('Daten sichern leads to Meine Daten, the phone change folded', async ({ page }) => {
   await page.goto('/daten-sichern');
   await expect(page.locator('li.quelle')).toHaveCount(0);
-  expect(await above(page, 'a[href="/meine-daten"]', 'p.schluessel')).toBe(true);
+  expect(await above(page, 'section.karte a[href="/meine-daten"]', 'p.schluessel')).toBe(true);
   for (const d of await page.locator('details.wechsel').all()) await expect(d).not.toHaveAttribute('open', '');
   expect(await above(page, 'p.schluessel', 'details.wechsel')).toBe(true);
-  await page.locator('a[href="/meine-daten"]').click();
+  await page.locator('section.karte a[href="/meine-daten"]').click();
   await expect(page.locator('h1')).toHaveText('Meine Daten');
 });
 
