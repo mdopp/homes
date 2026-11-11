@@ -97,4 +97,8 @@ func TestEnergyChartAxisIsHonest(t *testing.T) {
 	svg = energyChart("Heute", []bucket{{v: map[string]float64{"solar": 9, "einsp": 0.1}}}, -1, "", nil)
 	mustContain(t, svg, ">9 kWh</text>", ">−0,1 kWh</text>")
 	mustNotContain(t, svg, ">0</text>")
+	// a hundredth went out: its number, not "−0"
+	svg = energyChart("Heute", []bucket{{v: map[string]float64{"solar": 0.4, "einsp": 0.01}}}, -1, "", nil)
+	mustContain(t, svg, ">−0,01 kWh</text>")
+	mustNotContain(t, svg, ">−0 kWh</text>")
 }

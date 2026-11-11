@@ -1134,7 +1134,7 @@ test('a tapped hour says what the house used in it', async ({ page }, info) => {
   await page.keyboard.press('ArrowRight');
   await expect(line).toContainText(/^1–2 Uhr:/);
   await expect(page.locator('.verlauf g[data-zeile]').nth(1)).toBeFocused();
-  await expect(page.locator('.verlauf svg text', { hasText: /^−[\d,]+ kWh$/ })).toHaveCount(1);
+  await expect(page.locator('.verlauf svg text', { hasText: /^−0?,?\d*[1-9]\d* kWh$/ })).toHaveCount(1);
   await page.locator('.verlauf').first().screenshot({ path: info.outputPath('energie-stunde.png') });
 });
 test.describe('light', () => {

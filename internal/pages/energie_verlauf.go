@@ -707,12 +707,13 @@ func vorjahrWord(title []string) string {
 	return "Vorjahr"
 }
 
-// shortKWh is an axis label: "12 kWh", "0,8 kWh".
+// shortKWh is an axis label: "12 kWh", "0,8 kWh", a sliver to two
+// places ("0,01 kWh"), never "0" for something.
 func shortKWh(v float64) string {
 	if v >= 10 {
 		return strconv.Itoa(int(math.Round(v))) + " kWh"
 	}
-	return decimal(v) + " kWh"
+	return stundeKWh(v) + " kWh"
 }
 
 // verlaufStyle is the Energie page's look, the house palette's tokens

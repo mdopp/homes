@@ -87,7 +87,7 @@ budget() { # budget <name> <cap> <dir…>
 # one card under one heading, „Frage 2 von 6 · Nächste Frage · Alle zeigen“ (kontakte_dieselbe.go)
 # 2026-11-11, owner decided 2026-11-11 (ADR 0002): the net into the archive (pages 19,030 -> 18,844, ratcheted down by the
 # 186 lines removed: kontakte_netz.go, „Steht nahe“; one link „Dein Netzwerk im Archiv ›“ instead), and one tap first on the faces
-# 2026-11-11, owner OK'd the needed raise 2026-11-11: Energie – what the chosen hour used (pages 18,844 -> 19,110; 19,096 used): energie_stunde.go, the line under
+# 2026-11-11, owner OK'd the needed raise 2026-11-11: Energie – what the chosen hour used (pages 18,844 -> 19,110; 19,097 used): energie_stunde.go, the line under
 # the Tag chart for the tapped hour, its devices, the Verbrauch column, the script choosing an hour; the scale's 0 and its negative bottom
 budget pages 19110 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
