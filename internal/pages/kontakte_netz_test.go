@@ -57,6 +57,9 @@ func TestNetzNurEigentuemer(t *testing.T) {
 			t.Fatalf("%q: %d", who, rec.Code)
 		}
 	}
+	if rec := asAdmin(NetzSeite, cfg, NetzPath); rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != KontaktePath {
+		t.Fatalf("admin: %d", rec.Code)
+	}
 	mustNotContain(t, as(Kontakte, cfg, KontaktePath, "ben", "ben@box.test").Body.String(), NetzPath)
 	mustNotContain(t, as(Kontakt, cfg, "/kontakte/a", "ben", "ben@box.test").Body.String(), "Steht nahe")
 }

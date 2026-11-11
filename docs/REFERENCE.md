@@ -760,7 +760,13 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     its pieces. A stack Paperless lists nothing for by the field (filing,
     failed, filed before the field) keeps Dokumente's own list, by id where
     Dokumente knows it, less what Paperless no longer holds by file name;
-    one with nothing left says *Nichts mehr in Paperless*. A `start` or
+    one with nothing left says *Nichts mehr in Paperless* — only a household
+    stack, the one Homes' Paperless key could have seen. A „nur für mich“
+    stack (ADR 0002) is shown only to its person (admins included, others
+    do not see it): its documents only as far as Homes' key sees them
+    (shared later), never Dokumente's titles; none seen reads *Nur für
+    dich: n Dokumente* with *In Paperless öffnen*, Paperless's list
+    filtered to the stack, which shows the person their own. A `start` or
     `weiter` the scan refused (its status `auftrag.angenommen: false`,
     mdopp/dokumente#16) shows the scan's reason where *Startet …* was, at
     once, the button back. *Trennblätter* (haus#161): one line on what they do,

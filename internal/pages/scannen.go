@@ -9,12 +9,14 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/mdopp/homes/internal/laib"
 	"github.com/mdopp/homes/internal/paperless"
+	"github.com/mdopp/homes/internal/texte"
 )
 
 // ScannenPath is where the Dokumente page's Scannen buttons post (haus#76).
@@ -714,7 +716,7 @@ func stacks(r *http.Request, cfg StartConfig, all []laib.Stack) string {
 			open = " open"
 		}
 		b.WriteString(`<li><details data-stapel="` + html.EscapeString(s.Stapel) + `"` + open + `><summary><b>` + html.EscapeString(s.line()) + `</b> <span class=k>` +
-			html.EscapeString(stackDetail(s.Stack, now, loc)) + `</span>`)
+			html.EscapeString(stackDetail(s.Stack, s.hidden(), now, loc)) + `</span>`)
 		if n := s.doubtful(); n > 0 { // seen folded too (mdopp/dokumente#12)
 			b.WriteString(` <span class=zweifel>` + html.EscapeString(strconv.Itoa(n)+" bitte prüfen") + `</span>`)
 		}
@@ -730,6 +732,7 @@ func stacks(r *http.Request, cfg StartConfig, all []laib.Stack) string {
 		if s.gone {
 			b.WriteString(`<p class=k>` + html.EscapeString(saysStackGone) + `</p>`)
 		}
+		b.WriteString(s.mineNote(cfg, opens))
 		if len(s.docs) > 0 {
 			b.WriteString(`<ul>`)
 			for _, d := range s.docs {
@@ -745,7 +748,7 @@ func stacks(r *http.Request, cfg StartConfig, all []laib.Stack) string {
 			}
 			b.WriteString(`</ul>`)
 		}
-		if opens && s.list != "" {
+		if opens && s.list != "" && !s.hidden() {
 			b.WriteString(`<p class=k><a href="` + html.EscapeString(cfg.paperless().href(s.list)) + `">Den ganzen Stapel in Paperless öffnen</a></p>`)
 		}
 		b.WriteString(`</details></li>`)
@@ -754,8 +757,15 @@ func stacks(r *http.Request, cfg StartConfig, all []laib.Stack) string {
 	return b.String()
 }
 
-// saysStackGone is a stack none of whose documents Homes sees: deleted, or a person's (laib DATA.md gap 6).
+// saysStackGone is a household stack none of whose documents Homes sees:
+// deleted, or Dokumente's sorting gave it to a person (laib DATA.md gap 6).
+// Never said of a „nur für mich“ stack.
 const saysStackGone = "Davon ist für den Haushalt nichts in Paperless: gelöscht, oder es gehört jemandem selbst."
+
+// saysStackMine is the viewer's own „nur für mich“ stack: Homes' household
+// key does not see its documents (laib DATA.md gap 6), Paperless shows them
+// to their owner.
+const saysStackMine = "Nur du siehst diese Dokumente, in Paperless mit deinem Konto. Homes zeigt sie nicht."
 
 // stackFoldScript keeps what a viewer opened or closed, per stack, in
 // their browser; it runs again after the page is fetched in place.
@@ -767,12 +777,39 @@ try{localStorage.setItem(k+d.getAttribute('data-stapel'),d.open?'1':'0')}catch(x
 // shownStack is a stack as the page shows it: its documents, from
 // Paperless by the field „Stapel“ when it has any (haus#197), else
 // Dokumente's own list; list is Paperless's own list of the stack ("":
-// none); gone, Paperless no longer has any of its documents.
+// none); gone, Paperless no longer has any of its documents; mine, the
+// viewer's own „nur für mich“ stack.
 type shownStack struct {
 	laib.Stack
 	docs []stackEntry
 	list string
 	gone bool
+	mine bool
+}
+
+// hidden is the viewer's own stack whose documents Homes does not see:
+// they are the viewer's in Paperless, not gone (laib DATA.md gap 6).
+func (s shownStack) hidden() bool { return s.mine && len(s.docs) == 0 }
+
+// mineNote is the viewer's own stack Homes does not see: Paperless shows
+// it to them, with the way there where Paperless opens; "" for any other.
+func (s shownStack) mineNote(cfg StartConfig, opens bool) string {
+	if !s.hidden() {
+		return ""
+	}
+	out := `<p class=k>` + html.EscapeString(saysStackMine) + `</p>`
+	if opens {
+		out += `<p class=k><a href="` + html.EscapeString(cfg.paperless().href(s.list)) + `">In Paperless öffnen</a></p>`
+	}
+	return out
+}
+
+// stackPrivate is a „nur für mich“ stack: only its person's.
+func stackPrivate(s laib.Stack) bool { return s.Fuer == "person" }
+
+// stackMine is a „nur für mich“ stack of the viewer.
+func stackMine(r *http.Request, s laib.Stack) bool {
+	return stackPrivate(s) && s.Person != "" && strings.EqualFold(s.Person, r.Header.Get("Remote-User"))
 }
 
 // stackEntry is one document of a stack: its title, where it opens in
@@ -794,6 +831,12 @@ func (s shownStack) doubtful() int {
 func (s shownStack) line() string {
 	if s.gone {
 		return "Nichts mehr in Paperless"
+	}
+	if s.hidden() && (s.Ende == "fertig" || s.Ende == "wartet" || s.Ende == "") {
+		if n := len(s.Dokumente); n > 0 { // Dokumente's own count, never its titles
+			return "Nur für dich: " + texte.Anzahl(n, "Dokument", "Dokumente")
+		}
+		return "Nur für dich"
 	}
 	if s.Ende == "fertig" || s.Ende == "wartet" || s.Ende == "" {
 		switch n := len(s.docs); n {
@@ -828,8 +871,9 @@ func stackLine(s laib.Stack) string {
 	}
 }
 
-// stackDetail is when, from where, and how many pages.
-func stackDetail(s laib.Stack, now time.Time, loc *time.Location) string {
+// stackDetail is when, from where, and how many pages; mine leaves out
+// whose it is (the line says „Nur für dich“).
+func stackDetail(s laib.Stack, mine bool, now time.Time, loc *time.Location) string {
 	var parts []string
 	if t, err := time.Parse(time.RFC3339, s.At); err == nil {
 		t = t.In(loc)
@@ -846,6 +890,7 @@ func stackDetail(s laib.Stack, now time.Time, loc *time.Location) string {
 		parts = append(parts, "aus dem Ordner")
 	}
 	switch { // who started it, and „nur für“ them (haus#197)
+	case mine:
 	case s.Fuer == "person" && s.Person != "":
 		parts = append(parts, "nur für "+capital(s.Person))
 	case s.Person != "":
@@ -900,19 +945,14 @@ func pagesOf(detail string) int {
 // Dokumente's list, less what Paperless no longer holds by file name; one
 // whose documents are all gone says so. Paperless not answering: the list
 // as the service says.
+//
+// A „nur für mich“ stack (ADR 0002) is shown only to its person, admins
+// included: to another it is not there. Its documents only as Paperless
+// lists them to Homes' household key (shared ones), never Dokumente's
+// titles; none seen is „Nur für dich“ with the link into Paperless, never
+// gone: only a household stack can be.
 func shownStacks(r *http.Request, cfg StartConfig, all []laib.Stack) []shownStack {
-	seen := map[string]bool{}
-	var out []shownStack
-	for _, s := range all { // newest first
-		if s.Stapel != "" && seen[s.Stapel] {
-			continue
-		}
-		seen[s.Stapel] = true
-		out = append(out, shownStack{Stack: s, docs: dokumenteList(s)})
-		if len(out) == maxStacks {
-			break
-		}
-	}
+	out := lastStacks(r, all)
 	if cfg.Docs == nil {
 		return out
 	}
@@ -923,9 +963,12 @@ func shownStacks(r *http.Request, cfg StartConfig, all []laib.Stack) []shownStac
 		log.Printf("homes: dokumente page: Paperless' field Stapel: %v", err)
 		return out
 	}
-	var rest []int // stacks Paperless lists nothing for by the field
+	var rest []int // household stacks Paperless lists nothing for by the field
 	for i := range out {
 		s := &out[i]
+		if field != 0 && s.Stapel != "" && s.mine { // the viewer's own: Paperless' list of it, whatever Homes sees
+			s.list = "/documents?" + paperless.FieldQuery(field, s.Stapel)
+		}
 		if field == 0 || s.Stapel == "" || len(s.Dokumente) == 0 {
 			rest = append(rest, i)
 			continue
@@ -939,24 +982,61 @@ func shownStacks(r *http.Request, cfg StartConfig, all []laib.Stack) []shownStac
 			rest = append(rest, i)
 			continue
 		}
-		byID, byTitle := map[int]string{}, map[string]string{} // Dokumente's doubts, onto Paperless's documents
-		for _, d := range s.Dokumente {
-			if p := oneLine(d.Pruefen); p != "" && d.ID > 0 {
-				byID[d.ID] = p
-			} else if p != "" {
-				byTitle[oneLine(d.Titel)] = p
-			}
-		}
-		s.docs = s.docs[:0:0]
-		for _, d := range docs {
-			p := byID[d.ID]
-			if p == "" {
-				p = byTitle[oneLine(d.Title)]
-			}
-			s.docs = append(s.docs, stackEntry{title: oneLine(d.Title), link: "/documents/" + strconv.Itoa(d.ID) + "/details", pruefen: p})
-		}
+		s.fromPaperless(docs)
 		s.list = "/documents?" + paperless.FieldQuery(field, s.Stapel)
 	}
+	stillHave(ctx, cfg, out, rest)
+	return out
+}
+
+// lastStacks are the last maxStacks stacks the viewer may see, each once,
+// its newest run: a household stack with Dokumente's list, the viewer's
+// own „nur für mich“ without it; another person's not at all (ADR 0002).
+func lastStacks(r *http.Request, all []laib.Stack) []shownStack {
+	seen := map[string]bool{}
+	var out []shownStack
+	for _, s := range all { // newest first
+		if s.Stapel != "" && seen[s.Stapel] || stackPrivate(s) && !stackMine(r, s) {
+			continue
+		}
+		seen[s.Stapel] = true
+		sh := shownStack{Stack: s, mine: stackPrivate(s), list: "/documents"}
+		if !sh.mine {
+			sh.docs, sh.list = dokumenteList(s), ""
+		}
+		if out = append(out, sh); len(out) == maxStacks {
+			break
+		}
+	}
+	return out
+}
+
+// fromPaperless lists the stack as Paperless has it, with Dokumente's
+// doubts put onto Paperless's documents.
+func (s *shownStack) fromPaperless(docs []paperless.Doc) {
+	byID, byTitle := map[int]string{}, map[string]string{}
+	for _, d := range s.Dokumente {
+		if p := oneLine(d.Pruefen); p != "" && d.ID > 0 {
+			byID[d.ID] = p
+		} else if p != "" {
+			byTitle[oneLine(d.Titel)] = p
+		}
+	}
+	s.docs = s.docs[:0:0]
+	for _, d := range docs {
+		p := byID[d.ID]
+		if p == "" {
+			p = byTitle[oneLine(d.Title)]
+		}
+		s.docs = append(s.docs, stackEntry{title: oneLine(d.Title), link: "/documents/" + strconv.Itoa(d.ID) + "/details", pruefen: p})
+	}
+}
+
+// stillHave keeps of the household stacks at rest what Paperless still has
+// by file name; one with nothing left is gone. The viewer's own stacks are
+// never gone: Homes' key does not see them.
+func stillHave(ctx context.Context, cfg StartConfig, out []shownStack, rest []int) {
+	rest = slices.DeleteFunc(rest, func(i int) bool { return out[i].mine || len(out[i].Dokumente) == 0 })
 	var names []string
 	for _, i := range rest {
 		for _, d := range out[i].Dokumente {
@@ -964,18 +1044,15 @@ func shownStacks(r *http.Request, cfg StartConfig, all []laib.Stack) []shownStac
 		}
 	}
 	if len(names) == 0 {
-		return out
+		return
 	}
 	have, err := cfg.Docs.Have(ctx, names)
 	if err != nil {
 		log.Printf("homes: dokumente page: which scans Paperless still has: %v", err)
-		return out
+		return
 	}
 	for _, i := range rest {
 		s := &out[i]
-		if len(s.Dokumente) == 0 {
-			continue
-		}
 		var docs []stackEntry
 		for j, d := range s.Dokumente {
 			if d.Datei == "" || have[d.Datei] {
@@ -984,7 +1061,6 @@ func shownStacks(r *http.Request, cfg StartConfig, all []laib.Stack) []shownStac
 		}
 		s.docs, s.gone = docs, len(docs) == 0
 	}
-	return out
 }
 
 // dokumenteList is a stack's documents as Dokumente filed them, each

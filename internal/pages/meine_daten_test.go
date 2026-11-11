@@ -103,6 +103,8 @@ func TestMeineDatenSaysEachSourceInItsState(t *testing.T) {
 	mustContain(t, ben, `<div>E-Mail<span class=k>`+texte.T(texte.KontaktKeinArchiv), `<div>Scanner<span class=k>zuletzt heute 09:00 · 1 Dokument`,
 		`<div>WhatsApp<span class=k>in der Homes-App einschalten`, "ben+doc@box.test")
 	mustNotContain(t, ben, "3,2 GB", "11:40", "Passphrase", "Papierstau", "läuft gerade", "Oma")
+	_, admin, _ := familyPageAs(t, MeineDaten, cfg, "GET", MeineDatenPath, "ben", "family,admins") // an admin: their own only too
+	mustNotContain(t, admin, "3,2 GB", "11:40", "Passphrase", "Papierstau", "läuft gerade", "Oma", "anna+doc")
 	if code, _, _ := familyPageAs(t, MeineDaten, cfg, "GET", MeineDatenPath, "", ""); code != 403 {
 		t.Errorf("without a person → %d", code)
 	}

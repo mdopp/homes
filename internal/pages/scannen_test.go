@@ -778,3 +778,69 @@ func TestScannenNeverWearsTheSharedSpinnerClass(t *testing.T) {
 		}
 	}
 }
+
+// The owner, 2026-11-11: every „nur für Mdopp“ stack read „Nichts mehr in
+// Paperless“ to mdopp, its owner: Homes' household key does not see a
+// person's documents (laib DATA.md gap 6), so the page said gone. One test
+// per viewer (ADR 0002): the stack's owner sees „Nur für dich“ with what
+// Dokumente says of it (count, pages, blank pages; never its titles) and
+// the way into Paperless filtered by the stack; another person, an admin
+// too, does not see it at all; a household stack Paperless has nothing of
+// any more is the only one called gone.
+func TestScannenPrivateStackPerViewer(t *testing.T) {
+	fake := paperlessfake.New("pl")
+	defer fake.Close()
+	fake.Field(7, "Stapel", "string") // mdopp's documents exist, but the household key does not see them: not in the fake
+	f := &scanLaib{status: map[string]any{"zustand": "bereit", "scanner": true, "letzte": []map[string]any{
+		{"stapel": "2026-10-29T17-07-46", "ende": "fertig", "quelle": "scanner", "at": "2026-10-29T16:07:46Z", "seiten": 74, "leer": 8,
+			"fuer": "person", "person": "mdopp", "dokumente": []map[string]any{
+				{"titel": "Arztbrief Kardiologie", "datei": "Arztbrief.pdf", "id": 31}, {"titel": "Gehaltsabrechnung", "datei": "Gehalt.pdf", "id": 32}}},
+		{"stapel": "2026-10-28T09-00-00", "ende": "fertig", "quelle": "scanner", "at": "2026-10-28T08:00:00Z", "seiten": 3, "person": "anna",
+			"dokumente": []map[string]any{{"titel": "Alte Rechnung", "datei": "Alte Rechnung.pdf", "id": 40}}},
+	}}}
+	page := func(user, groups string) string {
+		t.Helper()
+		_, cfg := dokumente(t)
+		cfg.Laib, cfg.Loc, cfg.Now = f.client(t), berlin(t), func() time.Time { return startNow(t) }
+		cfg.Docs = &paperless.Client{URL: fake.URL, Token: "pl"}
+		rec := getDokumente(cfg, "/dokumente", map[string]string{"X-Forwarded-For": "192.168.1.23", "Remote-User": user, "Remote-Groups": groups})
+		body := rec.Body.String()
+		return body[strings.Index(body, "<h2>Scannen</h2>"):]
+	}
+	gone := `<details data-stapel="2026-10-28T09-00-00"><summary><b>Nichts mehr in Paperless</b>`
+
+	owner := page("mdopp", "family")
+	mustContain(t, owner, `<details data-stapel="2026-10-29T17-07-46" open><summary><b>Nur für dich: 2 Dokumente</b>`,
+		"vom Scanner · 74 Seiten, 8 leer entfernt", html.EscapeString(saysStackMine),
+		`<a href="https://paperless.box.test/documents?custom_field_query=%5B%22AND%22%2C%5B%5B7%2C%22exact%22%2C%222026-10-29T17-07-46%22%5D%5D%5D">In Paperless öffnen</a>`,
+		gone, html.EscapeString(saysStackGone))
+	mustNotContain(t, owner[:strings.Index(owner, gone)], "Nichts mehr in Paperless", html.EscapeString(saysStackGone),
+		"Arztbrief", "Gehaltsabrechnung", "nur für Mdopp", "Den ganzen Stapel")
+
+	for _, viewer := range []struct{ user, groups string }{{"anna", "family"}, {"ben", "family,admins"}} {
+		other := page(viewer.user, viewer.groups)
+		mustContain(t, other, `<details data-stapel="2026-10-28T09-00-00"><summary><b>Nichts mehr in Paperless</b>`)
+		mustNotContain(t, other, "2026-10-29T17-07-46", "Mdopp", "mdopp", "Nur für dich", "74 Seiten", "Arztbrief", "Gehaltsabrechnung")
+	}
+}
+
+// The owner's own stack whose documents were shared with the household
+// later (tag Haushalt) lists them as Paperless has them; with Paperless
+// away the owner still reads „Nur für dich“, never Dokumente's titles.
+func TestScannenOwnPrivateStackSharedOrPaperlessAway(t *testing.T) {
+	fake := paperlessfake.New("pl")
+	defer fake.Close()
+	fake.Field(7, "Stapel", "string")
+	fake.Add(paperlessfake.Doc{ID: 31, Title: "Grundsteuer", Fields: map[int]any{7: "S"}})
+	all := []laib.Stack{{Stapel: "S", Ende: "fertig", Fuer: "person", Person: "mdopp", Dokumente: []laib.StackDoc{{Titel: "Grundsteuer", Datei: "G.pdf", ID: 31}, {Titel: "Arztbrief", Datei: "A.pdf", ID: 32}}}}
+	req := httptest.NewRequest("GET", "/dokumente", nil)
+	req.Header.Set("Remote-User", "Mdopp")
+	got := shownStacks(req, StartConfig{Docs: &paperless.Client{URL: fake.URL, Token: "pl"}}, all)
+	if len(got) != 1 || got[0].hidden() || got[0].gone || len(got[0].docs) != 1 || got[0].docs[0].title != "Grundsteuer" || got[0].line() != "1 Dokument" {
+		t.Fatalf("shared: %+v", got)
+	}
+	got = shownStacks(req, StartConfig{Docs: &paperless.Client{URL: "http://127.0.0.1:1", Token: "pl"}}, all)
+	if len(got) != 1 || !got[0].hidden() || got[0].gone || len(got[0].docs) != 0 || got[0].line() != "Nur für dich: 2 Dokumente" {
+		t.Fatalf("Paperless away: %+v", got)
+	}
+}
