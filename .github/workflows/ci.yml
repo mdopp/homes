@@ -33,9 +33,7 @@ jobs:
       - run: scripts/ratchet.py
   e2e:
     # the family pages in a real browser against cmd/homesdemo's fakes
-    # ubuntu-24.04, not -latest: on the 26.04 image apt could not resolve the
-    # Ubuntu mirrors (5 red runs on 2026-11-11), and --with-deps needs apt
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: e2e
@@ -50,7 +48,10 @@ jobs:
           cache: npm
           cache-dependency-path: e2e/package-lock.json
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      # no --with-deps: the runner image already carries Chrome's libraries,
+      # and apt made this job red whenever the Ubuntu mirrors were unreachable
+      # (six runs on 2026-11-11)
+      - run: npx playwright install chromium
       - run: npx playwright test
         env:
           CI: "1"
