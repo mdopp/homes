@@ -76,6 +76,14 @@ Stays in Homes:
 - Groups (`CATEGORIES`): shown on a shared card's page and above
   Kontakte, edited there by who may correct a shared card on its page
   (an admin, as „Daten prüfen lassen“).
+- The household's contact photos in Immich (owner 2026-11-11, homes#352):
+  the photos on the household's shared cards go into one archived Immich
+  album, and *Wer ist das?* offers a shared card's name for the face Immich
+  matches. The owner confirms it with a tap. Only household cards are read
+  and only household names are offered, never a person's phone book or
+  archive. The owner accepted that faces of people outside the family then
+  live in Immich. This needs write permissions on Homes' key (an upload, an
+  album, a delete), beyond the read-only key of point 2.
 
 ## Candidates for a later review
 

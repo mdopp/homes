@@ -132,6 +132,10 @@ type stand struct {
 	// Kontaktbilder are the owner's contacts' pictures in Immich, by
 	// "privat/<uid>" (kontaktbilder.go)
 	Kontaktbilder map[string]kontaktbild `json:"kontaktbilder,omitempty"`
+	// Kontaktfotos are the Haushalts-Kontakte's photos in Immich, by their
+	// hash, in the album Album (kontaktfotos.go)
+	Kontaktfotos map[string]kontaktfoto `json:"kontaktfotos,omitempty"`
+	Album        string                 `json:"album,omitempty"`
 	// Umfeld is, by person shown on „Dieselbe Person?“, its places and company (umfeld.go)
 	Umfeld map[string]umfeld `json:"umfeld,omitempty"`
 	// Ohne are the unnamed persons „Wer ist das?“ chooses from (wer.go),
@@ -190,7 +194,7 @@ func (g *Gesichter) laden() {
 	}
 	st := &g.stand
 	st.Zuordnung, st.Naehe, st.Andere, st.Fotos, st.Nein, st.Spaeter = leer(st.Zuordnung), leer(st.Naehe), leer(st.Andere), leer(st.Fotos), leer(st.Nein), leer(st.Spaeter)
-	st.Kontaktbilder, st.Umfeld, st.Unbekannt = leer(st.Kontaktbilder), leer(st.Umfeld), leer(st.Unbekannt)
+	st.Kontaktbilder, st.Kontaktfotos, st.Umfeld, st.Unbekannt = leer(st.Kontaktbilder), leer(st.Kontaktfotos), leer(st.Umfeld), leer(st.Unbekannt)
 }
 
 func leer[V any](m map[string]V) map[string]V {
@@ -323,7 +327,7 @@ func (g *Gesichter) darf(recht string) bool {
 // each that has none kept, a changed one, or one older than BildTTL; a
 // face Immich has not is left out. Faces of people gone are dropped. The
 // first werKandidaten unnamed ones the owner knows (wer.go) are kept, with
-// their faces.
+// their faces, and those a contact's photo suggests a name for.
 func (g *Gesichter) Auffrischen(ctx context.Context) error {
 	if g == nil || g.Immich == nil {
 		return nil
@@ -343,8 +347,12 @@ func (g *Gesichter) Auffrischen(ctx context.Context) error {
 		g.stand.Rechte = rechte
 	}
 	alt := g.stand.Bilder
-	ohne = slices.DeleteFunc(ohne, func(p immich.Person) bool { _, nie := g.stand.Unbekannt[p.ID]; return nie || g.weg[p.ID] })
-	ohne = ohne[:min(len(ohne), werKandidaten)]
+	vor, n := g.stand.vorschlaege(), 0
+	ohne = slices.DeleteFunc(ohne, func(p immich.Person) bool {
+		_, nie := g.stand.Unbekannt[p.ID]
+		n += btoi(!nie && !g.weg[p.ID])
+		return nie || g.weg[p.ID] || (n > werKandidaten && vor[p.ID] == "")
+	})
 	g.mu.Unlock()
 	neu := map[string]bild{}
 	for _, p := range slices.Concat(people, ohne) {
@@ -406,30 +414,20 @@ func (g *Gesichter) Pflegen(ctx context.Context, jede time.Duration, kontakte *c
 		return
 	}
 	g.Kontakte, g.Handy = kontakte, handy
+	schritte := []struct {
+		was string
+		tun func(context.Context) error
+	}{
+		{"people and faces", g.Auffrischen}, {"persons of one name", g.Zusammenfuehren}, {"a person per contact", g.Abgleichen},
+		{"new contacts for the owner's phone", g.Neuanlegen}, {"the contacts' pictures", g.Kontaktbilder},
+		{"the household's contact photos", g.Kontaktfotos}, {"the closest faces", g.Vorschlagen},
+		{"the places and company of the pairs", g.Umfelder}, {"the contact net", g.danach},
+	}
 	for {
-		if err := g.Auffrischen(ctx); err != nil && ctx.Err() == nil {
-			log.Printf("homes: immich: people and faces: %v", err)
-		}
-		if err := g.Zusammenfuehren(ctx); err != nil && ctx.Err() == nil {
-			log.Printf("homes: immich: persons of one name: %v", err)
-		}
-		if err := g.Abgleichen(ctx); err != nil && ctx.Err() == nil {
-			log.Printf("homes: immich: a person per contact: %v", err)
-		}
-		if err := g.Neuanlegen(ctx); err != nil && ctx.Err() == nil {
-			log.Printf("homes: immich: new contacts for the owner's phone: %v", err)
-		}
-		if err := g.Kontaktbilder(ctx); err != nil && ctx.Err() == nil {
-			log.Printf("homes: immich: the contacts' pictures: %v", err)
-		}
-		if err := g.Vorschlagen(ctx); err != nil && ctx.Err() == nil {
-			log.Printf("homes: immich: the closest faces: %v", err)
-		}
-		if err := g.Umfelder(ctx); err != nil && ctx.Err() == nil {
-			log.Printf("homes: immich: the places and company of the pairs: %v", err)
-		}
-		if err := g.danach(ctx); err != nil && ctx.Err() == nil {
-			log.Printf("homes: immich: the contact net: %v", err)
+		for _, s := range schritte {
+			if err := s.tun(ctx); err != nil && ctx.Err() == nil {
+				log.Printf("homes: immich: %s: %v", s.was, err)
+			}
 		}
 		select {
 		case <-ctx.Done():

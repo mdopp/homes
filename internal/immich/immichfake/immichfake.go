@@ -9,7 +9,9 @@
 // and the photos Homes uploads: POST /api/assets (multipart, a duplicate
 // for bytes it has), GET /api/faces?id= (the faces Erkennen gives the
 // photo, or a library photo's faces in their Rahmen), GET
-// /api/assets/<id>/thumbnail (a library photo's Bild) and DELETE /api/assets.
+// /api/assets/<id>/thumbnail (a library photo's Bild), DELETE /api/assets
+// (the metadata search finds the uploads too, as Immich finds archived
+// photos), and Homes' albums: GET and POST /api/albums, PUT …/assets.
 package immichfake
 
 import (
@@ -58,6 +60,37 @@ type Server struct {
 	hoch     int // uploads taken
 	// Bibliothek are the photos the metadata search finds, newest first
 	Bibliothek []Foto
+	alben      map[string][]string // album id → its photos
+}
+
+// Alben are the albums, each its photos' upload names, in order.
+func (s *Server) Alben() map[string][]string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := map[string][]string{}
+	for id, ids := range s.alben {
+		out[id] = []string{}
+		for _, a := range s.assets {
+			if slices.Contains(ids, a.ID) {
+				out[id] = append(out[id], a.Name)
+			}
+		}
+	}
+	return out
+}
+
+// AlbumWeg deletes the album id, as one would in Immich.
+func (s *Server) AlbumWeg(id string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.alben, id)
+}
+
+// AssetWeg deletes the upload of that name, as one would in Immich.
+func (s *Server) AssetWeg(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.assets = slices.DeleteFunc(s.assets, func(a *asset) bool { return a.Name == name })
 }
 
 // Foto is a photo of the library as /api/search/metadata finds it: when
@@ -67,6 +100,7 @@ type Server struct {
 // the photo's preview.
 type Foto struct {
 	ID, Wann, Stadt, Land string
+	Datei                 string // its file name; "" <ID>.jpg
 	Lat, Lng              float64
 	Wer                   []string
 	Breite, Hoehe         int
@@ -195,7 +229,7 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 	case r.URL.Path == "/api/api-keys/me":
 		rechte := []string{"all"}
 		if len(s.Ohne) > 0 {
-			rechte = slices.DeleteFunc([]string{"person.read", "person.create", "person.update", "person.merge", "person.statistics", "user.read", "asset.read", "asset.view", "asset.upload", "face.read", "asset.delete"}, func(r string) bool { return slices.Contains(s.Ohne, r) })
+			rechte = slices.DeleteFunc([]string{"person.read", "person.create", "person.update", "person.merge", "person.statistics", "user.read", "asset.read", "asset.view", "asset.upload", "face.read", "asset.delete", "album.create", "album.read", "albumAsset.create"}, func(r string) bool { return slices.Contains(s.Ohne, r) })
 		}
 		json.NewEncoder(w).Encode(map[string]any{"id": "k1", "name": "Homes", "permissions": rechte})
 	case r.URL.Path == "/api/users/me":
@@ -261,6 +295,8 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "image/jpeg")
 			w.Write(s.Bibliothek[i].Bild)
 		}
+	case strings.HasPrefix(r.URL.Path, "/api/albums"):
+		s.album(w, r)
 	case r.URL.Path == "/api/faces" && r.Method == http.MethodGet:
 		if s.darf(w, "face.read") {
 			s.faces(w, r.URL.Query().Get("id"))
@@ -356,6 +392,48 @@ func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"id": a.ID, "status": "created"})
 }
 
+// album is GET /api/albums/<id> (album.read; 400 when gone, as Immich's
+// access check), POST /api/albums (album.create) and PUT
+// /api/albums/<id>/assets (albumAsset.create).
+func (s *Server) album(w http.ResponseWriter, r *http.Request) {
+	id, _ := strings.CutPrefix(r.URL.Path, "/api/albums")
+	id, zu := strings.CutSuffix(strings.TrimPrefix(id, "/"), "/assets")
+	_, da := s.alben[id]
+	switch {
+	case id == "" && r.Method == http.MethodPost:
+		if s.darf(w, "album.create") {
+			id = fmt.Sprint("album-", len(s.alben)+1)
+			if s.alben == nil {
+				s.alben = map[string][]string{}
+			}
+			s.alben[id] = []string{}
+			w.WriteHeader(http.StatusCreated)
+			json.NewEncoder(w).Encode(map[string]string{"id": id})
+		}
+	case !da:
+		http.Error(w, `{"message":"Not found or no album.read access"}`, http.StatusBadRequest)
+	case zu && r.Method == http.MethodPut:
+		if s.darf(w, "albumAsset.create") {
+			var body struct{ IDs []string }
+			json.NewDecoder(r.Body).Decode(&body)
+			out := []map[string]any{}
+			for _, a := range body.IDs {
+				out = append(out, map[string]any{"id": a, "success": !slices.Contains(s.alben[id], a)})
+				if !slices.Contains(s.alben[id], a) {
+					s.alben[id] = append(s.alben[id], a)
+				}
+			}
+			json.NewEncoder(w).Encode(out)
+		}
+	case r.Method == http.MethodGet:
+		if s.darf(w, "album.read") {
+			json.NewEncoder(w).Encode(map[string]any{"id": id, "assetCount": len(s.alben[id])})
+		}
+	default:
+		http.NotFound(w, r)
+	}
+}
+
 // faces are the faces Erkennen finds in the photo, each with its person.
 func (s *Server) faces(w http.ResponseWriter, id string) {
 	i := slices.IndexFunc(s.assets, func(a *asset) bool { return a.ID == id })
@@ -427,7 +505,7 @@ func (s *Server) umfeld(w http.ResponseWriter, r *http.Request) {
 	json.NewDecoder(r.Body).Decode(&body)
 	size, page := max(body.Size, 1), max(body.Page, 1)
 	items, n := []map[string]any{}, 0
-	for _, f := range s.Bibliothek {
+	for _, f := range s.mitHochgeladenen() {
 		if slices.ContainsFunc(body.PersonIds, func(id string) bool { return !slices.Contains(f.Wer, id) }) {
 			continue
 		}
@@ -444,11 +522,25 @@ func (s *Server) umfeld(w http.ResponseWriter, r *http.Request) {
 		if f.Lat != 0 || f.Lng != 0 {
 			exif["latitude"], exif["longitude"] = f.Lat, f.Lng
 		}
-		items = append(items, map[string]any{"id": f.ID, "localDateTime": f.Wann, "exifInfo": exif, "people": leute})
+		items = append(items, map[string]any{"id": f.ID, "originalFileName": cmp.Or(f.Datei, f.ID+".jpg"), "localDateTime": f.Wann, "exifInfo": exif, "people": leute})
 	}
 	var next any
 	if n > page*size {
 		next = strconv.Itoa(page + 1)
 	}
 	json.NewEncoder(w).Encode(map[string]any{"assets": map[string]any{"items": items, "count": len(items), "nextPage": next}})
+}
+
+// mitHochgeladenen are the library's photos, then the uploads with the
+// persons Erkennen gives them: Immich's search finds archived photos too.
+func (s *Server) mitHochgeladenen() []Foto {
+	out := slices.Clone(s.Bibliothek)
+	for _, a := range s.assets {
+		f := Foto{ID: a.ID, Datei: a.Name, Wann: "2026-01-01T00:00:00Z"}
+		if s.Erkennen != nil {
+			f.Wer = slices.DeleteFunc(s.Erkennen(a.Name, a.jpeg), func(id string) bool { return id == "" })
+		}
+		out = append(out, f)
+	}
+	return out
 }

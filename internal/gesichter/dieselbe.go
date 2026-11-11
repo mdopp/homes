@@ -347,6 +347,9 @@ type Seite struct {
 	// Kontakt is a named person's contact, its key in Zuordnung
 	// ("haushalt/<uid>", "privat/<uid>"); "" none
 	Kontakt string
+	// Vorschlag is an unnamed person's name as a Haushalts-Kontakt's photo
+	// suggests it (kontaktfotos.go); "" none
+	Vorschlag string
 }
 
 // zeigbar: s can be asked about, a face to show and photos, or not counted.
