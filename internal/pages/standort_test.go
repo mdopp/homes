@@ -192,7 +192,7 @@ func TestStandortConnectedLeadsWithTheTimeline(t *testing.T) {
 	mustNotContain(t, page, step, "Verbunden seit")
 	before(t, page, open, "zuletzt aufgezeichnet")
 	trennenLast(t, page)
-	if ziel, stand := Zeile(cfg, "anna", StandortPath); ziel != "https://reitti.box.test" || stand != "Zuletzt aufgezeichnet heute 08:40" {
+	if ziel, stand := Zeile(cfg, "anna", StandortPath); ziel != "https://reitti.box.test" || stand != "Zuletzt heute 08:40" {
 		t.Fatalf("the app's row: %q %q", ziel, stand)
 	}
 
@@ -247,12 +247,13 @@ func TestMehrSaysWhereEachStands(t *testing.T) {
 	}
 	anna := page("anna")
 	mustContain(t, anna, `<section class="karte leise" aria-labelledby=karte-einrichten>`,
-		`<a href="/standort">Standortverlauf</a> <span class=k>Noch nicht verbunden</span>`,
+		`<a href="/standort">Standortverlauf</a> <span class=k>Wo du unterwegs warst, in deiner eigenen Zeitleiste</span>`, // its state is Meine Daten's (homes#342)
 		`<a href="/netzlaufwerk">Netzlaufwerk</a> <span class=k>Noch kein Passwort</span>`,
 		`<a href="/abmelden">Abmelden</a> <span class=k>Angemeldet als anna</span>`)
 	mustNotContain(t, anna, "Danach meldet sich jemand anderes an")
 	before(t, anna, `href="/dokumente"`, "karte-einrichten")
 	before(t, anna, "karte-einrichten", "karte-konto")
 	cfg.Reitti.Verbinden(context.Background(), "ben", "gut-0123")
-	mustContain(t, page("ben"), "Verbunden, noch kein Punkt angekommen", "Passwort seit 3. Mai 2026")
+	mustContain(t, page("ben"), "Passwort seit 3. Mai 2026")
+	mustNotContain(t, page("ben"), "Verbunden, noch kein Punkt angekommen")
 }

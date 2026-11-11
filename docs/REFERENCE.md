@@ -1191,15 +1191,25 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   eingerichtet.*). A piece may stall 45 s; parts untouched for seven days
   go (at start and daily). The page *Daten sichern* (`/daten-sichern`;
   the old `/nachrichten-sichern` redirects there; under Mehr when the box
-  has the inbox) shows the same state for the signed-in person, one line
-  with a dot per source (grey nothing yet, amber waiting for the archive,
-  green arrived; a phone source with nothing yet adds *in der Homes-App
-  einschalten*), and what else the archive keeps (owner, 2026-11-04): the
-  location history's last point (Reitti), the number of cards in
-  Handy-Kontakte and of the person's calendars (neither tells Homes a
-  time), and E-Mail as the way to it (Homes cannot see the mailbox). It is
-  the one overview (owner, 2026-11-08): no intro, no guide; the app keeps
-  only what needs the phone and links here (*Alles im Überblick*). Below
+  has the inbox) leads to *Meine Daten* (`/meine-daten`, homes#342, under
+  Mehr for everyone signed in), which says where each source of the
+  signed-in person stands, once: per source a dot and one line — current
+  (*zuletzt …* with how much), quiet past its threshold (*still seit …* and
+  the next step; the threshold is written under each line: two days for
+  the app's nightly WhatsApp, Signal and SMS, one for mail and the
+  location; a scan or a share is never quiet), running (a stack of the
+  person's in the scan's queue), failed (the archive's or the scan's own
+  sentence after *hängt:*) — and below, *So kommt mehr dazu*, the sources
+  never set up with their way in and the ways Homes cannot see arrive
+  (mail to Dokumente as `<login>+doc@`, Share → Homes, a Takeout location
+  history). It reads Homes' ledger, the cards in Handy-Kontakte (a count:
+  no time), Reitti's last point, the scan's status (`laib scan`: the last
+  stack the person started per scanner and inbox folder) and the archive's
+  status for Laib (`laib status archiv-<person>`: `letztes_paket`,
+  `letzter_import`, `letzter_fehler` — times and the archive's own
+  sentence, never content, ADR 0002); each row only while the box has its
+  module. Mehr's own rows no longer say a source's state, and the app's
+  Standortverlauf row says Meine Daten's words. Below
   the card, *Schlüssel im Archiv eintragen* opens the archive's `/tresor`
   (`HOMES_ARCHIV_INTERN`'s persons, at home; away or without an archive
   the plain reason instead), *Was nie ins Archiv kommt* and *Handy wechseln*

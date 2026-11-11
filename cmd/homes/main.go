@@ -265,6 +265,7 @@ func familyMux(s site) *http.ServeMux {
 	pagesMux.HandleFunc(pages.AnfordernPath, pages.Anfordern(family))
 	pagesMux.HandleFunc(pages.ModulPages, pages.ModulSeite(family))               // a module, admins: where a wish leads
 	pagesMux.HandleFunc(pages.ZusammenPath, pages.Zusammen(family))               // „So hängt alles zusammen“, under Mehr
+	pagesMux.HandleFunc(pages.MeineDatenPath, pages.MeineDaten(family))           // each source of the person's data and its last arrival (homes#342)
 	pagesMux.HandleFunc("/aufgaben", pages.DeineAufgaben(family))                 // haus#188: Deine Aufgaben // the bar's fourth entry, with Abmelden (haus#67)
 	pagesMux.HandleFunc(pages.ZugangPath, pages.Zugang(family))                   // the teaser's access requests, admins (owner 2026-11-08)
 	pagesMux.HandleFunc("/willkommen", pages.Willkommen(family))                  // hello and the next steps (haus#56)

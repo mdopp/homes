@@ -7,28 +7,44 @@ package texte
 // The module titles are "modul.<name>"; Titel finds them.
 const (
 	// Daten sichern (owner 2026-11-08: the one overview; the app keeps only what needs the phone)
-	DatenInDerApp       ID = "daten.in-der-app"    // a phone source with nothing yet: where to switch it on
-	DatenTeilen         ID = "daten.teilen"        // Facebook and LinkedIn with nothing yet: share the export to the app
-	DatenMail           ID = "daten.mail"          // E-Mail's line: Homes cannot see the mailbox, so the way
-	DatenKeinKalender   ID = "daten.kein-kalender" // the person sees no calendar yet, not even the household's
-	DatenTermine        ID = "daten.termine"       // after the count of calendars
-	DatenSchluessel     ID = "daten.schluessel"    // the button into the archive's /tresor
-	DatenWelche         ID = "daten.welche"        // its quiet line: which keys
-	DatenBitwarden      ID = "daten.bitwarden"     // the keys belong in Bitwarden too
-	DatenNieTitel       ID = "daten.nie.titel"     // the <details>: what never reaches the archive
-	DatenNie            ID = "daten.nie"
-	DatenWechsel        ID = "daten.wechsel" // the phone change (haus#209, homes-android#197): three steps, one a line
-	DatenWechselMedien  ID = "daten.wechsel.medien"
-	SpurFehlt           ID = "spur.fehlt"        // the box does not run the module's backend
-	SpurAus             ID = "spur.aus"          // the owner switched it off
-	SpurAngefordert     ID = "spur.angefordert"  // a wish is open
-	SpurWartet          ID = "spur.wartet"       // a proposal for it waits in the owner's Inbox
-	SpurAbgelehnt       ID = "spur.abgelehnt"    // the proposal was rejected, or the wish closed without it
-	SpurEingerichtet    ID = "spur.eingerichtet" // the proposal was approved, the module is not on yet
-	Anfordern           ID = "anfordern"         // the trace's button
-	Anfordernd          ID = "anfordern.laeuft"  // the pressed button
-	SpurenTitel         ID = "spuren.titel"      // Mehr's card of traces
-	SpurenHinweis       ID = "spuren.hinweis"    // its quiet line
+	DatenInDerApp      ID = "daten.in-der-app"    // a phone source with nothing yet: where to switch it on
+	DatenTeilen        ID = "daten.teilen"        // Facebook and LinkedIn with nothing yet: share the export to the app
+	DatenMail          ID = "daten.mail"          // E-Mail's line: Homes cannot see the mailbox, so the way
+	DatenKeinKalender  ID = "daten.kein-kalender" // the person sees no calendar yet, not even the household's
+	DatenTermine       ID = "daten.termine"       // after the count of calendars
+	DatenSchluessel    ID = "daten.schluessel"    // the button into the archive's /tresor
+	DatenWelche        ID = "daten.welche"        // its quiet line: which keys
+	DatenBitwarden     ID = "daten.bitwarden"     // the keys belong in Bitwarden too
+	DatenNieTitel      ID = "daten.nie.titel"     // the <details>: what never reaches the archive
+	DatenNie           ID = "daten.nie"
+	DatenWechsel       ID = "daten.wechsel" // the phone change (haus#209, homes-android#197): three steps, one a line
+	DatenWechselMedien ID = "daten.wechsel.medien"
+	// Meine Daten (homes#342): every source of a person on one page, with its last arrival
+	MeineDatenTitel     ID = "meine-daten.titel"
+	MeineDatenMehr      ID = "meine-daten.mehr"     // its line on Mehr
+	MeineDatenDa        ID = "meine-daten.da"       // the card of the sources that came
+	MeineDatenWege      ID = "meine-daten.wege"     // the card of the sources not set up, and the ways in
+	MeineDatenNachTag   ID = "meine-daten.nach"     // a threshold: „still nach %s“
+	MeineDatenSelbst    ID = "meine-daten.selbst"   // a source that comes when the person sends it: never quiet
+	MeineDatenZahl      ID = "meine-daten.zahl"     // a source Homes only counts
+	MeineDatenWartet    ID = "meine-daten.wartet"   // after „n Dateien warten“: the next step
+	MeineDatenFehler    ID = "meine-daten.fehler"   // before the archive's own sentence
+	MeineDatenStumm     ID = "meine-daten.stumm"    // the archive's status could not be read
+	MeineDatenScannen   ID = "meine-daten.scannen"  // the scanner, never used: the way
+	MeineDatenOrdner    ID = "meine-daten.ordner"   // the inbox folder: „Dateien in den Ordner „%s“ …“
+	MeineDatenMailDok   ID = "meine-daten.mail-dok" // documents by mail: „an %s schicken“
+	MeineDatenTeilen    ID = "meine-daten.teilen"   // Share → Homes
+	MeineDatenTakeout   ID = "meine-daten.takeout"  // a Google location history
+	SpurFehlt           ID = "spur.fehlt"           // the box does not run the module's backend
+	SpurAus             ID = "spur.aus"             // the owner switched it off
+	SpurAngefordert     ID = "spur.angefordert"     // a wish is open
+	SpurWartet          ID = "spur.wartet"          // a proposal for it waits in the owner's Inbox
+	SpurAbgelehnt       ID = "spur.abgelehnt"       // the proposal was rejected, or the wish closed without it
+	SpurEingerichtet    ID = "spur.eingerichtet"    // the proposal was approved, the module is not on yet
+	Anfordern           ID = "anfordern"            // the trace's button
+	Anfordernd          ID = "anfordern.laeuft"     // the pressed button
+	SpurenTitel         ID = "spuren.titel"         // Mehr's card of traces
+	SpurenHinweis       ID = "spuren.hinweis"       // its quiet line
 	SpurenStandNicht    ID = "spuren.stand-nicht"
 	AnfordernNicht      ID = "anfordern.nicht"        // Laib refused or failed
 	AnfordernStumm      ID = "anfordern.stumm"        // Laib did not answer in time
@@ -375,39 +391,59 @@ const (
 )
 
 var de = map[ID]string{
-	"daten.in-der-app":     "in der Homes-App einschalten",
-	"daten.teilen":         "Export auf dem Handy teilen → „Ins Archiv“",
-	"daten.mail":           "Trag dein Postfach einmal im Archiv ein; es holt dann jede Stunde neue Mails.",
-	"daten.kein-kalender":  "noch kein Kalender",
-	"daten.termine":        "das Archiv übernimmt sie, während es offen ist",
-	"daten.schluessel":     "Schlüssel im Archiv eintragen",
-	"daten.welche":         "Signal-Passphrase, WhatsApp-Schlüssel und Postfach",
-	"daten.bitwarden":      "Leg Archiv-Passwort, Signal-Passphrase und WhatsApp-Schlüssel auch in Bitwarden ab: wer einen verliert, kann diese Sicherungen nicht mehr lesen.",
-	"daten.nie.titel":      "Was nie ins Archiv kommt",
-	"daten.wechsel":        "Auf dem neuen Handy die Homes-App installieren und mit deinem Namen koppeln.\nIn der Homes-App: Mehr → Daten sichern → „Sicherung zurückholen“. Für Signal einen Ordner wählen, etwa „Dokumente/Signal“. WhatsApp vorher installieren, aber noch nicht öffnen, und den Ordner „Android/media/com.whatsapp/WhatsApp“ freigeben (gibt es ihn noch nicht: „Android/media“).\nSignal neu installieren, bei der Einrichtung „Aus Sicherung wiederherstellen“ wählen, die Datei auswählen und die 30-stellige Passphrase aus Bitwarden eingeben. WhatsApp öffnen, mit derselben Nummer anmelden und „Wiederherstellen“ wählen.",
-	"daten.wechsel.medien": "Fotos und Sprachnachrichten kommen nur zurück, während dein Archiv offen ist. Die App überschreibt nichts, ohne zu fragen.",
-	"daten.nie":            "Nachrichten, die sich selbst löschen, und Fotos oder Videos zur einmaligen Ansicht: sie stehen in keiner Sicherung.",
-	"modul.geraete":        "Geräte",
-	"modul.energie":        "Energie",
-	"modul.sprechen":       "Sprechen",
-	"modul.kalender":       "Kalender",
-	"modul.kontakte":       "Kontakte",
-	"modul.konto":          "Homes-Konto",
-	"modul.einkauf":        "Einkauf",
-	"modul.notizen":        "Notizen",
-	"modul.dokumente":      "Dokumente",
-	"modul.musik":          "Musik",
-	"modul.podcasts":       "Podcasts",
-	"modul.hoerbuecher":    "Hörbücher und Podcasts",
-	"modul.gesehen":        "Gesehen & Gehört",
-	"modul.sicherung":      "Daten sichern",
-	"modul.standort":       "Standortverlauf",
-	"modul.netzlaufwerk":   "Netzlaufwerk",
-	"modul.werkstatt":      "Werkstatt",
-	"modul.nutzung":        "Was wird genutzt",
-	"modul.fotos":          "Fotos",
-	"modul.passwoerter":    "Passwörter",
-	"modul.filme":          "Filme und Musik",
+	"meine-daten.titel":          "Meine Daten",
+	"meine-daten.mehr":           "Was von dir auf die Box kommt, und wann zuletzt",
+	"meine-daten.da":             "Was ankommt",
+	"meine-daten.wege":           "So kommt mehr dazu",
+	"meine-daten.nach":           "still nach %s",
+	"meine-daten.selbst":         "kommt, wenn du etwas schickst",
+	"meine-daten.zahl":           "die Box zählt nur, sie sieht keine Uhrzeit",
+	"meine-daten.wartet":         "öffne dein Archiv, dann liest es sie",
+	"meine-daten.fehler":         "hängt: ",
+	"meine-daten.stumm":          "Dein Archiv sagt gerade nicht, wann zuletzt etwas kam. Später noch einmal schauen.",
+	"meine-daten.scannen":        "Dokumente → Stapel scannen",
+	"meine-daten.ordner":         "Dateien in den Ordner „%s“ auf dem Netzlaufwerk legen",
+	"meine-daten.mail-dok":       "Briefe und Rechnungen per Mail an %s schicken",
+	"meine-daten.teilen":         "Ein Foto oder PDF auf dem Handy teilen → Homes",
+	"meine-daten.takeout":        "Den Standortverlauf aus Google Takeout auf dem Handy teilen → Homes",
+	"meine-daten.still.whatsapp": "die Homes-App öffnen: läuft die Sicherung noch?",
+	"meine-daten.still.signal":   "die Homes-App öffnen: läuft die Sicherung noch?",
+	"meine-daten.still.sms":      "die Homes-App öffnen: läuft die Sicherung noch?",
+	"meine-daten.still.mail":     "im Archiv das Postfach prüfen",
+	"meine-daten.still.standort": "auf dem Handy prüfen, ob der Standort an ist",
+	"daten.in-der-app":           "in der Homes-App einschalten",
+	"daten.teilen":               "Export auf dem Handy teilen → „Ins Archiv“",
+	"daten.mail":                 "Trag dein Postfach einmal im Archiv ein; es holt dann jede Stunde neue Mails.",
+	"daten.kein-kalender":        "noch kein Kalender",
+	"daten.termine":              "das Archiv übernimmt sie, während es offen ist",
+	"daten.schluessel":           "Schlüssel im Archiv eintragen",
+	"daten.welche":               "Signal-Passphrase, WhatsApp-Schlüssel und Postfach",
+	"daten.bitwarden":            "Leg Archiv-Passwort, Signal-Passphrase und WhatsApp-Schlüssel auch in Bitwarden ab: wer einen verliert, kann diese Sicherungen nicht mehr lesen.",
+	"daten.nie.titel":            "Was nie ins Archiv kommt",
+	"daten.wechsel":              "Auf dem neuen Handy die Homes-App installieren und mit deinem Namen koppeln.\nIn der Homes-App: Mehr → Daten sichern → „Sicherung zurückholen“. Für Signal einen Ordner wählen, etwa „Dokumente/Signal“. WhatsApp vorher installieren, aber noch nicht öffnen, und den Ordner „Android/media/com.whatsapp/WhatsApp“ freigeben (gibt es ihn noch nicht: „Android/media“).\nSignal neu installieren, bei der Einrichtung „Aus Sicherung wiederherstellen“ wählen, die Datei auswählen und die 30-stellige Passphrase aus Bitwarden eingeben. WhatsApp öffnen, mit derselben Nummer anmelden und „Wiederherstellen“ wählen.",
+	"daten.wechsel.medien":       "Fotos und Sprachnachrichten kommen nur zurück, während dein Archiv offen ist. Die App überschreibt nichts, ohne zu fragen.",
+	"daten.nie":                  "Nachrichten, die sich selbst löschen, und Fotos oder Videos zur einmaligen Ansicht: sie stehen in keiner Sicherung.",
+	"modul.geraete":              "Geräte",
+	"modul.energie":              "Energie",
+	"modul.sprechen":             "Sprechen",
+	"modul.kalender":             "Kalender",
+	"modul.kontakte":             "Kontakte",
+	"modul.konto":                "Homes-Konto",
+	"modul.einkauf":              "Einkauf",
+	"modul.notizen":              "Notizen",
+	"modul.dokumente":            "Dokumente",
+	"modul.musik":                "Musik",
+	"modul.podcasts":             "Podcasts",
+	"modul.hoerbuecher":          "Hörbücher und Podcasts",
+	"modul.gesehen":              "Gesehen & Gehört",
+	"modul.sicherung":            "Daten sichern",
+	"modul.standort":             "Standortverlauf",
+	"modul.netzlaufwerk":         "Netzlaufwerk",
+	"modul.werkstatt":            "Werkstatt",
+	"modul.nutzung":              "Was wird genutzt",
+	"modul.fotos":                "Fotos",
+	"modul.passwoerter":          "Passwörter",
+	"modul.filme":                "Filme und Musik",
 
 	SpurFehlt:           "auf dieser Box nicht eingerichtet",
 	SpurAus:             "ausgeschaltet",

@@ -1,19 +1,15 @@
 package pages
 
 import (
-	"context"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/mdopp/homes/internal/texte"
 
-	"github.com/mdopp/homes/internal/caldav"
-	"github.com/mdopp/homes/internal/caldav/davfake"
 	"github.com/mdopp/homes/internal/napi"
 )
 
@@ -40,19 +36,15 @@ func TestDatenSichernShowsTheStandAndTheGuide(t *testing.T) {
 	if code != 200 || hdr.Get("Cache-Control") != "no-store" {
 		t.Fatalf("%d %q", code, hdr.Get("Cache-Control"))
 	}
-	for _, want := range []string{"<h1>Daten sichern</h1>", "Dein Stand",
-		`<span class="punkt gelb"></span><div>WhatsApp<span class=k>zuletzt Sa 31.10. 03:11 · 2 Dateien, 3,2 GB · 1 Datei wartet auf dein Archiv`, // Berlin time
-		`<span class="punkt "></span><div>Signal<span class=k>zuletzt heute 03:00 · 1 Datei, 2,0 KB`,
-		`<span class="punkt grau"></span><div>SMS und Anrufe<span class=k>noch nichts angekommen · in der Homes-App einschalten`, " frei.",
-		`<span class="punkt grau"></span><div>Facebook und LinkedIn<span class=k>noch nichts angekommen · Export auf dem Handy teilen → „Ins Archiv“`,
-		`<div>E-Mail<span class=k>Trag dein Postfach einmal im Archiv ein; es holt dann jede Stunde neue Mails.`, "Bitwarden",
+	for _, want := range []string{"<h1>Daten sichern</h1>", "Dein Stand", `<a href="/meine-daten">Meine Daten</a>`, "Bitwarden",
 		"<summary>Was nie ins Archiv kommt</summary>", "<details class=wechsel><summary>Handy wechseln</summary>"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("the page lacks %q", want)
 		}
 	}
+	// homes#342: where each source stands is Meine Daten's alone, not said twice
 	for _, gone := range []string{"Discord", "Nachrichten sichern", "Chat-Backups", "64-stelligen Schlüssel verwenden", "„Kontakte übertragen“", "je nach App-Version", "<h2>Signal</h2>",
-		"class=lead", "Das Sichern macht die Homes-App", "Ohne Handy", "/tresor"} { // no archive for anna here: no link into it
+		"class=lead", "Das Sichern macht die Homes-App", "Ohne Handy", "/tresor", "3,2 GB", "zuletzt heute", "li class=quelle"} { // no archive for anna here: no link into it
 		if strings.Contains(body, gone) {
 			t.Errorf("the page still says %q", gone)
 		}
@@ -62,10 +54,6 @@ func TestDatenSichernShowsTheStandAndTheGuide(t *testing.T) {
 	before(t, body, "Was nie ins Archiv kommt", "Handy wechseln")
 	if strings.Contains(body, "<form") || strings.Contains(body, "<button") {
 		t.Error("nothing on the page changes anything yet: no form, no button")
-	}
-	// another person's page shows only theirs
-	if _, ben, _ := familyPageAs(t, Nachrichten, cfg, "GET", DatenPath, "ben", "family"); strings.Contains(ben, "3,2 GB") || strings.Contains(ben, "wartet") {
-		t.Errorf("Ben sees Anna's backups:\n%s", ben)
 	}
 	if code, _, _ := familyPageAs(t, Nachrichten, cfg, "GET", DatenPath, "", ""); code != 403 {
 		t.Errorf("without a person → %d", code)
@@ -158,11 +146,6 @@ func TestDatenSichernWithoutTheArchiv(t *testing.T) {
 	if _, mehr, _ := familyPage(t, Mehr, StartConfig{}, "GET", mehrPath, "family"); strings.Contains(mehr, DatenPath) {
 		t.Error("Mehr lists a page the box does not have")
 	}
-	// a stand that cannot be read is one plain line
-	cfg := StartConfig{Sicherung: napi.NewSicherung(t.TempDir(), "/dev/null/kein")}
-	if _, body, _ := familyPage(t, Nachrichten, cfg, "GET", DatenPath, "family"); !strings.Contains(body, saysStandFehlt) {
-		t.Errorf("an unreadable ledger:\n%s", body)
-	}
 }
 
 func TestGroesseWorte(t *testing.T) {
@@ -174,34 +157,4 @@ func TestGroesseWorte(t *testing.T) {
 	if got := texte.Anzahl(12345, "Datei", "Dateien"); got != "12.345 Dateien" {
 		t.Errorf("anzahl = %q", got)
 	}
-}
-
-// Owner 2026-11-04: „Standort und Kalender und Adressbuch sind auch Dinge,
-// die gesichert werden.“ Dein Stand says each from what Homes can read:
-// Reitti's last point, the cards in Handy-Kontakte (a count; Homes keeps no
-// time of their arrival), the calendars the archive takes over (a count).
-func TestDatenSichernStandortKontakteKalender(t *testing.T) {
-	dav := davfake.New("homes", "pw")
-	t.Cleanup(dav.Close)
-	dav.AddPrincipal("anna")
-	dav.AddCalendar("/homes/haushalt/", "Haushalt")
-	dav.AddAddressBook("/anna/handy-kontakte/", "Handy-Kontakte")
-	for i, n := range []string{"Oma", "Opa"} {
-		dav.Put("/anna/handy-kontakte/k"+strconv.Itoa(i)+".vcf", "BEGIN:VCARD\r\nVERSION:3.0\r\nUID:k"+strconv.Itoa(i)+"\r\nFN:"+n+"\r\nEND:VCARD\r\n")
-	}
-	now := time.Date(2026, 11, 4, 12, 0, 0, 0, time.UTC)
-	cfg, _ := standortCfg(t)
-	cfg.Sicherung, cfg.Now, cfg.Loc = napi.NewSicherung(t.TempDir(), t.TempDir()), func() time.Time { return now }, berlin(t)
-	dav2 := &caldav.Client{URL: dav.URL, User: "homes", Password: "pw", Loc: berlin(t)}
-	cfg.Contacts, cfg.Calendar = dav2, dav2
-	_, body, _ := familyPage(t, Nachrichten, cfg, "GET", DatenPath, "family")
-	mustContain(t, body, `<span class="punkt grau"></span><div><a href=/standort>Standort</a><span class=k>noch nichts aufgezeichnet`,
-		`<span class="punkt "></span><div>Kontakte<span class=k>2 Kontakte im Adressbuch „Handy-Kontakte“`,
-		`<span class="punkt grau"></span><div>Kalender<span class=k>1 Kalender; das Archiv übernimmt sie, während es offen ist`)
-	_, ben, _ := familyPageAs(t, Nachrichten, cfg, "GET", DatenPath, "ben", "family") // no contacts of his own
-	mustContain(t, ben, `<div>Kontakte<span class=k>noch nichts angekommen · in der Homes-App einschalten`)
-	mustNotContain(t, body, "Deine Kalender in Homes übernimmt")
-	cfg.Reitti.Verbinden(context.Background(), "anna", "gut-0123")
-	_, body, _ = familyPage(t, Nachrichten, cfg, "GET", DatenPath, "family")
-	mustContain(t, body, `<span class="punkt gelb"></span><div><a href=/standort>Standort</a><span class=k>noch nichts aufgezeichnet`)
 }

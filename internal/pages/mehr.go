@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/mdopp/homes/internal/cards"
 	"github.com/mdopp/homes/internal/modul"
@@ -16,58 +15,41 @@ const mehrPath = "/mehr"
 
 // What Mehr says of each of its pages, in a line.
 var mehrSays = map[string]string{
-	"Dokumente":               "Briefe, Rechnungen und Verträge ablegen und wiederfinden",
-	"Deine Aufgaben":          "Was du einmal einrichtest, offen und erledigt",
-	"Podcasts":                "Podcasts per Link abonnieren; Bescheid bei jeder neuen Folge",
-	"Gesehen & Gehört":        "Was du geschaut und gehört hast; was als Nächstes auf die Wunschliste kommt",
-	"Platte erfassen":         "Eine Schallplatte fotografieren und in deine Discogs-Sammlung eintragen",
-	"Discogs":                 "Dein Discogs-Konto verbinden: Sammlung, Wantlist, Platte erfassen",
-	"Musik":                   "Hinzufügen und was beim Einsortieren hängt, Platten erfassen, die Musik-Wunschliste",
-	"Netzlaufwerk":            "Dein Passwort für das Netzlaufwerk",
-	"Standortverlauf":         "Wo du unterwegs warst, in deiner eigenen Zeitleiste",
-	"Daten sichern":           "Nachrichten, Kontakte, Mails und Termine in dein Archiv",
-	"Box":                     "Wie es der Box geht, für Admins",
-	texte.T("zusammen.titel"): texte.T("zusammen.mehr"),
-	texte.T("archiv.titel"):   texte.T("archiv.mehr"),
+	"Dokumente":                    "Briefe, Rechnungen und Verträge ablegen und wiederfinden",
+	"Deine Aufgaben":               "Was du einmal einrichtest, offen und erledigt",
+	"Podcasts":                     "Podcasts per Link abonnieren; Bescheid bei jeder neuen Folge",
+	"Gesehen & Gehört":             "Was du geschaut und gehört hast; was als Nächstes auf die Wunschliste kommt",
+	"Platte erfassen":              "Eine Schallplatte fotografieren und in deine Discogs-Sammlung eintragen",
+	"Discogs":                      "Dein Discogs-Konto verbinden: Sammlung, Wantlist, Platte erfassen",
+	"Musik":                        "Hinzufügen und was beim Einsortieren hängt, Platten erfassen, die Musik-Wunschliste",
+	"Netzlaufwerk":                 "Dein Passwort für das Netzlaufwerk",
+	"Standortverlauf":              "Wo du unterwegs warst, in deiner eigenen Zeitleiste",
+	"Daten sichern":                "Nachrichten, Kontakte, Mails und Termine in dein Archiv",
+	"Box":                          "Wie es der Box geht, für Admins",
+	texte.T("zusammen.titel"):      texte.T("zusammen.mehr"),
+	texte.T("archiv.titel"):        texte.T("archiv.mehr"),
+	texte.T(texte.MeineDatenTitel): texte.T(texte.MeineDatenMehr),
 }
 
 // einmalig are the pages a person sets up once and then rarely opens, and Box.
 var einmalig = map[string]bool{StandortPath: true, netzlaufwerkPath: true, DatenPath: true, DiscogsPath: true, aufgabenPath: true, "/box": true}
 
 // mehrStand is where a page stands for the person, from what Homes keeps
-// itself (Mehr never waits for a backend); "" where there is nothing cheap to say.
+// itself (Mehr never waits for a backend); "" where there is nothing cheap to
+// say. Where a source's data stands is Meine Daten's alone (homes#342).
 func mehrStand(r *http.Request, cfg StartConfig, pfad string) string {
 	user := r.Header.Get("Remote-User")
-	now, loc := cfg.clock()
+	_, loc := cfg.clock()
 	switch pfad {
 	case aufgabenPath:
 		if n := offeneZahl(r, cfg); n > 0 { // the counter, in words (owner 2026-11-04)
 			return fmt.Sprintf(texte.T(texte.Offen), n) + " · " + mehrSays["Deine Aufgaben"]
 		}
-	case StandortPath:
-		if k, ok := cfg.Reitti.Konto(user); !ok {
-			return "Noch nicht verbunden"
-		} else if !k.Zuletzt.IsZero() {
-			return "Zuletzt aufgezeichnet " + dayWord(k.Zuletzt, now, loc) + " " + k.Zuletzt.In(loc).Format("15:04")
-		}
-		return "Verbunden, noch kein Punkt angekommen"
 	case netzlaufwerkPath:
 		if acc, err := cfg.Samba.Accounts(); err == nil && !acc[user].IsZero() {
 			return "Passwort seit " + dayWords(acc[user], loc)
 		}
 		return "Noch kein Passwort"
-	case DatenPath:
-		var last time.Time
-		st, _ := cfg.Sicherung.Stand(user)
-		for _, q := range st.Quellen {
-			if t := am(q); t.After(last) {
-				last = t
-			}
-		}
-		if last.IsZero() {
-			return "Noch nichts angekommen"
-		}
-		return "Zuletzt angekommen " + dayWord(last, now, loc) + " " + last.In(loc).Format("15:04")
 	case MusikPath: // the inbox, read here; beets' own word is Laib's, which Mehr does not wait for
 		if cfg.MusicInbox == "" {
 			return ""
@@ -95,10 +77,15 @@ func mehrStand(r *http.Request, cfg StartConfig, pfad string) string {
 // Zeile is a module's row in the app (owner 2026-11-08: „direkter bauen“): where its tap goes
 // when not to its page (the timeline itself once Reitti is connected) and the line Mehr says of it.
 func Zeile(cfg StartConfig, user, pfad string) (ziel, stand string) {
-	if _, ok := cfg.Reitti.Konto(user); ok && pfad == StandortPath {
+	if pfad != StandortPath {
+		return "", mehrStand(&http.Request{Header: http.Header{"Remote-User": {user}}}, cfg, pfad)
+	}
+	if _, ok := cfg.Reitti.Konto(user); ok {
 		ziel = AppURL(OnDomain(cfg.Reitti.PublicURL, cfg.PublicURL))
 	}
-	return ziel, mehrStand(&http.Request{Header: http.Header{"Remote-User": {user}}}, cfg, pfad)
+	now, loc := cfg.clock()
+	stand = standortZeile(cfg, user, now, loc).says // Meine Daten's words
+	return ziel, strings.ToUpper(stand[:1]) + stand[1:]
 }
 
 // Mehr is the bar's last entry on the phone (haus#67): the pages that
