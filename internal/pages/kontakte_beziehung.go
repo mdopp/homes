@@ -17,7 +17,7 @@ import (
 // questions „Wie steht X zu Y?“ moved into the person's archive (archiv#27, ADR 0002).
 
 const netzFrageStyle = `<style>.bzeile select{min-height:44px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--edge);border-radius:10px;padding:0 8px}
-.bzeile label{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--edge)}.bzeile span{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}.bzeile small{display:block}.bzeile select{flex:0 0 46%}</style>`
+.bzeile label{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--edge)}.bzeile span{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}.bzeile small{display:block}.bzeile select{flex:0 0 11rem;max-width:50%;margin-left:auto}.paar form.bzeile{display:block;margin:0}.paar form.bzeile:last-of-type label{border-bottom:0}</style>`
 
 // netzArten are the kinds, Kennen sich nicht and extra as options, art chosen.
 func netzArten(art string, extra ...string) string {
