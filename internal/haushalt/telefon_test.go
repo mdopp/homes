@@ -113,3 +113,17 @@ func TestTelefonVereinheitlichen(t *testing.T) {
 		t.Fatalf("again: %q", text)
 	}
 }
+
+// owner 2026-11-11: a card with one number in two forms (0151 … and
+// +49 151 …) has it once after the run, the line with the kind kept; red
+// before (two equal lines).
+func TestTelefonVereinheitlichenWritesANumberOnce(t *testing.T) {
+	s := newSetup(t, want{contacts: true})
+	s.fake.Put("/bote/kontakte/c.vcf", "BEGIN:VCARD\r\nVERSION:3.0\r\nUID:c\r\nFN:Carla\r\nTEL:0151 23456789\r\nTEL;TYPE=CELL:+4915123456789\r\nEND:VCARD\r\n")
+	if text, isErr := call(t, s.h, "telefon_vereinheitlichen", map[string]any{"apply": true}); isErr {
+		t.Fatalf("%q", text)
+	}
+	if got := s.fake.Objects()["/bote/kontakte/c.vcf"]; strings.Count(got, "TEL") != 1 || !strings.Contains(got, "TEL;TYPE=CELL:+49 151 23456789\r\n") {
+		t.Fatalf("the card:\n%s", got)
+	}
+}

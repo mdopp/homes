@@ -42,7 +42,7 @@ func Formfehler(vorher, nachher Felder, land string) map[string]string {
 		}
 	}
 	for i, t := range nachher.Telefone {
-		if t.Nummer != "" && ziffern(t.Nummer) != ziffern(at(vorher.Telefone, i).Nummer) {
+		if t.Nummer != "" && nummer(t.Nummer) != nummer(at(vorher.Telefone, i).Nummer) {
 			falsch("tel."+strconv.Itoa(i), Nummer(t.Nummer, land))
 		}
 	}

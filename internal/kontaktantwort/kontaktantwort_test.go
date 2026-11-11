@@ -269,3 +269,14 @@ func TestSauberCutsAndFlattens(t *testing.T) {
 		t.Errorf("Sauber = %q, %d, %+v, %d", got.Vorname, len(got.Telefone), got.Telefone[0], len([]rune(got.Mails[0].Adresse)))
 	}
 }
+
+// owner 2026-11-11: a number the card has in the other form (a browser's
+// autofill „+49 171 …“ beside the card's „0171 …“) is no new number,
+// neither in a new place nor in its own; red before (two numbers).
+func TestVergleichANumberInTheOtherFormIsNone(t *testing.T) {
+	vorher := Felder{Telefone: []Telefon{{"0171 1234567", "mobil", false}}}
+	nachher := Felder{Telefone: []Telefon{{"+49 171 1234567", "mobil", false}, {"+49171 1234567", "mobil", false}}}
+	if got := Vergleich(vorher, nachher); len(got) != 0 {
+		t.Fatalf("Vergleich = %+v", got)
+	}
+}

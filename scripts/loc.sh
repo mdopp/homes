@@ -148,7 +148,11 @@ budget cmd 1448 cmd/homes             # homes' wiring: 1,018 with the demo then
 # (originalFileName), and immichfake's albums and its search finding the uploads as Immich finds archived photos (homes#352)
 # 2026-11-11, owner decided 2026-11-11 (ADR 0002): the net into the archive (connectors 15,425 -> 15,373, ratcheted down by the
 # 52 lines removed: immich.Aufnahmen, the photo read only the net used)
-budget connectors 15373 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
+# 2026-11-11, owner asked 2026-11-11 („Viele Kontakte haben mehrfach die gleiche Nummer“): one line per number
+# (connectors 15,373 -> 15,500; 15,496 used): caldav/doppelt.go, a number compared with its country code (0171 … = +49 171 …),
+# the phone's mirror stored with each number once, a correction that never writes one twice, and the counts and
+# writes of `homes nummern-bereinigen`
+budget connectors 15500 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
 # 2026-11-04, internal/jsonfile (47 lines, 50 of cap) from household's cap to shared's: it
 # replaces nine copies of a save, 62 of their lines in household
 # 2026-11-05, owner 2026-11-05 yes: Immich for the contacts (9,583 -> 9,874):

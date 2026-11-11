@@ -131,11 +131,13 @@ func (cd RawCard) inhalt() string {
 	return hex.EncodeToString(h[:])
 }
 
-// stored is the card as Homes writes it: the phone's text, with the hash
-// before its end.
+// stored is the card as Homes writes it: the phone's text with one line
+// per number (a phone sends a number once per joined raw contact,
+// doppelt.go), the hash of the text as sent before its end.
 func (cd RawCard) stored() string {
-	i := strings.LastIndex(strings.ToUpper(cd.Text), "END:VCARD")
-	return cd.Text[:i] + inhaltProp + ":" + cd.inhalt() + "\r\n" + cd.Text[i:]
+	text, _ := OhneDoppelteNummern(cd.Text, "")
+	i := strings.LastIndex(strings.ToUpper(text), "END:VCARD")
+	return text[:i] + inhaltProp + ":" + cd.inhalt() + "\r\n" + text[i:]
 }
 
 // CardHref is a card's place in a mirrored book, from its UID: hex only,
