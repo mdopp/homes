@@ -62,7 +62,7 @@ framework, no build step.
 
 ## Code gates
 
-The owner, 2026-11-03: „Code sollte immer möglichst sauber sein“. Both
+The owner, 2026-11-03: „Code sollte immer möglichst sauber sein“. The
 gates run in CI; run them before a PR.
 
 - `scripts/loc.sh` — production lines per area under its cap (pages,
@@ -87,8 +87,11 @@ gates run in CI; run them before a PR.
   reason in the PR and the owner's yes. A finding that went away fails
   too until the same PR lowers the baseline: `scripts/ratchet.py
   --update` (it only lowers) and commit `scripts/ratchet/`. A renamed or
-  moved function counts as new under its new name. The script is the
-  same as laib's `scripts/ratchet.py`; change both.
+  moved function counts as new under its new name.
+- `scripts/copies.sh` — `ratchet.py`, `test_ratchet.py`, `pins.sh` and
+  `copies.sh` are copies of laib's `werkstatt/scaffold/repo/scripts/`,
+  the one source of the gates (laib#1170); CI fails when a copy differs
+  from laib's main. A change goes to laib first, then here as a copy.
 
 
 ## Layout
