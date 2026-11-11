@@ -87,9 +87,9 @@ func TestDieselbeNeinWerDann(t *testing.T) {
 // owner 2026-11-11 (Android Chrome showed a datalist's names only now and
 // then): the family pages' script shows a datalist field's matching names
 // as rows to tap and drops the field's list; the page keeps the datalist
-// for a browser without script (archiv#41). e2e drives it at 411 px.
+// for a browser without script (archiv#41), also on a page swapped in. e2e drives it at 411 px.
 func TestNamenVorschlaege(t *testing.T) {
-	for _, want := range []string{"querySelectorAll('input[list]').forEach(feld)", "removeAttribute('list')", ".slice(0,6)", "replace(/ä/g,'ae')", "b.textContent=n", "u.addEventListener('mousedown',function(e){e.preventDefault()})"} {
+	for _, want := range []string{"querySelectorAll('input[list]').forEach(feld)", "namen();restore(k,same)", "removeAttribute('list')", ".slice(0,6)", "replace(/ä/g,'ae')", "b.textContent=n", "u.addEventListener('mousedown',function(e){e.preventDefault()})"} {
 		if !strings.Contains(homesScript, want) {
 			t.Fatalf("the script has no %q", want)
 		}
