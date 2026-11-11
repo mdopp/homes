@@ -234,6 +234,9 @@ func (w *wsConn) closeOn(ctx context.Context) (stop func()) {
 	return func() { close(done) }
 }
 
+// errNotFound is HA's not_found answer (energy/get_prefs without a dashboard).
+var errNotFound = errors.New("ha: not found")
+
 // result reads until the result for id and decodes it into out.
 func (w *wsConn) result(id int, out any) error {
 	for {
@@ -255,6 +258,9 @@ func (w *wsConn) result(id int, out any) error {
 		}
 		if !m.Success && m.Error.Code == "unauthorized" {
 			return fmt.Errorf("ha: command %d: %w", id, ErrNotAdmin)
+		}
+		if !m.Success && m.Error.Code == "not_found" {
+			return fmt.Errorf("ha: command %d: %s: %w", id, m.Error.Message, errNotFound)
 		}
 		if !m.Success {
 			return fmt.Errorf("ha: command %d: %s", id, m.Error.Message)

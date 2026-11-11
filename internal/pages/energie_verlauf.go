@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/mdopp/homes/internal/cards"
-	"github.com/mdopp/homes/internal/energie"
 	"github.com/mdopp/homes/internal/ha"
 )
 
@@ -46,17 +45,16 @@ var views = []struct{ key, name string }{{"tag", "Tag"}, {"woche", "Woche"}, {"m
 // hour or day, as Unix seconds), in kWh.
 type amounts map[string]map[int64]float64
 
-// statsFor reads what HA's long-term statistics say for the history's
-// ids between from and to, by period, each period by its local start;
-// nothing derived.
-func statsFor(ctx context.Context, c *ha.Client, st energie.Stats, from, to time.Time, period string, loc *time.Location) (amounts, error) {
-	slots := map[string]string{"solar": st.Solar, "bezug": st.Bezug, "einsp": st.Einspeisung}
+// statsFor reads what HA's long-term statistics say for the slots' ids
+// between from and to, by period, each period by its local start, summed
+// by the slot's key (two batteries are one); nothing derived.
+func statsFor(ctx context.Context, c *ha.Client, slots []statSlot, from, to time.Time, period string, loc *time.Location) (amounts, error) {
 	var ids []string
 	seen := map[string]bool{}
-	for _, id := range slots {
-		if id != "" && !seen[id] {
-			ids = append(ids, id)
-			seen[id] = true
+	for _, sl := range slots {
+		if sl.id != "" && !seen[sl.id] {
+			ids = append(ids, sl.id)
+			seen[sl.id] = true
 		}
 	}
 	sort.Strings(ids)
@@ -65,12 +63,15 @@ func statsFor(ctx context.Context, c *ha.Client, st energie.Stats, from, to time
 		return nil, err
 	}
 	out := amounts{}
-	for key, id := range slots {
-		rows, ok := got[id]
-		if id == "" || !ok {
+	for _, sl := range slots {
+		rows, ok := got[sl.id]
+		if sl.id == "" || !ok {
 			continue
 		}
-		m := map[int64]float64{}
+		m := out[sl.key]
+		if m == nil {
+			m = map[int64]float64{}
+		}
 		for _, s := range rows {
 			at := s.Start.In(loc)
 			if period == "day" {
@@ -79,7 +80,7 @@ func statsFor(ctx context.Context, c *ha.Client, st energie.Stats, from, to time
 			}
 			m[at.Unix()] += s.Change
 		}
-		out[key] = m
+		out[sl.key] = m
 	}
 	return out, nil
 }
@@ -134,6 +135,7 @@ func back(t time.Time, years, months int, end bool) time.Time {
 // bucket is one bar of the chart: when it starts, its label on the axis
 // (may be ""), its name in words, and each series' amount.
 type bucket struct {
+	at          int64 // the Tag chart's hour, its start (Unix seconds)
 	label, long string
 	v           map[string]float64
 	// est is the estimate for the rest of the bar's period (Jahr, Monat:
@@ -159,7 +161,7 @@ func buckets(view string, now time.Time, loc *time.Location, daily, hourly amoun
 	case "tag":
 		title = "Heute, Stunde für Stunde"
 		for h := today; h.Before(today.AddDate(0, 0, 1)); h = h.Add(time.Hour) {
-			b := bucket{long: h.Format("15") + " Uhr", v: map[string]float64{}}
+			b := bucket{at: h.Unix(), long: h.Format("15") + " Uhr", v: map[string]float64{}}
 			if h.Hour()%6 == 0 {
 				b.label = strconv.Itoa(h.Hour())
 			}
@@ -203,7 +205,7 @@ func buckets(view string, now time.Time, loc *time.Location, daily, hourly amoun
 // verlaufHTML is the history: the spans to choose, the span's totals as
 // Jetzt's flow picture in kWh, its chart, the chart as a table; then the comparisons and the year-end forecast (under the
 // Jahr chart, else last).
-func verlaufHTML(view string, now time.Time, loc *time.Location, daily, hourly amounts, err error) string {
+func verlaufHTML(view string, now time.Time, loc *time.Location, daily, hourly amounts, geraete []geraet, err error) string {
 	var b strings.Builder
 	b.WriteString("<h2 class=abschnitt>Verlauf</h2><nav class=zeitraum aria-label=Zeitraum>")
 	for _, v := range views {
@@ -241,7 +243,11 @@ func verlaufHTML(view string, now time.Time, loc *time.Location, daily, hourly a
 		b.WriteString(flussHTML(flussSpanne(flowTitle, bs, daily, hourly)))
 		heute := schaetze(view, now, loc, daily, bs)
 		rest := map[string]string{"jahr": "der Rest des Jahres", "monat": "der Rest des Monats"}[view]
-		b.WriteString(energyChart(title, bs, heute, rest))
+		var hours *stundenTag
+		if view == "tag" {
+			hours = stundenOf(bs, hourly, geraete, now.In(loc))
+		}
+		b.WriteString(energyChart(title, bs, heute, rest, hours))
 	}
 	today := midnight(now, loc)
 	forecast := prognoseHTML(today, time.Date(today.Year(), time.January, 1, 0, 0, 0, 0, loc), loc, daily)
@@ -409,8 +415,9 @@ const (
 // what was, in the same series' colours, heute a dashed line at where now
 // falls (in bars; −1 none), last year a stroke. Each bar names its
 // numbers on hover (a title); the legend names the colours; the table
-// under it says the same in numbers. No script, no library.
-func energyChart(title string, bs []bucket, heute float64, rest string) string {
+// under it says the same in numbers. No library; on the Tag chart (hours
+// not nil) a bar chooses its hour (energie_stunde.go).
+func energyChart(title string, bs []bucket, heute float64, rest string, hours *stundenTag) string {
 	var up, down float64
 	anyEst, anyVorjahr, anyVorjahrEins := false, false, false
 	for _, b := range bs {
@@ -439,7 +446,7 @@ func energyChart(title string, bs []bucket, heute float64, rest string) string {
 		label += ", " + rest + " geschätzt (schraffiert)"
 	}
 	var b strings.Builder
-	b.WriteString(`<figure class=verlauf><svg viewBox="0 0 ` + strconv.Itoa(chartW) + " " + strconv.Itoa(chartH) + `" role=img aria-label="` +
+	b.WriteString(`<figure class=verlauf><svg viewBox="0 0 ` + strconv.Itoa(chartW) + " " + strconv.Itoa(chartH) + `" role=` + hours.role() + ` aria-label="` +
 		html.EscapeString(label+"; die Zahlen stehen in der Tabelle darunter") + `">`)
 	if anyEst {
 		b.WriteString("<defs>")
@@ -448,15 +455,7 @@ func energyChart(title string, bs []bucket, heute float64, rest string) string {
 		}
 		b.WriteString("</defs>")
 	}
-	// the scale: the top, the line, the bottom when something went out
-	grid := func(y float64, label string) {
-		b.WriteString(`<line class=gitter x1=` + strconv.Itoa(chartL) + ` x2=` + strconv.Itoa(chartW-chartR) + ` y1=` + f(y) + ` y2=` + f(y) + `></line>`)
-		b.WriteString(`<text class=achse x=` + strconv.Itoa(chartL-6) + ` y=` + f(y+4) + ` text-anchor=end>` + html.EscapeString(label) + `</text>`)
-	}
-	grid(float64(chartT), shortKWh(up))
-	if down > 0 {
-		grid(float64(chartH-chartB), shortKWh(down))
-	}
+	chartAxis(&b, up, down, base)
 	if heute >= 0 && anyEst {
 		hx := float64(chartL) + step*heute
 		b.WriteString(`<line class=heute x1=` + f(hx) + ` x2=` + f(hx) + ` y1=` + strconv.Itoa(chartT) + ` y2=` + strconv.Itoa(chartH-chartB) + `></line>`)
@@ -495,7 +494,7 @@ func energyChart(title string, bs []bucket, heute float64, rest string) string {
 		case x.hasVorjahrEins:
 			tip += " · Vorjahr eingespeist " + energyWords(x.vorjahrEinsp)
 		}
-		b.WriteString(group + "<title>" + html.EscapeString(tip) + "</title>")
+		b.WriteString(hours.bar(group, i, x) + "<title>" + html.EscapeString(tip) + "</title>")
 		// the whole column answers the finger, not only the bar
 		b.WriteString(`<rect class=treffer x=` + f(cx-step/2) + ` y=` + strconv.Itoa(chartT) + ` width=` + f(step) + ` height=` + f(plotH) + `></rect>`)
 		// above the line: what was, then the estimate on top
@@ -593,7 +592,7 @@ func energyChart(title string, bs []bucket, heute float64, rest string) string {
 			has[k] = true
 		}
 	}
-	b.WriteString("</svg><figcaption><ul class=legende>")
+	b.WriteString("</svg>" + hours.html() + "<figcaption><ul class=legende>")
 	for _, l := range []struct{ key, says string }{{"solar", "Erzeugt"}, {"bezug", "Netzbezug"}, {"einsp", "Ins Netz"}} {
 		if has[l.key] {
 			b.WriteString("<li><i class=" + l.key + "></i>" + l.says + "</li>")
@@ -607,7 +606,15 @@ func energyChart(title string, bs []bucket, heute float64, rest string) string {
 		b.WriteString("<li><i class=vorjahr></i>" + vorjahrWord(y) + "</li>")
 	}
 	b.WriteString("</ul></figcaption>")
-	// the same in numbers
+	chartTable(&b, bs, has, anyVorjahr, anyVorjahrEins, hours)
+	b.WriteString("</figure>")
+	return b.String()
+}
+
+// chartTable is the chart's numbers as a table, in a fold: a row a bar
+// with numbers, a column a series it has; Vorjahr's when it has them; the
+// Tag chart's Verbrauch.
+func chartTable(b *strings.Builder, bs []bucket, has map[string]bool, anyVorjahr, anyVorjahrEins bool, hours *stundenTag) {
 	b.WriteString("<details><summary>Als Tabelle</summary><table><thead><tr><th scope=col>Zeit</th>")
 	for _, s := range energySeries {
 		if has[s.key] {
@@ -620,8 +627,11 @@ func energyChart(title string, bs []bucket, heute float64, rest string) string {
 	if anyVorjahrEins {
 		b.WriteString("<th scope=col>Vorjahr eingespeist</th>")
 	}
+	if hours != nil {
+		b.WriteString("<th scope=col>Verbrauch</th>")
+	}
 	b.WriteString("</tr></thead><tbody>")
-	for _, x := range bs {
+	for i, x := range bs {
 		if len(x.v) == 0 && len(x.est) == 0 {
 			continue
 		}
@@ -651,11 +661,32 @@ func energyChart(title string, bs []bucket, heute float64, rest string) string {
 				b.WriteString("<td>–</td>")
 			}
 		}
-		b.WriteString("</tr>")
+		b.WriteString(hours.cell(i) + "</tr>")
 	}
-	b.WriteString("</tbody></table></details></figure>")
-	return b.String()
+	b.WriteString("</tbody></table></details>")
 }
+
+// chartAxis is the scale: the top, the line at 0, and the bottom when
+// something went out — below the line, so its number is negative. The 0
+// is left out where it would sit on another number.
+func chartAxis(b *strings.Builder, up, down, base float64) {
+	f := func(v float64) string { return strconv.FormatFloat(math.Round(v*10)/10, 'f', -1, 64) }
+	grid := func(y float64, label string) {
+		b.WriteString(`<line class=gitter x1=` + strconv.Itoa(chartL) + ` x2=` + strconv.Itoa(chartW-chartR) + ` y1=` + f(y) + ` y2=` + f(y) + `></line>`)
+		b.WriteString(`<text class=achse x=` + strconv.Itoa(chartL-6) + ` y=` + f(y+4) + ` text-anchor=end>` + html.EscapeString(label) + `</text>`)
+	}
+	grid(float64(chartT), shortKWh(up))
+	bottom := float64(chartH - chartB)
+	if down > 0 {
+		grid(bottom, "−"+shortKWh(down))
+	}
+	if base-chartT >= chartAxisGap && (down == 0 || bottom-base >= chartAxisGap) {
+		b.WriteString(`<text class=achse x=` + strconv.Itoa(chartL-6) + ` y=` + f(base+4) + ` text-anchor=end>0</text>`)
+	}
+}
+
+// chartAxisGap is how far apart two numbers on the scale must be to be read.
+const chartAxisGap = 14
 
 // roughOr is a measured amount as it is, an estimate rough.
 func roughOr(pre string, v float64) string {

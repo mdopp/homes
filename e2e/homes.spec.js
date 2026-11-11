@@ -1116,6 +1116,27 @@ test('picture of /energie in Jahr', async ({ page }, info) => {
   await page.goto('/energie?zeitraum=jahr');
   await page.screenshot({ path: info.outputPath('energie-jahr.png'), fullPage: true });
 });
+// The chosen hour (owner 2026-11-11: „was in der Stunde, die ich ausgewählt
+// habe, auch verbraucht wurde“): the latest hour is chosen at first; a tap
+// on the first bar says 0–1 Uhr at once, the arrow moves to the next hour,
+// the device line follows; the scale's bottom is negative.
+test('a tapped hour says what the house used in it', async ({ page }, info) => {
+  await page.goto('/energie');
+  const line = page.locator('.verlauf .stunde');
+  await expect(line).toContainText(/\d+–\d+ Uhr: [\d,]+ kWh verbraucht/);
+  await expect(page.locator('.verlauf g[aria-pressed=true]')).toHaveCount(1);
+  const first = page.locator('.verlauf g[data-zeile]').first();
+  await first.tap();
+  await expect(line).toContainText(/^0–1 Uhr: [\d,]+ kWh verbraucht · .* aus dem Netz/);
+  await expect(line.locator('.geraete')).toContainText(/Wärmepumpe [\d,]+ kWh/);
+  await expect(first).toHaveAttribute('aria-pressed', 'true');
+  await first.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(line).toContainText(/^1–2 Uhr:/);
+  await expect(page.locator('.verlauf g[data-zeile]').nth(1)).toBeFocused();
+  await expect(page.locator('.verlauf svg text', { hasText: /^−[\d,]+ kWh$/ })).toHaveCount(1);
+  await page.locator('.verlauf').first().screenshot({ path: info.outputPath('energie-stunde.png') });
+});
 test.describe('light', () => {
   test.use({ colorScheme: 'light' });
   test('picture of /energie in the light', async ({ page }, info) => {

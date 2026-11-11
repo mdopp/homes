@@ -63,6 +63,16 @@ type HA struct {
 	apply    bool              // a call turns a light or switch on or off, like HA (the demo)
 	statDown bool
 	statAsks []map[string]any
+	energy   map[string]any // energy/get_prefs' answer; nil: HA's not_found (no energy dashboard)
+}
+
+// SetEnergyPrefs sets what energy/get_prefs answers, HA's shape
+// ({energy_sources: […], device_consumption: […]}); nil answers not_found,
+// as HA does without an energy dashboard.
+func (h *HA) SetEnergyPrefs(prefs map[string]any) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.energy = prefs
 }
 
 // Stat is what a statistic added in the hour (or the day) from Start.
@@ -744,6 +754,16 @@ func (h *HA) websocket(w http.ResponseWriter, r *http.Request) {
 				c.send(map[string]any{"id": m["id"], "type": "result", "success": false, "error": map[string]any{"code": code, "message": map[string]string{"unauthorized": "Unauthorized", "not_found": "not found"}[code]}})
 			} else {
 				c.send(map[string]any{"id": m["id"], "type": "result", "success": true, "result": res})
+			}
+			continue
+		}
+		if m["type"] == "energy/get_prefs" {
+			prefs := h.energy
+			h.mu.Unlock()
+			if prefs == nil {
+				c.send(map[string]any{"id": m["id"], "type": "result", "success": false, "error": map[string]any{"code": "not_found", "message": "No prefs"}})
+			} else {
+				c.send(map[string]any{"id": m["id"], "type": "result", "success": true, "result": prefs})
 			}
 			continue
 		}

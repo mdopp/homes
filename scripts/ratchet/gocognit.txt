@@ -41,7 +41,7 @@
 33 internal/pages/einrichtung.go: pages.DeineAufgaben
 51 internal/pages/energie_fluss.go: pages.flussHTML
 35 internal/pages/energie_prognose.go: pages.schaetze
-102 internal/pages/energie_verlauf.go: pages.energyChart
+81 internal/pages/energie_verlauf.go: pages.energyChart
 56 internal/pages/kalender.go: pages.Kalender
 48 internal/pages/kalender_verwalten.go: pages.KalenderAendern
 37 internal/pages/kalender_verwalten.go: pages.KalenderHinzufuegen
