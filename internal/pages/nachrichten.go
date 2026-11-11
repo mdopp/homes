@@ -29,7 +29,7 @@ const saysStandFehlt = "Der Stand lässt sich gerade nicht lesen. Später noch e
 // quelleName is how the page names a quelle.
 var quelleName = map[string]string{"whatsapp": "WhatsApp", "signal": "Signal", "sms": "SMS und Anrufe", "sozial": "Facebook und LinkedIn"}
 
-const nachrichtenStyle = `<style>.quelle{display:flex;gap:10px;align-items:flex-start}.quelle .punkt{margin-top:.55em}.schluessel .k{display:block;margin-top:6px}.schwelle{display:block;font-size:.75rem;color:var(--faint)}.punkt.rot{background:var(--danger)}.punkt.lauf{background:var(--accent)}
+const nachrichtenStyle = `<style>.quelle{display:flex;gap:10px;align-items:flex-start}.quelle .punkt{margin-top:.55em}.schluessel .k{display:block;margin-top:6px}.schluessel .knopf{display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:600;text-decoration:none}.schwelle{display:block;font-size:.75rem;color:var(--faint)}.punkt.rot{background:var(--danger)}.punkt.lauf{background:var(--accent)}
 .wechsel{margin:22px 0 0}.wechsel summary{font-weight:700}.wechsel ol{margin:8px 0 0;padding:10px 14px 10px 34px;background:var(--card);border-radius:14px}.wechsel ol li{margin:6px 0}</style>`
 
 // Nachrichten is the page „Daten sichern“: the way to Meine Daten, where
