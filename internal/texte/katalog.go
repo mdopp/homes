@@ -193,36 +193,9 @@ const (
 	WerUnbekanntLauft  ID = "wer-ist-das.unbekannt.laeuft"
 	WerVorschlag       ID = "wer-ist-das.vorschlag"    // a contact's photo suggests the name: „%s“ the name
 	WerVorschlagJa     ID = "wer-ist-das.vorschlag.ja" // its one tap: „%s“ the name
-	// „Wer steht wem nahe“ (owner 2026-11-09): the contact net, for the Immich key's owner
-	Netz              ID = "netz"         // the page, its link on Kontakte
-	NetzNahe          ID = "netz.nahe"    // the section on a contact's page
-	NetzLeer          ID = "netz.leer"    // nothing computed yet
-	NetzKeine         ID = "netz.keine"   // this person has no tie shown
-	NetzBild          ID = "netz.bild"    // the picture's label: „%s“ the centre
-	NetzMehr          ID = "netz.mehr"    // widens the picture
-	NetzMitte         ID = "netz.mitte"   // a row's link that makes it the centre: „%s“ the name
-	NetzKontakt       ID = "netz.kontakt" // a row's link to its contact
-	NetzAus           ID = "netz.aus"     // Ausblenden, and pressed
-	NetzAusLaeuft     ID = "netz.aus.laeuft"
-	NetzNicht         ID = "netz.nicht" // Nicht berechnen, and pressed
-	NetzNichtLaeuft   ID = "netz.nicht.laeuft"
-	NetzZurueck       ID = "netz.zurueck" // restore, and pressed
-	NetzZurueckLaeuft ID = "netz.zurueck.laeuft"
-	NetzVerborgen     ID = "netz.verborgen"       // the list „Ausgeblendet“
-	NetzNichtArt      ID = "netz.verborgen.nicht" // a row there that is not computed
-	NetzGesagtAus     ID = "netz.gesagt.aus"      // „%s“ the name
-	NetzGesagtNicht   ID = "netz.gesagt.nicht"    // „%s“ the name
-	NetzGesagtZurueck ID = "netz.gesagt.zurueck"  // „%s“ the name
-	NetzFehler        ID = "netz.fehler"          // the choice was not kept
-	NetzHinweis       ID = "netz.hinweis"         // how it is computed, folded away
-	NetzFotos         ID = "netz.fotos"           // a reason: „%s“ the days, „%d“ the first year
-	NetzAdresse       ID = "netz.adresse"         // a reason: the same postal address
-	NetzFirma         ID = "netz.firma"           // a reason: the same company
-	NetzBeziehung     ID = "netz.beziehung"       // a reason: „%s“ the relation the centre's card names
-	NetzBeziehungVon  ID = "netz.beziehung.von"   // a reason: „%s“ the relation, „%s“ whose card names it
-	NetzVerwandt      ID = "netz.verwandt"        // a reason: a relation without a kind
+	// The contact net (owner 2026-11-09): what is left in Homes, the relations on a contact's page; the net itself is in the person's archive (ADR 0002)
+	NetzFehler ID = "netz.fehler" // the choice was not kept
 	// a contact's relations (owner 2026-11-09); the kinds are netz.art.<kind>
-	NetzGesagt      ID = "netz.gesagt"          // a reason: „%s“ the kind the owner gave
 	NetzIst         ID = "netz.ist"             // the choice's label: „%s“ X
 	NetzSpeichern   ID = "netz.speichern"       // and pressed
 	NetzKeineBez    ID = "netz.keine-beziehung" // and pressed
@@ -237,7 +210,7 @@ const (
 	NetzGesagtWeg     ID = "netz.gesagt.weg"       // „%s“ and „%s“ the two: taken away
 	NetzGesagtVergess ID = "netz.gesagt.vergessen" // forgotten
 	NetzTelefonbuch   ID = "netz.telefonbuch"      // a relation's source, under its name
-	NetzImArchiv      ID = "netz.im-archiv"        // the link to the questions in the person's archive (archiv#27)
+	NetzImArchiv      ID = "netz.im-archiv"        // the one link to the net in the person's archive (ADR 0002)
 	// Ins Adressbuch übernehmen (archiv#27 step 2, ADR 0002): an answer from the person's archive, confirmed here
 	// Gruppen (owner 2026-11-10, ADR 0002): a contact's own groups, as the card's CATEGORIES
 	Gruppen            ID = "gruppen"           // the section on a contact's page, the filter on Kontakte
@@ -607,34 +580,7 @@ var de = map[ID]string{
 	"wer-ist-das.unbekannt.laeuft": "Merkt es sich …",
 	"wer-ist-das.vorschlag":        "Sieht aus wie %s aus deinen Kontakten.",
 	"wer-ist-das.vorschlag.ja":     "Ja, das ist %s",
-	"netz":                         "Wer steht wem nahe",
-	"netz.nahe":                    "Steht nahe",
-	"netz.leer":                    "Noch keine Verbindungen. Homes rechnet einmal am Tag aus deinen Fotos und den Telefonbüchern; schau morgen wieder.",
-	"netz.keine":                   "Zu dieser Person gibt es noch keine Verbindung.",
-	"netz.bild":                    "Wer %s nahe steht",
-	"netz.mehr":                    "Mehr zeigen",
-	"netz.mitte":                   "%s in die Mitte",
-	"netz.kontakt":                 "Kontakt",
-	"netz.aus":                     "Ausblenden",
-	"netz.aus.laeuft":              "Blendet aus …",
-	"netz.nicht":                   "Nicht berechnen",
-	"netz.nicht.laeuft":            "Nimmt heraus …",
-	"netz.zurueck":                 "Zurückholen",
-	"netz.zurueck.laeuft":          "Holt zurück …",
-	"netz.verborgen":               "Ausgeblendet",
-	"netz.verborgen.nicht":         "nicht berechnet",
-	"netz.gesagt.aus":              "%s ist ausgeblendet. Unter „Ausgeblendet“ lässt es sich zurückholen.",
-	"netz.gesagt.nicht":            "%s wird nicht mehr berechnet, auch nicht in den Verbindungen der anderen.",
-	"netz.gesagt.zurueck":          "%s ist wieder da.",
 	"netz.fehler":                  "Das hat nicht geklappt: Homes konnte es nicht speichern. Versuch es gleich noch einmal.",
-	"netz.hinweis":                 "Homes zählt einmal am Tag, an wie vielen Tagen zwei Menschen zusammen auf deinen Fotos sind; ein Tag an einem Ort zählt einmal, ein großes Gruppenfoto wenig, Altes weniger als Neues. Dazu kommt, was die Telefonbücher sagen: dieselbe Adresse, dieselbe Firma, eine eingetragene Beziehung. „Nicht berechnen“ nimmt jemanden ganz heraus, etwa Freunde der Kinder. Nur du siehst diese Seite.",
-	"netz.fotos":                   "%s auf deinen Fotos seit %d",
-	"netz.adresse":                 "gleiche Adresse",
-	"netz.firma":                   "gleiche Firma",
-	"netz.beziehung":               "%s (Telefonbuch)",
-	"netz.beziehung.von":           "%s von %s (Telefonbuch)",
-	"netz.verwandt":                "im Telefonbuch verknüpft",
-	"netz.gesagt":                  "%s (von dir angegeben)",
 	"netz.ist":                     "%s ist …",
 	"netz.speichern":               "Speichern",
 	"netz.keine-beziehung":         "Keine Beziehung",
@@ -648,7 +594,7 @@ var de = map[ID]string{
 	"netz.gesagt.weg":              "Entfernt: %s und %s stehen in keiner Beziehung. Homes fragt danach nicht wieder.",
 	"netz.gesagt.vergessen":        "Vergessen. Homes fragt vielleicht später wieder danach.",
 	"netz.telefonbuch":             "aus dem Telefonbuch",
-	"netz.im-archiv":               "Wie die Menschen zueinander stehen, klärst du jetzt in deinem Archiv",
+	"netz.im-archiv":               "Dein Netzwerk im Archiv ›",
 	"gruppen":                      "Gruppen",
 	"gruppen.keine":                "Noch in keiner Gruppe.",
 	"gruppen.alle":                 "Alle",

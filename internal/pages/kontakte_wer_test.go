@@ -30,9 +30,9 @@ func TestDieselbeWerIstDas(t *testing.T) {
 	mustContain(t, body, "<h2>Wer ist das?</h2>", `<input type=hidden name=wer value="u17"><input name=name list=wernamen required maxlength=120`,
 		`<datalist id=wernamen>`, `<option value="Anna">`, `<option value="Xaver">`, // the household's people, one Immich does not know too (owner 2026-11-09)
 		`<button name=antwort value=ja data-laeuft="Speichert …">Speichern</button>`, `class=leise formnovalidate data-laeuft="Merkt es sich …">Kenne ich nicht</button>`,
-		"<i>ohne Namen</i><span>18 Fotos</span>", "<h2>Dieselbe Person?</h2>", `<small><a href="/kontakte/a" aria-label="Kontakt von Anna öffnen">Kontakt</a></small>`)
-	if n := strings.Count(body, `<section class="paar wer">`); n != 5 || strings.Index(body, "Wer ist das?") > strings.Index(body, "<section class=paar>") {
-		t.Fatalf("%d faces, or below the pairs", n)
+		"<i>ohne Namen</i><span>18 Fotos</span>", "<h1>Dieselbe Person?</h1>", `<small><a href="/kontakte/a" aria-label="Kontakt von Anna öffnen">Kontakt</a></small>`)
+	if n := strings.Count(body, `<section class="paar wer">`); n != 5 || strings.Index(body, "Wer ist das?") < strings.Index(body, "<section class=paar>") {
+		t.Fatalf("%d faces, or above the pairs (one tap first)", n)
 	}
 	if n := strings.Count(body, ">Kontakt</a>"); n != 1 { // Anna's pair; Ben has no contact
 		t.Fatalf("%d contact links", n)

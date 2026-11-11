@@ -85,7 +85,9 @@ budget() { # budget <name> <cap> <dir…>
 #   the owner's own reads „Nur für dich“ with the way into Paperless instead of „Nichts mehr in Paperless“, another person's is not shown.
 # 2026-11-11, owner OK'd needed raises for the UX pass 2026-11-11: Dieselbe Person – eine Frage auf einmal (pages 18,990 -> 19,030; 19,012 used):
 # one card under one heading, „Frage 2 von 6 · Nächste Frage · Alle zeigen“ (kontakte_dieselbe.go)
-budget pages 19030 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-11, owner decided 2026-11-11 (ADR 0002): the net into the archive (pages 19,030 -> 18,844, ratcheted down by the
+# 186 lines removed: kontakte_netz.go, „Steht nahe“; one link „Dein Netzwerk im Archiv ›“ instead), and one tap first on the faces
+budget pages 18844 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -144,7 +146,9 @@ budget cmd 1448 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-11, owner decided 2026-11-11 (the needed raise OK'd): Kontaktfotos helfen Immich (connectors 15,290 -> 15,425; 15,420 used):
 # immich.Album and InsAlbum (album.create, album.read, albumAsset.create), Homes' uploads left out of Umfeld and Aufnahmen
 # (originalFileName), and immichfake's albums and its search finding the uploads as Immich finds archived photos (homes#352)
-budget connectors 15425 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
+# 2026-11-11, owner decided 2026-11-11 (ADR 0002): the net into the archive (connectors 15,425 -> 15,373, ratcheted down by the
+# 52 lines removed: immich.Aufnahmen, the photo read only the net used)
+budget connectors 15373 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
 # 2026-11-04, internal/jsonfile (47 lines, 50 of cap) from household's cap to shared's: it
 # replaces nine copies of a save, 62 of their lines in household
 # 2026-11-05, owner 2026-11-05 yes: Immich for the contacts (9,583 -> 9,874):
@@ -193,7 +197,9 @@ budget connectors 15425 $connectors   # one client per service, with its fake: 1
 # 2026-11-11, owner decided 2026-11-11 (the needed raise OK'd): Kontaktfotos helfen Immich (household 14,810 -> 15,035; 15,029 used):
 # gesichter/kontaktfotos.go puts each household photo up once by its hash, archived, into one album, replaces and deletes it, reads its
 # face's person and suggests the name on „Wer ist das?“; counts leave Homes' uploads out (homes#352)
-budget household 15035 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-11, owner decided 2026-11-11 (ADR 0002): the net into the archive (household 15,035 -> 14,635, ratcheted down by the
+# 400 lines removed: internal/netz's ties from photos, their ranking, hiding and reasons; the relations stay)
+budget household 14635 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one

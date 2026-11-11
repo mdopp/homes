@@ -118,6 +118,6 @@ func kontaktSeite(w http.ResponseWriter, r *http.Request, cfg StartConfig, ct ca
 		b.WriteString(`<p class=weiter><a href="` + DieselbePath + `">` + wort(texte.DieselbeWeiter) + `</a></p>`)
 	}
 	kontaktOffen(b, r, cfg, buch, ct.UID, name, r.URL.RequestURI(), e) // what waits first, the card after
-	b.WriteString(c.HTML() + gruppenTeil + netzNahe(r, cfg, buch, ct.UID) + netzBeziehungen(r, cfg, buch, ct.UID, r.URL.RequestURI()))
+	b.WriteString(c.HTML() + gruppenTeil + netzImArchiv(r, cfg) + netzBeziehungen(r, cfg, buch, ct.UID, r.URL.RequestURI()))
 	writePage(w, http.StatusOK, b)
 }

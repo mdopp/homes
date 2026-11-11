@@ -19,6 +19,20 @@ import (
 const netzFrageStyle = `<style>.bzeile select{min-height:44px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--edge);border-radius:10px;padding:0 8px}
 .bzeile label{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--edge)}.bzeile span{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}.bzeile small{display:block}.bzeile select{flex:0 0 11rem;max-width:50%;margin-left:auto}.paar form.bzeile{display:block;margin:0}.paar form.bzeile:last-of-type label{border-bottom:0}</style>`
 
+// netzDa: the viewer is the key's owner and there is a net.
+func netzDa(r *http.Request, cfg StartConfig) bool { return cfg.Netz != nil && privatEigen(r, cfg) }
+
+// netzImArchiv is the one way to the contact net, which lives in the
+// person's archive (ADR 0002; owner 2026-11-11): „Dein Netzwerk im Archiv ›“
+// to the workplace's „Steht nahe“, on Kontakte and a contact's page, for
+// whom has an archive. A closed vault is the archive's to ask for.
+func netzImArchiv(r *http.Request, cfg StartConfig) string {
+	if cfg.ArchivURL == "" || !cfg.Archive[r.Header.Get("Remote-User")] {
+		return ""
+	}
+	return `<p class="weiter-in netz-archiv"><style>.netz-archiv a::after{content:none}</style><a href="` + html.EscapeString(cfg.ArchivURL+"/tresor?tab=nahe") + `">` + wort(texte.NetzImArchiv) + "</a></p>"
+}
+
 // netzArten are the kinds, Kennen sich nicht and extra as options, art chosen.
 func netzArten(art string, extra ...string) string {
 	var b strings.Builder

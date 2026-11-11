@@ -24,7 +24,12 @@ func werKarten(r *http.Request, cfg StartConfig, dann, wer []gesichter.Seite, ac
 	if len(dann)+len(wer) == 0 {
 		return ""
 	}
-	t := func(id texte.ID) string { return html.EscapeString(texte.T(id)) }
+	return werNamen(r, cfg) + werTeil(cfg, dann, wer, action)
+}
+
+// werNamen are the names the name field offers: the household's contacts
+// and the key owner's Handy-Kontakte, firms aside.
+func werNamen(r *http.Request, cfg StartConfig) string {
 	var b strings.Builder
 	var all, eigene []caldav.Contact
 	if cfg.Contacts != nil { // the page is the key owner's alone (privatEigen): their Handy-Kontakte too (owner 2026-11-10)
@@ -38,7 +43,14 @@ func werKarten(r *http.Request, cfg StartConfig, dann, wer []gesichter.Seite, ac
 			b.WriteString(`<option value="` + html.EscapeString(c.Name) + `">`)
 		}
 	}
-	b.WriteString("</datalist>")
+	return "<datalist id=wernamen>" + b.String() + "</datalist>"
+}
+
+// werTeil is the face after a pair's Nein („Wer ist das dann?“) and the
+// faces to name, each under its heading, posted to action.
+func werTeil(cfg StartConfig, dann, wer []gesichter.Seite, action string) string {
+	t := func(id texte.ID) string { return html.EscapeString(texte.T(id)) }
+	var b strings.Builder
 	if len(dann) > 0 {
 		b.WriteString("<h2>" + t(texte.WerDann) + "</h2><p class=k>" + t(texte.WerDannHinweis) + "</p>" + werKarte(cfg, dann[0], action))
 	}
@@ -48,7 +60,7 @@ func werKarten(r *http.Request, cfg StartConfig, dann, wer []gesichter.Seite, ac
 	for _, s := range wer {
 		b.WriteString(werKarte(cfg, s, action))
 	}
-	return "<datalist id=wernamen>" + b.String()
+	return b.String()
 }
 
 // werKarte is one face to name, the contact's name its photo suggests as

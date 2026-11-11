@@ -68,8 +68,8 @@ func TestEintragenAufsHandy(t *testing.T) {
 		}
 		return nil
 	}
-	fritz, _ := n.Person("p-fritz")
-	kim, _ := n.Person("p-kim")
+	fritz := knotenVon(n, "p-fritz")
+	kim := knotenVon(n, "p-kim")
 	n.Eintragen(t.Context(), kim, fritz, "neffe")
 	n.Eintragen(t.Context(), kim, fritz, Keine)
 	want := []gesichter.HandyAenderung{{UID: "urn:uuid:k2", AltVorname: "Fritz Kurz", Mit: "Kim Berg", Art: "neffe"}, {UID: "urn:uuid:k2", AltVorname: "Fritz Kurz", Mit: "Kim Berg"}}
@@ -88,8 +88,8 @@ func TestEintragenPrivatBleibtPrivat(t *testing.T) {
 	n, _, _ := netzBox(t)
 	var got []gesichter.HandyAenderung
 	n.G.Handy = func(_ string, a gesichter.HandyAenderung) error { got = append(got, a); return nil }
-	anna, _ := n.Person("p-anna")
-	fritz, _ := n.Person("p-fritz")
+	anna := knotenVon(n, "p-anna")
+	fritz := knotenVon(n, "p-fritz")
 	if err := n.Eintragen(t.Context(), fritz, anna, "freund"); err != nil {
 		t.Fatal(err)
 	}

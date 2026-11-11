@@ -668,7 +668,7 @@ test('Standortverlauf, connected, leads with the timeline and ends with a quiet 
 // Felder geprüft?"): with every fold open, the page is no wider than the
 // screen, a field to type in has room, a button is big enough for a
 // finger, and no text runs out of its box.
-const PAGES = ['/start', '/raeume', '/raeume/light.kueche', '/medien', '/energie', '/energie?zeitraum=jahr', '/kalender', '/kalender/verwalten', '/kontakte', '/kontakte/h3', '/kontakte/privat', '/kontakte/privat/k0', '/kontakte/dieselbe', '/kontakte/netz',
+const PAGES = ['/start', '/raeume', '/raeume/light.kueche', '/medien', '/energie', '/energie?zeitraum=jahr', '/kalender', '/kalender/verwalten', '/kontakte', '/kontakte/h3', '/kontakte/privat', '/kontakte/privat/k0', '/kontakte/dieselbe',
   '/notizen', '/notizen?tag=kochen', '/notizen/einkaufsliste.md', '/notizen/markdown.md', '/notizen/einkaufsliste.md?bearbeiten=1', '/mehr', '/musik', '/platte', '/discogs', '/aktivierungswort', '/aufgaben', '/dokumente', '/dokumente/zuordnen', '/dokumente/suche?q=strom', '/dokumente/suche?nur=versicherungen', '/willkommen', '/einrichten/fotos', '/box/geraete', '/pair-device', '/podcasts', '/gesehen', '/standort',
   '/daten-sichern', '/meine-daten', '/netzlaufwerk', '/box', '/box/aufgaben', '/box/auslastung', '/box/haushalt', '/box/personen', '/box/module', '/adresse',
   '/einkauf', '/einkauf?liste=liste-baumarkt', '/einkauf?liste=liste-musik', '/einkauf/rezepte', '/einkauf/rezepte?n=rezepte%2Flasagne.md', '/notizen/rezepte/lasagne.md'];
@@ -827,44 +827,18 @@ test('Kontakte lists the address book, the search filters while typing, a row op
   await expect(page.getByText('Neue Termine und Änderungen machst du auf dem Handy')).toBeVisible();
 });
 
-// owner 2026-11-09: „Wer steht wem nahe“ — who stands close to whom in the key owner's photos and phone
-// books: a radial picture around one person, a node puts itself in the middle, the list with reasons
-// under it, Ausblenden and back; on a contact „Steht nahe“
-test('Wer steht wem nahe: the picture fits a phone, a node moves the middle, a row hides and comes back', async ({ page }, info) => {
+// owner 2026-11-11 (ADR 0002): the contact net lives in the person's archive; Kontakte and a contact's
+// page carry one link to it, and the old page is gone
+test('Dein Netzwerk im Archiv: one link on Kontakte and on a contact, no net page in Homes', async ({ page }) => {
   await page.setViewportSize({ width: 411, height: 900 });
-  await page.goto('/kontakte');
-  await page.getByRole('link', { name: 'Wer steht wem nahe' }).click();
-  await expect(page).toHaveURL(/\/kontakte\/netz$/);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Wer steht wem nahe');
-  const bild = page.getByRole('img', { name: 'Wer Anna Beispiel nahe steht' });
-  await expect(bild).toBeVisible();
-  expect((await bild.boundingBox()).width).toBeLessThanOrEqual(411);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
-  const zeilen = page.locator('.netzliste ol > li');
-  expect(await zeilen.count()).toBeGreaterThan(5);
-  await expect(zeilen.first()).toContainText('Ben Beispiel');
-  await expect(zeilen.first()).toContainText('Partner/in (Telefonbuch)');
-  await expect(zeilen.first()).toContainText(/\d+ Tage auf deinen Fotos seit 20\d\d/);
-  await page.screenshot({ path: info.outputPath('netz-411.png'), fullPage: true });
-  await bild.getByRole('link', { name: 'Ben Beispiel in die Mitte' }).click();
-  await expect(page).toHaveURL(/mitte=/);
-  await expect(page.getByRole('img', { name: 'Wer Ben Beispiel nahe steht' })).toBeVisible();
-  await expect(zeilen.first()).toContainText('Partner/in von Anna Beispiel (Telefonbuch)');
-  const paul = zeilen.filter({ hasText: 'Paul Weber' });
-  await paul.getByRole('button', { name: 'Ausblenden' }).click();
-  await expect(page.getByText('Paul Weber ist ausgeblendet.')).toBeVisible();
-  await expect(zeilen.filter({ hasText: 'Paul Weber' })).toHaveCount(0);
-  const weg = page.locator('section.netzliste', { has: page.getByRole('heading', { name: 'Ausgeblendet' }) });
-  await expect(weg).toContainText('Paul Weber');
-  await page.screenshot({ path: info.outputPath('netz-ausgeblendet-411.png'), fullPage: true });
-  await weg.getByRole('button', { name: 'Zurückholen' }).click();
-  await expect(page.getByText('Paul Weber ist wieder da.')).toBeVisible();
-  await expect(zeilen.filter({ hasText: 'Paul Weber' })).toHaveCount(1);
-  await page.goto('/kontakte/h1');
-  const nahe = page.locator('section.karte', { has: page.getByRole('heading', { name: 'Steht nahe' }) });
-  await expect(nahe.locator('li')).toHaveCount(5);
-  await expect(nahe.getByRole('link', { name: 'Anna Beispiel' })).toHaveAttribute('href', '/kontakte/h0');
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
+  for (const pfad of ['/kontakte', '/kontakte/h1']) {
+    await page.goto(pfad);
+    const link = page.getByRole('link', { name: 'Dein Netzwerk im Archiv ›' });
+    await expect(link).toHaveCount(1);
+    await expect(link).toHaveAttribute('href', 'https://archiv.example/tresor?tab=nahe');
+    await expect(page.getByText('Wer steht wem nahe')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Steht nahe' })).toHaveCount(0);
+  }
 });
 
 // owner 2026-11-09: „Baue den Rest inkl. Änderbarkeit und mache es zum Teil des Kontaktformulars.“ —
@@ -999,16 +973,25 @@ test('Dieselbe Person? on the contact takes a Nein', async ({ page }, info) => {
   await page.goto('/kontakte/dieselbe');
   await expect(page).toHaveURL(/\/kontakte\/dieselbe$/);
   await expect(page.locator('section.paar')).toHaveCount(1);
-  await expect(page.locator('h1, h2')).toHaveText(['Wer ist das?']);
+  await expect(page.locator('h1, h2')).toHaveText([/^(Dieselbe Person\?|Ist das …\?)$/]);
   await expect(page.getByText(/^Frage 1 von \d+/)).toBeVisible();
   await page.screenshot({ path: info.outputPath('eine-frage-411.png'), fullPage: true });
-  await page.getByRole('link', { name: 'Nächste Frage' }).click();
-  await expect(page).toHaveURL(/\/kontakte\/dieselbe\?ab=1$/);
-  await expect(page.locator('section.paar')).toHaveCount(1);
-  await expect(page.getByText(/^Frage 2 von \d+/)).toBeVisible();
+  // owner 2026-11-11: one tap first — every „Dieselbe Person?“ and „Ist das …?“ before „Wer ist das?“ (typing)
+  const anzahl = Number((await page.getByText(/^Frage 1 von \d+/).textContent()).match(/von (\d+)/)[1]);
+  const fragen = [];
+  for (let i = 0; i < anzahl; i++) {
+    await expect(page.getByText(new RegExp(`^Frage ${i + 1} von ${anzahl}`))).toBeVisible();
+    await expect(page.locator('section.paar')).toHaveCount(1);
+    fragen.push(await page.locator('h1').textContent());
+    await page.getByRole('link', { name: 'Nächste Frage' }).click();
+  }
+  const erstesTippen = fragen.indexOf('Wer ist das?');
+  expect(erstesTippen, fragen.join(' · ')).toBeGreaterThan(0);
+  expect(fragen.slice(erstesTippen).every((h) => h === 'Wer ist das?'), fragen.join(' · ')).toBe(true);
+  await expect(page).toHaveURL(/\/kontakte\/dieselbe\?ab=0$/);
   await page.getByRole('link', { name: 'Alle zeigen' }).click();
   await expect(page).toHaveURL(/\/kontakte\/dieselbe\?alle=1$/);
-  // „Wer ist das?“ (owner 2026-11-09): unnamed faces to name, above the pairs, each its field and two buttons
+  // „Wer ist das?“ (owner 2026-11-09): unnamed faces to name, below the one-tap questions, each its field and two buttons
   const wer = page.locator('section.paar.wer');
   expect(await wer.count()).toBeGreaterThan(0);
   await expect(wer.first().getByRole('textbox', { name: 'Name' })).toBeVisible();
@@ -1027,7 +1010,7 @@ test('Dieselbe Person? on the contact takes a Nein', async ({ page }, info) => {
 // shows the matching names as rows under it instead, a tap fills it (as archiv#41), a group field the same
 test('Namensvorschläge: typing shows the matching names as rows, a tap fills the field', async ({ page }, info) => {
   await page.setViewportSize({ width: 411, height: 900 });
-  await page.goto('/kontakte/dieselbe');
+  await page.goto('/kontakte/dieselbe?alle=1');
   const feld = page.locator('section.paar.wer').first().getByRole('textbox', { name: 'Name' });
   await expect(feld).not.toHaveAttribute('list', /./); // the browser's own popup cannot cover the rows
   await feld.pressSequentially('hil');

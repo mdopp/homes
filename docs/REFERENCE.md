@@ -526,42 +526,29 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     names it the way *Speichern* does. A person the photos of two names
     point at gets no suggestion. Nothing is named without the tap. Homes'
     uploads (`homes-kontakt…`) are left out of every search of the family's
-    photos (*Orte*, *Auch dabei*, the small faces, the contact net) and out
+    photos (*Orte*, *Auch dabei*, the small faces) and out
     of the photo counts. The key needs `album.create`, `album.read` and
     `albumAsset.create`, as well as `asset.upload`, `face.read` and
     `asset.delete`.
-  - *Wer steht wem nahe* (owner 2026-11-09; `/kontakte/netz`, linked from
-    Kontakte; *Steht nahe* on each contact's page, its five closest; the
-    key's owner only, anyone else is sent to Kontakte): who is close to
-    whom in the key owner's photos and phone books, among everyone in
-    them, not only the owner. After the hourly run, at most once a day,
-    `internal/netz` reads every photo again (`POST /api/search/metadata`,
-    `withExif`, `withPeople`, `page`/`nextPage`, 500 a page; hidden
-    persons left out), keeps the photos with a person as a table in
-    `immich-netz.json` (asset id, the instant of `dateTimeOriginal`, lat/lng,
-    city, person ids) and rebuilds every tie from it. An event is a day
-    (the house's zone) at one place (a cell of about 1 km, else the
-    city, else the day alone); a pair counts once per event, weighed
-    1/(n−1) for n named persons there and halved every four years, plus
-    0.15 per distinct year; a tie from photos shows from two days on.
-    The order multiplies that by 0.25 + 0.75·(shared events / √(events A
-    · events B)), so a child on every photo is not close to all. The phone
-    books (the household's and the owner's Handy-Kontakte, firm cards
-    aside) add *gleiche Adresse* (+1.5), *gleiche Firma* (+0.4) and a
-    relation the phone wrote (+3: `RELATED`, iOS's `X-ABRELATEDNAMES` with
-    its `X-ABLabel`, Android's `X-ANDROID-CUSTOM` relation; by UID or
-    name), a contact being its Immich person's node (`zuordnung`). The
-    page draws the middle (`?mitte=`, the owner's card by the key's
-    e-mail by default) and its 30 first in three rings (*Mehr zeigen*:
-    60), thin lines for ties among them, each node a link to the middle;
-    under it the list with the reasons in raw numbers. *Ausblenden* (not
-    shown) and *Nicht berechnen* (taken out of the photos before any tie)
-    are kept per key owner in `immich-netz-verborgen.json`; *Ausgeblendet*
-    lists both with *Zurückholen*.
-    The relation questions („Wie steht X zu Y?“) and their suggestions
-    moved into the person's archive (archiv#27 step 2, ADR 0002); the page
-    links there (`<archiv>/tresor/umfeld`) for whom has an archive. A
-    contact's *Beziehungen* still change in place.
+  - *Dein Netzwerk im Archiv ›* (owner 2026-11-11, ADR 0002): who stands
+    close to whom lives in the person's archive, not in Homes. Kontakte
+    and each contact's page carry this one link to the archive's
+    workplace (`<archiv>/tresor?tab=nahe`, *Steht nahe*) for whom has an
+    archive; the archive asks for the vault when it is closed. Homes no
+    longer reads the photos for it (the page `/kontakte/netz`, *Steht
+    nahe* on a contact and `immich-netz-verborgen.json` are gone).
+  - *Beziehungen* on a contact's page (owner 2026-11-09; the Immich key's
+    owner only): the contact's relations, the owner's answers over what
+    the phone books say, each changed in place (a kind, *Keine
+    Beziehung*, *Vergessen*). After the hourly run, at most once a day,
+    `internal/netz` reads the phone books (the household's and the
+    owner's Handy-Kontakte, firm cards aside) for the relations a phone
+    wrote (`RELATED`, iOS's `X-ABRELATEDNAMES` with its `X-ABLabel`,
+    Android's `X-ANDROID-CUSTOM` relation; by UID or name) into
+    `immich-netz.json`; a contact is its Immich person's node
+    (`zuordnung`), a named Immich person without a contact a node of its
+    own. The relation questions („Wie steht X zu Y?“) moved into the
+    person's archive (archiv#27 step 2).
   - *Wem gehört dieser Scan?* (`/dokumente/zuordnen`, admins only; laib
     docs/DATA.md gap 6): what Dokumente's sorting could not give to a
     person or the household stays Dokumente's in Paperless, seen by no one

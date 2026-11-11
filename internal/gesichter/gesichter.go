@@ -389,8 +389,8 @@ func (g *Gesichter) danach(ctx context.Context) error {
 }
 
 // Zuordnungen are each contact's Immich person id, by "haushalt/<uid>" or
-// "privat/<uid>", and the e-mail of the key's account (the contact net).
-func (g *Gesichter) Zuordnungen() (map[string]string, string) {
+// "privat/<uid>" (the contact net).
+func (g *Gesichter) Zuordnungen() map[string]string {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.laden()
@@ -398,7 +398,22 @@ func (g *Gesichter) Zuordnungen() (map[string]string, string) {
 	for k, z := range g.stand.Zuordnung {
 		out[k] = z.ID
 	}
-	return out, g.stand.Email
+	return out
+}
+
+// Namen are the named Immich persons not hidden, by id (the contact net's
+// nodes without a contact).
+func (g *Gesichter) Namen() map[string]string {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.laden()
+	out := map[string]string{}
+	for _, p := range g.stand.Personen {
+		if name := strings.Join(strings.Fields(p.Name), " "); name != "" && !p.Versteckt {
+			out[p.ID] = name
+		}
+	}
+	return out
 }
 
 // save keeps the stand; g.mu is held.

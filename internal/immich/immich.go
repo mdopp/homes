@@ -24,7 +24,6 @@ import (
 	"net/url"
 	"os"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -172,62 +171,11 @@ func (c *Client) Umfeld(ctx context.Context, id string, n int) ([]Foto, error) {
 
 // EigenesFoto starts the name of every picture Homes uploads (a contact's,
 // Hochladen): none of them is a photo of the family's, so a search of the
-// family's photos leaves them out (Umfeld, Aufnahmen).
+// family's photos leaves them out (Umfeld).
 const EigenesFoto = "homes-kontakt"
 
 // Eigen: the file name is one of Homes' own uploads.
 func Eigen(datei string) bool { return strings.HasPrefix(datei, EigenesFoto) }
-
-// Aufnahme is one photo as the contact net reads it (owner 2026-11-09):
-// its id, when it was taken (dateTimeOriginal, an instant, not the
-// localDateTime), where, and who is in it.
-type Aufnahme struct {
-	ID    string `json:"id"`
-	Datei string `json:"originalFileName"`
-	Exif  struct {
-		Zeit  string   `json:"dateTimeOriginal"`
-		Lat   *float64 `json:"latitude"`
-		Lng   *float64 `json:"longitude"`
-		Stadt string   `json:"city"`
-	} `json:"exifInfo"`
-	Personen []Person `json:"people"`
-}
-
-// maxAufnahmeSeiten bounds Aufnahmen: 500 a page, 200,000 photos.
-const maxAufnahmeSeiten = 400
-
-// Aufnahmen are all of the account's photos with at least one person,
-// every page of them (POST /api/search/metadata, withExif, withPeople,
-// page and its nextPage; asset.read). 500 a page, not Immich's 1000, so a
-// page with its exif and faces stays under maxAntwort.
-func (c *Client) Aufnahmen(ctx context.Context) (out []Aufnahme, err error) {
-	for page := 1; page > 0 && page <= maxAufnahmeSeiten; {
-		b, _ := json.Marshal(map[string]any{"withExif": true, "withPeople": true, "size": 500, "page": page})
-		var answer struct {
-			Assets struct {
-				Items []Aufnahme
-				Next  *string `json:"nextPage"`
-			}
-		}
-		body, err := c.send(ctx, http.MethodPost, "/api/search/metadata", b)
-		if err == nil {
-			err = json.Unmarshal(body, &answer)
-		}
-		if err != nil {
-			return nil, err
-		}
-		for _, a := range answer.Assets.Items {
-			if len(a.Personen) > 0 && !Eigen(a.Datei) {
-				out = append(out, a)
-			}
-		}
-		page = 0
-		if answer.Assets.Next != nil {
-			page, _ = strconv.Atoi(*answer.Assets.Next)
-		}
-	}
-	return out, nil
-}
 
 // BildRechte are those the contacts' pictures need (Hochladen, Funde,
 // Entfernen).
