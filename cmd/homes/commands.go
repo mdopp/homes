@@ -25,14 +25,17 @@ import (
 //   - import-takeout: a Google Takeout archive into the Haushalt calendar,
 //     the Haushalt address book and the notes folder, once (haus#13, laib
 //     ADR 0017 §4).
+//   - nummern-bereinigen: each number once on a card (nummern.go).
 func command(ctx context.Context, args []string, getenv func(string) string, out, errw io.Writer) int {
 	switch args[0] {
 	case "export-documents":
 		return exportDocuments(ctx, getenv, out, errw)
 	case "import-takeout":
 		return importTakeout(ctx, args[1:], getenv, out, errw)
+	case "nummern-bereinigen":
+		return nummernBereinigen(ctx, args[1:], getenv, out, errw)
 	}
-	fmt.Fprintf(errw, "homes: unknown command %q; known: export-documents, import-takeout\n", args[0])
+	fmt.Fprintf(errw, "homes: unknown command %q; known: export-documents, import-takeout, nummern-bereinigen\n", args[0])
 	return 2
 }
 

@@ -71,3 +71,17 @@ carries the time zones it names. Radicale not answering or refusing ends
 it; it says in German what it wrote, what was there and what not, and
 exits 1 when something was not written.
 
+`homes nummern-bereinigen [-apply] [-person <login>]…` (owner
+2026-11-11: „Viele Kontakte haben mehrfach die gleiche Nummer“) leaves
+each number once on a card: on the Haushalt address books and on each
+named person's mirrored phone contacts (`/<login>/handy-kontakte/`).
+Numbers are one when their digits with the country code are
+(`0171 1234567` = `+49 171 1234567`, `HOMES_PHONE_COUNTRY`); of their
+lines the main one stays, else the one with the most kinds, else the
+first; every other line of the card stays, a mirrored card's hash too, so
+the next sync from the phone leaves it alone. Without `-apply` it only
+counts, per book: contacts, contacts with a number more than once, lines
+that would go. It names no contact, number or person. Run it in Homes'
+container (`laib exec homes -- /homes nummern-bereinigen …`); exit 1 when
+a book was not read or a card not written (a second run goes on).
+

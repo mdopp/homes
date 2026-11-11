@@ -79,7 +79,7 @@ func vereinheitlichen(ctx context.Context, c *caldav.Client, cc string, a map[st
 			case !ok:
 				unklar = append(unklar, name+": "+oneLine(p))
 			case t != p:
-				ks, neu = append(ks, caldav.Korrektur{Prop: "TEL", Alt: p, Neu: t}), append(neu, name+": "+oneLine(p)+" → "+t)
+				ks, neu = append(ks, caldav.Korrektur{Prop: "TEL", Alt: p, Neu: t, Land: cc}), append(neu, name+": "+oneLine(p)+" → "+t)
 			}
 		}
 		if apply && len(ks) > 0 {

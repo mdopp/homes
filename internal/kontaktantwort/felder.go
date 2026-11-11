@@ -340,7 +340,7 @@ func telefone(vorher, nachher []Telefon) []Aenderung {
 		}
 		return out
 	}
-	return eintraege("telefon", e(vorher), e(nachher), Arten, ziffern)
+	return eintraege("telefon", e(vorher), e(nachher), Arten, nummer)
 }
 
 func mails(vorher, nachher []Mail) []Aenderung {
@@ -381,6 +381,9 @@ func ziffern(s string) string {
 	}
 	return b.String()
 }
+
+// nummer is a number as compared: 0171 … and +49 171 … are one, an autofill's other form no new one (owner 2026-11-11).
+func nummer(s string) string { return caldav.TelSchluessel(s, "") }
 
 // davProp is each kind's vCard property.
 var davProp = map[string]string{"vorname": "N-GIVEN", "nachname": "N-FAMILY", "telefon": "TEL", "mail": "EMAIL", "adresse": "ADR",

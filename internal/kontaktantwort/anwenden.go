@@ -48,7 +48,8 @@ func Uebernehmen(ctx context.Context, dav *caldav.Client, f Frage, stand []strin
 	}
 	for i, k := range ks {
 		if k.Prop == "TEL" {
-			ks[i].Neu, _ = haushalt.Telefon(k.Neu, cmp.Or(land, haushalt.DefaultCountry))
+			ks[i].Land = cmp.Or(land, haushalt.DefaultCountry)
+			ks[i].Neu, _ = haushalt.Telefon(k.Neu, ks[i].Land)
 		}
 	}
 	out := append([]string(nil), stand...)

@@ -23,7 +23,7 @@ import (
 var kontakteMaxBody int64 = 64 << 20
 
 const (
-	kontakteBook = "handy-kontakte"
+	kontakteBook = caldav.HandyBuch
 	kontakteName = "Handy-Kontakte"
 )
 

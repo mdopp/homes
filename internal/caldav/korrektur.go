@@ -24,10 +24,12 @@ import (
 // NeuAdr; for BDAY JJJJ-MM-TT or --MM-TT; for TEL and EMAIL Art is the new
 // kind (mobil, privat, geschaeftlich, andere; "" keeps the line's) and
 // Haupt whether it is the main one (nil keeps it; the main one is the
-// only one, PREF=1 or in vCard 3.0 TYPE=PREF).
+// only one, PREF=1 or in vCard 3.0 TYPE=PREF). Land is the household's
+// calling code a TEL is compared in (TelSchluessel; "" is 49).
 type Korrektur struct {
 	Prop           string
 	Alt, Neu, Art  string
+	Land           string
 	Haupt          *bool
 	AltAdr, NeuAdr *Address
 	Bild           []byte
@@ -295,12 +297,13 @@ func korrigiertEinzeln(body []string, k Korrektur) ([]string, bool) {
 
 // korrigiertWert changes one TEL or EMAIL: alt's line, or a new one; its
 // kind and whether it is the main one with it when k says so. A new main
-// one takes that from the others of its kind.
+// one takes that from the others of its kind. A number is never on the
+// card twice (owner 2026-11-11): the line that says most stays (telRang).
 func korrigiertWert(body []string, k Korrektur) ([]string, bool) {
 	prop := k.Prop
 	same := func(v string) func(Prop) bool {
-		want := gleichWert(prop, v)
-		return func(p Prop) bool { return gleichWert(prop, UnescapeText(p.Value)) == want }
+		want := gleichWert(prop, v, k.Land)
+		return func(p Prop) bool { return gleichWert(prop, UnescapeText(p.Value), k.Land) == want }
 	}
 	neu := strings.TrimSpace(k.Neu)
 	i := find(body, prop, same(k.Alt))
@@ -324,14 +327,14 @@ func korrigiertWert(body []string, k Korrektur) ([]string, bool) {
 	}
 	p, _ := parseLine(out[i])
 	if k.Art == "" && k.Haupt == nil {
-		return withValue(out, i, EscapeText(neu)), true
+		return eineJeNummer(prop, withValue(out, i, EscapeText(neu)), k.Land), true
 	}
 	pref := isPref(p)
 	if k.Haupt != nil {
 		pref = *k.Haupt
 	}
 	out[i] = wertZeile(out[i], p, k.Art, pref, vier(out)) + EscapeText(neu)
-	return out, true
+	return eineJeNummer(prop, out, k.Land), true
 }
 
 // wertZeile is line's group, name and parameters up to the colon, with the
@@ -377,19 +380,12 @@ func wertZeile(line string, p Prop, art string, pref, v4 bool) string {
 	return b.String() + ":"
 }
 
-// gleichWert is a value as two are compared: a number by its digits and a
-// leading +, an address by its letters in one case.
-func gleichWert(prop, v string) string {
+// gleichWert is a value as two are compared: a number as TelSchluessel
+// in the calling code cc, an address by its letters in one case.
+func gleichWert(prop, v, cc string) string {
 	v = strings.TrimSpace(v)
 	if prop == "TEL" {
-		v = strings.TrimPrefix(v, "tel:")
-		var d strings.Builder
-		for i, r := range v {
-			if (r >= '0' && r <= '9') || (r == '+' && i == 0) {
-				d.WriteRune(r)
-			}
-		}
-		return d.String()
+		return TelSchluessel(v, cc)
 	}
 	return strings.ToLower(strings.TrimPrefix(v, "mailto:"))
 }

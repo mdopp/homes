@@ -94,8 +94,8 @@ gates run in CI; run them before a PR.
 ## Layout
 
 ```
-cmd/homes/        the binary: env → wiring → routes; also `homes export-documents`
-                  and `homes import-takeout` (docs/RUN.md)
+cmd/homes/        the binary: env → wiring → routes; also `homes export-documents`,
+                  `homes import-takeout`, `homes nummern-bereinigen` (docs/RUN.md)
 cmd/homesdemo/    the family pages against the fakes, for e2e/ and for looking
 internal/pages/   the family's pages, one per file (+ the inline script, skript.go)
 internal/napi/    /napi, the app's API (docs/REFERENCE.md; the app's side:

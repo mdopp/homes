@@ -148,3 +148,41 @@ func TestImportTakeoutEdges(t *testing.T) {
 		t.Fatalf("the note's day: %q", b)
 	}
 }
+
+// owner 2026-11-11: nummern-bereinigen counts first and writes nothing; with
+// -apply the household's cards and the named person's mirrored contacts
+// have each number once; it names no contact and no number.
+func TestNummernBereinigenCommand(t *testing.T) {
+	dav := davfake.New("homes", "pw")
+	defer dav.Close()
+	dav.AddAddressBook("/homes/haushalt-kontakte/", "Haushalt")
+	dav.Put("/homes/haushalt-kontakte/a.vcf", "BEGIN:VCARD\r\nVERSION:3.0\r\nUID:a\r\nFN:Anna Geheim\r\nTEL:0171 1234567\r\nTEL;TYPE=CELL:+49 171 1234567\r\nEND:VCARD\r\n")
+	env := map[string]string{"HOMES_RADICALE_URL": dav.URL, "HOMES_RADICALE_USER": "homes", "HOMES_RADICALE_PASSWORD": "pw"}
+	run := func(args ...string) (int, string) {
+		var out, errw bytes.Buffer
+		code := command(context.Background(), append([]string{"nummern-bereinigen"}, args...), func(k string) string { return env[k] }, &out, &errw)
+		return code, out.String() + errw.String()
+	}
+	dav.AddAddressBook("/ben/handy-kontakte/", "Handy-Kontakte")
+	dav.Put("/ben/handy-kontakte/b.vcf", "BEGIN:VCARD\r\nVERSION:3.0\r\nUID:b\r\nFN:Bert\r\nTEL:0711 1\r\nTEL:0711 1\r\nTEL:0711 1\r\nEND:VCARD\r\n")
+	before := dav.Objects()
+	code, said := run("-person", "ben")
+	if code != 0 || !strings.Contains(said, "Probelauf") || !strings.Contains(said, "Haushalt: 1 Kontakte, 1 mit einer Nummer mehrfach, 1 doppelte Zeilen würden wegfallen") ||
+		!strings.Contains(said, "Handy-Kontakte, Person 1: 1 Kontakte, 1 mit einer Nummer mehrfach, 2 doppelte Zeilen") {
+		t.Fatalf("dry run %d:\n%s", code, said)
+	}
+	if strings.Contains(said, "Anna") || strings.Contains(said, "171") || strings.Contains(said, " ben") {
+		t.Fatalf("it names a contact, a number or a person:\n%s", said)
+	}
+	for p, v := range dav.Objects() {
+		if before[p] != v {
+			t.Fatalf("the dry run wrote %s", p)
+		}
+	}
+	if code, said = run("-apply", "-person", "ben"); code != 0 || !strings.Contains(said, "weggefallen (1 Kontakte geschrieben)") {
+		t.Fatalf("apply %d:\n%s", code, said)
+	}
+	if objs := dav.Objects(); strings.Count(objs["/homes/haushalt-kontakte/a.vcf"], "TEL") != 1 || strings.Count(objs["/ben/handy-kontakte/b.vcf"], "TEL") != 1 {
+		t.Fatalf("after: %v", objs)
+	}
+}
