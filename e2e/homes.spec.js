@@ -344,15 +344,32 @@ async function above(page, a, b) {
 
 // The Mehr audit (owner 2026-11-04): filing is the first and biggest thing on Dokumente; the title
 // asks once a file is chosen; the mail is one quiet line below.
-// Daten sichern (owner 2026-11-08: the one overview): the state first, one line per source with a dot,
+// Daten sichern: the way to Meine Daten first (homes#342: each source's state is said there, once),
 // then the way to the keys, what never goes and the phone change folded last.
-test('Daten sichern leads with the state, the phone change folded', async ({ page }) => {
+test('Daten sichern leads to Meine Daten, the phone change folded', async ({ page }) => {
   await page.goto('/daten-sichern');
-  const stand = page.locator('#karte-dein-stand, section:has(h2:text-is("Dein Stand"))').first();
-  for (const q of ['WhatsApp', 'Signal', 'SMS und Anrufe', 'Standort', 'Kontakte', 'E-Mail', 'Kalender']) await expect(stand.locator('li.quelle', { hasText: q })).toHaveCount(1);
-  expect(await above(page, 'li.quelle', 'p.schluessel')).toBe(true);
+  await expect(page.locator('li.quelle')).toHaveCount(0);
+  expect(await above(page, 'a[href="/meine-daten"]', 'p.schluessel')).toBe(true);
   for (const d of await page.locator('details.wechsel').all()) await expect(d).not.toHaveAttribute('open', '');
   expect(await above(page, 'p.schluessel', 'details.wechsel')).toBe(true);
+  await page.locator('a[href="/meine-daten"]').click();
+  await expect(page.locator('h1')).toHaveText('Meine Daten');
+});
+
+// Meine Daten (homes#342) on a phone: one line per source with its dot and its threshold under it, what
+// came first, the sources not set up below with their way in; nothing wider than the screen.
+test('Meine Daten: one line per source, the ways in below', async ({ page }, info) => {
+  await page.goto('/meine-daten');
+  const da = page.locator('section:has(h2:text-is("Was ankommt"))');
+  for (const q of ['Signal', 'WhatsApp', 'SMS und Anrufe', 'Kontakte', 'E-Mail', 'Standort']) await expect(da.locator('li.quelle', { hasText: q })).toHaveCount(1);
+  await expect(da.locator('li.quelle', { hasText: 'E-Mail' })).toContainText('zuletzt heute');
+  await expect(da.locator('li.quelle', { hasText: 'Signal' }).locator('.schwelle')).toHaveText('still nach 2 Tagen');
+  const wege = page.locator('section:has(h2:text-is("So kommt mehr dazu"))');
+  await expect(wege.locator('li.quelle', { hasText: 'Facebook und LinkedIn' })).toContainText('Ins Archiv');
+  await expect(wege).toContainText('anna+doc@example.org');
+  expect(await above(page, 'section:has(h2:text-is("Was ankommt"))', 'section:has(h2:text-is("So kommt mehr dazu"))')).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: info.outputPath('meine-daten.png'), fullPage: true });
 });
 
 // Netzlaufwerk once the password is set: the addresses first, the state in a line, the change folded.
@@ -653,7 +670,7 @@ test('Standortverlauf, connected, leads with the timeline and ends with a quiet 
 // finger, and no text runs out of its box.
 const PAGES = ['/start', '/raeume', '/raeume/light.kueche', '/medien', '/energie', '/energie?zeitraum=jahr', '/kalender', '/kalender/verwalten', '/kontakte', '/kontakte/h3', '/kontakte/privat', '/kontakte/privat/k0', '/kontakte/dieselbe', '/kontakte/netz',
   '/notizen', '/notizen?tag=kochen', '/notizen/einkaufsliste.md', '/notizen/markdown.md', '/notizen/einkaufsliste.md?bearbeiten=1', '/mehr', '/musik', '/platte', '/discogs', '/aktivierungswort', '/aufgaben', '/dokumente', '/dokumente/zuordnen', '/dokumente/suche?q=strom', '/dokumente/suche?nur=versicherungen', '/willkommen', '/einrichten/fotos', '/box/geraete', '/pair-device', '/podcasts', '/gesehen', '/standort',
-  '/daten-sichern', '/netzlaufwerk', '/box', '/box/aufgaben', '/box/auslastung', '/box/haushalt', '/box/personen', '/box/module', '/adresse',
+  '/daten-sichern', '/meine-daten', '/netzlaufwerk', '/box', '/box/aufgaben', '/box/auslastung', '/box/haushalt', '/box/personen', '/box/module', '/adresse',
   '/einkauf', '/einkauf?liste=liste-baumarkt', '/einkauf?liste=liste-musik', '/einkauf/rezepte', '/einkauf/rezepte?n=rezepte%2Flasagne.md', '/notizen/rezepte/lasagne.md'];
 for (const path of PAGES) {
   test(`layout of ${path}`, async ({ page }) => {

@@ -258,6 +258,9 @@ func main() {
 	demoLaib.wishes.Status("beets", laibfake.DemoBeets(inbox, time.Now(), false))
 	seiten := mehr // Daten sichern, Netzlaufwerk, Box, Adresse (the Mehr audit)
 	seiten.Reitti = standort.Reitti
+	// Meine Daten (homes#342): Anna's archive fetched her mail an hour ago; her own address for documents
+	seiten.Archive, seiten.ArchivURL, seiten.DocumentsMail = map[string]bool{"anna": true}, "https://archiv.example", "dokumente@example.org"
+	demoLaib.wishes.Status("archiv-anna", `{"letztes_paket":{"mail":{"am":"`+time.Now().Add(-time.Hour).UTC().Format(time.RFC3339)+`"}}}`)
 	mehrSeiten(mux, seiten, dav, dir, store)
 	mux.HandleFunc("/demo/wunsch", func(w http.ResponseWriter, r *http.Request) { // a wish moved on in Laib: wartet, abgelehnt, …
 		demoLaib.wishes.Setze(r.URL.Query().Get("modul"), r.URL.Query().Get("stand"), "")

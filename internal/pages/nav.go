@@ -83,6 +83,8 @@ func kern(cfg StartConfig) []modul.Eintrag {
 		// the person's own archive, theirs only (owner 2026-11-10: „aus der App gibt es einen Link?“)
 		{Titel: texte.T("archiv.titel"), Pfad: cfg.ArchivURL + "/", Icon: iconArchiv, Ort: modul.Mehr, Rang: 75,
 			Fuer: func(r *http.Request) bool { return cfg.ArchivURL != "" && cfg.Archive[r.Header.Get("Remote-User")] }},
+		// every source of the person's data with its last arrival (homes#342), theirs only
+		{Titel: texte.T(texte.MeineDatenTitel), Pfad: MeineDatenPath, Icon: iconDaten, Ort: modul.Mehr, Rang: 77, Fuer: angemeldet},
 		{Titel: "Box", Pfad: "/box", Icon: iconBox, Ort: modul.Mehr, Rang: 120, Fuer: isAdmin},
 	}
 }

@@ -76,6 +76,7 @@ func mehrSeiten(mux *http.ServeMux, cfg pages.StartConfig, dav *davfake.Server, 
 	cfg.Samba, cfg.SambaHost = &samba.Dir{Path: sambaDir}, "box.local"
 	cfg.Sicherung, cfg.Contacts, cfg.LaibURL = napi.NewSicherung(archiv, dir), cfg.Calendar, "https://laib.example"
 	mux.HandleFunc(pages.DatenPath, pages.Nachrichten(cfg))
+	mux.HandleFunc(pages.MeineDatenPath, pages.MeineDaten(cfg)) // every source with its last arrival (homes#342)
 	// the household's address book, nine cards as on the box (owner 2026-11-05): the list and each contact's page
 	dav.AddAddressBook("/homes/haushalt-kontakte/", "Haushalt")
 	for i, k := range [][3]string{{"Anna Beispiel", "+49 151 23456789", "anna@example.org"}, {"Ben Beispiel", "+49 160 9876543", ""},
