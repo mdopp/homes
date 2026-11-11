@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/mdopp/homes/internal/immich"
+	"github.com/mdopp/homes/internal/namen"
 )
 
 // „Wer ist das?“ (owner 2026-11-09): up to werN unnamed persons for the
@@ -16,7 +17,10 @@ import (
 // reads their places and company once a day (Umfelder); a page only reads
 // what is kept. A name goes to Immich (Benennen); one of a person's name
 // already is merged into it by the next run (Zusammenfuehren). „Kenne ich
-// nicht“ is kept, and that face is never offered again.
+// nicht“ is kept, and that face is never offered again. The unnamed face
+// of a pair the owner said „Nein“ to is named the same way, right there
+// (Dann, owner 2026-11-11); the named side's own name for it is a „Ja“
+// after all.
 
 const (
 	werN, werMinFotos = 5, 5 // persons offered; the photos one is in at least (owner 2026-11-09: no stranger in the back)
@@ -37,11 +41,7 @@ func (g *Gesichter) Wer() []Seite {
 	var out []Seite
 	for _, p := range st.Ohne {
 		_, nie := st.Unbekannt[p.ID]
-		n := -1
-		if z, ok := st.Fotos[p.ID]; ok {
-			n = z.N
-		}
-		if s := st.seite(p.ID, "", n, st.Bilder[p.ID].JPEG); !nie && !g.weg[p.ID] && s.Fotos >= werMinFotos && s.zeigbar() {
+		if s := st.seite(p.ID, "", st.fotos(p.ID), st.Bilder[p.ID].JPEG); !nie && !g.weg[p.ID] && s.Fotos >= werMinFotos && s.zeigbar() {
 			out = append(out, s)
 		}
 	}
@@ -52,24 +52,75 @@ func (g *Gesichter) Wer() []Seite {
 	return out[:min(len(out), werN)]
 }
 
-// Benennen takes the owner's answer about the unnamed person id: a name
-// is set in Immich (PUT people, person.update) and answered; "" is „Kenne
-// ich nicht“, kept. ErrKeineFrage: id is not offered (any more).
-func (g *Gesichter) Benennen(ctx context.Context, id, name string) (string, error) {
-	gezeigt := slices.ContainsFunc(g.Wer(), func(s Seite) bool { return s.ID == id })
+// Dann is the unnamed face id of a pair the owner said „Nein“ to, to name
+// right there (owner 2026-11-11: „bei Nein gleich den richtigen Namen“);
+// ok false: none such, or it is named, not known or merged away.
+func (g *Gesichter) Dann(id string) (Seite, bool) {
+	if g == nil || g.Immich == nil {
+		return Seite{}, false
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.laden()
+	st := g.stand
+	p, da := st.Andere[id]
+	_, nie := st.Unbekannt[id]
+	if !da || nie || g.weg[id] || strings.TrimSpace(p.Name) != "" || len(st.neinMit(id)) == 0 || slices.ContainsFunc(st.Personen, func(q immich.Person) bool { return q.ID == id }) {
+		return Seite{}, false
+	}
+	return st.seite(id, "", st.fotos(id), st.Bilder[id].JPEG), true
+}
+
+// fotos are the photos kept of person id; -1 not counted.
+func (st stand) fotos(id string) int {
+	if z, ok := st.Fotos[id]; ok {
+		return z.N
+	}
+	return -1
+}
+
+// neinMit are the persons the owner said „Nein“ to beside id.
+func (st stand) neinMit(id string) []string {
+	var out []string
+	for k := range st.Nein {
+		if a, b, _ := strings.Cut(k, "|"); a == id {
+			out = append(out, b)
+		} else if b == id {
+			out = append(out, a)
+		}
+	}
+	return out
+}
+
+// Benennen takes the owner's answer about the unnamed person id (of Wer
+// or Dann): a name is set in Immich (PUT people, person.update) and
+// answered; "" is „Kenne ich nicht“, kept. The name of a person the owner
+// said „Nein“ to beside id merges id into it instead (zusammen) and
+// answers doch. ErrKeineFrage: id is not offered (any more).
+func (g *Gesichter) Benennen(ctx context.Context, id, name string) (genannt string, doch bool, err error) {
+	_, dann := g.Dann(id)
+	gezeigt := dann || slices.ContainsFunc(g.Wer(), func(s Seite) bool { return s.ID == id })
 	name = strings.Join(strings.Fields(name), " ")
 	g.mu.Lock()
-	var p immich.Person
+	p, links := g.stand.Andere[id], immich.Person{}
 	if i := slices.IndexFunc(g.stand.Ohne, func(p immich.Person) bool { return p.ID == id }); i >= 0 {
 		p = g.stand.Ohne[i]
 	}
+	for _, q := range g.stand.Personen {
+		if name != "" && namen.Plain(q.Name) == namen.Plain(name) && slices.Contains(g.stand.neinMit(id), q.ID) {
+			links = q
+		}
+	}
 	g.mu.Unlock()
 	if !gezeigt || p.ID == "" {
-		return "", ErrKeineFrage
+		return "", false, ErrKeineFrage
+	}
+	if links.ID != "" {
+		return links.Name, true, g.zusammen(ctx, links.ID, id)
 	}
 	if name != "" {
 		if err := g.Immich.Aendern(ctx, id, name, p.Geburtstag); err != nil {
-			return "", err
+			return "", false, err
 		}
 	}
 	g.mu.Lock()
@@ -80,5 +131,5 @@ func (g *Gesichter) Benennen(ctx context.Context, id, name string) (string, erro
 	} else {
 		g.stand.Personen = append(g.stand.Personen, p)
 	}
-	return name, g.save()
+	return name, false, g.save()
 }

@@ -404,11 +404,7 @@ func (g *Gesichter) Paare() []Paar {
 		wer[p.ID] = p
 	}
 	seite := func(id string) Seite {
-		n := -1
-		if z, ok := st.Fotos[id]; ok {
-			n = z.N
-		}
-		return st.seite(id, strings.TrimSpace(wer[id].Name), n, st.Bilder[id].JPEG)
+		return st.seite(id, strings.TrimSpace(wer[id].Name), st.fotos(id), st.Bilder[id].JPEG)
 	}
 	type kandidat struct {
 		Paar
@@ -463,19 +459,31 @@ func (g *Gesichter) Antworten(ctx context.Context, a, b, antwort string) (string
 	if antwort != "ja" {
 		return "", fmt.Errorf("gesichter: no answer %q", antwort)
 	}
-	weg, err := g.verschmelzen(ctx, p.A.ID, []string{p.B.ID})
+	if err := g.zusammen(ctx, p.A.ID, p.B.ID); err != nil {
+		return "", err
+	}
+	return p.A.Name, nil
+}
+
+// zusammen merges the unnamed b into the named a (verschmelzen), and a
+// „Nein“ of the two goes. Without person.merge Fehlt says so; one of them
+// gone is ErrNichtZusammen, and both are asked of Immich again.
+func (g *Gesichter) zusammen(ctx context.Context, a, b string) error {
+	weg, err := g.verschmelzen(ctx, a, []string{b})
 	var fehlt immich.FehltRecht
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	switch {
+	switch _, nein := g.stand.Nein[paarKey(a, b)]; {
 	case errors.As(err, &fehlt):
 		g.stand.FehltMerge = fehlt.Recht
-	case err == nil && len(weg) == 0: // one of them is gone: ask Immich again
+	case err == nil && len(weg) == 0:
 		delete(g.stand.Naehe, a)
 		delete(g.stand.Naehe, b)
 		err = ErrNichtZusammen
+	case err == nil && nein:
+		delete(g.stand.Nein, paarKey(a, b))
 	default:
-		return p.A.Name, err
+		return err
 	}
-	return "", errors.Join(err, g.save())
+	return errors.Join(err, g.save())
 }

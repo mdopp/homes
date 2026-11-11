@@ -944,7 +944,7 @@ test('Dieselbe Person? on the contact takes a Nein', async ({ page }, info) => {
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Oma Hilde');
   await expect(page.getByRole('heading', { name: 'Dieselbe Person?' })).toHaveCount(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
-  const paare = page.locator('section.paar:not(.frage)');
+  const paare = page.locator('section.paar:not(.frage):not(.wer)');
   const n = await paare.count();
   expect(n).toBe(1); // only the closest face per person (owner 2026-11-09)
   await expect(paare.first()).toContainText('Oma Hilde');
@@ -965,7 +965,17 @@ test('Dieselbe Person? on the contact takes a Nein', async ({ page }, info) => {
   await expect(page.getByText('Gemerkt: Nach diesen beiden fragt Homes nicht wieder.')).toBeVisible();
   await expect(page).toHaveURL(/\/kontakte\/privat\/k0$/);
   await expect(paare).toHaveCount(n - 1);
+  // owner 2026-11-11: after the Nein, the unnamed face to name right there
+  await expect(page.getByRole('heading', { name: 'Wer ist das dann?' })).toBeVisible();
+  const dann = page.locator('section.paar.wer').first();
+  await expect(dann).toContainText('ohne Namen');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
   await page.screenshot({ path: info.outputPath('dieselbe-nein-411.png'), fullPage: true });
+  await dann.getByRole('combobox', { name: 'Name' }).fill('Tante Erika');
+  await dann.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.getByText('Gespeichert: Das Gesicht heißt in Immich jetzt Tante Erika.')).toBeVisible();
+  await expect(page).toHaveURL(/\/kontakte\/privat\/k0$/);
+  await expect(page.getByRole('heading', { name: 'Wer ist das dann?' })).toHaveCount(0);
   // the task's address asks every question right there, no click-through (owner 2026-11-09)
   await page.goto('/kontakte/dieselbe');
   await expect(page).toHaveURL(/\/kontakte\/dieselbe$/);

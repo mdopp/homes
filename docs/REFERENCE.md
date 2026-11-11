@@ -494,7 +494,15 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     /api/people/<id>`, `person.update`; a person of that name already is
     merged into it by the next run) and *Kenne ich nicht* (kept,
     `unbekannt`: never offered again). Not counted in the task: unnamed
-    faces never run out.
+    faces never run out. After a pair's *Nein* (owner 2026-11-11: „bei Nein
+    gleich den richtigen Namen“) the answer's page (`/kontakte/dieselbe` or
+    the contact's) opens with *Wer ist das dann?*: the pair's unnamed face
+    as the same card, posted the same way (`wer`, `name`, `antwort`), with
+    the same suggestions; it stays while a name is refused, and is offered
+    only for a face of a kept *Nein*, unnamed and not „Kenne ich nicht“
+    (`gesichter.Dann`). Typing the named side's own name (`namen.Plain`)
+    merges the two after all (`person.merge`), drops the *Nein* and says
+    *also doch dieselbe Person*.
   - *Wer steht wem nahe* (owner 2026-11-09; `/kontakte/netz`, linked from
     Kontakte; *Steht nahe* on each contact's page, its five closest; the
     key's owner only, anyone else is sent to Kontakte): who is close to

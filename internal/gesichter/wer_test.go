@@ -84,13 +84,13 @@ func TestWer(t *testing.T) {
 // without person.update.
 func TestBenennen(t *testing.T) {
 	g, fake := werBox(t)
-	if name, err := g.Benennen(t.Context(), "x2", "  Yvonne   Huber "); err != nil || name != "Yvonne Huber" {
+	if name, _, err := g.Benennen(t.Context(), "x2", "  Yvonne   Huber "); err != nil || name != "Yvonne Huber" {
 		t.Fatalf("%q %v", name, err)
 	}
 	if !slices.Contains(fake.Alle(), "Yvonne Huber|") || slices.Contains(wer(g), "x2") || g.Bild("Yvonne Huber") == nil {
 		t.Fatalf("%v %v", fake.Alle(), wer(g))
 	}
-	if _, err := g.Benennen(t.Context(), "x3", ""); err != nil {
+	if _, _, err := g.Benennen(t.Context(), "x3", ""); err != nil {
 		t.Fatal(err)
 	}
 	if got := fmt.Sprint(wer(g)); got != "[x1 x4 x5]" { // x6 is in 4 photos: never asked
@@ -102,13 +102,13 @@ func TestBenennen(t *testing.T) {
 		t.Fatalf("anew: %s", got)
 	}
 	for _, id := range []string{"x3", "x7", "x8", "anna", "nie"} {
-		if _, err := neu.Benennen(t.Context(), id, "Z"); !errors.Is(err, ErrKeineFrage) {
+		if _, _, err := neu.Benennen(t.Context(), id, "Z"); !errors.Is(err, ErrKeineFrage) {
 			t.Fatalf("%s: %v", id, err)
 		}
 	}
 	fake.Ohne = []string{"person.update"}
 	var fehlt immich.FehltRecht
-	if _, err := neu.Benennen(t.Context(), "x1", "Zoe"); !errors.As(err, &fehlt) || !slices.Contains(wer(neu), "x1") {
+	if _, _, err := neu.Benennen(t.Context(), "x1", "Zoe"); !errors.As(err, &fehlt) || !slices.Contains(wer(neu), "x1") {
 		t.Fatalf("%v %v", err, wer(neu))
 	}
 }
@@ -125,5 +125,47 @@ func TestSeiteKontakt(t *testing.T) {
 	p := g.Paare()[0]
 	if p.A.ID != "anna" || p.A.Kontakt != "haushalt/h" || p.B.ID != "u1" || p.B.Kontakt != "" {
 		t.Fatalf("%+v %+v", p.A.Kontakt, p.B.Kontakt)
+	}
+}
+
+// After a pair's „Nein“ its unnamed face can be named right there (owner
+// 2026-11-11): offered by Dann only then, named in Immich like „Wer ist
+// das?“; the named side's own name merges the two after all and the
+// „Nein“ goes; „Kenne ich nicht“ ends it; a face of no „Nein“ is refused.
+func TestDann(t *testing.T) {
+	g, fake := naeheBox(t)
+	if _, ok := g.Dann("u1"); ok {
+		t.Fatal("offered before a Nein")
+	}
+	for _, ab := range [][2]string{{"anna", "u1"}, {"carl", "u3"}} {
+		if _, err := g.Antworten(t.Context(), ab[0], ab[1], "nein"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if s, ok := g.Dann("u1"); !ok || s.Name != "" || s.Fotos != 7 || !Gesehen(s.Bild) {
+		t.Fatalf("%v %+v", ok, s)
+	}
+	if name, doch, err := g.Benennen(t.Context(), "u1", " Zoe  Berg"); err != nil || doch || name != "Zoe Berg" || !slices.Contains(fake.Alle(), "Zoe Berg|") {
+		t.Fatalf("%q %v %v %v", name, doch, err, fake.Alle())
+	}
+	if _, ok := g.Dann("u1"); ok {
+		t.Fatal("a named face still offered")
+	}
+	if name, doch, err := g.Benennen(t.Context(), "u3", " carl "); err != nil || !doch || name != "Carl" || fmt.Sprint(fake.Merges()) != "[[carl u3]]" {
+		t.Fatalf("%q %v %v %v", name, doch, err, fake.Merges())
+	}
+	if _, nein := g.stand.Nein[paarKey("carl", "u3")]; nein {
+		t.Fatal("the Nein stayed after the merge")
+	}
+	if _, _, err := g.Benennen(t.Context(), "u2", "Udo"); !errors.Is(err, ErrKeineFrage) {
+		t.Fatalf("no Nein, not offered: %v", err)
+	}
+	g2, _ := naeheBox(t)
+	g2.Antworten(t.Context(), "anna", "u1", "nein")
+	if _, _, err := g2.Benennen(t.Context(), "u1", ""); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := g2.Dann("u1"); ok {
+		t.Fatal("offered after Kenne ich nicht")
 	}
 }
