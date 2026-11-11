@@ -266,6 +266,9 @@ const (
 	WerDoch            ID = "wer-ist-das.doch"     // the named side's own name typed: merged after all, „%s“ the name
 	DieselbeKontakt    ID = "dieselbe.kontakt"     // under a named face: its contact's page
 	DieselbeKontaktVon ID = "dieselbe.kontakt.von" // the link's label: „%s“ the name
+	DieselbeVon        ID = "dieselbe.von"         // one question at a time (owner 2026-11-11): which of how many
+	DieselbeNaechste   ID = "dieselbe.naechste"    // the next one, this one left open
+	DieselbeAlle       ID = "dieselbe.alle"        // every question on one page
 	// Kontakt prüfen lassen (owner 2026-11-07): the start, the answers' review, the page without a login
 	PruefenErstelltLaeuft ID = "pruefen.erstellen.laeuft"
 	PruefenText           ID = "pruefen.text"        // the prepared message: the first name, the link
@@ -596,7 +599,7 @@ var de = map[ID]string{
 	"ist-das.kein-foto.gemerkt":    "Gemerkt: Homes hat das Bild aus Immich genommen und nimmt es nicht wieder.",
 	"ist-das.stumm":                "Immich hat gerade nicht geantwortet, nichts wurde geändert. Versuch es gleich noch einmal.",
 	"wer-ist-das":                  "Wer ist das?",
-	"wer-ist-das.hinweis":          "Gesichter, die Immich oft sieht und noch nicht kennt. Ein Name gilt in Immich; heißt schon jemand so, führt Homes beide in der nächsten Stunde zusammen.",
+	"wer-ist-das.hinweis":          "Oft auf deinen Fotos, aber noch ohne Namen. Der Name gilt in Immich; heißt dort schon jemand so, führt Homes beide zusammen.",
 	"wer-ist-das.name":             "Name",
 	"wer-ist-das.speichern":        "Speichern",
 	"wer-ist-das.speichern.laeuft": "Speichert …",
@@ -716,6 +719,9 @@ var de = map[ID]string{
 	"wer-ist-das.doch":         "Das ist derselbe Name wie links, also doch dieselbe Person: Die Fotos gehören jetzt zu %s.",
 	"dieselbe.kontakt":         "Kontakt",
 	"dieselbe.kontakt.von":     "Kontakt von %s öffnen",
+	"dieselbe.von":             "Frage %d von %d",
+	"dieselbe.naechste":        "Nächste Frage",
+	"dieselbe.alle":            "Alle zeigen",
 
 	// „So hängt alles zusammen“ (owner 2026-11-05): the page, its web's nodes ("knoten.<…>", a word and a line under it), its moments ("<…>" and "<…>.so")
 	"zusammen.titel":                    "So hängt alles zusammen",

@@ -83,7 +83,9 @@ budget() { # budget <name> <cap> <dir…>
 # „Sieht aus wie … aus deinen Kontakten“ with its one tap on „Wer ist das?“ (kontakte_wer.go, homes#352)
 # 2026-11-11, owner OK'd the needed raise 2026-11-11: a „nur für mich“ stack on Letzte Stapel (pages 18,910 -> 18,990; 18,980 used):
 #   the owner's own reads „Nur für dich“ with the way into Paperless instead of „Nichts mehr in Paperless“, another person's is not shown.
-budget pages 18990 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-11, owner OK'd needed raises for the UX pass 2026-11-11: Dieselbe Person – eine Frage auf einmal (pages 18,990 -> 19,030; 19,012 used):
+# one card under one heading, „Frage 2 von 6 · Nächste Frage · Alle zeigen“ (kontakte_dieselbe.go)
+budget pages 19030 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted

@@ -994,9 +994,20 @@ test('Dieselbe Person? on the contact takes a Nein', async ({ page }, info) => {
   await expect(page.getByText('Gespeichert: Das Gesicht heißt in Immich jetzt Tante Erika.')).toBeVisible();
   await expect(page).toHaveURL(/\/kontakte\/privat\/k0$/);
   await expect(page.getByRole('heading', { name: 'Wer ist das dann?' })).toHaveCount(0);
-  // the task's address asks every question right there, no click-through (owner 2026-11-09)
+  // the task's address asks every question right there, no click-through (owner 2026-11-09), one at a
+  // time (owner 2026-11-11, „rigoros einfach“): one card under one heading, which of how many, the next
   await page.goto('/kontakte/dieselbe');
   await expect(page).toHaveURL(/\/kontakte\/dieselbe$/);
+  await expect(page.locator('section.paar')).toHaveCount(1);
+  await expect(page.locator('h1, h2')).toHaveText(['Wer ist das?']);
+  await expect(page.getByText(/^Frage 1 von \d+/)).toBeVisible();
+  await page.screenshot({ path: info.outputPath('eine-frage-411.png'), fullPage: true });
+  await page.getByRole('link', { name: 'Nächste Frage' }).click();
+  await expect(page).toHaveURL(/\/kontakte\/dieselbe\?ab=1$/);
+  await expect(page.locator('section.paar')).toHaveCount(1);
+  await expect(page.getByText(/^Frage 2 von \d+/)).toBeVisible();
+  await page.getByRole('link', { name: 'Alle zeigen' }).click();
+  await expect(page).toHaveURL(/\/kontakte\/dieselbe\?alle=1$/);
   // „Wer ist das?“ (owner 2026-11-09): unnamed faces to name, above the pairs, each its field and two buttons
   const wer = page.locator('section.paar.wer');
   expect(await wer.count()).toBeGreaterThan(0);

@@ -60,24 +60,60 @@ func Dieselbe(cfg StartConfig) http.HandlerFunc {
 	}
 }
 
-// dieselbeRest is the page: the outcome, every „Ist das …?“ and the first
-// pairs, each answered in place; the next ones follow after an answer.
+// dieselbeRest is the page: the outcome and one question at a time (owner
+// 2026-11-11: „rigoros einfach“; six cards of three kinds stood on one
+// page), answered in place, the next one following; under it which one
+// of how many it is, „Nächste Frage“ (?ab=) and „Alle zeigen“ (?alle=1:
+// every „Wer ist das?“, every „Ist das …?“ and the first pairs at once).
+// The face of a pair just answered Nein comes first, whatever was asked.
 func dieselbeRest(r *http.Request, cfg StartConfig, said, problem string) *strings.Builder {
 	t := func(id texte.ID) string { return html.EscapeString(texte.T(id)) }
 	b := kontakteHead(r, cfg, texte.T(texte.Dieselbe), "", texte.T(texte.Dieselbe))
-	b.WriteString(dieselbeStyle + "<h1>" + t(texte.Dieselbe) + "</h1>" + gesagt(said, problem))
-	fragen, paare, wer := cfg.Gesichter.Fragen(), cfg.Gesichter.Paare(), cfg.Gesichter.Wer()
-	b.WriteString(werKarten(r, cfg, werDann(r, cfg, problem), wer, DieselbePath) + istFragen(cfg, fragen, DieselbePath))
-	if len(paare)+len(fragen)+len(wer) == 0 {
+	b.WriteString(dieselbeStyle)
+	dann, fragen, paare := werDann(r, cfg, problem), cfg.Gesichter.Fragen(), cfg.Gesichter.Paare()
+	wer := slices.DeleteFunc(slices.Clone(cfg.Gesichter.Wer()), func(s gesichter.Seite) bool {
+		return slices.ContainsFunc(dann, func(d gesichter.Seite) bool { return d.ID == s.ID })
+	})
+	paare = paare[:min(len(paare), dieselbeJeSeite)]
+	n, action, fuss := len(dann)+len(wer)+len(fragen)+len(paare), DieselbePath+"?alle=1", ""
+	einzeln := r.URL.Query().Get("alle") == "" && n > 1
+	if einzeln { // one of them: the others are cut away
+		ab, _ := strconv.Atoi(r.URL.Query().Get("ab"))
+		if ab < 0 || ab >= n || len(dann) > 0 {
+			ab = 0
+		}
+		action = DieselbePath + "?ab=" + strconv.Itoa(ab)
+		fuss = fmt.Sprintf(`<p class=k>%s · <a href="%s?ab=%d">%s</a> · <a href="%s?alle=1">%s</a></p>`, html.EscapeString(fmt.Sprintf(texte.T(texte.DieselbeVon), ab+1, n)),
+			DieselbePath, (ab+1)%n, t(texte.DieselbeNaechste), DieselbePath, t(texte.DieselbeAlle))
+		dann, wer, fragen, paare = eine(dann, &ab), eine(wer, &ab), eine(fragen, &ab), eine(paare, &ab)
+	}
+	andere := werKarten(r, cfg, dann, wer, action) + istFragen(cfg, fragen, action)
+	if einzeln && andere != "" { // the page's name is the question asked: one heading
+		andere = strings.Replace(strings.Replace(andere, "<h2>", "<h1>", 1), "</h2>", "</h1>", 1)
+	} else {
+		b.WriteString("<h1>" + t(texte.Dieselbe) + "</h1>")
+	}
+	b.WriteString(gesagt(said, problem) + andere)
+	if n == 0 {
 		b.WriteString("<p class=k>" + t(texte.DieselbeLeer) + "</p>")
-	} else if len(paare) > 0 && len(fragen)+len(wer) > 0 {
+	} else if len(paare) > 0 && andere != "" {
 		b.WriteString("<h2>" + t(texte.Dieselbe) + "</h2>")
 	}
-	for _, p := range paare[:min(len(paare), dieselbeJeSeite)] {
-		b.WriteString(paarKarte(cfg, p, DieselbePath))
+	for _, p := range paare {
+		b.WriteString(paarKarte(cfg, p, action))
 	}
-	b.WriteString(wieDas(texte.IstDasHinweis, texte.DieselbeHinweis))
+	b.WriteString(fuss + wieDas(texte.IstDasHinweis, texte.DieselbeHinweis))
 	return b
+}
+
+// eine is the one of xs at *ab, or none; *ab moves on past xs.
+func eine[T any](xs []T, ab *int) []T {
+	i := *ab
+	*ab -= len(xs)
+	if i < 0 || i >= len(xs) {
+		return nil
+	}
+	return xs[i : i+1]
 }
 
 // immichAntwort passes the key owner's answer on: about a contact's

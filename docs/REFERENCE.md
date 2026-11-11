@@ -441,7 +441,10 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     id` ticks one off and comes back). Never a registration: a login is
     made at the box.
   - *Dieselbe Person?* (on the contact of either person, see above; what
-    belongs to no contact at `/kontakte/dieselbe`; the key's owner only):
+    belongs to no contact at `/kontakte/dieselbe`; the key's owner only;
+    there one question at a time under one heading, owner 2026-11-11:
+    „Frage 2 von 6 · Nächste Frage · Alle zeigen“, `?ab=<n>` the one
+    shown and where an answer comes back to, `?alle=1` all at once):
     pairs of a named person and an unnamed face Immich holds close (two
     named persons never: the owner told them apart, 2026-11-09). The
     hourly run asks, for at most 40 named persons
