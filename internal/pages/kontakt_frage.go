@@ -14,6 +14,7 @@ import (
 	"maps"
 	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"regexp"
 	"slices"
@@ -75,16 +76,17 @@ func KontaktServer(cfg StartConfig) http.Handler {
 	})
 }
 
-// The limits: per client address a burst of fragePro and one more every
-// frageTakt; for everyone together fragAlle, one more a second.
+// Per address reads and answers, links and guesses alike (no 200/429
+// oracle); for all, only what has a token's form (no scanner's path).
 const (
-	fragePro   = 10
-	frageTakt  = 30 * time.Second
-	frageAlle  = 120
-	frageBytes = 32 << 10 // a form of 12 numbers, mails and addresses is a few KB
+	fragePro, frageTakt         = 60, 10 * time.Second
+	frageProPost, frageTaktPost = 10, 30 * time.Second
+	frageAlle, frageAlleTakt    = 300, time.Second / 2
+	frageMelden                 = 10 * time.Minute // one log line per address and this long
+	frageBytes                  = 32 << 10         // a form of 12 numbers, mails and addresses is a few KB
 )
 
-// drossel is a token bucket per address, and one for all.
+// drossel is a token bucket per address and kind, and one for all.
 type drossel struct {
 	mu   sync.Mutex
 	je   map[string]*eimer
@@ -93,8 +95,8 @@ type drossel struct {
 }
 
 type eimer struct {
-	voll float64
-	am   time.Time
+	voll         float64
+	am, gemeldet time.Time
 }
 
 func (e *eimer) nimm(now time.Time, cap float64, takt time.Duration) bool {
@@ -110,23 +112,34 @@ func (e *eimer) nimm(now time.Time, cap float64, takt time.Duration) bool {
 	return true
 }
 
-func (d *drossel) darf(ip string) bool {
+// darf takes one request of ip (post: an answer; alle: counted for all
+// too); a refusal is logged once per address (/24, /48) and frageMelden.
+func (d *drossel) darf(ip string, post, alle bool) bool {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	now := d.now()
 	if len(d.je) > 10000 { // an address that waited long enough is full again: forget it
-		for k, e := range d.je {
-			if now.Sub(e.am) > fragePro*frageTakt {
-				delete(d.je, k)
-			}
+		maps.DeleteFunc(d.je, func(_ string, e *eimer) bool { return now.Sub(e.am) > frageMelden })
+	}
+	cap, takt, key := float64(fragePro), frageTakt, "r "+ip
+	if post {
+		cap, takt, key = frageProPost, frageTaktPost, "p "+ip
+	}
+	e, bucket := cmp.Or(d.je[key], &eimer{}), "per-address"
+	d.je[key] = e
+	if e.nimm(now, cap, takt) {
+		if !alle || d.alle.nimm(now, frageAlle, frageAlleTakt) {
+			return true
 		}
+		bucket = "all"
 	}
-	e := d.je[ip]
-	if e == nil {
-		e = &eimer{}
-		d.je[ip] = e
+	if a, _ := netip.ParseAddr(ip); now.Sub(e.gemeldet) >= frageMelden {
+		a = a.Unmap()
+		wer, _ := a.Prefix(map[bool]int{true: 24, false: 48}[a.Is4()]) // the address as it may be logged
+		e.gemeldet = now
+		log.Printf("homes: kontakt: too many requests from %s, bucket=%s", wer, bucket)
 	}
-	return e.nimm(now, fragePro, frageTakt) && d.alle.nimm(now, frageAlle, time.Second)
+	return false
 }
 
 // hostOf is the request's Host without a port.
@@ -185,12 +198,12 @@ func KontaktFrage(cfg StartConfig) http.HandlerFunc {
 			frageSeite(w, http.StatusMethodNotAllowed, nonce, wort(texte.FrageUngueltig), "<p>"+wort(texte.FrageUngueltigText)+"</p>")
 			return
 		}
-		if !d.darf(clientIP(r)) {
+		token := strings.TrimPrefix(r.URL.Path, "/")
+		if !d.darf(clientIP(r), r.Method == http.MethodPost, kontaktantwort.TokenForm(token)) {
 			h.Set("Retry-After", "60")
 			frageSeite(w, http.StatusTooManyRequests, nonce, wort(texte.FrageZuViele), "<p>"+wort(texte.FrageZuVieleText)+"</p>")
 			return
 		}
-		token := strings.TrimPrefix(r.URL.Path, "/")
 		ungueltig := func() {
 			frageSeite(w, http.StatusNotFound, nonce, wort(texte.FrageUngueltig), "<p>"+wort(texte.FrageUngueltigText)+"</p>")
 		}
