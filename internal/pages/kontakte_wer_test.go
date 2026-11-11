@@ -83,3 +83,16 @@ func TestDieselbeNeinWerDann(t *testing.T) {
 	rec = antworteBei(Kontakt(cfg), "/kontakte/a", "anna", url.Values{"a": {"p-anna"}, "b": {"u0"}, "antwort": {"nein"}})
 	mustContain(t, rec.Body.String(), "<h1>Anna</h1>", "<h2>Wer ist das dann?</h2>", `<form method=post action="/kontakte/a"><input type=hidden name=wer value="u0">`)
 }
+
+// owner 2026-11-11 (Android Chrome showed a datalist's names only now and
+// then): the family pages' script shows a datalist field's matching names
+// as rows to tap and drops the field's list; the page keeps the datalist
+// for a browser without script (archiv#41). e2e drives it at 411 px.
+func TestNamenVorschlaege(t *testing.T) {
+	for _, want := range []string{"querySelectorAll('input[list]').forEach(feld)", "removeAttribute('list')", ".slice(0,6)", "replace(/ä/g,'ae')", "b.textContent=n", "u.addEventListener('mousedown',function(e){e.preventDefault()})"} {
+		if !strings.Contains(homesScript, want) {
+			t.Fatalf("the script has no %q", want)
+		}
+	}
+	mustContain(t, homesStyle, ".vorschlaege[hidden]{display:none}", ".vorschlaege button{display:block;width:100%;min-height:44px")
+}

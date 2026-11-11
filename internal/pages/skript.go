@@ -25,9 +25,11 @@ import "strconv"
 // has the class weg — tiles grey under „Stand …“ — until a fetch answers.
 //
 // A form with data-ganz, or one whose answer is not a page (an app link),
-// goes the browser's own way. The script sits in the head and listens on
-// the document, so a page swapped in needs nothing bound again; the
-// page's own inline scripts run again after a swap.
+// goes the browser's own way. The script sits in the head and listens on the document, so a page
+// swapped in needs nothing bound again; the page's own inline scripts run again after a swap.
+// A datalist field (a name, a group) drops its list, as Android Chrome's popup (often empty) would
+// cover the rows it shows instead: up to six names holding every typed word, ä as ae or as a,
+// those with a word starting so first; a tap fills the field (owner 2026-11-11, as archiv#41).
 const homesScript = `<script>(function(){if(window.homesSkript)return;window.homesSkript=1;
 var busy=0,last=0,timer=null,sec=1e3,es=null;
 var saysAway='Homes ist gerade nicht erreichbar. Prüf die Verbindung und versuch es dann noch einmal.';
@@ -83,6 +85,10 @@ document.addEventListener('con'+'textmenu',function(e){if(e.target.closest&&e.ta
 addEventListener('offline',function(){weg(true)});addEventListener('online',function(){fresh()});
 document.addEventListener('toggle',function(e){var p=e.target;if(!(p.id&&p.hasAttribute&&p.hasAttribute('popover')))return;
 document.querySelectorAll('.stufe[popovertarget="'+p.id+'"]').forEach(function(b){b.setAttribute('aria-expanded',e.newState==='open'?'true':'false')})},true);
+function klar(s,ae){s=s.toLowerCase().replace(/ß/g,'ss');if(ae)s=s.replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue');try{s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'')}catch(e){}return s.replace(/[^\p{L}\p{N}]/gu,'')}function hat(n,w){return Math.max(klar(n,1).indexOf(klar(w,1)),klar(n).indexOf(klar(w)))>=0}
+function feld(i){if(!(i&&i.matches&&i.matches('input[list],input[data-liste]')))return null;if(i.hasAttribute('list')){i.setAttribute('data-liste',i.getAttribute('list'));i.removeAttribute('list')}return i}function zeilen(i){var u=i.vorschlaege;if(u&&u.isConnected)return u;u=document.createElement('ul');u.className='vorschlaege';u.hidden=true;or(i.closest('label'),i).after(u);i.vorschlaege=u;u.addEventListener('mousedown',function(e){e.preventDefault()});u.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;i.value=b.textContent;u.hidden=true;i.focus()});return u}
+function zeigen(i){var u=zeilen(i),d=document.getElementById(i.getAttribute('data-liste')),q=i.value,ws=q.split(/\s+/).filter(function(w){return klar(w)}),vorn=[],sonst=[];u.textContent='';if(!(d&&ws.length)){u.hidden=true;return}[].forEach.call(d.options,function(o){var n=o.value;if(!(n&&n!==q&&ws.every(function(w){return hat(n,w)})))return;(n.split(/\s+/).some(function(t){return klar(t,1).indexOf(klar(ws[0],1))===0})?vorn:sonst).push(n)});vorn.concat(sonst).slice(0,6).forEach(function(n){var l=document.createElement('li'),b=document.createElement('button');b.type='button';b.textContent=n;l.appendChild(b);u.appendChild(l)});u.hidden=!u.firstChild}
+document.addEventListener('focusin',function(e){feld(e.target)});document.addEventListener('input',function(e){var i=feld(e.target);if(i)zeigen(i)});document.addEventListener('focusout',function(e){var i=feld(e.target),u=i&&i.vorschlaege;if(u)setTimeout(function(){if(document.activeElement!==i&&!u.contains(document.activeElement))u.hidden=true},150)});document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('input[list]').forEach(feld)});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',plan);else plan()})()</script>`
 
 // homesStyle is what the script shows: the sentence at the bottom, a
@@ -91,6 +97,7 @@ const homesStyle = `<style>#homes-hinweis{position:fixed;left:50%;bottom:calc(76
 padding:12px 16px;border-radius:14px;background:var(--danger-soft);border:1px solid var(--danger);color:var(--ink);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:20;backdrop-filter:blur(8px)}
 #homes-hinweis.zeigt{opacity:1;transform:translate(-50%,0);pointer-events:auto}#homes-hinweis{display:flex;gap:10px;align-items:flex-start}#homes-hinweis span{flex:1}
 #homes-hinweis .zu{min-height:32px;min-width:32px;padding:0;background:none;color:var(--ink);font-size:1.2rem;line-height:1}button[aria-busy=true]{opacity:.6;cursor:progress}
+.vorschlaege{flex-basis:100%;list-style:none;margin:4px 0 0;padding:4px;background:var(--card);border:1px solid var(--edge);border-radius:12px}.vorschlaege[hidden]{display:none}.vorschlaege button{display:block;width:100%;min-height:44px;text-align:left;color:var(--ink);background:none;border:0;font:inherit;font-size:1rem;border-radius:8px;padding:0 10px}.vorschlaege button:hover,.vorschlaege button:focus{background:var(--accent-soft)}
 @media (prefers-reduced-motion:reduce){#homes-hinweis{transition:none}}</style>`
 
 // refreshEvery marks a page that changes by itself: homesScript fetches it
