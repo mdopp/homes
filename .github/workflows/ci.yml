@@ -33,7 +33,9 @@ jobs:
       - run: scripts/ratchet.py
   e2e:
     # the family pages in a real browser against cmd/homesdemo's fakes
-    runs-on: ubuntu-latest
+    # ubuntu-24.04, not -latest: on the 26.04 image apt could not resolve the
+    # Ubuntu mirrors (5 red runs on 2026-11-11), and --with-deps needs apt
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: e2e
