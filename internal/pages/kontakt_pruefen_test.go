@@ -245,26 +245,100 @@ func TestThePublicPageRefusesWhatIsNotItsOwnForm(t *testing.T) {
 	}
 }
 
+// fragVon sends one request to the public page from the address ip.
+func fragVon(h http.Handler, method, pfad, ip string) int {
+	req := httptest.NewRequest(method, pfad, strings.NewReader("vorname=X"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("X-Forwarded-For", ip)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	return rec.Code
+}
+
+// The brake is for guessing, not for the person with the link (owner
+// 2026-11-11: a relative met „Zu viele Versuche“ at her first look): a
+// link opened 50 times from one address, the messenger's previews and
+// browsers included, is still the form. Links and non-links count alike
+// (an empty bucket must not answer a link 200 and a guess 429), so a
+// guess is limited at the same burst, and an answer at a smaller one.
 func TestThePublicPageIsRateLimited(t *testing.T) {
+	var logged bytes.Buffer
+	log.SetOutput(&logged)
+	t.Cleanup(func() { log.SetOutput(os.Stderr) })
 	cfg, _ := pruefenCfg(t)
+	token := startLink(t, cfg, "privat", "3789r1-2B4D", "family")
 	pub := KontaktServer(cfg)
+	for i := range 50 {
+		if code := fragVon(pub, "GET", "/"+token, "198.51.100.7"); code != 200 {
+			t.Fatalf("the link's %d. look: %d", i+1, code)
+		}
+	}
+
+	guess := "/" + strings.Repeat("B", 43)
 	codes := map[int]int{}
 	for range fragePro + 3 {
-		req := httptest.NewRequest("GET", "/"+strings.Repeat("B", 43), nil)
-		req.Header.Set("X-Forwarded-For", "203.0.113.9")
-		rec := httptest.NewRecorder()
-		pub.ServeHTTP(rec, req)
-		codes[rec.Code]++
+		codes[fragVon(pub, "GET", guess, "203.0.113.9")]++
 	}
 	if codes[404] != fragePro || codes[http.StatusTooManyRequests] != 3 {
-		t.Errorf("codes %v", codes)
+		t.Errorf("guesses: codes %v", codes)
 	}
-	req := httptest.NewRequest("GET", "/"+strings.Repeat("B", 43), nil)
-	req.Header.Set("X-Forwarded-For", "203.0.113.10")
-	rec := httptest.NewRecorder()
-	pub.ServeHTTP(rec, req)
-	if rec.Code != 404 {
-		t.Errorf("another address is limited too: %d", rec.Code)
+	if code := fragVon(pub, "GET", "/"+token, "203.0.113.9"); code != http.StatusTooManyRequests {
+		t.Errorf("an emptied address tells a link from a guess: %d", code)
+	}
+	if code := fragVon(pub, "GET", guess, "203.0.113.10"); code != 404 {
+		t.Errorf("another address is limited too: %d", code)
+	}
+
+	codes = map[int]int{}
+	for range frageProPost + 2 {
+		codes[fragVon(pub, "POST", guess, "192.0.2.44")]++
+	}
+	if codes[404] != frageProPost || codes[http.StatusTooManyRequests] != 2 {
+		t.Errorf("posts: codes %v", codes)
+	}
+
+	for range fragePro + 1 {
+		fragVon(pub, "GET", guess, "2001:db8:1:2::5")
+	}
+	out := logged.String()
+	for _, want := range []string{
+		"homes: kontakt: too many requests from 2001:db8:1::/48, bucket=per-address\n",
+		"homes: kontakt: too many requests from 203.0.113.0/24, bucket=per-address\n",
+		"homes: kontakt: too many requests from 192.0.2.0/24, bucket=per-address\n",
+	} {
+		if strings.Count(out, want) != 1 {
+			t.Errorf("want once %q in\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, token) || strings.Contains(out, strings.Repeat("B", 43)) || strings.Contains(out, "203.0.113.9") {
+		t.Errorf("the log names a token or the whole address:\n%s", out)
+	}
+}
+
+// The internet's scanners find kontakt.<domain> in the certificate logs
+// and try their paths from many addresses; none of that is a token, and
+// none of it uses up the page for everyone.
+func TestScannersDoNotEmptyThePageForEveryone(t *testing.T) {
+	var logged bytes.Buffer
+	log.SetOutput(&logged)
+	t.Cleanup(func() { log.SetOutput(os.Stderr) })
+	cfg, _ := pruefenCfg(t)
+	token := startLink(t, cfg, "privat", "3789r1-2B4D", "family")
+	pub := KontaktServer(cfg)
+	for i := range frageAlle + 50 {
+		fragVon(pub, "GET", "/wp-login.php", "10.0."+strconv.Itoa(i/250)+"."+strconv.Itoa(i%250))
+	}
+	if code := fragVon(pub, "GET", "/"+token, "198.51.100.7"); code != 200 {
+		t.Errorf("after the scanners the link answers %d", code)
+	}
+	for i := range frageAlle {
+		fragVon(pub, "GET", "/"+strings.Repeat("C", 43), "10.1."+strconv.Itoa(i/250)+"."+strconv.Itoa(i%250))
+	}
+	if code := fragVon(pub, "GET", "/"+token, "198.51.100.7"); code != http.StatusTooManyRequests {
+		t.Errorf("a flood of guesses from many addresses is not limited in all: %d", code)
+	}
+	if !strings.Contains(logged.String(), "homes: kontakt: too many requests from 198.51.100.0/24, bucket=all\n") {
+		t.Errorf("the refusal in all is not logged:\n%s", logged.String())
 	}
 }
 
