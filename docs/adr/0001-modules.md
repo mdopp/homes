@@ -121,7 +121,7 @@ type Route struct {
 // (GET /napi/kann "app"; the keys are listed in ADR 0001 §2).
 type Angebot struct {
 	Widgets   []string // "geraet", "energie", "tool:note"
-	Teilen    []string // share targets: "merken", "dokument", "standort-import"
+	Teilen    []string // share targets: "merken", "dokument", "standort-import", "archiv"
 	Konto     []string // the Homes account's parts: "kontakte", "kalender"
 	Sicherung []string // the backup's parts: "whatsapp", "signal", "sms", "kontakte"
 	Mehr      []string // the app's own Mehr rows: "daten-sichern", "standortverlauf"
@@ -258,7 +258,7 @@ The keys the app knows today are:
 | list | keys |
 |---|---|
 | `widgets` | `geraet`, `energie`, and `tool:<id>` for each tool def (`note`, `doc`, `contacts`, `task`) |
-| `teilen` | `merken` (text), `dokument` (images), `standort-import` (GPX/GeoJSON), `musik` (songs and ZIPs) |
+| `teilen` | `merken` (text), `dokument` (images), `standort-import` (GPX/GeoJSON), `musik` (songs and ZIPs), `archiv` (a Facebook or LinkedIn export, encrypted on the phone into the person's archive; module `sicherung`) |
 | `konto` | `kontakte`, `kalender` |
 | `sicherung` | `whatsapp`, `signal`, `sms`, `kontakte` |
 | `mehr` | `daten-sichern`, `standortverlauf`, `archiv` (per person: only to a device whose person has a message archive), `dokumente-adresse` (per person, with the household's documents address: „Dokumente-Adresse kopieren“) |
@@ -393,7 +393,7 @@ module: `LAIB_URL`, `LAIB_TOKEN`, `LAIB_PUBLIC_URL`, `LAIB_DOMAIN`,
 | `musik` | Musik | music inbox (beets), radicale (wishes), MusicBrainz; opt. media (Jellyfin, for the wish list), Discogs, the house model | `HOMES_MUSIC_INBOX` (or the `/musik-eingang` mount); opt. `HOMES_JELLYFIN_URL`, `_TOKEN`, `HOMES_DISCOGS_KEY`, `_SECRET`, `HOMES_LLM_VISION_MODEL` | `/musik`, `/discogs`, `/discogs/zurueck`, `/platte`, `/platte/bild` · Mehr | – | `POST musik` | teilen `musik` (with the inbox); Bote wish tools |
 | `podcasts` | Podcasts | audiobookshelf | `HOMES_ABS_URL`, `HOMES_ABS_TOKEN` | `/podcasts` · Mehr | – | – | Bote podcast tool; new episodes told |
 | `gesehen` | Gesehen & Gehört | media (Jellyfin) and/or audiobookshelf; radicale (wishes) | `HOMES_JELLYFIN_URL`, `HOMES_JELLYFIN_KEY`; `HOMES_ABS_*` | `/gesehen` · Mehr | – | – | – |
-| `sicherung` | Daten sichern | archiv (each person's inbox) | `HOMES_ARCHIV_DIR`; opt. `HOMES_ARCHIV_INTERN`, `HOMES_ARCHIV_SECRET_<PERSON>` | `/daten-sichern`, `/nachrichten-sichern` · Mehr | – | `sicherung/*` (503 while off) | sicherung `whatsapp`, `signal`, `sms`; mehr `daten-sichern` |
+| `sicherung` | Daten sichern | archiv (each person's inbox) | `HOMES_ARCHIV_DIR`; opt. `HOMES_ARCHIV_INTERN`, `HOMES_ARCHIV_SECRET_<PERSON>` | `/daten-sichern`, `/nachrichten-sichern` · Mehr | – | `sicherung/*` (503 while off) | sicherung `whatsapp`, `signal`, `sms`; teilen `archiv`; mehr `daten-sichern` |
 | `standort` | Standortverlauf | reitti | `HOMES_REITTI_URL`; opt. `HOMES_REITTI_PUBLIC_URL` | `/standort` · Mehr | – | `standort`, `standort/import/*` (503 while off) | teilen `standort-import`; mehr `standortverlauf` |
 | `netzlaufwerk` | Netzlaufwerk | file-share (Samba) | `HOMES_SAMBA_DIR`, `HOMES_SAMBA_HOST` | `/netzlaufwerk` · Mehr | – | – | – |
 | `werkstatt` | Werkstatt | GitHub (admins) | `HOMES_WERKSTATT_REPOS`; opt. `HOMES_GITHUB_API` | the card on Box | – | – | – |

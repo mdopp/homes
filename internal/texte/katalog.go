@@ -8,6 +8,7 @@ package texte
 const (
 	// Daten sichern (owner 2026-11-08: the one overview; the app keeps only what needs the phone)
 	DatenInDerApp       ID = "daten.in-der-app"    // a phone source with nothing yet: where to switch it on
+	DatenTeilen         ID = "daten.teilen"        // Facebook and LinkedIn with nothing yet: share the export to the app
 	DatenMail           ID = "daten.mail"          // E-Mail's line: Homes cannot see the mailbox, so the way
 	DatenKeinKalender   ID = "daten.kein-kalender" // the person sees no calendar yet, not even the household's
 	DatenTermine        ID = "daten.termine"       // after the count of calendars
@@ -371,6 +372,7 @@ const (
 
 var de = map[ID]string{
 	"daten.in-der-app":     "in der Homes-App einschalten",
+	"daten.teilen":         "Export auf dem Handy teilen → „Ins Archiv“",
 	"daten.mail":           "Trag dein Postfach einmal im Archiv ein; es holt dann jede Stunde neue Mails.",
 	"daten.kein-kalender":  "noch kein Kalender",
 	"daten.termine":        "das Archiv übernimmt sie, während es offen ist",

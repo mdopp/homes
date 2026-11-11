@@ -1135,11 +1135,13 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   run, 408 when a body stalls past two minutes; a disk error is 500
   `store_failed`, not the phone's fault.
 - The phone's message backups (haus#207, laib ADR 0029; the app's side is
-  homes-android#194): WhatsApp, Signal, SMS/call log and Discord files into
+  homes-android#194): WhatsApp, Signal, SMS/call log files and, shared to the app's „Ins Archiv“,
+  a Facebook or LinkedIn export (`sozial`, age-encrypted on the phone to the
+  person's archive like the SMS; Homes never reads it, archiv `sozial.go`) into
   `HOMES_ARCHIV_DIR/<person>/<quelle>/<pfad>`, where that person's archive
   imports them. The person is the device's (the uid it was paired with),
   never the request's. `GET /napi/sicherung/stand` → `{quellen:{whatsapp|
-  signal|sms|discord:{zuletzt, dateien, bytes, wartend}}, frei_bytes}`;
+  signal|sms|sozial:{zuletzt, dateien, bytes, wartend}}, frei_bytes}`;
   `POST /napi/sicherung/fehlend {quelle, dateien:[{pfad, groesse}]}` (≤ 5000)
   → `{fehlend:[pfad]}`, against Homes' ledger
   (`HOMES_DATA/sicherung/<person>/<quelle>.jsonl`: the size each pfad last

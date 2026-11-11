@@ -625,7 +625,15 @@ func TestSicherungTakesSMS(t *testing.T) {
 	if st.Quellen["sms"].Dateien != 2 {
 		t.Fatalf("stand %+v", st.Quellen["sms"])
 	}
-	if say := checkFile("telegram", "x", 1); !strings.Contains(say, "whatsapp, signal und sms") {
+	// a Facebook or LinkedIn export, encrypted on the phone like the SMS (archiv sozial.go)
+	id, _ := a.start("anna1", "sozial", "facebook-20261111T120000Z.zip.age", int64(len(content)))
+	if rec, out := a.piece("anna1", id, 0, bytes.NewReader(content)); rec.Code != 200 || out["fertig"] != true {
+		t.Fatalf("sozial → %d %v", rec.Code, out)
+	}
+	if b, err := os.ReadFile(filepath.Join(a.dir, "anna", "sozial", "facebook-20261111T120000Z.zip.age")); err != nil || !bytes.Equal(b, content) {
+		t.Fatalf("sozial: %q %v", b, err)
+	}
+	if say := checkFile("telegram", "x", 1); !strings.Contains(say, "whatsapp, signal, sms und sozial") {
 		t.Fatalf("the sentence lists the sources wrong: %s", say)
 	}
 }

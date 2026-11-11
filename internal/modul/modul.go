@@ -46,7 +46,7 @@ type Route struct {
 // (GET /napi/kann "app"; the keys are listed in ADR 0001 §2).
 type Angebot struct {
 	Widgets   []string `json:"widgets"`   // "geraet", "energie", "tool:note"
-	Teilen    []string `json:"teilen"`    // share targets: "merken", "dokument", "standort-import"
+	Teilen    []string `json:"teilen"`    // share targets: "merken", "dokument", "standort-import", "archiv"
 	Konto     []string `json:"konto"`     // the Homes account's parts: "kontakte", "kalender"
 	Sicherung []string `json:"sicherung"` // the backup's parts: "whatsapp", "signal", "sms", "kontakte"
 	Mehr      []string `json:"mehr"`      // the app's own Mehr rows: "daten-sichern", "standortverlauf"

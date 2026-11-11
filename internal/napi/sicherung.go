@@ -63,8 +63,8 @@ var (
 // Quellen are the folders of a person's inbox, in the order the page shows
 // them. sms holds the phone's SMS and call log, which the app encrypts to
 // the person's archive (GET /napi/sicherung/schluessel) before it sends
-// them: sms-<zeit>.xml.age, anrufe-<zeit>.xml.age.
-var Quellen = []string{"whatsapp", "signal", "sms"} // Discord dropped (owner, 2026-11-03)
+// them: sms-<zeit>.xml.age, anrufe-<zeit>.xml.age; sozial a Facebook or LinkedIn export the app encrypted the same way (archiv sozial.go).
+var Quellen = []string{"whatsapp", "signal", "sms", "sozial"} // Discord dropped (owner, 2026-11-03)
 
 // teil is the hidden folder of the parts in a person's inbox.
 const teil = ".teil"
@@ -207,7 +207,7 @@ func validPfad(p string) bool {
 func checkFile(quelle, pfad string, groesse int64) string {
 	switch {
 	case !validQuelle(quelle):
-		return "Unbekannte Quelle „" + quelle + "“: es gibt whatsapp, signal und sms. Aktualisiere die Homes-App."
+		return "Unbekannte Quelle „" + quelle + "“: es gibt whatsapp, signal, sms und sozial. Aktualisiere die Homes-App."
 	case !validPfad(pfad):
 		return "Der Pfad „" + pfad + "“ geht nicht: nur Ordner und Dateien unterhalb der Sicherung, nichts Verstecktes (mit Punkt vorn), höchstens 512 Zeichen."
 	case groesse < 0:

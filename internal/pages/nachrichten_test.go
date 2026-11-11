@@ -44,6 +44,7 @@ func TestDatenSichernShowsTheStandAndTheGuide(t *testing.T) {
 		`<span class="punkt gelb"></span><div>WhatsApp<span class=k>zuletzt Sa 31.10. 03:11 · 2 Dateien, 3,2 GB · 1 Datei wartet auf dein Archiv`, // Berlin time
 		`<span class="punkt "></span><div>Signal<span class=k>zuletzt heute 03:00 · 1 Datei, 2,0 KB`,
 		`<span class="punkt grau"></span><div>SMS und Anrufe<span class=k>noch nichts angekommen · in der Homes-App einschalten`, " frei.",
+		`<span class="punkt grau"></span><div>Facebook und LinkedIn<span class=k>noch nichts angekommen · Export auf dem Handy teilen → „Ins Archiv“`,
 		`<div>E-Mail<span class=k>Trag dein Postfach einmal im Archiv ein; es holt dann jede Stunde neue Mails.`, "Bitwarden",
 		"<summary>Was nie ins Archiv kommt</summary>", "<details class=wechsel><summary>Handy wechseln</summary>"} {
 		if !strings.Contains(body, want) {

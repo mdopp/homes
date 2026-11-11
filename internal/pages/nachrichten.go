@@ -29,7 +29,7 @@ const NachrichtenPath = "/nachrichten-sichern"
 const saysStandFehlt = "Der Stand lässt sich gerade nicht lesen. Später noch einmal versuchen."
 
 // quelleName is how the page names a quelle.
-var quelleName = map[string]string{"whatsapp": "WhatsApp", "signal": "Signal", "sms": "SMS und Anrufe"}
+var quelleName = map[string]string{"whatsapp": "WhatsApp", "signal": "Signal", "sms": "SMS und Anrufe", "sozial": "Facebook und LinkedIn"}
 
 const nachrichtenStyle = `<style>.quelle{display:flex;gap:10px;align-items:flex-start}.quelle .punkt{margin-top:.55em}.schluessel .k{display:block;margin-top:6px}
 .wechsel{margin:22px 0 0}.wechsel summary{font-weight:700}.wechsel ol{margin:8px 0 0;padding:10px 14px 10px 34px;background:var(--card);border-radius:14px}.wechsel ol li{margin:6px 0}</style>`
@@ -95,7 +95,7 @@ func nachrichtenStand(r *http.Request, cfg StartConfig, person string) string {
 	now, loc := cfg.clock()
 	for _, q := range napi.Quellen {
 		qs := st.Quellen[q]
-		dot, says := "grau", []string{"noch nichts angekommen", texte.T(texte.DatenInDerApp)}
+		dot, says := "grau", []string{"noch nichts angekommen", texte.T(map[bool]texte.ID{true: texte.DatenTeilen, false: texte.DatenInDerApp}[q == "sozial"])}
 		if t := am(qs); !t.IsZero() {
 			dot, says = "", []string{"zuletzt " + dayWord(t, now, loc) + " " + t.In(loc).Format("15:04"), texte.Anzahl(qs.Dateien, "Datei", "Dateien") + ", " + texte.Groesse(qs.Bytes)}
 		}
