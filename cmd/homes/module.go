@@ -111,7 +111,7 @@ func katalog(s site) []modul.Modul {
 			s.gesehen != nil, "Auf dieser Box laufen weder Jellyfin noch Audiobookshelf."),
 		bau(modul.Modul{Name: "sicherung", Backend: "archiv",
 			Env: []string{"HOMES_ARCHIV_DIR", "HOMES_ARCHIV_INTERN", "HOMES_ARCHIV_SECRET_"},
-			App: modul.Angebot{Sicherung: []string{"whatsapp", "signal", "sms"}, Mehr: []string{"daten-sichern"}}},
+			App: modul.Angebot{Sicherung: []string{"whatsapp", "signal", "sms"}, Teilen: []string{"archiv"}, Mehr: []string{"daten-sichern"}}}, // Teilen → „Ins Archiv“: a Facebook or LinkedIn export, encrypted on the phone
 			n.Sicherung != nil, "Auf dieser Box gibt es kein Archiv für Nachrichten."),
 		bau(modul.Modul{Name: "standort", Backend: "reitti",
 			Env: []string{"HOMES_REITTI_URL", "HOMES_REITTI_PUBLIC_URL"},
