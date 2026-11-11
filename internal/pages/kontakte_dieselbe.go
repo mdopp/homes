@@ -33,7 +33,7 @@ const (
 )
 
 const dieselbeStyle = `<style>.paar{margin:18px 0 0;padding:14px;border-radius:16px;background:var(--card)}.paar .zwei{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0}.paar figure{margin:0;text-align:center;min-width:0}.paar img,.paar .ohne{display:block;width:96px;height:96px;margin:0 auto 8px;border-radius:50%;object-fit:cover;background:var(--track)}
-.paar figure>a{display:block}.paar figcaption{overflow-wrap:anywhere}.paar figcaption b{display:block}.paar figcaption i,.paar figcaption span,.paar figcaption small{display:block;color:var(--muted);font-size:.85rem}.paar figcaption small{font-size:.78rem;margin-top:2px}.paar form{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}.paar form button{flex:1 1 auto}.paar form button.leise{flex:0 0 auto}.paar form input{flex:1 1 100%;min-width:0;min-height:44px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--edge);border-radius:10px;padding:0 12px}</style>`
+.paar figure>a{display:block}.paar .weitere{display:flex;justify-content:center;gap:4px;margin:-2px 0 8px}.paar .weitere img{width:44px;height:44px;margin:0;border-radius:10px}.paar figcaption{overflow-wrap:anywhere}.paar figcaption b{display:block}.paar figcaption i,.paar figcaption span,.paar figcaption small{display:block;color:var(--muted);font-size:.85rem}.paar figcaption small{font-size:.78rem;margin-top:2px}.paar form{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}.paar form button{flex:1 1 auto}.paar form button.leise{flex:0 0 auto}.paar form input{flex:1 1 100%;min-width:0;min-height:44px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--edge);border-radius:10px;padding:0 12px}</style>`
 
 // Dieselbe is the task's address, and the answers to what is left (POST
 // as on a contact's page, immichAntwort).
@@ -150,7 +150,8 @@ func paarKarte(cfg StartConfig, p gesichter.Paar, action string) string {
 }
 
 // dieselbeGesicht is one person of a pair: the face, a link to all its
-// photos in Immich (a new tab), the name or „ohne Namen“, the photos when
+// photos in Immich (a new tab), up to three small faces from other photos,
+// each a link to its photo, the name or „ohne Namen“, the photos when
 // counted, and a grey line each for its places and years and who else is
 // in its photos, when read.
 func dieselbeGesicht(cfg StartConfig, s gesichter.Seite) string {
@@ -164,6 +165,13 @@ func dieselbeGesicht(cfg StartConfig, s gesichter.Seite) string {
 			label = fmt.Sprintf(texte.T(texte.DieselbeInImmich), s.Name)
 		}
 		bild = immichLink(href, label, bild)
+	}
+	if len(s.Weitere) > 0 { // the same face in other photos, each opening its photo (owner 2026-11-11)
+		bild += "<span class=weitere>"
+		for _, a := range s.Weitere {
+			bild += immichLink(cfg.Gesichter.FotoSeite(a.Asset), texte.T(texte.DieselbeFoto), `<img src="data:image/jpeg;base64,`+base64.StdEncoding.EncodeToString(a.JPEG)+`" alt="" width=44 height=44>`)
+		}
+		bild += "</span>"
 	}
 	name := "<i>" + html.EscapeString(texte.T(texte.DieselbeOhneName)) + "</i>"
 	if s.Name != "" {

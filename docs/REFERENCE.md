@@ -329,8 +329,9 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     „Fotos“ uses the same mapping. The key needs `person.read`,
     `person.create`, `person.update`, `person.merge` and `user.read`, and
     `asset.upload`, `face.read` and `asset.delete` for the contacts'
-    pictures (*Ist das …?*), and `asset.read` for the places and company
-    beside a pair's faces; `person.statistics` adds the photo counts. Immich's named
+    pictures (*Ist das …?*), `asset.read` for the places and company
+    beside a pair's faces, and `asset.view` for the small faces under them;
+    `person.statistics` adds the photo counts. Immich's named
     people's faces are asked hourly too, a face once and again when Immich
     changed it or after 7 days.
   - *One name, one person* (owner 2026-11-06, the same hourly run, before
@@ -464,7 +465,21 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     and *Auch dabei* (the three named persons most often in the same
     photos), read with `POST /api/search/metadata` (`personIds`,
     `withExif`, `withPeople`) once after Homes starts, then daily, kept as
-    `umfeld`. While any pair or question is open, the key's owner has one
+    `umfeld`. In the same daily run each pair's person gets up to three
+    small faces from other photos (owner 2026-11-11): of its newest 100
+    photos, the 8 with the fewest people (the faces kept first, while their
+    photo is among them), its box from `GET /api/faces?id=<photo>`
+    (`face.read`) at least a twentieth of the photo's width, cut as a
+    square half again the face's size from the photo's preview (`GET
+    /api/assets/<id>/thumbnail?size=preview`, `asset.view`), at most
+    160 px, kept in `umfeld` (`ausschnitte`). A face that says little —
+    mean brightness under 40 of 255, or brightness varying by less than 12
+    (a shadow, one colour) — is not kept; Immich's own face that says as
+    little is replaced by the first cut one, shown big. The small faces
+    (44 px) stand under the big one, each opening its whole photo in
+    Immich (`/photos/<id>`, a new tab). Not caught: a crop of the wrong
+    thing, a blurred or turned-away face. While any pair or question is
+    open, the key's owner has one
     task, „N Personen in Immich prüfen“, on Deine Aufgaben, Mehr and in
     the app (`/napi/einrichtung`, `immich-pruefen`), gone by itself once
     none is.

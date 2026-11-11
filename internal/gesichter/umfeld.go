@@ -39,13 +39,16 @@ type umfeld struct {
 	// of more than one photo: what ranks „Wer ist das?“ (wer.go)
 	MitFotos int `json:"mitFotos,omitempty"`
 	Wieder   int `json:"wieder,omitempty"`
+	// Ausschnitte are a pair's person's faces cut from its photos (ausschnitte.go)
+	Ausschnitte []Ausschnitt `json:"ausschnitte,omitempty"`
 }
 
 // Umfelder reads the places and company of every person the pairs and
 // questions show, at most maxUmfeld: on its first call, then when
 // umfeldTakt has passed since the last run that went through; else it
 // does nothing. Those no longer shown are dropped. Without asset.read it
-// reads nothing.
+// reads nothing; a pair's persons get their faces cut from three photos,
+// with face.read and asset.view.
 func (g *Gesichter) Umfelder(ctx context.Context) error {
 	if g == nil || g.Immich == nil {
 		return nil
@@ -56,9 +59,9 @@ func (g *Gesichter) Umfelder(ctx context.Context) error {
 	if !faellig {
 		return nil
 	}
-	gezeigt := map[string]bool{}
+	gezeigt, paar := map[string]bool{}, map[string]bool{}
 	for _, p := range g.Paare() {
-		gezeigt[p.A.ID], gezeigt[p.B.ID] = true, true
+		gezeigt[p.A.ID], gezeigt[p.B.ID], paar[p.A.ID], paar[p.B.ID] = true, true, true, true
 	}
 	for _, f := range g.Fragen() {
 		gezeigt[f.Person.ID] = true
@@ -68,7 +71,7 @@ func (g *Gesichter) Umfelder(ctx context.Context) error {
 		gezeigt[p.ID] = true
 	}
 	maps.DeleteFunc(g.stand.Umfeld, func(id string, _ umfeld) bool { return !gezeigt[id] })
-	darf := g.darf("asset.read")
+	darf, schneiden := g.darf("asset.read"), g.darf("face.read") && g.darf("asset.view")
 	g.mu.Unlock()
 	var err error
 	n := 0
@@ -83,6 +86,12 @@ func (g *Gesichter) Umfelder(ctx context.Context) error {
 		}
 		u := zusammenfassen(id, fotos)
 		u.Geholt = g.now()
+		if paar[id] && schneiden {
+			g.mu.Lock()
+			alt := g.stand.Umfeld[id].Ausschnitte
+			g.mu.Unlock()
+			u.Ausschnitte = g.ausschneiden(ctx, id, fotos, alt)
+		}
 		g.mu.Lock()
 		g.stand.Umfeld[id] = u
 		g.mu.Unlock()

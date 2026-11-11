@@ -1,8 +1,11 @@
 package pages
 
 import (
+	"bytes"
 	"fmt"
+	"image"
 	"image/color"
+	"image/jpeg"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -164,4 +167,28 @@ func TestDieselbeKontext(t *testing.T) {
 	mustContain(t, body, `<a href="https://photos.box.test/people/p-anna" target=_blank rel=noopener aria-label="Alle Fotos von Anna in Immich"><img`,
 		`<a href="https://photos.box.test/people/u0" target=_blank rel=noopener aria-label="Alle Fotos dieses Gesichts in Immich">`,
 		`<small>Orte: Italien, Münster · 2012–2019</small><small>Auch dabei: Ben</small>`, `<small>Orte: Italien · 2012</small><small>Auch dabei: Anna</small>`)
+}
+
+// Under each face up to three more, cut from other photos, each opening
+// its whole photo in Immich (owner 2026-11-11); Immich's own face is one
+// colour here, so the first cut one is shown big in its place.
+func TestDieselbeWeitere(t *testing.T) {
+	cfg, fake := dieselbeConfig(t)
+	img := image.NewRGBA(image.Rect(0, 0, 400, 300))
+	for y := range 300 {
+		for x := range 400 {
+			img.Set(x, y, color.RGBA{uint8(x), uint8(y), 128, 255})
+		}
+	}
+	var b bytes.Buffer
+	jpeg.Encode(&b, img, nil)
+	for _, id := range []string{"f1", "f2", "f3", "f4"} {
+		fake.Bibliothek = append(fake.Bibliothek, immichfake.Foto{ID: id, Wann: "2020-01-01T10:00:00.000Z", Wer: []string{"p-anna"}, Breite: 4000, Hoehe: 3000,
+			Rahmen: map[string][4]int{"p-anna": {1000, 1000, 1600, 1700}}, Bild: b.Bytes()})
+	}
+	cfg.Gesichter.Umfelder(t.Context())
+	body := as(Dieselbe, cfg, DieselbePath, "anna", "anna@box.test").Body.String()
+	mustContain(t, body, `<span class=weitere><a href="https://photos.box.test/photos/f2" target=_blank rel=noopener aria-label="Das ganze Foto in Immich"><img src="data:image/jpeg;base64,`,
+		`<a href="https://photos.box.test/photos/f3" target=_blank`)
+	mustNotContain(t, body, "photos/f1", "photos/f4")
 }

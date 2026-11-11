@@ -5,7 +5,8 @@
 // API key of the owner's account (HOMES_IMMICH_KEY: person.read,
 // person.create, person.update, person.merge, user.read; asset.upload,
 // face.read and asset.delete for the contacts' pictures; person.statistics
-// if it may count photos). The API as Immich 3.3.5 serves it
+// if it may count photos; face.read and asset.view for the small faces
+// on „Dieselbe Person?“). The API as Immich 3.3.5 serves it
 // (server/src/controllers/person.controller.ts, search.controller.ts,
 // user.controller.ts, asset-media.controller.ts, face.controller.ts).
 package immich
@@ -138,12 +139,13 @@ func (c *Client) Gesicht(ctx context.Context, id string) ([]byte, error) {
 }
 
 // Braucht are the permissions Homes needs of the key (asset.read: a
-// person's places and company, Umfeld); person.statistics only counts the
-// photos.
-var Braucht = append([]string{"person.read", "person.create", "person.update", "person.merge", "user.read", "asset.read"}, BildRechte...)
+// person's places and company, Umfeld; asset.view: a photo's preview,
+// Vorschau); person.statistics only counts the photos.
+var Braucht = append([]string{"person.read", "person.create", "person.update", "person.merge", "user.read", "asset.read", "asset.view"}, BildRechte...)
 
-// Foto is one photo as Umfeld reads it: when, where, and who is in it.
+// Foto is one photo as Umfeld reads it: which, when, where, and who is in it.
 type Foto struct {
+	ID   string `json:"id"`
 	Wann string `json:"localDateTime"`
 	Exif struct {
 		Stadt string `json:"city"`
@@ -248,6 +250,24 @@ func (c *Client) Hochladen(ctx context.Context, name string, jpeg []byte, wann t
 type Fund struct {
 	ID     string  `json:"id"`
 	Person *Person `json:"person"`
+	Rahmen
+}
+
+// Rahmen is where a face is in its photo, in pixels of Breite×Hoehe
+// (Immich's imageWidth and imageHeight, not the preview's).
+type Rahmen struct {
+	X1     int `json:"boundingBoxX1"`
+	Y1     int `json:"boundingBoxY1"`
+	X2     int `json:"boundingBoxX2"`
+	Y2     int `json:"boundingBoxY2"`
+	Breite int `json:"imageWidth"`
+	Hoehe  int `json:"imageHeight"`
+}
+
+// Vorschau is the photo asset as Immich's preview, a JPEG of about
+// 1440 px (GET /api/assets/{id}/thumbnail?size=preview; asset.view).
+func (c *Client) Vorschau(ctx context.Context, asset string) ([]byte, error) {
+	return c.get(ctx, "/api/assets/"+url.PathEscape(asset)+"/thumbnail?size=preview")
 }
 
 // Funde are the faces Immich found in the photo asset (GET
