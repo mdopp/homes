@@ -971,7 +971,7 @@ test('Dieselbe Person? on the contact takes a Nein', async ({ page }, info) => {
   await expect(dann).toContainText('ohne Namen');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
   await page.screenshot({ path: info.outputPath('dieselbe-nein-411.png'), fullPage: true });
-  await dann.getByRole('combobox', { name: 'Name' }).fill('Tante Erika');
+  await dann.getByRole('textbox', { name: 'Name' }).fill('Tante Erika');
   await dann.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.getByText('Gespeichert: Das Gesicht heißt in Immich jetzt Tante Erika.')).toBeVisible();
   await expect(page).toHaveURL(/\/kontakte\/privat\/k0$/);
@@ -982,7 +982,7 @@ test('Dieselbe Person? on the contact takes a Nein', async ({ page }, info) => {
   // „Wer ist das?“ (owner 2026-11-09): unnamed faces to name, above the pairs, each its field and two buttons
   const wer = page.locator('section.paar.wer');
   expect(await wer.count()).toBeGreaterThan(0);
-  await expect(wer.first().getByRole('combobox', { name: 'Name' })).toBeVisible();
+  await expect(wer.first().getByRole('textbox', { name: 'Name' })).toBeVisible();
   await expect(wer.first().getByRole('button', { name: 'Kenne ich nicht' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
   await page.screenshot({ path: info.outputPath('wer-ist-das-411.png'), fullPage: true });
@@ -992,6 +992,37 @@ test('Dieselbe Person? on the contact takes a Nein', async ({ page }, info) => {
   await offen.first().getByRole('button', { name: 'Nein' }).click();
   await expect(page).toHaveURL(/\/kontakte\/dieselbe/);
   await expect(page.locator('section.paar').first()).toBeVisible();
+});
+
+// owner 2026-11-11 (Android Chrome, 411 px): a name field's datalist showed nothing while typing; the field
+// shows the matching names as rows under it instead, a tap fills it (as archiv#41), a group field the same
+test('Namensvorschläge: typing shows the matching names as rows, a tap fills the field', async ({ page }, info) => {
+  await page.setViewportSize({ width: 411, height: 900 });
+  await page.goto('/kontakte/dieselbe');
+  const feld = page.locator('section.paar.wer').first().getByRole('textbox', { name: 'Name' });
+  await expect(feld).not.toHaveAttribute('list', /./); // the browser's own popup cannot cover the rows
+  await feld.pressSequentially('hil');
+  const zeilen = page.locator('section.paar.wer').first().locator('ul.vorschlaege');
+  await expect(zeilen.getByRole('button')).toHaveText(['Oma Hilde']);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
+  await page.screenshot({ path: info.outputPath('namen-vorschlaege-411.png'), fullPage: true });
+  await zeilen.getByRole('button', { name: 'Oma Hilde' }).click();
+  await expect(feld).toHaveValue('Oma Hilde');
+  await expect(zeilen).toBeHidden();
+  await feld.fill('');
+  await feld.pressSequentially('ruth tante'); // every word, in any order
+  await expect(zeilen.getByRole('button')).toHaveText(['Tante Ruth']);
+  await feld.fill('');
+  await feld.pressSequentially('baecker'); // ä as ae, and as a
+  await expect(zeilen.getByRole('button')).toHaveText(['Bäckerei Müller']);
+  await feld.fill('');
+  await feld.pressSequentially('mull');
+  await expect(zeilen.getByRole('button')).toHaveText(['Bäckerei Müller']);
+  await page.goto('/kontakte/h1');
+  const gruppe = page.getByLabel('Zu Gruppe hinzufügen');
+  await gruppe.pressSequentially('kick');
+  await page.locator('ul.vorschlaege').getByRole('button', { name: 'Kickermannschaft Renegades' }).click();
+  await expect(gruppe).toHaveValue('Kickermannschaft Renegades');
 });
 
 // owner 2026-11-06: a contact's picture is a suggestion, never an answer — „Ist das …?“ shows it
