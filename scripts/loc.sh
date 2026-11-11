@@ -75,7 +75,9 @@ budget() { # budget <name> <cap> <dir…>
 # 2026-11-10, owner approved 2026-11-10: Beziehungen als eine Zeile je Person, beim Wählen gespeichert, und Handy-Kontakte als Namensvorschläge bei Wer ist das? (pages 18,600 -> 18,620; 18,613 used); shrinks when the questions move to the archive (archiv#27)
 # 2026-11-11, owner approved 2026-11-11: Dieselbe Person – drei Gesichter je Seite (pages 18,620 -> 18,640; 18,627 used): the
 # small faces under each face of a pair, each a link to its photo in Immich (kontakte_dieselbe.go)
-budget pages 18640 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-11, owner asked 2026-11-11: Dieselbe Person – bei Nein gleich den richtigen Namen (pages 18,640 -> 18,680; 18,671 used):
+# „Wer ist das dann?“ after a pair's Nein, the same card as „Wer ist das?“ (kontakte_wer.go)
+budget pages 18680 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -175,7 +177,9 @@ budget connectors 15290 $connectors   # one client per service, with its fake: 1
 # 2026-11-10, owner approved 2026-11-09: Beziehungen änderbar, aufs Handy, in Deine Aufgaben und im Kontaktformular (homes#330) (14,420 -> 14,620): changing and removing answers, relations to the phone, the task count
 # 2026-11-11, owner approved 2026-11-11: Dieselbe Person – drei Gesichter je Seite (household 14,620 -> 14,760; 14,748 used):
 # gesichter/ausschnitte.go cuts each pair's person's face from three photos in the daily run, and a face that says little is replaced
-budget household 14760 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-11, owner asked 2026-11-11: Dieselbe Person – bei Nein gleich den richtigen Namen (household 14,760 -> 14,810; 14,807 used):
+# gesichter.Dann, Benennen for a Nein's face, the named side's own name a merge after all (wer.go, dieselbe.go zusammen)
+budget household 14810 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one

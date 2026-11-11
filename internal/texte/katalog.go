@@ -243,6 +243,9 @@ const (
 	WerGemerkt         ID = "wer-ist-das.gemerkt" // „Kenne ich nicht“ kept
 	WerOhneName        ID = "wer-ist-das.ohne-name"
 	WerStumm           ID = "wer-ist-das.stumm"
+	WerDann            ID = "wer-ist-das.dann" // after a pair's Nein: its unnamed face to name (owner 2026-11-11)
+	WerDannHinweis     ID = "wer-ist-das.dann.hinweis"
+	WerDoch            ID = "wer-ist-das.doch"     // the named side's own name typed: merged after all, „%s“ the name
 	DieselbeKontakt    ID = "dieselbe.kontakt"     // under a named face: its contact's page
 	DieselbeKontaktVon ID = "dieselbe.kontakt.von" // the link's label: „%s“ the name
 	// Kontakt prüfen lassen (owner 2026-11-07): the start, the answers' review, the page without a login
@@ -645,31 +648,34 @@ var de = map[ID]string{
 	"netz.art.bekannt":         "Bekannte/r",
 	"netz.art.verwandt":        "Sonstige verwandt",
 	// a relation's kind as phones write it (netz.label): vCard's RELATED TYPE, iOS's labels, Android's types
-	"netz.rel.spouse":       "Ehepartner/in",
-	"netz.rel.partner":      "Partner/in",
-	"netz.rel.child":        "Kind",
-	"netz.rel.son":          "Sohn",
-	"netz.rel.daughter":     "Tochter",
-	"netz.rel.parent":       "Elternteil",
-	"netz.rel.mother":       "Mutter",
-	"netz.rel.father":       "Vater",
-	"netz.rel.sibling":      "Geschwister",
-	"netz.rel.brother":      "Bruder",
-	"netz.rel.sister":       "Schwester",
-	"netz.rel.friend":       "Freund/in",
-	"netz.rel.relative":     "Verwandt",
-	"netz.rel.kin":          "Verwandt",
-	"netz.rel.colleague":    "Kollege/Kollegin",
-	"netz.rel.coworker":     "Kollege/Kollegin",
-	"netz.rel.manager":      "Vorgesetzte/r",
-	"netz.rel.assistant":    "Assistenz",
-	"netz.rel.neighbor":     "Nachbar/in",
-	"wer-ist-das.genannt":   "Gespeichert: Das Gesicht heißt in Immich jetzt %s.",
-	"wer-ist-das.gemerkt":   "Gemerkt: Nach diesem Gesicht fragt Homes nicht wieder.",
-	"wer-ist-das.ohne-name": "Der Name fehlt. Schreib ihn ins Feld, oder tippe auf „Kenne ich nicht“.",
-	"wer-ist-das.stumm":     "Immich hat gerade nicht geantwortet, nichts wurde gespeichert. Versuch es gleich noch einmal.",
-	"dieselbe.kontakt":      "Kontakt",
-	"dieselbe.kontakt.von":  "Kontakt von %s öffnen",
+	"netz.rel.spouse":          "Ehepartner/in",
+	"netz.rel.partner":         "Partner/in",
+	"netz.rel.child":           "Kind",
+	"netz.rel.son":             "Sohn",
+	"netz.rel.daughter":        "Tochter",
+	"netz.rel.parent":          "Elternteil",
+	"netz.rel.mother":          "Mutter",
+	"netz.rel.father":          "Vater",
+	"netz.rel.sibling":         "Geschwister",
+	"netz.rel.brother":         "Bruder",
+	"netz.rel.sister":          "Schwester",
+	"netz.rel.friend":          "Freund/in",
+	"netz.rel.relative":        "Verwandt",
+	"netz.rel.kin":             "Verwandt",
+	"netz.rel.colleague":       "Kollege/Kollegin",
+	"netz.rel.coworker":        "Kollege/Kollegin",
+	"netz.rel.manager":         "Vorgesetzte/r",
+	"netz.rel.assistant":       "Assistenz",
+	"netz.rel.neighbor":        "Nachbar/in",
+	"wer-ist-das.genannt":      "Gespeichert: Das Gesicht heißt in Immich jetzt %s.",
+	"wer-ist-das.gemerkt":      "Gemerkt: Nach diesem Gesicht fragt Homes nicht wieder.",
+	"wer-ist-das.ohne-name":    "Der Name fehlt. Schreib ihn ins Feld, oder tippe auf „Kenne ich nicht“.",
+	"wer-ist-das.stumm":        "Immich hat gerade nicht geantwortet, nichts wurde gespeichert. Versuch es gleich noch einmal.",
+	"wer-ist-das.dann":         "Wer ist das dann?",
+	"wer-ist-das.dann.hinweis": "Kennst du das Gesicht, schreib seinen Namen dazu. Er gilt dann in Immich.",
+	"wer-ist-das.doch":         "Das ist derselbe Name wie links, also doch dieselbe Person: Die Fotos gehören jetzt zu %s.",
+	"dieselbe.kontakt":         "Kontakt",
+	"dieselbe.kontakt.von":     "Kontakt von %s öffnen",
 
 	// „So hängt alles zusammen“ (owner 2026-11-05): the page, its web's nodes ("knoten.<…>", a word and a line under it), its moments ("<…>" and "<…>.so")
 	"zusammen.titel":                    "So hängt alles zusammen",

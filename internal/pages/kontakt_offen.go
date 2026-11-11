@@ -97,7 +97,7 @@ func kontaktOffen(b *strings.Builder, r *http.Request, cfg StartConfig, buch, ui
 	if e.antwort != nil {
 		antwort = e.antwort
 	}
-	b.WriteString(gesagt(e.said, e.problem) + pruefenStyle + dieselbeStyle)
+	b.WriteString(gesagt(e.said, e.problem) + pruefenStyle + dieselbeStyle + werKarten(r, cfg, werDann(r, cfg, e.problem), nil, action))
 	if antwort != nil {
 		b.WriteString("<h2>" + wort(texte.KontaktAntwort) + "</h2>")
 		antwortFelder(b, *antwort, action)

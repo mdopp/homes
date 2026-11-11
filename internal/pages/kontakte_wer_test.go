@@ -1,6 +1,7 @@
 package pages
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -51,4 +52,34 @@ func TestDieselbeWerIstDas(t *testing.T) {
 	if rec := antworte(cfg, "ben", url.Values{"wer": {"u15"}, "name": {"Zoe"}, "antwort": {"ja"}}); rec.Code != http.StatusSeeOther || fake.ID("Zoe") != "" {
 		t.Fatalf("ben named a face: %d", rec.Code)
 	}
+}
+
+// owner 2026-11-11 („bei Nein gleich den richtigen Namen“): a pair's Nein
+// turns its unnamed face into „Wer ist das dann?“ at the top, the same
+// field and buttons; a name is said and set in Immich, a missing one is
+// said and the card stays, the named side's own name merges the two after
+// all and says so. On the contact's page the same, posted there.
+func TestDieselbeNeinWerDann(t *testing.T) {
+	cfg, fake := dieselbeConfig(t, "a|Anna||")
+	rec := antworte(cfg, "anna", url.Values{"a": {"p-ben"}, "b": {"u3"}, "antwort": {"nein"}})
+	body := rec.Body.String()
+	mustContain(t, body, "Gemerkt: Nach diesen beiden fragt Homes nicht wieder.", "<h2>Wer ist das dann?</h2>", `<input type=hidden name=wer value="u3"><input name=name list=wernamen required`, `<option value="Xaver">`)
+	if strings.Index(body, "Wer ist das dann?") > strings.Index(body, "<h2>Wer ist das?</h2>") || strings.Count(body, "<datalist") != 1 {
+		t.Fatal("not first, or two lists of names")
+	}
+	mustNotContain(t, as(Dieselbe, cfg, DieselbePath, "anna", "anna@box.test").Body.String(), "Wer ist das dann?")
+	mustContain(t, antworte(cfg, "anna", url.Values{"wer": {"u3"}, "name": {" "}, "antwort": {"ja"}}).Body.String(), "Der Name fehlt.", "Wer ist das dann?", `name=wer value="u3"`)
+	rec = antworte(cfg, "anna", url.Values{"wer": {"u3"}, "name": {"Yvonne"}, "antwort": {"ja"}})
+	mustContain(t, rec.Body.String(), "Gespeichert: Das Gesicht heißt in Immich jetzt Yvonne.")
+	mustNotContain(t, rec.Body.String(), "Wer ist das dann?")
+	if fake.ID("Yvonne") != "u3" {
+		t.Fatal("not named")
+	}
+	antworte(cfg, "anna", url.Values{"a": {"p-carla"}, "b": {"u6"}, "antwort": {"nein"}})
+	mustContain(t, antworte(cfg, "anna", url.Values{"wer": {"u6"}, "name": {"carla"}, "antwort": {"ja"}}).Body.String(), "also doch dieselbe Person: Die Fotos gehören jetzt zu Carla.")
+	if fmt.Sprint(fake.Merges()) != "[[p-carla u6]]" {
+		t.Fatalf("%v", fake.Merges())
+	}
+	rec = antworteBei(Kontakt(cfg), "/kontakte/a", "anna", url.Values{"a": {"p-anna"}, "b": {"u0"}, "antwort": {"nein"}})
+	mustContain(t, rec.Body.String(), "<h1>Anna</h1>", "<h2>Wer ist das dann?</h2>", `<form method=post action="/kontakte/a"><input type=hidden name=wer value="u0">`)
 }
