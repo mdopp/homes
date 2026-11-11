@@ -81,7 +81,9 @@ budget() { # budget <name> <cap> <dir…>
 # person on one page with its last arrival, state and threshold (meine_daten.go, homes#342); Daten sichern's and Mehr's own state lines go
 # 2026-11-11, owner decided 2026-11-11 (the needed raise OK'd): Kontaktfotos helfen Immich (pages 18,900 -> 18,910; 18,904 used):
 # „Sieht aus wie … aus deinen Kontakten“ with its one tap on „Wer ist das?“ (kontakte_wer.go, homes#352)
-budget pages 18910 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-11, owner OK'd the needed raise 2026-11-11: a „nur für mich“ stack on Letzte Stapel (pages 18,910 -> 18,990; 18,980 used):
+#   the owner's own reads „Nur für dich“ with the way into Paperless instead of „Nichts mehr in Paperless“, another person's is not shown.
+budget pages 18990 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted

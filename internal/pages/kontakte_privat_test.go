@@ -45,10 +45,21 @@ func privatConfig(t *testing.T) (StartConfig, *immichfake.Server) {
 
 // as asks a page as a person with an e-mail.
 func as(page func(StartConfig) http.HandlerFunc, cfg StartConfig, target, user, email string) *httptest.ResponseRecorder {
+	return asIn(page, cfg, target, user, email, "family")
+}
+
+// asAdmin asks a page as an admin who is not the Immich key's owner: an
+// owner-only page is not theirs either (one test per viewer: owner, other
+// person, admin).
+func asAdmin(page func(StartConfig) http.HandlerFunc, cfg StartConfig, target string) *httptest.ResponseRecorder {
+	return asIn(page, cfg, target, "carla", "carla@box.test", "family,admins")
+}
+
+func asIn(page func(StartConfig) http.HandlerFunc, cfg StartConfig, target, user, email, groups string) *httptest.ResponseRecorder {
 	req := httptest.NewRequest("GET", target, nil)
 	req.Header.Set("Remote-User", user)
 	req.Header.Set("Remote-Email", email)
-	req.Header.Set("Remote-Groups", "family")
+	req.Header.Set("Remote-Groups", groups)
 	rec := httptest.NewRecorder()
 	page(cfg).ServeHTTP(rec, req)
 	return rec
@@ -101,6 +112,9 @@ func TestMeineKontakte(t *testing.T) {
 	for _, path := range []string{MeineKontaktePath, "/kontakte/privat/c"} {
 		if rec := as(MeineKontakte, cfg, path, "ben", "ben@box.test"); rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != KontaktePath {
 			t.Errorf("ben %s: %d", path, rec.Code)
+		}
+		if rec := asAdmin(MeineKontakte, cfg, path); rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != KontaktePath {
+			t.Errorf("admin %s: %d", path, rec.Code)
 		}
 	}
 	// a missing permission is said on the page

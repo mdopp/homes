@@ -79,6 +79,9 @@ func TestDieselbeNurEigentuemer(t *testing.T) {
 	if rec := as(Dieselbe, cfg, DieselbePath, "ben", "ben@box.test"); rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != KontaktePath {
 		t.Fatalf("ben: %d", rec.Code)
 	}
+	if rec := asAdmin(Dieselbe, cfg, DieselbePath); rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != KontaktePath {
+		t.Fatalf("admin: %d", rec.Code)
+	}
 	if rec := antworte(cfg, "ben", url.Values{"a": {"p-anna"}, "b": {"u0"}, "antwort": {"ja"}}); rec.Code != http.StatusSeeOther || len(fake.Merges()) != 0 {
 		t.Fatalf("ben merged: %d %v", rec.Code, fake.Merges())
 	}

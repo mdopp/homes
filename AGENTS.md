@@ -145,6 +145,10 @@ parsers in mdopp/homes-android. `HOMES_QMD_REAL=<a running qmd>
 HOMES_QMD_REAL_NOTES=<its notes folder> go test ./internal/library -run Real`
 checks against a real qmd by hand; CI never does.
 No Go file names the old app or its names (`internal/app/names_test.go`).
+A page that filters or hides by owner or person gets one test per viewer:
+the owner, another person, an admin (who is not the owner); a page that
+says something is gone tests that it says so only where Homes could have
+seen it (`TestScannenPrivateStackPerViewer`).
 
 **In a browser** (`e2e/`, CI job `e2e`): `cmd/homesdemo` serves the family
 pages against the fakes (lamps, a cover, a player that change when

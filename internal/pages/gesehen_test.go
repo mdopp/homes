@@ -77,6 +77,8 @@ func TestGesehenPage(t *testing.T) {
 	mustNotContain(t, body, "Krabat", "Dark")
 	_, body, _ = familyPageAs(t, Gesehen, cfg, "GET", GesehenPath, "carla", "family")
 	mustContain(t, body, saysJellyfinNoUser)
+	_, body, _ = familyPageAs(t, Gesehen, cfg, "GET", GesehenPath, "ben", "family,admins") // an admin sees only their own too
+	mustNotContain(t, body, "Krabat", "Dark")
 
 	h := Gesehen(cfg)
 	rec := post(t, h, GesehenPath, url.Values{"tun": {"wuenschen"}, "titel": {"Arrival"}, "art": {"Film"}}, "anna", nil)
