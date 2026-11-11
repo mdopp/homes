@@ -191,6 +191,8 @@ const (
 	WerSpeichernLaeuft ID = "wer-ist-das.speichern.laeuft"
 	WerUnbekannt       ID = "wer-ist-das.unbekannt" // „Kenne ich nicht“
 	WerUnbekanntLauft  ID = "wer-ist-das.unbekannt.laeuft"
+	WerVorschlag       ID = "wer-ist-das.vorschlag"    // a contact's photo suggests the name: „%s“ the name
+	WerVorschlagJa     ID = "wer-ist-das.vorschlag.ja" // its one tap: „%s“ the name
 	// „Wer steht wem nahe“ (owner 2026-11-09): the contact net, for the Immich key's owner
 	Netz              ID = "netz"         // the page, its link on Kontakte
 	NetzNahe          ID = "netz.nahe"    // the section on a contact's page
@@ -600,6 +602,8 @@ var de = map[ID]string{
 	"wer-ist-das.speichern.laeuft": "Speichert …",
 	"wer-ist-das.unbekannt":        "Kenne ich nicht",
 	"wer-ist-das.unbekannt.laeuft": "Merkt es sich …",
+	"wer-ist-das.vorschlag":        "Sieht aus wie %s aus deinen Kontakten.",
+	"wer-ist-das.vorschlag.ja":     "Ja, das ist %s",
 	"netz":                         "Wer steht wem nahe",
 	"netz.nahe":                    "Steht nahe",
 	"netz.leer":                    "Noch keine Verbindungen. Homes rechnet einmal am Tag aus deinen Fotos und den Telefonbüchern; schau morgen wieder.",

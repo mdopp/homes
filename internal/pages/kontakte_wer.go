@@ -17,6 +17,7 @@ import (
 // knows no name for (gesichter.Wer), each with its photos, places and company, a name field (it suggests
 // the household's people and the owner's Handy-Kontakte, firms not) with Speichern (to Immich) and Kenne ich nicht (never asked again).
 // The same card, „Wer ist das dann?“, for the unnamed face of a pair just answered Nein (owner 2026-11-11).
+// A face Immich holds for the one on a Haushalts-Kontakt's photo offers that name first, saved with one tap (homes#352).
 
 // werKarten are the faces to name, posted to action: dann (werDann) under
 // „Wer ist das dann?“, then wer under „Wer ist das?“; "" without one.
@@ -54,10 +55,17 @@ func werKarten(r *http.Request, cfg StartConfig, dann, wer []gesichter.Seite, ac
 	return "<datalist id=wernamen>" + b.String()
 }
 
-// werKarte is one face to name, its name field and two buttons, posted to action.
+// werKarte is one face to name, the contact's name its photo suggests as
+// one tap, its name field and two buttons, posted to action.
 func werKarte(cfg StartConfig, s gesichter.Seite, action string) string {
 	t := func(id texte.ID) string { return html.EscapeString(texte.T(id)) }
-	return `<section class="paar wer">` + dieselbeGesicht(cfg, s) + `<form method=post action="` + html.EscapeString(action) +
+	vorschlag := ""
+	if n := html.EscapeString(s.Vorschlag); n != "" {
+		vorschlag = `<form method=post class=vorschlag action="` + html.EscapeString(action) + `"><input type=hidden name=wer value="` + html.EscapeString(s.ID) +
+			`"><input type=hidden name=name value="` + n + `"><p>` + fmt.Sprintf(t(texte.WerVorschlag), "<b>"+n+"</b>") +
+			`</p><button name=antwort value=ja data-laeuft="` + t(texte.WerSpeichernLaeuft) + `">` + fmt.Sprintf(t(texte.WerVorschlagJa), n) + `</button></form>`
+	}
+	return `<section class="paar wer">` + dieselbeGesicht(cfg, s) + vorschlag + `<form method=post action="` + html.EscapeString(action) +
 		`"><input type=hidden name=wer value="` + html.EscapeString(s.ID) + `"><input name=name list=wernamen required maxlength=120 autocomplete=off aria-label="` + t(texte.WerName) + `" placeholder="` + t(texte.WerName) +
 		`"><button name=antwort value=ja data-laeuft="` + t(texte.WerSpeichernLaeuft) + `">` + t(texte.WerSpeichern) +
 		`</button><button name=antwort value=nein class=leise formnovalidate data-laeuft="` + t(texte.WerUnbekanntLauft) + `">` + t(texte.WerUnbekannt) + `</button></form></section>`

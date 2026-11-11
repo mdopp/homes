@@ -966,7 +966,8 @@ test('Dieselbe Person? on the contact takes a Nein', async ({ page }, info) => {
   expect(n).toBe(1); // only the closest face per person (owner 2026-11-09)
   await expect(paare.first()).toContainText('Oma Hilde');
   await expect(paare.first()).toContainText('ohne Namen');
-  await expect(paare.first()).toContainText('412 Fotos');
+  // 412 in Immich, one of them Tante Ruth's contact picture Homes uploaded: not the family's (homes#352)
+  await expect(paare.first()).toContainText('411 Fotos');
   // owner 2026-11-11: under each face three more from other photos, each opening its photo; the
   // unnamed one's face in Immich is only a shadow, so one cut from a photo is shown big instead
   const klein = paare.first().locator('.weitere a');

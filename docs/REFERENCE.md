@@ -329,7 +329,8 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     „Fotos“ uses the same mapping. The key needs `person.read`,
     `person.create`, `person.update`, `person.merge` and `user.read`, and
     `asset.upload`, `face.read` and `asset.delete` for the contacts'
-    pictures (*Ist das …?*), `asset.read` for the places and company
+    pictures (*Ist das …?*, *Kontaktfotos helfen Immich*), `album.create`,
+    `album.read` and `albumAsset.create` for the household's photos' album, `asset.read` for the places and company
     beside a pair's faces, and `asset.view` for the small faces under them;
     `person.statistics` adds the photo counts. Immich's named
     people's faces are asked hourly too, a face once and again when Immich
@@ -503,6 +504,29 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     (`gesichter.Dann`). Typing the named side's own name (`namen.Plain`)
     merges the two after all (`person.merge`), drops the *Nein* and says
     *also doch dieselbe Person*.
+  - *Kontaktfotos helfen Immich* (owner 2026-11-11, homes#352; the owner
+    accepted that faces of people outside the family then live in
+    Immich): the hourly run puts the JPEG `PHOTO` of each Haushalts-Kontakt
+    (Homes' own address books only: never a person's Handy-Kontakte or
+    archive; firms and a face Homes wrote onto a card aside) into Immich
+    once by its hash (`homes-kontaktfoto-<hash>.jpg`, `POST /api/assets`
+    with `visibility: archive`, so it is never in the timeline), at most
+    ten a run, into one album Homes keeps, *Homes · Kontaktfotos*
+    (`POST /api/albums`, `PUT /api/albums/<id>/assets`; made again when
+    deleted in Immich). A changed photo replaces its upload; a photo on no
+    card any more is deleted (`DELETE /api/assets`, `force`); one deleted in
+    Immich is not put there again. Immich's own face detection runs on it,
+    and Homes runs no ML. When Immich puts the one face of such a photo
+    into an unnamed person (`GET /api/faces`), *Wer ist das?* offers that
+    person first, even in fewer than five photos, with „Sieht aus wie
+    <Name> aus deinen Kontakten“ and the tap *Ja, das ist <Name>*, which
+    names it the way *Speichern* does. A person the photos of two names
+    point at gets no suggestion. Nothing is named without the tap. Homes'
+    uploads (`homes-kontakt…`) are left out of every search of the family's
+    photos (*Orte*, *Auch dabei*, the small faces, the contact net) and out
+    of the photo counts. The key needs `album.create`, `album.read` and
+    `albumAsset.create`, as well as `asset.upload`, `face.read` and
+    `asset.delete`.
   - *Wer steht wem nahe* (owner 2026-11-09; `/kontakte/netz`, linked from
     Kontakte; *Steht nahe* on each contact's page, its five closest; the
     key's owner only, anyone else is sent to Kontakte): who is close to

@@ -79,7 +79,9 @@ budget() { # budget <name> <cap> <dir…>
 # „Wer ist das dann?“ after a pair's Nein, the same card as „Wer ist das?“ (kontakte_wer.go)
 # 2026-11-11, owner approved 2026-11-11 („den Rest“): Meine Daten (pages 18,680 -> 18,900; 18,896 used): every source of a
 # person on one page with its last arrival, state and threshold (meine_daten.go, homes#342); Daten sichern's and Mehr's own state lines go
-budget pages 18900 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-11, owner decided 2026-11-11 (the needed raise OK'd): Kontaktfotos helfen Immich (pages 18,900 -> 18,910; 18,904 used):
+# „Sieht aus wie … aus deinen Kontakten“ with its one tap on „Wer ist das?“ (kontakte_wer.go, homes#352)
+budget pages 18910 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -135,7 +137,10 @@ budget cmd 1448 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-10, owner approved 2026-11-09: Beziehungen änderbar, aufs Handy, in Deine Aufgaben und im Kontaktformular (homes#330) (15,220 -> 15,240): the relation in the phone-correction payload
 # 2026-11-11, owner approved 2026-11-11: Dieselbe Person – drei Gesichter je Seite (connectors 15,240 -> 15,290; 15,281 used): immich.Vorschau
 # (a photo's preview, asset.view), the face's box in Funde, and immichfake's library faces and previews
-budget connectors 15290 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
+# 2026-11-11, owner decided 2026-11-11 (the needed raise OK'd): Kontaktfotos helfen Immich (connectors 15,290 -> 15,425; 15,420 used):
+# immich.Album and InsAlbum (album.create, album.read, albumAsset.create), Homes' uploads left out of Umfeld and Aufnahmen
+# (originalFileName), and immichfake's albums and its search finding the uploads as Immich finds archived photos (homes#352)
+budget connectors 15425 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
 # 2026-11-04, internal/jsonfile (47 lines, 50 of cap) from household's cap to shared's: it
 # replaces nine copies of a save, 62 of their lines in household
 # 2026-11-05, owner 2026-11-05 yes: Immich for the contacts (9,583 -> 9,874):
@@ -181,7 +186,10 @@ budget connectors 15290 $connectors   # one client per service, with its fake: 1
 # gesichter/ausschnitte.go cuts each pair's person's face from three photos in the daily run, and a face that says little is replaced
 # 2026-11-11, owner asked 2026-11-11: Dieselbe Person – bei Nein gleich den richtigen Namen (household 14,760 -> 14,810; 14,807 used):
 # gesichter.Dann, Benennen for a Nein's face, the named side's own name a merge after all (wer.go, dieselbe.go zusammen)
-budget household 14810 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-11, owner decided 2026-11-11 (the needed raise OK'd): Kontaktfotos helfen Immich (household 14,810 -> 15,035; 15,029 used):
+# gesichter/kontaktfotos.go puts each household photo up once by its hash, archived, into one album, replaces and deletes it, reads its
+# face's person and suggests the name on „Wer ist das?“; counts leave Homes' uploads out (homes#352)
+budget household 15035 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one

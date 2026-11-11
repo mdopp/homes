@@ -12,8 +12,8 @@ import (
 
 // „Wer ist das?“ (owner 2026-11-09): up to werN unnamed persons for the
 // key's owner to name, beside the pairs. The hourly run keeps the first
-// werKandidaten unnamed ones in Immich's order, the most faces first
-// (Auffrischen), with their faces, counts their photos (Vorschlagen) and
+// werKandidaten unnamed ones in Immich's order, the most faces first,
+// and those a Haushalts-Kontakt's photo suggests a name for (Auffrischen), with their faces, counts their photos (Vorschlagen) and
 // reads their places and company once a day (Umfelder); a page only reads
 // what is kept. A name goes to Immich (Benennen); one of a person's name
 // already is merged into it by the next run (Zusammenfuehren). „Kenne ich
@@ -27,9 +27,11 @@ const (
 	werKandidaten     = 15   // unnamed persons kept to choose from
 )
 
-// Wer are the unnamed persons to name, at most werN: in the most photos
-// first, then most often beside named persons, then at the most recurring
-// places; none without a face or in fewer than werMinFotos photos, nor one the owner does not know.
+// Wer are the unnamed persons to name, at most werN: those with a name
+// suggested (Seite.Vorschlag) first, then in the most photos, then most
+// often beside named persons, then at the most recurring places; none
+// without a face, nor in fewer than werMinFotos photos but with a name
+// suggested, nor one the owner does not know.
 func (g *Gesichter) Wer() []Seite {
 	if g == nil || g.Immich == nil {
 		return nil
@@ -38,16 +40,18 @@ func (g *Gesichter) Wer() []Seite {
 	defer g.mu.Unlock()
 	g.laden()
 	st := g.stand
+	vor := st.vorschlaege()
 	var out []Seite
 	for _, p := range st.Ohne {
 		_, nie := st.Unbekannt[p.ID]
-		if s := st.seite(p.ID, "", st.fotos(p.ID), st.Bilder[p.ID].JPEG); !nie && !g.weg[p.ID] && s.Fotos >= werMinFotos && s.zeigbar() {
+		s := st.seite(p.ID, "", st.fotos(p.ID), st.Bilder[p.ID].JPEG)
+		if s.Vorschlag = vor[p.ID]; !nie && !g.weg[p.ID] && (s.Fotos >= werMinFotos || s.Vorschlag != "") && s.zeigbar() {
 			out = append(out, s)
 		}
 	}
 	slices.SortStableFunc(out, func(a, b Seite) int {
 		ua, ub := st.Umfeld[a.ID], st.Umfeld[b.ID]
-		return cmp.Or(cmp.Compare(b.Fotos, a.Fotos), cmp.Compare(ub.MitFotos, ua.MitFotos), cmp.Compare(ub.Wieder, ua.Wieder))
+		return cmp.Or(cmp.Compare(btoi(b.Vorschlag != ""), btoi(a.Vorschlag != "")), cmp.Compare(b.Fotos, a.Fotos), cmp.Compare(ub.MitFotos, ua.MitFotos), cmp.Compare(ub.Wieder, ua.Wieder))
 	})
 	return out[:min(len(out), werN)]
 }
@@ -68,13 +72,16 @@ func (g *Gesichter) Dann(id string) (Seite, bool) {
 	if !da || nie || g.weg[id] || strings.TrimSpace(p.Name) != "" || len(st.neinMit(id)) == 0 || slices.ContainsFunc(st.Personen, func(q immich.Person) bool { return q.ID == id }) {
 		return Seite{}, false
 	}
-	return st.seite(id, "", st.fotos(id), st.Bilder[id].JPEG), true
+	s := st.seite(id, "", st.fotos(id), st.Bilder[id].JPEG)
+	s.Vorschlag = st.vorschlaege()[id]
+	return s, true
 }
 
-// fotos are the photos kept of person id; -1 not counted.
+// fotos are the family's photos kept of person id, Homes' own uploads
+// left out (eigene); -1 not counted.
 func (st stand) fotos(id string) int {
 	if z, ok := st.Fotos[id]; ok {
-		return z.N
+		return max(z.N-st.eigene(id), 0)
 	}
 	return -1
 }

@@ -291,11 +291,7 @@ func (g *Gesichter) Fragen() []Frage {
 		if b.Stand != bildFrage {
 			continue
 		}
-		n := -1
-		if z, ok := g.stand.Fotos[b.Person]; ok {
-			n = z.N
-		}
-		f := Frage{key, g.stand.Zuordnung[key].Name, b.Bild, b.Asset, g.stand.seite(b.Person, b.Name, n, b.Dessen)}
+		f := Frage{key, g.stand.Zuordnung[key].Name, b.Bild, b.Asset, g.stand.seite(b.Person, b.Name, g.stand.fotos(b.Person), b.Dessen)}
 		if Gesehen(f.Bild) && f.Person.zeigbar() { // both faces to show, or nothing to decide
 			out = append(out, f)
 		}

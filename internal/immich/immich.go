@@ -6,7 +6,8 @@
 // person.create, person.update, person.merge, user.read; asset.upload,
 // face.read and asset.delete for the contacts' pictures; person.statistics
 // if it may count photos; face.read and asset.view for the small faces
-// on „Dieselbe Person?“). The API as Immich 3.3.5 serves it
+// on „Dieselbe Person?“; album.create, album.read and albumAsset.create for
+// the household's contact photos, FotoRechte). The API as Immich 3.3.5 serves it
 // (server/src/controllers/person.controller.ts, search.controller.ts,
 // user.controller.ts, asset-media.controller.ts, face.controller.ts).
 package immich
@@ -15,6 +16,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -141,13 +143,14 @@ func (c *Client) Gesicht(ctx context.Context, id string) ([]byte, error) {
 // Braucht are the permissions Homes needs of the key (asset.read: a
 // person's places and company, Umfeld; asset.view: a photo's preview,
 // Vorschau); person.statistics only counts the photos.
-var Braucht = append([]string{"person.read", "person.create", "person.update", "person.merge", "user.read", "asset.read", "asset.view"}, BildRechte...)
+var Braucht = append([]string{"person.read", "person.create", "person.update", "person.merge", "user.read", "asset.read", "asset.view"}, FotoRechte...)
 
 // Foto is one photo as Umfeld reads it: which, when, where, and who is in it.
 type Foto struct {
-	ID   string `json:"id"`
-	Wann string `json:"localDateTime"`
-	Exif struct {
+	ID    string `json:"id"`
+	Datei string `json:"originalFileName"`
+	Wann  string `json:"localDateTime"`
+	Exif  struct {
 		Stadt string `json:"city"`
 		Land  string `json:"country"`
 	} `json:"exifInfo"`
@@ -156,7 +159,7 @@ type Foto struct {
 
 // Umfeld are the newest n photos of person id with their place and
 // people (POST /api/search/metadata, personIds, withExif, withPeople;
-// asset.read).
+// asset.read); Homes' own uploads left out.
 func (c *Client) Umfeld(ctx context.Context, id string, n int) ([]Foto, error) {
 	b, _ := json.Marshal(map[string]any{"personIds": []string{id}, "withExif": true, "withPeople": true, "size": n, "order": "desc"})
 	body, err := c.send(ctx, http.MethodPost, "/api/search/metadata", b)
@@ -164,15 +167,24 @@ func (c *Client) Umfeld(ctx context.Context, id string, n int) ([]Foto, error) {
 	if err == nil {
 		err = json.Unmarshal(body, &answer)
 	}
-	return answer.Assets.Items, err
+	return slices.DeleteFunc(answer.Assets.Items, func(f Foto) bool { return Eigen(f.Datei) }), err
 }
+
+// EigenesFoto starts the name of every picture Homes uploads (a contact's,
+// Hochladen): none of them is a photo of the family's, so a search of the
+// family's photos leaves them out (Umfeld, Aufnahmen).
+const EigenesFoto = "homes-kontakt"
+
+// Eigen: the file name is one of Homes' own uploads.
+func Eigen(datei string) bool { return strings.HasPrefix(datei, EigenesFoto) }
 
 // Aufnahme is one photo as the contact net reads it (owner 2026-11-09):
 // its id, when it was taken (dateTimeOriginal, an instant, not the
 // localDateTime), where, and who is in it.
 type Aufnahme struct {
-	ID   string `json:"id"`
-	Exif struct {
+	ID    string `json:"id"`
+	Datei string `json:"originalFileName"`
+	Exif  struct {
 		Zeit  string   `json:"dateTimeOriginal"`
 		Lat   *float64 `json:"latitude"`
 		Lng   *float64 `json:"longitude"`
@@ -205,7 +217,7 @@ func (c *Client) Aufnahmen(ctx context.Context) (out []Aufnahme, err error) {
 			return nil, err
 		}
 		for _, a := range answer.Assets.Items {
-			if len(a.Personen) > 0 {
+			if len(a.Personen) > 0 && !Eigen(a.Datei) {
 				out = append(out, a)
 			}
 		}
@@ -277,6 +289,41 @@ func (c *Client) Funde(ctx context.Context, asset string) ([]Fund, error) {
 	var out []Fund
 	err := c.getJSON(ctx, "/api/faces?"+url.Values{"id": {asset}}.Encode(), &out)
 	return out, err
+}
+
+// FotoRechte are those the household's contact photos need (BildRechte,
+// and the album Homes keeps them in: Album, InsAlbum).
+var FotoRechte = append(slices.Clone(BildRechte), "album.create", "album.read", "albumAsset.create")
+
+// Album makes sure Homes' album id is there (GET /api/albums/{id};
+// album.read), else makes one of name and text (POST /api/albums;
+// album.create); neu: it was made, empty.
+func (c *Client) Album(ctx context.Context, id, name, text string) (_ string, neu bool, err error) {
+	if id != "" {
+		_, err = c.get(ctx, "/api/albums/"+url.PathEscape(id)+"?withoutAssets=true")
+		var a Antwort
+		if !errors.As(err, &a) || (a.Code != 400 && a.Code != 404) {
+			return id, false, err
+		}
+	}
+	b, _ := json.Marshal(map[string]string{"albumName": name, "description": text})
+	body, err := c.send(ctx, http.MethodPost, "/api/albums", b)
+	var answer struct{ ID string }
+	if err == nil {
+		err = json.Unmarshal(body, &answer)
+	}
+	if err == nil && answer.ID == "" {
+		err = errors.New("immich: an album without an id")
+	}
+	return answer.ID, err == nil, err
+}
+
+// InsAlbum puts the photos ids into the album (PUT /api/albums/{id}/assets;
+// albumAsset.create); one there already counts as put.
+func (c *Client) InsAlbum(ctx context.Context, album string, ids []string) error {
+	b, _ := json.Marshal(map[string][]string{"ids": ids})
+	_, err := c.send(ctx, http.MethodPut, "/api/albums/"+url.PathEscape(album)+"/assets", b)
+	return err
 }
 
 // Entfernen deletes Homes' own photos for good, their faces with them

@@ -1,7 +1,10 @@
 package pages
 
 import (
+	"bytes"
+	"encoding/base64"
 	"fmt"
+	"image/color"
 	"net/http"
 	"net/url"
 	"strings"
@@ -95,4 +98,45 @@ func TestNamenVorschlaege(t *testing.T) {
 		}
 	}
 	mustContain(t, homesStyle, ".vorschlaege[hidden]{display:none}", ".vorschlaege button{display:block;width:100%;min-height:44px")
+}
+
+// homes#352: a face Immich holds for the one on a Haushalts-Kontakt's
+// photo offers that name first, as one tap; nothing is named before it.
+// The tap names the face in Immich and says so; an Immich that does not
+// answer is said, and nothing changes.
+func TestDieselbeWerVorschlagAusKontaktfoto(t *testing.T) {
+	cfg, fake := dieselbeConfig(t, "a|Anna||")
+	bild := faceJPEG(t, color.RGBA{90, 20, 160, 255})
+	fake.Erkennen = func(_ string, jpeg []byte) []string {
+		if bytes.Equal(jpeg, bild) {
+			return []string{"u12"}
+		}
+		return nil
+	}
+	karte := "BEGIN:VCARD\r\nVERSION:3.0\r\nUID:k\r\nFN:Kerstin Kühn\r\nPHOTO;ENCODING=b;TYPE=JPEG:" + base64.StdEncoding.EncodeToString(bild) + "\r\nEND:VCARD\r\n"
+	if err := cfg.Contacts.PutCard(t.Context(), cfg.Contacts.URL+"/homes/haushalt-kontakte/k.vcf", "", karte); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		if err := cfg.Gesichter.Kontaktfotos(t.Context()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cfg.Gesichter.Auffrischen(t.Context())
+	body := as(Dieselbe, cfg, DieselbePath, "anna", "anna@box.test").Body.String()
+	mustContain(t, body, `<form method=post class=vorschlag action="/kontakte/dieselbe"><input type=hidden name=wer value="u12"><input type=hidden name=name value="Kerstin Kühn"><p>Sieht aus wie <b>Kerstin Kühn</b> aus deinen Kontakten.</p><button name=antwort value=ja data-laeuft="Speichert …">Ja, das ist Kerstin Kühn</button></form>`)
+	if strings.Index(body, `name=wer value="u12"`) > strings.Index(body, `name=wer value="u17"`) || strings.Count(body, "class=vorschlag") != 1 {
+		t.Fatal("the suggested face is not first, or suggested twice")
+	}
+	if fake.ID("Kerstin Kühn") != "" {
+		t.Fatal("named before the tap")
+	}
+	rec := antworte(cfg, "anna", url.Values{"wer": {"u12"}, "name": {"Kerstin Kühn"}, "antwort": {"ja"}})
+	mustContain(t, rec.Body.String(), "Gespeichert: Das Gesicht heißt in Immich jetzt Kerstin Kühn.")
+	mustNotContain(t, rec.Body.String(), "class=vorschlag")
+	if fake.ID("Kerstin Kühn") != "u12" {
+		t.Fatal("not named")
+	}
+	fake.Close()
+	mustContain(t, antworte(cfg, "anna", url.Values{"wer": {"u17"}, "name": {"Kerstin Kühn"}, "antwort": {"ja"}}).Body.String(), "Immich hat gerade nicht geantwortet, nichts wurde gespeichert.")
 }
