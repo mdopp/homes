@@ -212,14 +212,27 @@ func TestDieselbeEineFrage(t *testing.T) {
 		t.Fatalf("alle: %d cards\n%s", n, alle)
 	}
 	body := as(Dieselbe, cfg, DieselbePath, "anna", "anna@box.test").Body.String()
-	mustContain(t, body, "<h1>Wer ist das?</h1>", fmt.Sprintf(`<p class=k>Frage 1 von %d · <a href="/kontakte/dieselbe?ab=1">Nächste Frage</a> · <a href="/kontakte/dieselbe?alle=1">Alle zeigen</a></p>`, n),
+	mustContain(t, body, "<h1>Dieselbe Person?</h1>", ">Überspringen</button>", fmt.Sprintf(`<p class=k>Frage 1 von %d · <a href="/kontakte/dieselbe?ab=1">Nächste Frage</a> · <a href="/kontakte/dieselbe?alle=1">Alle zeigen</a></p>`, n),
 		`<form method=post action="/kontakte/dieselbe?ab=0">`)
 	if strings.Count(body, "<section class=") != 1 || strings.Count(body, "<h1>") != 1 || strings.Contains(body, "<h2>") {
 		t.Fatalf("not one card under one heading:\n%s", body)
 	}
-	// the last one is a pair, under the page's own name; the one after it is the first again
+	// one tap first (owner 2026-11-11): every „Dieselbe Person?“ and „Ist das …?“ before any „Wer ist das?“
+	tippen, getippt := len(cfg.Gesichter.Paare())+len(cfg.Gesichter.Fragen()), false
+	if tippen == 0 || tippen == n {
+		t.Fatalf("the fixture needs both kinds: %d of %d", tippen, n)
+	}
+	for ab := range n {
+		seite := as(Dieselbe, cfg, fmt.Sprintf("%s?ab=%d", DieselbePath, ab), "anna", "anna@box.test").Body.String()
+		wer := strings.Contains(seite, "<h1>Wer ist das?</h1>")
+		if ab < tippen && wer || ab >= tippen && !wer || getippt && !wer {
+			t.Fatalf("question %d of %d (%d one tap): typing out of order:\n%s", ab+1, n, tippen, seite)
+		}
+		getippt = getippt || wer
+	}
+	// the last one is a face to name; the one after it is the first again
 	letzte := as(Dieselbe, cfg, fmt.Sprintf("%s?ab=%d", DieselbePath, n-1), "anna", "anna@box.test").Body.String()
-	mustContain(t, letzte, "<h1>Dieselbe Person?</h1>", fmt.Sprintf("Frage %d von %d", n, n), `<a href="/kontakte/dieselbe?ab=0">Nächste Frage</a>`, ">Überspringen</button>")
+	mustContain(t, letzte, "<h1>Wer ist das?</h1>", fmt.Sprintf("Frage %d von %d", n, n), `<a href="/kontakte/dieselbe?ab=0">Nächste Frage</a>`, ">Kenne ich nicht</button>")
 	if strings.Count(letzte, "<section class=") != 1 {
 		t.Fatalf("the last: not one card:\n%s", letzte)
 	}
@@ -228,14 +241,14 @@ func TestDieselbeEineFrage(t *testing.T) {
 	}
 	// an answer at ?ab=… comes back there: the next question, one fewer
 	erste := cfg.Gesichter.Wer()[0].ID
-	rec := antworteBei(Dieselbe(cfg), DieselbePath+"?ab=0", "anna", url.Values{"wer": {erste}, "antwort": {"nein"}})
-	mustContain(t, rec.Body.String(), "role=status", "Frage 1 von ", `action="/kontakte/dieselbe?ab=0"`)
+	rec := antworteBei(Dieselbe(cfg), fmt.Sprintf("%s?ab=%d", DieselbePath, tippen), "anna", url.Values{"wer": {erste}, "antwort": {"nein"}})
+	mustContain(t, rec.Body.String(), "role=status", fmt.Sprintf("Frage %d von ", tippen+1), fmt.Sprintf(`action="/kontakte/dieselbe?ab=%d"`, tippen))
 	if strings.Count(rec.Body.String(), "<section class=") != 1 || strings.Contains(rec.Body.String(), `name=wer value="`+erste+`"`) {
 		t.Fatalf("after an answer: not one card:\n%s", rec.Body)
 	}
 	// a pair's Nein: its unnamed face to name comes first, whatever was asked
 	p := cfg.Gesichter.Paare()[0]
-	rec = antworteBei(Dieselbe(cfg), fmt.Sprintf("%s?ab=%d", DieselbePath, n-2), "anna", url.Values{"a": {p.A.ID}, "b": {p.B.ID}, "antwort": {"nein"}})
+	rec = antworteBei(Dieselbe(cfg), DieselbePath+"?ab=0", "anna", url.Values{"a": {p.A.ID}, "b": {p.B.ID}, "antwort": {"nein"}})
 	mustContain(t, rec.Body.String(), "<h1>Wer ist das dann?</h1>", `name=wer value="`+p.B.ID+`"`, `action="/kontakte/dieselbe?ab=0"`)
 	// another person and an admin without the key see none of it, at any address
 	for _, pfad := range []string{DieselbePath, DieselbePath + "?ab=1", dieselbeAlle} {

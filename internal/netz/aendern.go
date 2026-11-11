@@ -46,7 +46,7 @@ func artVon(wie string) string {
 }
 
 // Beziehungen are id's relations by name: the key owner's answers (Keine
-// too), else what the phone books say; none with a hidden node.
+// too), else what the phone books say.
 func (n *Netz) Beziehungen(id string) []Bezug {
 	if n == nil || id == "" {
 		return nil
@@ -54,7 +54,7 @@ func (n *Netz) Beziehungen(id string) []Bezug {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	n.laden()
-	weg, m := n.verborgen[n.G.Wessen()], map[string]Bezug{}
+	m := map[string]Bezug{}
 	for _, f := range n.st.Fest {
 		a, b := n.von[f.A], n.von[f.B]
 		art := artVon(f.Wie)
@@ -81,7 +81,7 @@ func (n *Netz) Beziehungen(id string) []Bezug {
 	}
 	var out []Bezug
 	for mit, b := range m {
-		if _, da := n.knoten[mit]; da && weg[mit] == "" && weg[id] == "" {
+		if _, da := n.knoten[mit]; da {
 			out = append(out, b)
 		}
 	}

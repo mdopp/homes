@@ -64,8 +64,10 @@ func Dieselbe(cfg StartConfig) http.HandlerFunc {
 // 2026-11-11: „rigoros einfach“; six cards of three kinds stood on one
 // page), answered in place, the next one following; under it which one
 // of how many it is, „Nächste Frage“ (?ab=) and „Alle zeigen“ (?alle=1:
-// every „Wer ist das?“, every „Ist das …?“ and the first pairs at once).
-// The face of a pair just answered Nein comes first, whatever was asked.
+// the first pairs, every „Ist das …?“ and every „Wer ist das?“ at once).
+// One tap first (owner 2026-11-11): „Dieselbe Person?“ and „Ist das …?“
+// come before „Wer ist das?“, which asks for typing. The face of a pair
+// just answered Nein comes first, whatever was asked.
 func dieselbeRest(r *http.Request, cfg StartConfig, said, problem string) *strings.Builder {
 	t := func(id texte.ID) string { return html.EscapeString(texte.T(id)) }
 	b := kontakteHead(r, cfg, texte.T(texte.Dieselbe), "", texte.T(texte.Dieselbe))
@@ -85,22 +87,27 @@ func dieselbeRest(r *http.Request, cfg StartConfig, said, problem string) *strin
 		action = DieselbePath + "?ab=" + strconv.Itoa(ab)
 		fuss = fmt.Sprintf(`<p class=k>%s · <a href="%s?ab=%d">%s</a> · <a href="%s?alle=1">%s</a></p>`, html.EscapeString(fmt.Sprintf(texte.T(texte.DieselbeVon), ab+1, n)),
 			DieselbePath, (ab+1)%n, t(texte.DieselbeNaechste), DieselbePath, t(texte.DieselbeAlle))
-		dann, wer, fragen, paare = eine(dann, &ab), eine(wer, &ab), eine(fragen, &ab), eine(paare, &ab)
+		dann, paare, fragen, wer = eine(dann, &ab), eine(paare, &ab), eine(fragen, &ab), eine(wer, &ab)
 	}
-	andere := werKarten(r, cfg, dann, wer, action) + istFragen(cfg, fragen, action)
-	if einzeln && andere != "" { // the page's name is the question asked: one heading
-		andere = strings.Replace(strings.Replace(andere, "<h2>", "<h1>", 1), "</h2>", "</h1>", 1)
+	oben, paarTeil := werTeil(cfg, dann, nil, action), ""
+	for _, p := range paare {
+		paarTeil += paarKarte(cfg, p, action)
+	}
+	if paarTeil != "" && (einzeln || oben != "") {
+		paarTeil = "<h2>" + t(texte.Dieselbe) + "</h2>" + paarTeil
+	}
+	karten := oben + paarTeil + istFragen(cfg, fragen, action) + werTeil(cfg, nil, wer, action)
+	if einzeln && karten != "" { // the page's name is the question asked: one heading
+		karten = strings.Replace(strings.Replace(karten, "<h2>", "<h1>", 1), "</h2>", "</h1>", 1)
 	} else {
 		b.WriteString("<h1>" + t(texte.Dieselbe) + "</h1>")
 	}
-	b.WriteString(gesagt(said, problem) + andere)
+	if len(dann)+len(wer) > 0 {
+		b.WriteString(werNamen(r, cfg))
+	}
+	b.WriteString(gesagt(said, problem) + karten)
 	if n == 0 {
 		b.WriteString("<p class=k>" + t(texte.DieselbeLeer) + "</p>")
-	} else if len(paare) > 0 && andere != "" {
-		b.WriteString("<h2>" + t(texte.Dieselbe) + "</h2>")
-	}
-	for _, p := range paare {
-		b.WriteString(paarKarte(cfg, p, action))
 	}
 	b.WriteString(fuss + wieDas(texte.IstDasHinweis, texte.DieselbeHinweis))
 	return b

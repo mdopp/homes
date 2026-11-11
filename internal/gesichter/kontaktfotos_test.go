@@ -93,10 +93,6 @@ func TestKontaktfotos(t *testing.T) {
 	if err != nil || len(umfeld) != 1 || umfeld[0].ID != "fam-1" {
 		t.Fatalf("Umfeld: %+v %v", umfeld, err)
 	}
-	aufnahmen, err := g.Immich.Aufnahmen(t.Context())
-	if err != nil || len(aufnahmen) != 1 {
-		t.Fatalf("Aufnahmen: %+v %v", aufnahmen, err)
-	}
 	if name, doch, err := g.Benennen(t.Context(), "u7", wer[0].Vorschlag); err != nil || doch || name != "Carla Berg" || fake.ID("Carla Berg") == "" {
 		t.Fatalf("named: %q %v %v", name, doch, err)
 	}

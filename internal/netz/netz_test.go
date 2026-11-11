@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 	"testing"
 	"time"
 
@@ -75,57 +74,36 @@ func netzBox(t *testing.T) (*Netz, *immichfake.Server, *time.Time) {
 	if err := g.Abgleichen(t.Context()); err != nil {
 		t.Fatal(err)
 	}
-	n := &Netz{G: g, Loc: time.UTC, Now: func() time.Time { return jetzt }}
+	n := &Netz{G: g, Now: func() time.Time { return jetzt }}
 	if err := n.Rechnen(t.Context()); err != nil {
 		t.Fatal(err)
 	}
 	return n, fake, &jetzt
 }
 
-func namenVon(vs []Verbindung) (out []string) {
-	for _, v := range vs {
-		out = append(out, v.Mit.Name)
-	}
-	return out
+// knotenVon is node id as the net holds it.
+func knotenVon(n *Netz, id string) Knoten {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	n.laden()
+	return n.knoten[id]
 }
 
-// The ties of all people in the key owner's photos, not only hers: a day
-// at one place counts once, a tie from photos needs two days (Gerd has
-// one), the phone books add the address, the firm and the relations
-// (iOS, Android, vCard 4) with the relation as seen from the centre.
-func TestNetzAusFotosUndTelefonbuch(t *testing.T) {
+// The nodes are the named Immich persons not hidden and the contacts of
+// both books, a contact on its person's node; the table is kept private.
+func TestNetzKnoten(t *testing.T) {
 	n, _, _ := netzBox(t)
-	anna := n.Mitte()
-	if anna != "p-anna" {
-		t.Fatalf("the middle is the key owner's: %q", anna)
+	if n.Von("haushalt/b") != "p-ben" || n.Von("privat/urn:uuid:k2") != "p-fritz" || knotenVon(n, n.Von("haushalt/c")).Kontakt != "haushalt/c" {
+		t.Fatalf("von: %q %q %q", n.Von("haushalt/b"), n.Von("privat/urn:uuid:k2"), n.Von("haushalt/c"))
 	}
-	nahe := n.Nahe(anna, 10)
-	if got := namenVon(nahe); !slices.Equal(got[:1], []string{"Ben Berg"}) || slices.Contains(got, "Gerd Lang") || slices.Contains(got, "Hanna") || !slices.Contains(got, "Carla Wolf") {
-		t.Fatalf("anna's: %v", got)
+	if k := knotenVon(n, "p-kim"); k.Name != "Kim Berg" || k.Kontakt != "" {
+		t.Fatalf("kim: %+v", k)
 	}
-	if got := n.Gruende(anna, nahe[0].Kante); got != "3 Tage auf deinen Fotos seit 2019 · gleiche Adresse · Ehepartner/in (Telefonbuch)" {
-		t.Fatalf("anna–ben: %q", got)
+	if k := knotenVon(n, "p-anna"); k.Kontakt != "haushalt/a" {
+		t.Fatalf("anna: %+v", k)
 	}
-	ben := n.Von("haushalt/b")
-	if ben != "p-ben" || n.Gruende(ben, nahe[0].Kante) != "3 Tage auf deinen Fotos seit 2019 · gleiche Adresse · Ehepartner/in von Anna Berg (Telefonbuch)" {
-		t.Fatalf("ben's view: %q %q", ben, n.Gruende(ben, nahe[0].Kante))
-	}
-	fritz := n.Nahe(n.Von("privat/urn:uuid:k2"), 5)
-	if got := namenVon(fritz); !slices.Equal(got, []string{"Anna Berg", "Kim Berg"}) {
-		t.Fatalf("fritz: %v", got)
-	}
-	if got := n.Gruende(fritz[0].Mit.ID, fritz[0].Kante); got != "Freund/in (Telefonbuch) · Geschwister (Telefonbuch)" {
-		t.Fatalf("anna–fritz: %q", got)
-	}
-	if got := n.Gruende("p-kim", fritz[1].Kante); got != "2 Tage auf deinen Fotos seit 2024" {
-		t.Fatalf("fritz–kim, not anna's: %q", got)
-	}
-	carla := slices.IndexFunc(nahe, func(v Verbindung) bool { return v.Mit.Name == "Carla Wolf" })
-	if n.Gruende(anna, nahe[carla].Kante) != "gleiche Firma" || nahe[carla].Mit.Kontakt != "haushalt/c" {
-		t.Fatalf("carla: %+v", nahe[carla])
-	}
-	if z := n.Zwischen([]string{"p-ben", "p-kim", "p-gerd"}); !slices.Equal(z, [][2]int{{0, 1}}) {
-		t.Fatalf("among them: %v", z)
+	if k := knotenVon(n, "p-hanna"); k.ID != "" {
+		t.Fatalf("a hidden person is a node: %+v", k)
 	}
 	fi, err := os.Stat(filepath.Join(n.G.Dir, tabelle))
 	if err != nil || fi.Mode().Perm() != 0o600 {
@@ -133,85 +111,28 @@ func TestNetzAusFotosUndTelefonbuch(t *testing.T) {
 	}
 }
 
-// Rang divides by how often both appear at all: Kim, on more events
-// without Anna than with her, comes after Ben. A big group counts little
-// per pair: two days of a ten-person photo are less than half of two
-// days as a pair.
-func TestNetzGruppeUndHub(t *testing.T) {
-	n, _, _ := netzBox(t)
-	var ben, kim Kante
-	for _, v := range n.Nahe("p-anna", 10) {
-		switch v.Mit.ID {
-		case "p-ben":
-			ben = v.Kante
-		case "p-kim":
-			kim = v.Kante
-		}
-	}
-	if kim.Tage != 2 || kim.Rang >= ben.Rang {
-		t.Fatalf("kim %+v, ben %+v", kim, ben)
-	}
-	viele := []string{"p-anna", "p-ben", "p-kim", "p-fritz", "p-gerd", "x1", "x2", "x3", "x4", "x5"}
-	n.st.Namen["x1"], n.st.Namen["x2"], n.st.Namen["x3"], n.st.Namen["x4"], n.st.Namen["x5"] = "X1", "X2", "X3", "X4", "X5"
-	n.st.Fotos = []foto{{T: time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC), Wer: viele}, {T: time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC), Wer: viele},
-		{T: time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC), Stadt: "Rom", Wer: []string{"x1", "x2"}}, {T: time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC), Stadt: "Rom", Wer: []string{"x1", "x2"}}}
-	n.bauen()
-	x := n.Nahe("x1", 10)
-	if x[0].Mit.ID != "x2" || x[1].Kante.Staerke >= x[0].Kante.Staerke/2 {
-		t.Fatalf("x1: %v %+v", namenVon(x), x[:2])
-	}
-}
-
-// Once a day: a second run within it reads nothing; the next day's
-// rebuilds from Immich as it is, a person gone is gone (no drift).
+// Once a day: a second run within it reads nothing; the next day's reads
+// the phone books as they are (no drift); after a restart the table is
+// read back.
 func TestNetzTaeglichNeu(t *testing.T) {
-	n, fake, jetzt := netzBox(t)
-	fake.Bibliothek = fake.Bibliothek[3:]
-	if err := n.Rechnen(t.Context()); err != nil || n.Nahe("p-anna", 10)[0].Kante.Tage != 3 {
-		t.Fatalf("read again within the day: %v", err)
+	n, _, jetzt := netzBox(t)
+	carla := n.Von("haushalt/c")
+	if err := n.Eintragen(t.Context(), knotenVon(n, carla), knotenVon(n, "p-anna"), "kollege"); err != nil { // the cards only, no answer kept
+		t.Fatal(err)
+	}
+	if err := n.Rechnen(t.Context()); err != nil || len(n.Beziehungen(carla)) != 0 {
+		t.Fatalf("read again within the day: %v %v", err, n.Beziehungen(carla))
 	}
 	*jetzt = jetzt.Add(25 * time.Hour)
 	if err := n.Rechnen(t.Context()); err != nil {
 		t.Fatal(err)
 	}
-	if got := n.Nahe("p-anna", 10)[0]; got.Mit.ID != "p-ben" || got.Kante.Tage != 0 || n.Gruende("p-anna", got.Kante) != "gleiche Adresse · Ehepartner/in (Telefonbuch)" { // one day left: the phone book's only
-		t.Fatalf("after a day: %+v", got)
+	if got := bezuegeVon(n.Beziehungen(carla)); !slices.Equal(got, []string{"Anna Berg=kollege|Kollege/Kollegin"}) {
+		t.Fatalf("after a day: %v", got)
 	}
-	again := &Netz{G: n.G, Loc: time.UTC, Now: n.Now} // after a restart, from the file
-	if got := namenVon(again.Nahe("p-anna", 10)); !slices.Equal(got, namenVon(n.Nahe("p-anna", 10))) {
+	again := &Netz{G: n.G, Now: n.Now} // after a restart, from the file
+	if got := bezuegeVon(again.Beziehungen(carla)); !slices.Equal(got, bezuegeVon(n.Beziehungen(carla))) {
 		t.Fatalf("from the file: %v", got)
-	}
-}
-
-// Ausblenden hides a person where it would show, restorable; Nicht
-// berechnen takes it out before any tie, the others' ties among
-// themselves too; both are kept per key owner and come back.
-func TestNetzVerbergen(t *testing.T) {
-	n, _, _ := netzBox(t)
-	if err := n.Verbergen("p-ben", Aus); err != nil {
-		t.Fatal(err)
-	}
-	if got := namenVon(n.Nahe("p-anna", 10)); slices.Contains(got, "Ben Berg") || len(n.Nahe("p-ben", 10)) != 0 {
-		t.Fatalf("ben shown: %v", got)
-	}
-	if err := n.Verbergen("p-kim", Nicht); err != nil {
-		t.Fatal(err)
-	}
-	if got := namenVon(n.Nahe("p-fritz", 10)); slices.Contains(got, "Kim Berg") || len(n.kanten["p-kim"]) != 0 {
-		t.Fatalf("kim computed: %v", got)
-	}
-	again := &Netz{G: n.G, Loc: time.UTC, Now: n.Now}
-	if v := again.Verborgene(); len(v) != 2 || v[0].Name != "Ben Berg" || v[0].Art != Aus || v[1].Art != Nicht {
-		t.Fatalf("kept: %+v", v)
-	}
-	again.Verbergen("p-kim", "")
-	again.Verbergen("p-ben", "")
-	if got := namenVon(again.Nahe("p-anna", 10)); got[0] != "Ben Berg" || !slices.Contains(got, "Kim Berg") || len(again.Verborgene()) != 0 {
-		t.Fatalf("back: %v", got)
-	}
-	b, _ := os.ReadFile(filepath.Join(n.G.Dir, verborgenNam))
-	if !strings.Contains(string(b), `"anna"`) {
-		t.Fatalf("not per key owner: %s", b)
 	}
 }
 

@@ -4,14 +4,13 @@ import (
 	"slices"
 	"strings"
 	"testing"
-	"time"
 )
 
 // Eintragen writes the relation into both household cards, each the other
 // by its UID with the kind seen from it; the next read of the phone books
 // shows it once, the answer's.
 func TestEintragen(t *testing.T) {
-	n, _, jetzt := netzBox(t)
+	n, _, _ := netzBox(t)
 	carla := n.Von("haushalt/c")
 	x, y, err := n.Aendern(carla, "p-anna", "kollege")
 	if err == nil {
@@ -32,32 +31,22 @@ func TestEintragen(t *testing.T) {
 		strings.Contains(text["a"], "Kim Berg") {
 		t.Fatalf("the cards:\n%s\n%s", text["a"], text["c"])
 	}
-	*jetzt = jetzt.Add(25 * time.Hour)
-	n.Rechnen(t.Context())
-	nahe := n.Nahe("p-anna", 10)
-	v := nahe[slices.IndexFunc(nahe, func(v Verbindung) bool { return v.Mit.ID == carla })]
-	if got := n.Gruende("p-anna", v.Kante); got != "gleiche Firma · Kollege/Kollegin (von dir angegeben)" {
-		t.Fatalf("carla: %q", got)
+	if got := bezuegeVon(n.Beziehungen(carla)); !slices.Equal(got, []string{"Anna Berg=kollege|Kollege/Kollegin|gesagt"}) {
+		t.Fatalf("carla: %v", got)
 	}
 }
 
-// Fremd (owner 2026-11-10: „die kennen sich nicht“) takes the tie out of
-// the net: neither end shows the other; forgetting it brings the tie back.
+// Fremd (owner 2026-11-10: „die kennen sich nicht“) is kept as the
+// answer about the pair and shown from both ends; forgetting it drops it.
 func TestFremd(t *testing.T) {
 	n, _, _ := netzBox(t)
-	nahe := func() bool {
-		return slices.ContainsFunc(n.Nahe("p-kim", 10), func(k Verbindung) bool { return k.Mit.ID == "p-ben" })
-	}
-	if !nahe() {
-		t.Fatal("kim–ben: no tie to start with")
-	}
 	if _, _, err := n.Aendern("p-kim", "p-ben", Fremd); err != nil {
 		t.Fatal(err)
 	}
-	if nahe() {
-		t.Fatal("fremd: still a tie")
+	if got := bezuegeVon(n.Beziehungen("p-kim")); !slices.Equal(got, []string{"Ben Berg=fremd|Kennen sich nicht|gesagt"}) {
+		t.Fatalf("fremd: %v", got)
 	}
-	if _, _, err := n.Aendern("p-kim", "p-ben", ""); err != nil || !nahe() {
-		t.Fatalf("forgotten: %v, tie back %v", err, nahe())
+	if _, _, err := n.Aendern("p-kim", "p-ben", ""); err != nil || len(n.Beziehungen("p-kim")) != 0 {
+		t.Fatalf("forgotten: %v %v", err, n.Beziehungen("p-kim"))
 	}
 }

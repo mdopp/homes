@@ -7,8 +7,11 @@ someone belongs to), or that shows an outsider how the household recorded
 them. Also applies when you review an existing Homes page against this rule.
 
 - **Status:** Accepted, 2026-11-10. The cut of the form's „Beziehungen“
-  and self-entered groups are built in the PR that adds this ADR. The move
-  of the contact network is a later PR.
+  and self-entered groups are built in the PR that adds this ADR. The
+  move of the contact network: on 2026-11-11 (owner) Homes' page
+  `/kontakte/netz`, *Steht nahe* and the photo read behind them were
+  removed; Kontakte and a contact's page link to the archive („Dein
+  Netzwerk im Archiv ›“). A contact's *Beziehungen* stay for now.
 - **Deciders:** the owner (mdopp), 2026-11-10, after an analysis that
   ended: „Homes ist nicht mehr ‚dein Zuhause klar im Blick‘, sondern
   Sherlock mit einem Lichtschalter.“

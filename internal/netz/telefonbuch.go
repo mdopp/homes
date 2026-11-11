@@ -2,7 +2,6 @@ package netz
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 	"strings"
 	"unicode"
@@ -13,18 +12,11 @@ import (
 )
 
 // What the phone books say (owner 2026-11-09): the household's book and
-// the key owner's mirrored Handy-Kontakte, firm cards aside. The same
-// postal address is a tie, the same company a weak one, and a relation a
-// phone wrote a strong one: vCard 4's RELATED, iOS's grouped
+// the key owner's mirrored Handy-Kontakte, firm cards aside, and the
+// relations a phone wrote: vCard 4's RELATED, iOS's grouped
 // X-ABRELATEDNAMES with its X-ABLabel, Android's X-ANDROID-CUSTOM
 // vnd.android.cursor.item/relation. A relation names its other by UID or
 // by name.
-
-// Groups larger than these are no tie (a block of flats, a big firm).
-const (
-	maxAdresse = 12
-	maxFirma   = 30
-)
 
 // karte is a card read: its key, its contact, its relations (UID or name → label).
 type karte struct {
@@ -33,17 +25,17 @@ type karte struct {
 	rel [][2]string
 }
 
-// telefonbuch reads both books: the contacts with their persons, the
-// ties, and the key owner's own contact (the card with the key's e-mail).
-func (n *Netz) telefonbuch(ctx context.Context) ([]kontakt, []Fest, string, error) {
+// telefonbuch reads both books: the contacts with their persons and the
+// relations.
+func (n *Netz) telefonbuch(ctx context.Context) ([]kontakt, []Fest, error) {
 	c := n.G.Kontakte
 	if c == nil {
-		return nil, nil, "", nil
+		return nil, nil, nil
 	}
 	var ks []karte
 	cards, _, err := c.Cards(ctx)
 	if err != nil {
-		return nil, nil, "", err
+		return nil, nil, err
 	}
 	for _, cd := range cards {
 		ks = append(ks, lesen("haushalt/", cd.Text(), cd.Contact)...)
@@ -51,24 +43,18 @@ func (n *Netz) telefonbuch(ctx context.Context) ([]kontakt, []Fest, string, erro
 	if login := n.G.Wessen(); login != "" {
 		bcs, _, err := c.BookCards(ctx, "/"+url.PathEscape(login)+"/handy-kontakte/")
 		if err != nil {
-			return nil, nil, "", err
+			return nil, nil, err
 		}
 		for _, cd := range bcs {
 			ks = append(ks, lesen("privat/", cd.Data, caldav.Contact{})...)
 		}
 	}
-	personen, email := n.G.Zuordnungen()
+	personen := n.G.Zuordnungen()
 	var out []kontakt
-	ich := ""
 	for _, k := range ks {
 		out = append(out, kontakt{k.key, strings.Join(strings.Fields(k.ct.Name), " "), personen[k.key]})
-		for _, m := range k.ct.Emails {
-			if email != "" && strings.EqualFold(strings.TrimSpace(m), email) && (ich == "" || strings.HasPrefix(k.key, "haushalt/")) {
-				ich = k.key
-			}
-		}
 	}
-	return out, append(gruppen(ks), beziehungen(ks)...), ich, nil
+	return out, beziehungen(ks), nil
 }
 
 // lesen are the cards of one text (or ct alone when there is none), firms
@@ -131,37 +117,6 @@ func relationen(c *caldav.Component) (out [][2]string) {
 	return out
 }
 
-// gruppen are the ties of the same address and the same company.
-func gruppen(ks []karte) (out []Fest) {
-	adr, firma := map[string][]string{}, map[string][]string{}
-	for _, k := range ks {
-		for i, a := range k.ct.Addresses {
-			if i < len(k.ct.Postal) && k.ct.Postal[i].Street != "" {
-				a = k.ct.Postal[i].Street + k.ct.Postal[i].Code
-			}
-			if a = namen.Plain(a); a != "" {
-				adr[a] = append(adr[a], k.key)
-			}
-		}
-		if f := namen.Plain(k.ct.Company); f != "" {
-			firma[f] = append(firma[f], k.key)
-		}
-	}
-	for art, m := range map[string]map[string][]string{Adresse: adr, Firma: firma} {
-		for _, keys := range m {
-			if len(keys) > map[string]int{Adresse: maxAdresse, Firma: maxFirma}[art] {
-				continue
-			}
-			for i, a := range keys {
-				for _, b := range keys[i+1:] {
-					out = append(out, Fest{A: a, B: b, Art: art})
-				}
-			}
-		}
-	}
-	return out
-}
-
 // beziehungen are the relations whose other is a contact of the same book
 // (by UID, else by name) or of the other.
 func beziehungen(ks []karte) (out []Fest) {
@@ -199,30 +154,4 @@ func label(s string) string {
 		return texte.T(id)
 	}
 	return s
-}
-
-// Gruende are the tie's reasons as seen from mitte: the photo days and
-// since when, then what the phone books say, raw numbers.
-func (n *Netz) Gruende(mitte string, k Kante) string {
-	var out []string
-	if k.Tage > 0 {
-		out = append(out, fmt.Sprintf(texte.T(texte.NetzFotos), texte.Anzahl(k.Tage, "Tag", "Tage"), k.Seit))
-	}
-	n.mu.Lock()
-	defer n.mu.Unlock()
-	for _, f := range k.Fest {
-		switch {
-		case f.Gesagt:
-			out = append(out, gesagtGrund(mitte, f))
-		case f.Art != Beziehung:
-			out = append(out, texte.T(map[string]texte.ID{Adresse: texte.NetzAdresse, Firma: texte.NetzFirma}[f.Art]))
-		case f.Wie == "":
-			out = append(out, texte.T(texte.NetzVerwandt))
-		case n.von[f.A] == mitte:
-			out = append(out, fmt.Sprintf(texte.T(texte.NetzBeziehung), f.Wie))
-		default:
-			out = append(out, fmt.Sprintf(texte.T(texte.NetzBeziehungVon), f.Wie, n.knoten[n.von[f.A]].Name))
-		}
-	}
-	return strings.Join(out, " · ")
 }

@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"context"
 	"errors"
-	"fmt"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -63,43 +62,6 @@ type antwort struct {
 var ErrKeineFrage = errors.New("netz: diese Frage gibt es nicht mehr")
 
 func paarKey(a, b string) string { return min(a, b) + "|" + max(a, b) }
-
-// gesagtDazu puts the key owner's answers into alle, each a relation in
-// place of what the phone books say of the pair; n.mu is held.
-func (n *Netz) gesagtDazu(alle map[[2]string]*Kante, nicht map[string]bool) {
-	for key, a := range n.antworten[n.G.Wessen()] {
-		x, y, _ := strings.Cut(key, "|")
-		if a.X == y {
-			x, y = y, x
-		}
-		_, dx := n.knoten[x]
-		p := [2]string{min(x, y), max(x, y)}
-		if a.Art == Fremd {
-			delete(alle, p)
-		}
-		if _, dy := n.knoten[y]; !dx || !dy || nicht[x] || nicht[y] || !slices.Contains(Arten, a.Art) {
-			continue
-		}
-		k := alle[p]
-		if k == nil {
-			k = &Kante{A: p[0], B: p[1]}
-			alle[p] = k
-		}
-		if !slices.ContainsFunc(k.Fest, func(f Fest) bool { return f.Art == Beziehung }) {
-			k.Staerke, k.Rang = k.Staerke+festGewicht[Beziehung], k.Rang+festGewicht[Beziehung]
-		}
-		k.Fest = append(slices.DeleteFunc(k.Fest, func(f Fest) bool { return f.Art == Beziehung }), Fest{A: y, B: x, Art: Beziehung, Wie: a.Art, Gesagt: true})
-	}
-}
-
-// gesagtGrund is an answer as a reason seen from mitte: „Kind (von dir angegeben)“.
-func gesagtGrund(mitte string, f Fest) string {
-	art := f.Wie
-	if f.A != mitte {
-		art = cmp.Or(gegen[art], art)
-	}
-	return fmt.Sprintf(texte.T(texte.NetzGesagt), Kurz(art))
-}
 
 // merken keeps wer's answer about x and y (x is art of y; "" forgets it)
 // and rebuilds; n.mu is held.
