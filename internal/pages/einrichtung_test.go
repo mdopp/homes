@@ -84,3 +84,29 @@ func TestEinrichtungMitLaibsAufgaben(t *testing.T) {
 		`<input type=hidden name=nachricht value="Aufgabe #7 mit dir erledigen"><button data-laeuft="Fragt Ada …">Gemeinsam mit Ada</button>`,
 		"<h2 id=karte-erledigt>Erledigt</h2>", "Alte Aufgabe")
 }
+
+// laib#1168: file-share's check asks Laib for the person's password task
+// with the way /netzlaufwerk; Homes has its own from the same status file,
+// shown at once: one task per page, never two. Vaultwarden's second factor
+// is Laib's alone and leads to the vault's setup page.
+func TestEinrichtungOhneDoppeltesPasswort(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		text := `{"offen":2,"faellig":0,"aufgaben":[
+ {"id":12,"titel":"Netzlaufwerk-Passwort festlegen","fuer":"person:anna","weg":{"seite":"/netzlaufwerk"},"fertig_wenn":"status netzlaufwerk.anna"},
+ {"id":13,"titel":"Zweiten Faktor für deinen Passwort-Tresor einrichten","warum":"Dein Tresor ist bisher nur mit dem Master-Passwort geschützt.","fuer":"person:anna","weg":{"seite":"/einrichten/passwoerter"},"fertig_wenn":"status zweiter-faktor.anna"}]}`
+		json.NewEncoder(w).Encode(map[string]any{"result": map[string]any{"content": []map[string]string{{"text": text}}}})
+	}))
+	t.Cleanup(srv.Close)
+	fs := sambafake.New(t, map[string]int64{"anna": 0}, true)
+	cfg := StartConfig{Laib: &laib.Client{URL: srv.URL, Token: "t"}, Samba: &samba.Dir{Path: fs.Dir}}
+	_, body, _ := familyPage(t, DeineAufgaben, cfg, "GET", aufgabenPath, "family")
+	if n := strings.Count(body, ">Netzlaufwerk-Passwort festlegen</a>"); n != 1 {
+		t.Fatalf("the password task %d times:\n%s", n, body)
+	}
+	mustContain(t, body, `<a href="/einrichten/passwoerter">Zweiten Faktor für deinen Passwort-Tresor einrichten</a>`)
+	cfg.Samba = nil // no network drive in Homes: Laib's task is the one
+	_, body, _ = familyPage(t, DeineAufgaben, cfg, "GET", aufgabenPath, "family")
+	if n := strings.Count(body, ">Netzlaufwerk-Passwort festlegen</a>"); n != 1 {
+		t.Fatalf("without Homes' own, Laib's: %d times", n)
+	}
+}
