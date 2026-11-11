@@ -22,7 +22,7 @@ func TestDieselbeWerIstDas(t *testing.T) {
 	if err := cfg.Gesichter.Abgleichen(t.Context()); err != nil {
 		t.Fatal(err)
 	}
-	rec := as(Dieselbe, cfg, DieselbePath, "anna", "anna@box.test")
+	rec := as(Dieselbe, cfg, dieselbeAlle, "anna", "anna@box.test")
 	body := rec.Body.String()
 	if rec.Code != http.StatusOK {
 		t.Fatalf("%d %s", rec.Code, body)
@@ -70,7 +70,7 @@ func TestDieselbeNeinWerDann(t *testing.T) {
 	if strings.Index(body, "Wer ist das dann?") > strings.Index(body, "<h2>Wer ist das?</h2>") || strings.Count(body, "<datalist") != 1 {
 		t.Fatal("not first, or two lists of names")
 	}
-	mustNotContain(t, as(Dieselbe, cfg, DieselbePath, "anna", "anna@box.test").Body.String(), "Wer ist das dann?")
+	mustNotContain(t, as(Dieselbe, cfg, dieselbeAlle, "anna", "anna@box.test").Body.String(), "Wer ist das dann?")
 	mustContain(t, antworte(cfg, "anna", url.Values{"wer": {"u3"}, "name": {" "}, "antwort": {"ja"}}).Body.String(), "Der Name fehlt.", "Wer ist das dann?", `name=wer value="u3"`)
 	rec = antworte(cfg, "anna", url.Values{"wer": {"u3"}, "name": {"Yvonne"}, "antwort": {"ja"}})
 	mustContain(t, rec.Body.String(), "Gespeichert: Das Gesicht heißt in Immich jetzt Yvonne.")
@@ -123,8 +123,8 @@ func TestDieselbeWerVorschlagAusKontaktfoto(t *testing.T) {
 		}
 	}
 	cfg.Gesichter.Auffrischen(t.Context())
-	body := as(Dieselbe, cfg, DieselbePath, "anna", "anna@box.test").Body.String()
-	mustContain(t, body, `<form method=post class=vorschlag action="/kontakte/dieselbe"><input type=hidden name=wer value="u12"><input type=hidden name=name value="Kerstin Kühn"><p>Sieht aus wie <b>Kerstin Kühn</b> aus deinen Kontakten.</p><button name=antwort value=ja data-laeuft="Speichert …">Ja, das ist Kerstin Kühn</button></form>`)
+	body := as(Dieselbe, cfg, dieselbeAlle, "anna", "anna@box.test").Body.String()
+	mustContain(t, body, `<form method=post class=vorschlag action="/kontakte/dieselbe?alle=1"><input type=hidden name=wer value="u12"><input type=hidden name=name value="Kerstin Kühn"><p>Sieht aus wie <b>Kerstin Kühn</b> aus deinen Kontakten.</p><button name=antwort value=ja data-laeuft="Speichert …">Ja, das ist Kerstin Kühn</button></form>`)
 	if strings.Index(body, `name=wer value="u12"`) > strings.Index(body, `name=wer value="u17"`) || strings.Count(body, "class=vorschlag") != 1 {
 		t.Fatal("the suggested face is not first, or suggested twice")
 	}

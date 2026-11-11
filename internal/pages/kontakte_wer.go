@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"html"
 	"net/http"
-	"slices"
 	"strings"
 
 	"github.com/mdopp/homes/internal/caldav"
@@ -20,11 +19,8 @@ import (
 // A face Immich holds for the one on a Haushalts-Kontakt's photo offers that name first, saved with one tap (homes#352).
 
 // werKarten are the faces to name, posted to action: dann (werDann) under
-// „Wer ist das dann?“, then wer under „Wer ist das?“; "" without one.
+// „Wer ist das dann?“, then wer (none of dann) under „Wer ist das?“; "" without one.
 func werKarten(r *http.Request, cfg StartConfig, dann, wer []gesichter.Seite, action string) string {
-	wer = slices.DeleteFunc(slices.Clone(wer), func(s gesichter.Seite) bool {
-		return slices.ContainsFunc(dann, func(d gesichter.Seite) bool { return d.ID == s.ID })
-	})
 	if len(dann)+len(wer) == 0 {
 		return ""
 	}

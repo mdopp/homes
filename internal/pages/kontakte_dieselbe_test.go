@@ -42,9 +42,12 @@ func dieselbeConfig(t *testing.T, karten ...string) (StartConfig, *immichfake.Se
 	return StartConfig{Contacts: c, Gesichter: g}, fake
 }
 
+// dieselbeAlle is the task's page with every question at once („Alle zeigen“).
+const dieselbeAlle = DieselbePath + "?alle=1"
+
 // antworte posts an answer as user from Homes' own page to Dieselbe.
 func antworte(cfg StartConfig, user string, form url.Values) *httptest.ResponseRecorder {
-	return antworteBei(Dieselbe(cfg), DieselbePath, user, form)
+	return antworteBei(Dieselbe(cfg), dieselbeAlle, user, form)
 }
 
 // antworteBei posts an answer as user from Homes' own page to h at pfad.
@@ -66,7 +69,7 @@ func antworteBei(h http.Handler, pfad, user string, form url.Values) *httptest.R
 func TestDieselbeNurEigentuemer(t *testing.T) {
 	cfg, fake := dieselbeConfig(t)
 	mustNotContain(t, as(Kontakte, cfg, KontaktePath, "anna", "anna@box.test").Body.String(), DieselbePath+">", "class=anzahl")
-	rec := as(Dieselbe, cfg, DieselbePath, "anna", "anna@box.test")
+	rec := as(Dieselbe, cfg, dieselbeAlle, "anna", "anna@box.test")
 	body := rec.Body.String()
 	if rec.Code != http.StatusOK {
 		t.Fatalf("%d %s", rec.Code, body)
@@ -95,7 +98,7 @@ func TestDieselbeAufDemKontakt(t *testing.T) {
 	cfg, fake := dieselbeConfig(t, "a|Anna||")
 	list := as(Kontakte, cfg, KontaktePath, "anna", "anna@box.test").Body.String()
 	mustContain(t, list, `<a href="/kontakte/a">Anna <span class=anzahl aria-label="1 offen">1</span></a>`, `<a href="/kontakte/x">Xaver</a>`)
-	if rec := as(Dieselbe, cfg, DieselbePath, "anna", "anna@box.test"); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `<form method=post action="/kontakte/dieselbe"><input type=hidden name=a value="p-anna"><input type=hidden name=b value="u0">`) {
+	if rec := as(Dieselbe, cfg, dieselbeAlle, "anna", "anna@box.test"); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `<form method=post action="/kontakte/dieselbe?alle=1"><input type=hidden name=a value="p-anna"><input type=hidden name=b value="u0">`) {
 		t.Fatalf("the task answers the pairs in place: %d", rec.Code) // owner 2026-11-09: no click-through
 	}
 	body := as(Kontakt, cfg, "/kontakte/a", "anna", "anna@box.test").Body.String()
@@ -109,7 +112,7 @@ func TestDieselbeAufDemKontakt(t *testing.T) {
 	if fmt.Sprint(fake.Merges()) != "[[p-anna u0]]" {
 		t.Fatalf("%v", fake.Merges())
 	}
-	rest := as(Dieselbe, cfg, DieselbePath, "anna", "anna@box.test")
+	rest := as(Dieselbe, cfg, dieselbeAlle, "anna", "anna@box.test")
 	if rest.Code != http.StatusOK || strings.Contains(rest.Body.String(), `value="p-anna"`) || !strings.Contains(rest.Body.String(), `value="p-ben"`) {
 		t.Fatalf("what is left: %d", rest.Code)
 	}
@@ -166,7 +169,7 @@ func TestDieselbeKontext(t *testing.T) {
 		{Wann: "2012-07-01T10:00:00.000Z", Land: "Italien", Wer: []string{"p-anna", "u0"}},
 	}
 	cfg.Gesichter.Umfelder(t.Context())
-	body := as(Dieselbe, cfg, DieselbePath, "anna", "anna@box.test").Body.String()
+	body := as(Dieselbe, cfg, dieselbeAlle, "anna", "anna@box.test").Body.String()
 	mustContain(t, body, `<a href="https://photos.box.test/people/p-anna" target=_blank rel=noopener aria-label="Alle Fotos von Anna in Immich"><img`,
 		`<a href="https://photos.box.test/people/u0" target=_blank rel=noopener aria-label="Alle Fotos dieses Gesichts in Immich">`,
 		`<small>Orte: Italien, Münster · 2012–2019</small><small>Auch dabei: Ben</small>`, `<small>Orte: Italien · 2012</small><small>Auch dabei: Anna</small>`)
@@ -190,8 +193,60 @@ func TestDieselbeWeitere(t *testing.T) {
 			Rahmen: map[string][4]int{"p-anna": {1000, 1000, 1600, 1700}}, Bild: b.Bytes()})
 	}
 	cfg.Gesichter.Umfelder(t.Context())
-	body := as(Dieselbe, cfg, DieselbePath, "anna", "anna@box.test").Body.String()
+	body := as(Dieselbe, cfg, dieselbeAlle, "anna", "anna@box.test").Body.String()
 	mustContain(t, body, `<span class=weitere><a href="https://photos.box.test/photos/f2" target=_blank rel=noopener aria-label="Das ganze Foto in Immich"><img src="data:image/jpeg;base64,`,
 		`<a href="https://photos.box.test/photos/f3" target=_blank`)
 	mustNotContain(t, body, "photos/f1", "photos/f4")
+}
+
+// One question at a time (owner 2026-11-11, „rigoros einfach“): the task's
+// address shows one card under one heading, which one of how many it is,
+// „Nächste Frage“ and „Alle zeigen“; an answer stays at its place, so the
+// next question follows; after a pair's Nein its unnamed face comes
+// first. The page is the key owner's alone, at every address.
+func TestDieselbeEineFrage(t *testing.T) {
+	cfg, _ := dieselbeConfig(t)
+	alle := as(Dieselbe, cfg, dieselbeAlle, "anna", "anna@box.test").Body.String()
+	n := strings.Count(alle, "<section class=")
+	if n < 3 || strings.Contains(alle, "Nächste Frage") {
+		t.Fatalf("alle: %d cards\n%s", n, alle)
+	}
+	body := as(Dieselbe, cfg, DieselbePath, "anna", "anna@box.test").Body.String()
+	mustContain(t, body, "<h1>Wer ist das?</h1>", fmt.Sprintf(`<p class=k>Frage 1 von %d · <a href="/kontakte/dieselbe?ab=1">Nächste Frage</a> · <a href="/kontakte/dieselbe?alle=1">Alle zeigen</a></p>`, n),
+		`<form method=post action="/kontakte/dieselbe?ab=0">`)
+	if strings.Count(body, "<section class=") != 1 || strings.Count(body, "<h1>") != 1 || strings.Contains(body, "<h2>") {
+		t.Fatalf("not one card under one heading:\n%s", body)
+	}
+	// the last one is a pair, under the page's own name; the one after it is the first again
+	letzte := as(Dieselbe, cfg, fmt.Sprintf("%s?ab=%d", DieselbePath, n-1), "anna", "anna@box.test").Body.String()
+	mustContain(t, letzte, "<h1>Dieselbe Person?</h1>", fmt.Sprintf("Frage %d von %d", n, n), `<a href="/kontakte/dieselbe?ab=0">Nächste Frage</a>`, ">Überspringen</button>")
+	if strings.Count(letzte, "<section class=") != 1 {
+		t.Fatalf("the last: not one card:\n%s", letzte)
+	}
+	for _, ab := range []string{"-3", "999", "x"} { // an address that fits nothing is the first question
+		mustContain(t, as(Dieselbe, cfg, DieselbePath+"?ab="+ab, "anna", "anna@box.test").Body.String(), "Frage 1 von ")
+	}
+	// an answer at ?ab=… comes back there: the next question, one fewer
+	erste := cfg.Gesichter.Wer()[0].ID
+	rec := antworteBei(Dieselbe(cfg), DieselbePath+"?ab=0", "anna", url.Values{"wer": {erste}, "antwort": {"nein"}})
+	mustContain(t, rec.Body.String(), "role=status", "Frage 1 von ", `action="/kontakte/dieselbe?ab=0"`)
+	if strings.Count(rec.Body.String(), "<section class=") != 1 || strings.Contains(rec.Body.String(), `name=wer value="`+erste+`"`) {
+		t.Fatalf("after an answer: not one card:\n%s", rec.Body)
+	}
+	// a pair's Nein: its unnamed face to name comes first, whatever was asked
+	p := cfg.Gesichter.Paare()[0]
+	rec = antworteBei(Dieselbe(cfg), fmt.Sprintf("%s?ab=%d", DieselbePath, n-2), "anna", url.Values{"a": {p.A.ID}, "b": {p.B.ID}, "antwort": {"nein"}})
+	mustContain(t, rec.Body.String(), "<h1>Wer ist das dann?</h1>", `name=wer value="`+p.B.ID+`"`, `action="/kontakte/dieselbe?ab=0"`)
+	// another person and an admin without the key see none of it, at any address
+	for _, pfad := range []string{DieselbePath, DieselbePath + "?ab=1", dieselbeAlle} {
+		if rec := as(Dieselbe, cfg, pfad, "ben", "ben@box.test"); rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != KontaktePath {
+			t.Fatalf("ben at %s: %d", pfad, rec.Code)
+		}
+		if rec := asAdmin(Dieselbe, cfg, pfad); rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != KontaktePath {
+			t.Fatalf("an admin at %s: %d", pfad, rec.Code)
+		}
+	}
+	if rec := antworteBei(Dieselbe(cfg), DieselbePath+"?ab=0", "ben", url.Values{"wer": {"u1"}, "antwort": {"nein"}}); rec.Code != http.StatusSeeOther {
+		t.Fatalf("ben answers: %d", rec.Code)
+	}
 }
