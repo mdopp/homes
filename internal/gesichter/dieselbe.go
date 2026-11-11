@@ -341,6 +341,9 @@ type Seite struct {
 	Orte     []string
 	Von, Bis int
 	Mit      []string
+	// Weitere are its faces Homes cut from other photos (ausschnitte.go);
+	// the first is Bild when Immich's face says little (schlecht)
+	Weitere []Ausschnitt
 	// Kontakt is a named person's contact, its key in Zuordnung
 	// ("haushalt/<uid>", "privat/<uid>"); "" none
 	Kontakt string
@@ -356,8 +359,8 @@ type Paar struct{ A, B Seite }
 // Key is the pair's name in Nein and Spaeter, the same either way round.
 func (p Paar) Key() string { return paarKey(p.A.ID, p.B.ID) }
 
-// seite is person id as a page shows it, with its places and company, and
-// when named its contact (the least key of those it has).
+// seite is person id as a page shows it, with its places and company, its
+// faces cut from other photos, and when named its contact (the least key of those it has).
 func (st stand) seite(id, name string, fotos int, bild []byte) Seite {
 	u, kontakt := st.Umfeld[id], ""
 	for k, z := range st.Zuordnung {
@@ -365,7 +368,11 @@ func (st stand) seite(id, name string, fotos int, bild []byte) Seite {
 			kontakt = k
 		}
 	}
-	return Seite{ID: id, Name: name, Fotos: fotos, Bild: bild, Orte: u.Orte, Von: u.Von, Bis: u.Bis, Mit: u.Mit, Kontakt: kontakt}
+	weitere := u.Ausschnitte
+	if len(weitere) > 0 && (!Gesehen(bild) || schlecht(bild)) {
+		bild, weitere = weitere[0].JPEG, weitere[1:]
+	}
+	return Seite{ID: id, Name: name, Fotos: fotos, Bild: bild, Orte: u.Orte, Von: u.Von, Bis: u.Bis, Mit: u.Mit, Weitere: weitere, Kontakt: kontakt}
 }
 
 // Offen is how many pairs and questions wait for person: the Immich key's

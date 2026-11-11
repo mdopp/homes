@@ -950,6 +950,16 @@ test('Dieselbe Person? on the contact takes a Nein', async ({ page }, info) => {
   await expect(paare.first()).toContainText('Oma Hilde');
   await expect(paare.first()).toContainText('ohne Namen');
   await expect(paare.first()).toContainText('412 Fotos');
+  // owner 2026-11-11: under each face three more from other photos, each opening its photo; the
+  // unnamed one's face in Immich is only a shadow, so one cut from a photo is shown big instead
+  const klein = paare.first().locator('.weitere a');
+  await expect(klein).toHaveCount(5);
+  for (const a of await klein.all()) {
+    await expect(a).toHaveAttribute('href', /^https:\/\/photos\.example\/photos\/paar-\d$/);
+    const b = await a.boundingBox();
+    expect(b.x + b.width, 'each small face on the screen').toBeLessThanOrEqual(411);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
   await page.screenshot({ path: info.outputPath('dieselbe-411.png'), fullPage: true });
   await paare.last().getByRole('button', { name: 'Nein' }).click();
   await expect(page.getByText('Gemerkt: Nach diesen beiden fragt Homes nicht wieder.')).toBeVisible();

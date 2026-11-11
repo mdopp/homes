@@ -8,7 +8,8 @@
 // POST /api/search/metadata (personIds, page and nextPage, over Bibliothek),
 // and the photos Homes uploads: POST /api/assets (multipart, a duplicate
 // for bytes it has), GET /api/faces?id= (the faces Erkennen gives the
-// photo) and DELETE /api/assets.
+// photo, or a library photo's faces in their Rahmen), GET
+// /api/assets/<id>/thumbnail (a library photo's Bild) and DELETE /api/assets.
 package immichfake
 
 import (
@@ -61,11 +62,16 @@ type Server struct {
 
 // Foto is a photo of the library as /api/search/metadata finds it: when
 // (an instant, both its localDateTime and its dateTimeOriginal), where
-// (Lat and Lng 0: none), and who is in it (by person id).
+// (Lat and Lng 0: none), and who is in it (by person id); Rahmen is,
+// by person id, where its face is (x1, y1, x2, y2 in Breite×Hoehe), Bild
+// the photo's preview.
 type Foto struct {
 	ID, Wann, Stadt, Land string
 	Lat, Lng              float64
 	Wer                   []string
+	Breite, Hoehe         int
+	Rahmen                map[string][4]int
+	Bild                  []byte
 }
 
 // asset is a photo Homes uploaded.
@@ -189,7 +195,7 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 	case r.URL.Path == "/api/api-keys/me":
 		rechte := []string{"all"}
 		if len(s.Ohne) > 0 {
-			rechte = slices.DeleteFunc([]string{"person.read", "person.create", "person.update", "person.merge", "person.statistics", "user.read", "asset.read", "asset.upload", "face.read", "asset.delete"}, func(r string) bool { return slices.Contains(s.Ohne, r) })
+			rechte = slices.DeleteFunc([]string{"person.read", "person.create", "person.update", "person.merge", "person.statistics", "user.read", "asset.read", "asset.view", "asset.upload", "face.read", "asset.delete"}, func(r string) bool { return slices.Contains(s.Ohne, r) })
 		}
 		json.NewEncoder(w).Encode(map[string]any{"id": "k1", "name": "Homes", "permissions": rechte})
 	case r.URL.Path == "/api/users/me":
@@ -222,7 +228,7 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 		} else if s.darf(w, "person.statistics") {
 			json.NewEncoder(w).Encode(map[string]int{"assets": p.fotos})
 		}
-	case strings.HasSuffix(id, "/thumbnail"):
+	case isPerson && strings.HasSuffix(id, "/thumbnail"):
 		if p := s.find(strings.TrimSuffix(id, "/thumbnail")); p != nil && p.gesicht != nil {
 			p.abgerufen++
 			w.Header().Set("Content-Type", "image/jpeg")
@@ -246,6 +252,14 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 	case r.URL.Path == "/api/search/metadata" && r.Method == http.MethodPost:
 		if s.darf(w, "asset.read") {
 			s.umfeld(w, r)
+		}
+	case strings.HasPrefix(r.URL.Path, "/api/assets/") && strings.HasSuffix(r.URL.Path, "/thumbnail"):
+		i := slices.IndexFunc(s.Bibliothek, func(f Foto) bool { return "/api/assets/"+f.ID+"/thumbnail" == r.URL.Path })
+		if i < 0 || s.Bibliothek[i].Bild == nil {
+			http.NotFound(w, r)
+		} else if s.darf(w, "asset.view") {
+			w.Header().Set("Content-Type", "image/jpeg")
+			w.Write(s.Bibliothek[i].Bild)
 		}
 	case r.URL.Path == "/api/faces" && r.Method == http.MethodGet:
 		if s.darf(w, "face.read") {
@@ -345,6 +359,17 @@ func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
 // faces are the faces Erkennen finds in the photo, each with its person.
 func (s *Server) faces(w http.ResponseWriter, id string) {
 	i := slices.IndexFunc(s.assets, func(a *asset) bool { return a.ID == id })
+	if j := slices.IndexFunc(s.Bibliothek, func(f Foto) bool { return f.ID == id }); i < 0 && j >= 0 {
+		out, f := []map[string]any{}, s.Bibliothek[j]
+		for _, pid := range f.Wer {
+			if b, da := f.Rahmen[pid]; da && s.find(pid) != nil {
+				out = append(out, map[string]any{"id": id + "-" + pid, "person": s.find(pid), "imageWidth": f.Breite, "imageHeight": f.Hoehe,
+					"boundingBoxX1": b[0], "boundingBoxY1": b[1], "boundingBoxX2": b[2], "boundingBoxY2": b[3]})
+			}
+		}
+		json.NewEncoder(w).Encode(out)
+		return
+	}
 	if i < 0 {
 		http.Error(w, `{"message":"Not found or no asset.read access"}`, http.StatusBadRequest)
 		return

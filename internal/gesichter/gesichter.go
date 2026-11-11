@@ -447,6 +447,11 @@ func Klein(b []byte, kante int) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	return verkleinern(src, kante)
+}
+
+// verkleinern is src as Klein makes it.
+func verkleinern(src image.Image, kante int) ([]byte, error) {
 	sb := src.Bounds()
 	w, h := sb.Dx(), sb.Dy()
 	if w > kante || h > kante {
@@ -469,6 +474,6 @@ func Klein(b []byte, kante int) ([]byte, error) {
 		}
 	}
 	var out bytes.Buffer
-	err = jpeg.Encode(&out, dst, &jpeg.Options{Quality: 80})
+	err := jpeg.Encode(&out, dst, &jpeg.Options{Quality: 80})
 	return out.Bytes(), err
 }

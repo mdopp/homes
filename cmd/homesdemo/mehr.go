@@ -202,7 +202,7 @@ func demoGesichter(dir string, kontakte *caldav.Client) *gesichter.Gesichter {
 		farbe color.RGBA
 		fotos int
 		x     float64
-	}{{color.RGBA{204, 132, 86, 255}, 23, 1}, {color.RGBA{96, 146, 206, 255}, 9, 11}, {color.RGBA{200, 120, 100, 255}, 4, 3}, {color.RGBA{120, 170, 120, 255}, 2, 6}} {
+	}{{color.RGBA{30, 28, 32, 255}, 23, 1}, {color.RGBA{96, 146, 206, 255}, 9, 11}, {color.RGBA{200, 120, 100, 255}, 4, 3}, {color.RGBA{120, 170, 120, 255}, 2, 6}} {
 		id := "u" + strconv.Itoa(i)
 		fake.Person(id, "", "1", false, demoGesicht(u.farbe))
 		fake.Lage(id, u.fotos, u.x, 0, false)
@@ -224,7 +224,43 @@ func demoGesichter(dir string, kontakte *caldav.Client) *gesichter.Gesichter {
 	g.Kontaktbilder(context.Background())
 	g.Vorschlagen(context.Background())
 	demoFotos(fake)
+	demoPaarFotos(fake)
+	g.Umfelder(context.Background())
 	return g
+}
+
+// demoPaarFotos are photos of the pairs' persons, the newest, each face
+// in its box (owner 2026-11-11): u0, Immich's face of it only a shadow,
+// shows one cut from them big, and three small under each side.
+func demoPaarFotos(fake *immichfake.Server) {
+	farbe := map[string]color.RGBA{"p-hilde": {214, 140, 90, 255}, "u0": {204, 132, 86, 255}, "p-karl": {90, 140, 214, 255}, "u1": {96, 146, 206, 255}}
+	var neu []immichfake.Foto
+	for i, wer := range [][]string{{"p-hilde", "u0"}, {"p-hilde"}, {"u0"}, {"p-hilde"}, {"u0"}, {"p-karl", "u1"}, {"p-karl"}, {"u1"}, {"p-karl"}, {"u1"}} {
+		img := image.NewRGBA(image.Rect(0, 0, 480, 360))
+		for y := range 360 {
+			for x := range 480 {
+				img.Set(x, y, color.RGBA{uint8(150 + x/8), uint8(170 + y/8), 200, 255})
+			}
+		}
+		f := immichfake.Foto{ID: fmt.Sprint("paar-", i), Wann: time.Date(2026, 10, 30-i, 12, 0, 0, 0, time.UTC).Format(time.RFC3339), Stadt: "Stuttgart",
+			Wer: wer, Breite: 4800, Hoehe: 3600, Rahmen: map[string][4]int{}}
+		for j, id := range wer {
+			x0, y0 := 80+i*6+j*200, 90+j*30
+			for y := range 110 {
+				for x := range 110 {
+					if dx, dy := x-55, y-55; dx*dx+dy*dy < 50*50 {
+						img.Set(x0+x, y0+y, farbe[id])
+					}
+				}
+			}
+			f.Rahmen[id] = [4]int{x0 * 10, y0 * 10, (x0 + 110) * 10, (y0 + 110) * 10}
+		}
+		var b bytes.Buffer
+		jpeg.Encode(&b, img, nil)
+		f.Bild = b.Bytes()
+		neu = append(neu, f)
+	}
+	fake.Bibliothek = append(neu, fake.Bibliothek...)
 }
 
 // demoFotos are Anna's photos for „Wer steht wem nahe“ (owner 2026-11-09):

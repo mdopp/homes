@@ -153,6 +153,7 @@ const (
 	DieselbeMit             ID = "dieselbe.mit"         // under a face: „%s“ the named persons in the same photos
 	DieselbeInImmich        ID = "dieselbe.immich"      // a face's link: „%s“ the name, all its photos in Immich
 	DieselbeInImmichOhne    ID = "dieselbe.immich.ohne" // the same for a face without a name
+	DieselbeFoto            ID = "dieselbe.foto"        // a small face's link: the whole photo in Immich
 	DieselbeAufgabe         ID = "dieselbe.aufgabe"     // the key owner's task: „%s“ how many, „3 Personen“
 	DieselbeAufgabeWarum    ID = "dieselbe.aufgabe.warum"
 	// „Ist das …?“: a contact's picture beside the person Immich gave its face
@@ -540,6 +541,7 @@ var de = map[ID]string{
 	"dieselbe.mit":                 "Auch dabei: %s",
 	"dieselbe.immich":              "Alle Fotos von %s in Immich",
 	"dieselbe.immich.ohne":         "Alle Fotos dieses Gesichts in Immich",
+	"dieselbe.foto":                "Das ganze Foto in Immich",
 	"dieselbe.aufgabe":             "%s in Immich prüfen",
 	"dieselbe.aufgabe.warum":       "Immich hält Gesichter für dieselbe Person oder fragt, ob ein Kontaktbild passt. Ein Ja führt sie zusammen.",
 	"ist-das":                      "Ist das …?",

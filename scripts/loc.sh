@@ -73,7 +73,9 @@ budget() { # budget <name> <cap> <dir…>
 # /kontakte/netz and on the contact page
 # 2026-11-10, owner approved 2026-11-09: Beziehungen änderbar, aufs Handy, in Deine Aufgaben und im Kontaktformular (homes#330) (18,480 -> 18,600): edit/remove on the contact page, the form's Beziehungen section and its review
 # 2026-11-10, owner approved 2026-11-10: Beziehungen als eine Zeile je Person, beim Wählen gespeichert, und Handy-Kontakte als Namensvorschläge bei Wer ist das? (pages 18,600 -> 18,620; 18,613 used); shrinks when the questions move to the archive (archiv#27)
-budget pages 18620 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-11, owner approved 2026-11-11: Dieselbe Person – drei Gesichter je Seite (pages 18,620 -> 18,640; 18,627 used): the
+# small faces under each face of a pair, each a link to its photo in Immich (kontakte_dieselbe.go)
+budget pages 18640 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -127,7 +129,9 @@ budget cmd 1448 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-09, owner approved 2026-11-09: Wer steht wem nahe (connectors 15,140 -> 15,220; 15,202 used): immich.Aufnahmen,
 # the photos with their people page by page, and its fake
 # 2026-11-10, owner approved 2026-11-09: Beziehungen änderbar, aufs Handy, in Deine Aufgaben und im Kontaktformular (homes#330) (15,220 -> 15,240): the relation in the phone-correction payload
-budget connectors 15240 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
+# 2026-11-11, owner approved 2026-11-11: Dieselbe Person – drei Gesichter je Seite (connectors 15,240 -> 15,290; 15,281 used): immich.Vorschau
+# (a photo's preview, asset.view), the face's box in Funde, and immichfake's library faces and previews
+budget connectors 15290 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
 # 2026-11-04, internal/jsonfile (47 lines, 50 of cap) from household's cap to shared's: it
 # replaces nine copies of a save, 62 of their lines in household
 # 2026-11-05, owner 2026-11-05 yes: Immich for the contacts (9,583 -> 9,874):
@@ -169,7 +173,9 @@ budget connectors 15240 $connectors   # one client per service, with its fake: 1
 # 2026-11-09, owner approved 2026-11-09: Beziehungen klären (household 14,100 -> 14,420; 14,374 used): netz's
 # suggestions, answers and their RELATED lines
 # 2026-11-10, owner approved 2026-11-09: Beziehungen änderbar, aufs Handy, in Deine Aufgaben und im Kontaktformular (homes#330) (14,420 -> 14,620): changing and removing answers, relations to the phone, the task count
-budget household 14620 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-11, owner approved 2026-11-11: Dieselbe Person – drei Gesichter je Seite (household 14,620 -> 14,760; 14,748 used):
+# gesichter/ausschnitte.go cuts each pair's person's face from three photos in the daily run, and a face that says little is replaced
+budget household 14760 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one

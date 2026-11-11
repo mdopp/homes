@@ -1,8 +1,11 @@
 package gesichter
 
 import (
+	"bytes"
 	"fmt"
+	"image"
 	"image/color"
+	"image/jpeg"
 	"slices"
 	"testing"
 	"time"
@@ -151,4 +154,78 @@ func TestFragenNurMitBildern(t *testing.T) {
 	if len(fr) != 1 || fr[0].Key != "privat/a" || fr[0].Asset != "a-1" {
 		t.Fatalf("%+v", fr)
 	}
+}
+
+// Three faces of a pair's person, each cut from another of its photos
+// (owner 2026-11-11): the photos with the fewest people first; a face
+// under a twentieth of its photo's width is none, nor one too dark to
+// say anything. Immich's own face, one colour here, says little, so the
+// first cut face is shown big in its place; a good one stays. The faces
+// kept are not cut again while their photos stay among the newest, and
+// without asset.view the page's line names it.
+func TestAusschnitte(t *testing.T) {
+	g, fake := naeheBox(t)
+	hell, dunkel := Foto(t, false), Foto(t, true)
+	gross, klein := [4]int{1000, 1000, 1600, 1700}, [4]int{1000, 1000, 1100, 1100}
+	f := func(id string, bild []byte, anna [4]int, wer ...string) immichfake.Foto {
+		return immichfake.Foto{ID: id, Wann: "2020-01-01T10:00:00.000Z", Wer: append([]string{"anna"}, wer...), Breite: 4000, Hoehe: 3000,
+			Rahmen: map[string][4]int{"anna": anna, "u1": {2400, 800, 3000, 1500}}, Bild: bild}
+	}
+	fake.Bibliothek = []immichfake.Foto{f("viele", hell, gross, "u1", "ben", "carl"), f("klein", hell, klein), f("dunkel", dunkel, gross),
+		f("a", hell, gross, "u1"), f("b", hell, gross), f("c", hell, gross, "ben")}
+	g.mu.Lock()
+	g.stand.Bilder["u1"] = bild{JPEG: hell, Stand: "1", Geholt: g.now()}
+	g.mu.Unlock()
+	if err := g.Umfelder(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	asset := func(as []Ausschnitt) (out []string) {
+		for _, a := range as {
+			out = append(out, a.Asset)
+		}
+		return out
+	}
+	p := g.Paare()[0]
+	if p.A.ID != "anna" || !Gesehen(p.A.Bild) || schlecht(p.A.Bild) || fmt.Sprint(asset(p.A.Weitere)) != "[a c]" {
+		t.Fatalf("anna: %v %v", schlecht(p.A.Bild), asset(p.A.Weitere))
+	}
+	if c, _ := jpeg.DecodeConfig(bytes.NewReader(p.A.Weitere[0].JPEG)); c.Width != c.Height || c.Width > ausschnittKante || c.Width < 90 {
+		t.Fatalf("%+v", c)
+	}
+	if !bytes.Equal(p.B.Bild, hell) || fmt.Sprint(asset(p.B.Weitere)) != "[a viele]" {
+		t.Fatalf("u1, its own face good: %v", asset(p.B.Weitere))
+	}
+	for i := range fake.Bibliothek {
+		fake.Bibliothek[i].Bild = nil
+	}
+	g.Now = func() time.Time { return time.Date(2026, 11, 7, 13, 0, 0, 0, time.UTC) }
+	if err := g.Umfelder(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if p := g.Paare()[0]; fmt.Sprint(asset(p.A.Weitere)) != "[a c]" {
+		t.Fatalf("the kept faces lost: %v", asset(p.A.Weitere))
+	}
+	fake.Ohne = []string{"asset.view"}
+	g.Auffrischen(t.Context())
+	if g.Fehlt() != "asset.view" {
+		t.Fatalf("%q", g.Fehlt())
+	}
+}
+
+// Foto is a photo's preview of 400×300, its brightness varying, or black.
+func Foto(t testing.TB, schwarz bool) []byte {
+	t.Helper()
+	img := image.NewRGBA(image.Rect(0, 0, 400, 300))
+	for y := range 300 {
+		for x := range 400 {
+			if !schwarz {
+				img.Set(x, y, color.RGBA{uint8(x), uint8(y), 128, 255})
+			}
+		}
+	}
+	var b bytes.Buffer
+	if err := jpeg.Encode(&b, img, nil); err != nil {
+		t.Fatal(err)
+	}
+	return b.Bytes()
 }
