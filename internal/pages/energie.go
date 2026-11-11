@@ -39,11 +39,17 @@ func Energie(cfg StartConfig) http.HandlerFunc {
 			return
 		}
 		var (
-			states []ha.State
-			haErr  error
+			states         []ha.State
+			prefs          ha.EnergyPrefs
+			haErr, prefErr error
 		)
-		fetch(r, func(ctx context.Context) { states, haErr = cfg.HA.States(ctx) })
-		logErrs("energie", map[string]error{"home assistant": haErr})
+		view := zeitraumOf(r)
+		reads := []func(context.Context){func(ctx context.Context) { states, haErr = cfg.HA.States(ctx) }}
+		if view == "tag" { // the chosen hour's battery and devices
+			reads = append(reads, func(ctx context.Context) { prefs, prefErr = cfg.HA.EnergyPrefs(ctx) })
+		}
+		fetch(r, reads...)
+		logErrs("energie", map[string]error{"home assistant": haErr, "energy dashboard": prefErr})
 		b := familyHead(r, cfg, "Energie", "Energie")
 		b.WriteString(refreshEvery(60)) // Jetzt follows the sun; the history is HA's statistics, not every second
 		b.WriteString("<h1>Energie</h1>")
@@ -61,20 +67,19 @@ func Energie(cfg StartConfig) http.HandlerFunc {
 		}
 		now, loc := cfg.clock()
 		today := midnight(now, loc)
-		view := zeitraumOf(r)
 		var (
 			daily, hourly   amounts
 			dailyE, hourlyE error
 		)
-		var reads []func(context.Context)
+		reads = nil
 		if stats.Any() { // the history from HA's long-term statistics (haus#65)
 			reads = append(reads, func(ctx context.Context) {
 				// last year's January on: the comparisons and the forecast
-				daily, dailyE = statsFor(ctx, cfg.HA, stats, time.Date(today.Year()-1, time.January, 1, 0, 0, 0, 0, loc), today.AddDate(0, 0, 1), "day", loc)
+				daily, dailyE = statsFor(ctx, cfg.HA, historySlots(stats), time.Date(today.Year()-1, time.January, 1, 0, 0, 0, 0, loc), today.AddDate(0, 0, 1), "day", loc)
 			})
 			if view == "tag" {
 				reads = append(reads, func(ctx context.Context) {
-					hourly, hourlyE = statsFor(ctx, cfg.HA, stats, today, today.AddDate(0, 0, 1), "hour", loc)
+					hourly, hourlyE = statsFor(ctx, cfg.HA, append(historySlots(stats), stundeSlots(prefs)...), today, today.AddDate(0, 0, 1), "hour", loc)
 				})
 			}
 		}
@@ -94,7 +99,7 @@ func Energie(cfg StartConfig) http.HandlerFunc {
 				err = hourlyE
 			}
 			b.WriteString("<div id=verlauf></div>")
-			b.WriteString(verlaufHTML(view, now, loc, daily, hourly, err))
+			b.WriteString(verlaufHTML(view, now, loc, daily, hourly, geraeteOf(prefs, states), err))
 		}
 		writePage(w, http.StatusOK, b)
 	}

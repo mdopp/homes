@@ -33,28 +33,13 @@ func (c *Client) Statistics(ctx context.Context, ids []string, start, end time.T
 			return nil, fmt.Errorf("ha: statistic id %q", id)
 		}
 	}
-	if _, ok := ctx.Deadline(); !ok {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, 20*time.Second)
-		defer cancel()
-	}
-	w, err := c.dial(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer w.close()
-	defer w.closeOn(ctx)()
-	id, err := w.send(map[string]any{"type": "recorder/statistics_during_period",
-		"start_time": start.UTC().Format(time.RFC3339), "end_time": end.UTC().Format(time.RFC3339),
-		"statistic_ids": ids, "period": period, "types": []string{"change"}, "units": map[string]string{"energy": "kWh"}})
-	if err != nil {
-		return nil, err
-	}
 	var raw map[string][]struct {
 		Start  json.RawMessage `json:"start"`
 		Change *float64        `json:"change"`
 	}
-	if err := w.result(id, &raw); err != nil {
+	if err := c.once(ctx, map[string]any{"type": "recorder/statistics_during_period",
+		"start_time": start.UTC().Format(time.RFC3339), "end_time": end.UTC().Format(time.RFC3339),
+		"statistic_ids": ids, "period": period, "types": []string{"change"}, "units": map[string]string{"energy": "kWh"}}, &raw); err != nil {
 		return nil, err
 	}
 	out := map[string][]Stat{}
@@ -73,6 +58,27 @@ func (c *Client) Statistics(ctx context.Context, ids []string, start, end time.T
 		}
 	}
 	return out, nil
+}
+
+// once sends one command on its own connection and reads its result into
+// out; 20 seconds at most when ctx sets no deadline.
+func (c *Client) once(ctx context.Context, cmd map[string]any, out any) error {
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+	}
+	w, err := c.dial(ctx)
+	if err != nil {
+		return err
+	}
+	defer w.close()
+	defer w.closeOn(ctx)()
+	id, err := w.send(cmd)
+	if err != nil {
+		return err
+	}
+	return w.result(id, out)
 }
 
 // statTime is a period's start as HA sends it: milliseconds since the

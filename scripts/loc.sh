@@ -87,7 +87,9 @@ budget() { # budget <name> <cap> <dir…>
 # one card under one heading, „Frage 2 von 6 · Nächste Frage · Alle zeigen“ (kontakte_dieselbe.go)
 # 2026-11-11, owner decided 2026-11-11 (ADR 0002): the net into the archive (pages 19,030 -> 18,844, ratcheted down by the
 # 186 lines removed: kontakte_netz.go, „Steht nahe“; one link „Dein Netzwerk im Archiv ›“ instead), and one tap first on the faces
-budget pages 18844 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-11, owner OK'd the needed raise 2026-11-11: Energie – what the chosen hour used (pages 18,844 -> 19,110; 19,097 used): energie_stunde.go, the line under
+# the Tag chart for the tapped hour, its devices, the Verbrauch column, the script choosing an hour; the scale's 0 and its negative bottom
+budget pages 19110 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -152,7 +154,9 @@ budget cmd 1448 cmd/homes             # homes' wiring: 1,018 with the demo then
 # (connectors 15,373 -> 15,500; 15,496 used): caldav/doppelt.go, a number compared with its country code (0171 … = +49 171 …),
 # the phone's mirror stored with each number once, a correction that never writes one twice, and the counts and
 # writes of `homes nummern-bereinigen`
-budget connectors 15500 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
+# 2026-11-11, owner OK'd the needed raise 2026-11-11: Energie – what the chosen hour used (connectors 15,500 -> 15,610; 15,597 used): ha.EnergyPrefs (energy/get_prefs:
+# the battery's counters and the devices), one command on its own connection, and hafake's energy dashboard
+budget connectors 15610 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
 # 2026-11-04, internal/jsonfile (47 lines, 50 of cap) from household's cap to shared's: it
 # replaces nine copies of a save, 62 of their lines in household
 # 2026-11-05, owner 2026-11-05 yes: Immich for the contacts (9,583 -> 9,874):
@@ -203,7 +207,9 @@ budget connectors 15500 $connectors   # one client per service, with its fake: 1
 # face's person and suggests the name on „Wer ist das?“; counts leave Homes' uploads out (homes#352)
 # 2026-11-11, owner decided 2026-11-11 (ADR 0002): the net into the archive (household 15,035 -> 14,635, ratcheted down by the
 # 400 lines removed: internal/netz's ties from photos, their ranking, hiding and reasons; the relations stay)
-budget household 14635 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-11, owner OK'd the needed raise 2026-11-11: Energie – what the chosen hour used (household 14,635 -> 14,700; 14,695 used): energie.Stunde, what the house used
+# in an hour with the battery, and its three devices that used most
+budget household 14700 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one

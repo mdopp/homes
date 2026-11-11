@@ -361,8 +361,36 @@ func demoEnergyCounters(fake *hafake.HA, now time.Time) {
 		for t := time.Date(y-1, time.January, 1, 0, 0, 0, 0, now.Location()); t.Before(midnight); t = t.AddDate(0, 0, 1) {
 			pts = append(pts, hafake.Stat{Start: t.Add(12 * time.Hour), Change: c.perDay(t)})
 		}
-		for h := 0; h < now.Hour(); h++ {
-			pts = append(pts, hafake.Stat{Start: midnight.Add(time.Duration(h) * time.Hour), Change: c.today / float64(max(1, now.Hour()))})
+		for h := 0; h <= now.Hour(); h++ { // the hour now too: the chart always has one to tap
+			pts = append(pts, hafake.Stat{Start: midnight.Add(time.Duration(h) * time.Hour), Change: c.today / float64(now.Hour()+1)})
+		}
+		fake.SetStatistics(c.id, pts)
+	}
+	demoEnergyHours(fake, midnight, now)
+}
+
+// demoEnergyHours is HA's energy dashboard for the demo: the battery's
+// counters and three devices, each what it added in today's hours (the
+// Energie page's chosen hour).
+func demoEnergyHours(fake *hafake.HA, midnight, now time.Time) {
+	fake.SetEnergyPrefs(map[string]any{
+		"energy_sources": []any{map[string]any{"type": "battery", "stat_energy_from": "sensor.akku_entladen", "stat_energy_to": "sensor.akku_laden"}},
+		"device_consumption": []any{map[string]any{"stat_consumption": "sensor.waermepumpe_energie", "name": "Wärmepumpe"},
+			map[string]any{"stat_consumption": "sensor.trockner_energie", "name": "Trockner"}, map[string]any{"stat_consumption": "sensor.kuehlschrank_energie", "name": "Kühlschrank"}},
+	})
+	for _, c := range []struct {
+		id   string
+		each func(h int) float64
+	}{
+		{"sensor.akku_entladen", func(h int) float64 { return 0.1 * float64(h%3) }},
+		{"sensor.akku_laden", func(h int) float64 { return 0.05 * float64(h%2) }},
+		{"sensor.waermepumpe_energie", func(h int) float64 { return 0.1 + 0.05*float64(h%4) }},
+		{"sensor.trockner_energie", func(h int) float64 { return 0.1 * float64(h%2) }},
+		{"sensor.kuehlschrank_energie", func(int) float64 { return 0.03 }},
+	} {
+		var pts []hafake.Stat
+		for h := 0; h <= now.Hour(); h++ {
+			pts = append(pts, hafake.Stat{Start: midnight.Add(time.Duration(h) * time.Hour), Change: c.each(h)})
 		}
 		fake.SetStatistics(c.id, pts)
 	}
