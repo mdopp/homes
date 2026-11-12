@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -58,8 +59,17 @@ func zugangPost(h http.Handler, ip string, form url.Values) *httptest.ResponseRe
 }
 
 func hol(h http.Handler, target string) *httptest.ResponseRecorder {
+	return holVon(h, target, "")
+}
+
+// holVon is a GET as Caddy passes it on for a client at ip ("" none).
+func holVon(h http.Handler, target, ip string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest("GET", target, nil)
+	if ip != "" {
+		req.Header.Set("X-Forwarded-For", ip)
+	}
 	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest("GET", target, nil))
+	h.ServeHTTP(rec, req)
 	return rec
 }
 
@@ -73,16 +83,16 @@ func anfrage(name, kontakt, nachricht string) url.Values {
 func TestTeaserDispatchesByHost(t *testing.T) {
 	cfg, _ := teaserCfg(t)
 	pub := KontaktServer(cfg)
-	rec := hol(pub, "https://box.example.org/")
+	rec := holVon(pub, "https://box.example.org/", "192.168.178.20")
 	if rec.Code != 200 {
 		t.Fatalf("the teaser: %d\n%s", rec.Code, rec.Body.String())
 	}
 	body := rec.Body.String()
 	mustContain(t, body, `<!doctype html><html lang="de"><head><meta charset="utf-8">`, "<title>Die Box</title>", "<h1>Die Box</h1>", `<form method="post" action="/zugang">`,
 		`name="name"`, `name="kontakt"`, `name="nachricht"`, `name="website"`, `href="https://www.example.org/"`, "Zugang anfragen", "</body></html>")
-	mustNotContain(t, body, `<template id="zugang-danke">`, "{{ANMELDEN}}", "claude:", "dopp.cloud")
+	mustNotContain(t, body, `<template id="zugang-danke">`, `<template id="zugang-draussen">`, "{{ANMELDEN}}", "claude:", "dopp.cloud", "https://fonts.", "<script")
 	h := rec.Header()
-	if h.Get("X-Robots-Tag") != "" || !strings.Contains(h.Get("Content-Security-Policy"), "default-src 'none'; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src fonts.gstatic.com") ||
+	if h.Get("X-Robots-Tag") != "" || !strings.Contains(h.Get("Content-Security-Policy"), "default-src 'none'; style-src 'unsafe-inline'; img-src") || h.Get("Cache-Control") != "private, no-cache" ||
 		!strings.Contains(h.Get("Content-Security-Policy"), "form-action 'self'; frame-ancestors 'none'") || h.Get("X-Frame-Options") != "DENY" {
 		t.Errorf("headers %v", h)
 	}
@@ -137,7 +147,7 @@ func TestZugangAnfragen(t *testing.T) {
 		{anfrage("Oma", "  ", ""), "Wie erreichen wir dich?"},
 		{anfrage("Oma", "0711 1", strings.Repeat("n", 301)), "höchstens 300 Zeichen"},
 	} {
-		rec := zugangPost(pub, "203.0.113.1", c.form)
+		rec := zugangPost(pub, "192.168.178.21", c.form)
 		if rec.Code != 422 || !strings.Contains(rec.Body.String(), `<p class="fehler" role="alert">`) || !strings.Contains(rec.Body.String(), c.says) || rec.Header().Get("X-Robots-Tag") != "noindex, nofollow" {
 			t.Errorf("%v: %d, no %q", c.form, rec.Code, c.says)
 		}
@@ -152,6 +162,7 @@ func TestZugangAnfragen(t *testing.T) {
 	req := httptest.NewRequest("POST", "https://box.example.org/zugang", strings.NewReader(anfrage("Oma", "0711 1", "").Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Sec-Fetch-Site", "cross-site")
+	req.Header.Set("X-Forwarded-For", "192.168.178.21")
 	rec := httptest.NewRecorder()
 	pub.ServeHTTP(rec, req)
 	if rec.Code != 403 || !strings.Contains(rec.Body.String(), "von dieser Seite aus") {
@@ -160,14 +171,14 @@ func TestZugangAnfragen(t *testing.T) {
 	// the honeypot: thanked, dropped
 	f := anfrage("Bot", "bot@example.org", "")
 	f.Set("website", "https://spam.example")
-	if rec := zugangPost(pub, "203.0.113.2", f); rec.Code != 200 || !strings.Contains(rec.Body.String(), "Danke, deine Anfrage ist angekommen.") {
+	if rec := zugangPost(pub, "10.0.0.2", f); rec.Code != 200 || !strings.Contains(rec.Body.String(), "Danke, deine Anfrage ist angekommen.") {
 		t.Errorf("honeypot: %d", rec.Code)
 	}
 	if offen, _ := cfg.Zugang.Offen(); len(offen) != 0 {
 		t.Fatalf("the bot's request was kept: %+v", offen)
 	}
 	// a real one
-	rec = zugangPost(pub, "203.0.113.1", anfrage(" Oma  Hilde ", "0711 445566", "Ich bin die Oma.\nRuft an."))
+	rec = zugangPost(pub, "192.168.178.21", anfrage(" Oma  Hilde ", "0711 445566", "Ich bin die Oma.\nRuft an."))
 	if rec.Code != 200 || rec.Header().Get("Cache-Control") != "no-store" {
 		t.Fatalf("%d %v\n%s", rec.Code, rec.Header(), rec.Body.String())
 	}
@@ -178,7 +189,7 @@ func TestZugangAnfragen(t *testing.T) {
 		t.Fatalf("%v %+v", err, offen)
 	}
 	b, _ := os.ReadFile(cfg.Zugang.Path)
-	if strings.Contains(string(b), "203.0.113") || !strings.Contains(string(b), `"adresse"`) {
+	if strings.Contains(string(b), "192.168.178") || !strings.Contains(string(b), `"adresse"`) {
 		t.Errorf("the file:\n%s", b)
 	}
 	// told to the notify person, in the background
@@ -223,10 +234,10 @@ func TestZugangThrottles(t *testing.T) {
 	cfg.Now = func() time.Time { return now }
 	cfg.Zugang.Now = cfg.Now
 	pub := KontaktServer(cfg)
-	if rec := zugangPost(pub, "203.0.113.1", anfrage("Oma", "0711 1", "")); rec.Code != 200 {
+	if rec := zugangPost(pub, "192.168.178.21", anfrage("Oma", "0711 1", "")); rec.Code != 200 {
 		t.Fatalf("the first: %d", rec.Code)
 	}
-	rec := zugangPost(pub, "203.0.113.1", anfrage("Oma", "0711 1", "noch einmal"))
+	rec := zugangPost(pub, "192.168.178.21", anfrage("Oma", "0711 1", "noch einmal"))
 	if rec.Code != 429 || !strings.Contains(rec.Body.String(), `<p class="fehler" role="alert">Gerade geht es nicht, versuch es später noch einmal.</p>`) || rec.Header().Get("Retry-After") != "3600" {
 		t.Errorf("the second from one address: %d %v\n%s", rec.Code, rec.Header(), rec.Body.String())
 	}
@@ -235,11 +246,11 @@ func TestZugangThrottles(t *testing.T) {
 	}
 	for i := 2; i <= zugang.ProTag; i++ {
 		now = now.Add(time.Second)
-		if rec := zugangPost(pub, "198.51.100."+string(rune('0'+i%10))+string(rune('0'+i/10)), anfrage("N", "k", "")); rec.Code != 200 {
+		if rec := zugangPost(pub, "10.0.1."+strconv.Itoa(i), anfrage("N", "k", "")); rec.Code != 200 {
 			t.Fatalf("request %d: %d", i, rec.Code)
 		}
 	}
-	if rec := zugangPost(pub, "192.0.2.9", anfrage("N", "k", "")); rec.Code != 429 {
+	if rec := zugangPost(pub, "fd00::9", anfrage("N", "k", "")); rec.Code != 429 {
 		t.Errorf("the 21st of the day: %d", rec.Code)
 	}
 	offen, _ := cfg.Zugang.Offen()
@@ -252,5 +263,57 @@ func TestZugangThrottles(t *testing.T) {
 	}
 	if n := len(told()); n != zugang.ProTag {
 		t.Errorf("told %d times, want %d", n, zugang.ProTag)
+	}
+}
+
+// Owner 2026-11-12, after spam: the form is shown and taken only at home,
+// as Caddy saw the client (X-Forwarded-For's last entry, which Caddy sets);
+// outside the one sentence instead, a POST refused with it, nothing kept or
+// told, and no header a client sends makes it home.
+func TestZugangNurZuhause(t *testing.T) {
+	cfg, told := teaserCfg(t)
+	pub := KontaktServer(cfg)
+	const draussen = "Zugang fragst du bei uns persönlich an, oder auf dieser Seite, wenn du bei uns zuhause bist."
+	for _, ip := range []string{"192.168.178.20", "10.1.2.3", "172.16.0.9", "fd12:3456::1", "fe80::1", "169.254.1.1", "127.0.0.1", "::ffff:192.168.1.5"} {
+		body := holVon(pub, "https://box.example.org/", ip).Body.String()
+		if !strings.Contains(body, `<form method="post" action="/zugang">`) || strings.Contains(body, draussen) {
+			t.Errorf("at home from %s: no form", ip)
+		}
+	}
+	for _, ip := range []string{"", "203.0.113.7", "2001:db8::1", "100.64.0.1", "unknown", "192.168.1.5, 203.0.113.7"} {
+		rec := holVon(pub, "https://box.example.org/", ip)
+		mustContain(t, rec.Body.String(), "<h1>Die Box</h1>", "Welche Daten wir annehmen", `<p class="draussen">`+draussen+"</p>", "Anmelden")
+		mustNotContain(t, rec.Body.String(), "<form", `name="kontakt"`, "Anfrage schicken", "Ein Mensch aus der Familie", "<template")
+		if rec.Code != 200 {
+			t.Errorf("outside from %q: %d", ip, rec.Code)
+		}
+	}
+	// a POST from outside, with what a client might send to look at home
+	for _, spoof := range []map[string]string{
+		{"X-Forwarded-For": "203.0.113.7"},
+		{"X-Forwarded-For": "192.168.1.5, 203.0.113.7"},
+		{"X-Forwarded-For": "203.0.113.7", "X-Real-IP": "192.168.1.5", "Forwarded": "for=192.168.1.5"},
+	} {
+		req := httptest.NewRequest("POST", "https://box.example.org/zugang", strings.NewReader(anfrage("Spam", "spam@example.org", "Hallo").Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Sec-Fetch-Site", "same-origin")
+		for k, v := range spoof {
+			req.Header.Set(k, v)
+		}
+		rec := httptest.NewRecorder()
+		pub.ServeHTTP(rec, req)
+		if rec.Code != 403 || !strings.Contains(rec.Body.String(), draussen) || strings.Contains(rec.Body.String(), "<form") || strings.Contains(rec.Body.String(), "Danke") {
+			t.Errorf("POST from outside %v: %d\n%s", spoof, rec.Code, rec.Body.String())
+		}
+	}
+	if _, err := os.Stat(cfg.Zugang.Path); err == nil || len(told()) != 0 {
+		t.Fatalf("a request from outside was kept (%v) or told %q", err, told())
+	}
+	// the same request from home is taken
+	if rec := zugangPost(pub, "192.168.178.20", anfrage("Oma", "0711 1", "")); rec.Code != 200 || !strings.Contains(rec.Body.String(), "Danke, deine Anfrage ist angekommen.") {
+		t.Errorf("from home: %d", rec.Code)
+	}
+	if offen, _ := cfg.Zugang.Offen(); len(offen) != 1 || offen[0].Name != "Oma" {
+		t.Errorf("kept %+v", offen)
 	}
 }
