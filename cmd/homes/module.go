@@ -339,7 +339,8 @@ func startLeaf(ctx context.Context, s site) {
 // on, the Homes app (done once paired), Jellyfin's devices where Homes has
 // its key, the ticks in HOMES_DATA, and the app's shortcuts this box has.
 func einrichtung(s site, gekoppelt func(string) bool, jf *jellyfin.Client) *einrichten.Quellen {
-	q := &einrichten.Quellen{Module: s.napi.Module, Haken: einrichten.Open(s.dataDir), Gekoppelt: gekoppelt, Adresse: s.publicURL, Ziele: map[string]string{}}
+	q := &einrichten.Quellen{Module: s.napi.Module, Haken: einrichten.Open(s.dataDir), Gekoppelt: gekoppelt, Adresse: s.publicURL, Ziele: map[string]string{},
+		Admins: einrichten.OpenAdmins(s.dataDir)}
 	if s.publicURL != "" {
 		q.HomesApp = &modul.Einrichtung{Web: s.publicURL, App: "Homes", Paket: app.Paket, Store: app.Quelle + "/releases/latest/download/app-release.apk",
 			Anleitung: app.Quelle + "#readme", Schritte: []string{"schritt.homes", "schritt.homes-iphone"}}

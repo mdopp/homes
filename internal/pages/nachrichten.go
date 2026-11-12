@@ -7,23 +7,21 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mdopp/homes/internal/cards"
 	"github.com/mdopp/homes/internal/texte"
 
 	"github.com/mdopp/homes/internal/einrichten"
 	"github.com/mdopp/homes/internal/napi"
 )
 
-// DatenPath is the page „Daten sichern“ (haus#207, laib ADR 0029; owner
-// 2026-11-03: more than messages go into the archive now).
+// DatenPath is the page „Daten sichern“'s address (haus#207): one with
+// Meine Daten since homes#362 (owner 2026-11-12), it leads there, as its
+// old address NachrichtenPath does, so a bookmark or an older app lands.
 const DatenPath = "/daten-sichern"
 
-// NachrichtenPath is the page's old address, „Nachrichten sichern“: it
-// leads to DatenPath, so a bookmark or an older app still lands.
+// NachrichtenPath is the page's oldest address, „Nachrichten sichern“.
 const NachrichtenPath = "/nachrichten-sichern"
 
-// What the page says that the catalog does not (texte: daten.*); Meine
-// Daten says it too.
+// What Meine Daten says when Homes' ledger cannot be read.
 const saysStandFehlt = "Der Stand lässt sich gerade nicht lesen. Später noch einmal versuchen."
 
 // quelleName is how the page names a quelle.
@@ -32,40 +30,26 @@ var quelleName = map[string]string{"whatsapp": "WhatsApp", "signal": "Signal", "
 const nachrichtenStyle = `<style>.quelle{display:flex;gap:10px;align-items:flex-start}.quelle .punkt{margin-top:.55em}.schluessel .k{display:block;margin-top:6px}.schluessel .knopf{display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:600;text-decoration:none}.schwelle{display:block;font-size:.75rem;color:var(--faint)}.punkt.rot{background:var(--danger)}.punkt.lauf{background:var(--accent)}
 .wechsel{margin:22px 0 0}.wechsel summary{font-weight:700}.wechsel ol{margin:8px 0 0;padding:10px 14px 10px 34px;background:var(--card);border-radius:14px}.wechsel ol li{margin:6px 0}</style>`
 
-// Nachrichten is the page „Daten sichern“: the way to Meine Daten, where
-// each source says what arrived (homes#342), the way into the archive for
-// the keys, what never goes, and the phone change, folded. Its old address
-// (NachrichtenPath) leads here.
-func Nachrichten(cfg StartConfig) http.HandlerFunc {
+// Nachrichten leads Daten sichern's addresses to Meine Daten.
+func Nachrichten(StartConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == NachrichtenPath {
-			http.Redirect(w, r, DatenPath, http.StatusMovedPermanently)
-			return
-		}
-		if !showOnly(w, r, "Daten sichern") {
-			return
-		}
-		if cfg.Sicherung == nil {
-			modulAus(w, r, cfg, "sicherung", DatenPath)
-			return
-		}
-		person := r.Header.Get("Remote-User")
-		if person == "" {
-			http.Error(w, "kein Remote-User: diese Seite gehört hinter Authelia", http.StatusForbidden)
-			return
-		}
-		w.Header().Set("Cache-Control", "no-store")
-		b := familyHead(r, cfg, "Daten sichern", "Daten sichern")
-		stand := cards.Card{Title: "Dein Stand"} // each source on Meine Daten, not twice (homes#342)
-		stand.AddLink(texte.T(texte.MeineDatenTitel), texte.T(texte.MeineDatenMehr), MeineDatenPath)
-		b.WriteString(nachrichtenStyle + "<h1>Daten sichern</h1>" + stand.HTML())
-		if a, ok := cfg.Einrichtung.Eine(person, einrichten.Homes); ok && a.Erledigt == nil { // no app yet: the way to it
-			b.WriteString(`<p><a href="` + einrichtenHref(einrichten.Homes) + `">` + html.EscapeString(a.Titel) + `</a></p>`)
-		}
-		b.WriteString(datenSchluessel(r, cfg, person) + "<details class=wechsel><summary>" + texte.T(texte.DatenNieTitel) + "</summary><p>" +
-			html.EscapeString(texte.T(texte.DatenNie)) + "</p></details>" + nachrichtenZurueck(cfg, person))
-		writePage(w, http.StatusOK, b)
+		http.Redirect(w, r, MeineDatenPath, http.StatusMovedPermanently)
 	}
+}
+
+// sichernTeil is what Daten sichern had beyond the sources (homes#362):
+// the way to the Homes app while there is none, the way to the keys,
+// what never goes, and the phone change, folded; "" without the backups.
+func sichernTeil(r *http.Request, cfg StartConfig, person string) string {
+	if cfg.Sicherung == nil {
+		return ""
+	}
+	out := ""
+	if a, ok := cfg.Einrichtung.Eine(person, einrichten.Homes); ok && a.Erledigt == nil { // no app yet: the way to it
+		out = `<p><a href="` + einrichtenHref(einrichten.Homes) + `">` + html.EscapeString(a.Titel) + `</a></p>`
+	}
+	return out + datenSchluessel(r, cfg, person) + "<details class=wechsel><summary>" + texte.T(texte.DatenNieTitel) + "</summary><p>" +
+		html.EscapeString(texte.T(texte.DatenNie)) + "</p></details>" + nachrichtenZurueck(cfg, person)
 }
 
 // datenSchluessel is the way to the keys: the archive's /tresor at home, why

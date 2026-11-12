@@ -121,6 +121,68 @@ type Quellen struct {
 	// Immich is how many of the Immich key owner's questions are open
 	// („Dieselbe Person?“, „Ist das …?“) for person: 0 for anyone else; nil none
 	Immich func(person string) int
+	// Liste is „Deine Aufgaben“ but the modules' setups (homes#362); nil: Fragen alone
+	Liste  func(ctx context.Context, person string) []Zeile
+	Admins *Admins // who Homes saw among Authelia's admins; nil: none
+}
+
+// Zeile is a row of „Deine Aufgaben“ that is no module's setup; Link is
+// the whole address, Vorn one before the modules' setups (the page's order).
+type Zeile struct {
+	Name, Titel, Warum, Icon, Link string
+	Vorn                           bool
+}
+
+// Admins remembers who Authelia said is an admin (HOMES_DATA/admins.json),
+// so the app, which has no Remote-Groups, shows an admin's rows too.
+type Admins struct {
+	path string
+	mu   sync.Mutex
+	set  map[string]bool
+}
+
+// OpenAdmins reads dir's file, if there is one; nil without a dir.
+func OpenAdmins(dir string) *Admins {
+	if dir == "" {
+		return nil
+	}
+	a := &Admins{path: filepath.Join(dir, "admins.json"), set: map[string]bool{}}
+	if b, err := os.ReadFile(a.path); err == nil {
+		json.Unmarshal(b, &a.set)
+	}
+	return a
+}
+
+// SahAdmin: person was seen on a page, an admin or not; a change is written.
+func (q *Quellen) SahAdmin(person string, admin bool) {
+	if a := q.admins(); a != nil && person != "" {
+		a.mu.Lock()
+		defer a.mu.Unlock()
+		if a.set[person] != admin {
+			a.set[person] = admin
+			if err := jsonfile.Save(a.path, a.set); err != nil {
+				log.Printf("homes: admins: %v", err)
+			}
+		}
+	}
+}
+
+// IstAdmin: person was an admin when last seen.
+func (q *Quellen) IstAdmin(person string) bool {
+	a := q.admins()
+	if a == nil {
+		return false
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.set[person]
+}
+
+func (q *Quellen) admins() *Admins {
+	if q == nil {
+		return nil
+	}
+	return q.Admins
 }
 
 // ImmichPruefen is the key of the task of the open questions in Immich; it
@@ -274,14 +336,27 @@ type NapiAufgabe struct {
 	Erledigt   bool   `json:"erledigt"`
 	Am         string `json:"am,omitempty"`
 	Wie        string `json:"wie,omitempty"`
-	Einrichten string `json:"einrichten"` // the setup's page, the whole address
+	Einrichten string `json:"einrichten"`      // the setup's page, the whole address
+	Warum      string `json:"warum,omitempty"` // one line why (homes#362)
 }
 
-// Napi is the person's Antwort.
-func (q *Quellen) Napi(person string) Antwort {
+// Napi is the person's Antwort: Deine Aufgaben's first rows, the modules,
+// its other rows (the app lists the open ones in this order, homes#362).
+func (q *Quellen) Napi(ctx context.Context, person string) Antwort {
 	out := Antwort{Version: 1, Module: []NapiModul{}, Ziele: map[string]string{}}
 	maps.Copy(out.Ziele, q.Ziele)
 	tasks := q.Fuer(person)
+	zeilen := q.zeilen(ctx, person)
+	zeile := func(vorn bool) {
+		for _, z := range zeilen { // a row is no module: an entry of its own, only while open
+			if z.Vorn == vorn {
+				out.Module = append(out.Module, NapiModul{Name: z.Name, Titel: z.Titel, Icon: z.Icon, Web: z.Link, NurWeb: true,
+					Aufgabe: &NapiAufgabe{Titel: z.Titel, Einrichten: z.Link, Warum: z.Warum}})
+				out.Offen++
+			}
+		}
+	}
+	zeile(true)
 	for _, m := range q.Module.Module() {
 		e := cmp.Or(m.Einrichtung, &modul.Einrichtung{})
 		n := NapiModul{Name: m.Name, Titel: m.Titel, Icon: cmp.Or(m.Icon, m.Name), Oeffnen: m.Oeffnen, Web: e.Web, NurWeb: e.App == ""}
@@ -308,11 +383,17 @@ func (q *Quellen) Napi(person string) Antwort {
 		}
 		out.Module = append(out.Module, n)
 	}
-	for _, a := range q.Fragen(person) { // a question is no module: an entry of its own, after them, only while open
-		web := q.Adresse + a.Pfad
-		out.Module = append(out.Module, NapiModul{Name: a.Modul, Titel: a.Titel, Icon: "fotos", Web: web, NurWeb: true,
-			Aufgabe: &NapiAufgabe{Titel: a.Titel, Einrichten: web}})
-		out.Offen++
+	zeile(false)
+	return out
+}
+
+// zeilen are Liste's rows, or without it the questions.
+func (q *Quellen) zeilen(ctx context.Context, person string) (out []Zeile) {
+	if q.Liste != nil {
+		return q.Liste(ctx, person)
+	}
+	for _, a := range q.Fragen(person) {
+		out = append(out, Zeile{Name: a.Modul, Titel: a.Titel, Warum: a.Warum, Icon: "fotos", Link: q.Adresse + a.Pfad, Vorn: true})
 	}
 	return out
 }

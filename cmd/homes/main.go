@@ -239,6 +239,9 @@ var adressLogin = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,62}$`)
 func familyMux(s site) *http.ServeMux {
 	pagesMux := http.NewServeMux()
 	family := familyOf(s)
+	if s.napi.Einrichtung != nil { // the app's Deine Aufgaben, the page's rows (homes#362)
+		s.napi.Einrichtung.Liste = pages.AppListe(family)
+	}
 	start := pages.Start(family) // one: the page and its Braucht dich share laib's status (haus#67)
 	pagesMux.HandleFunc("/start", start)
 	live := &pages.Live{HA: family.HA} // the pages' push: Home Assistant's changes and Homes' own

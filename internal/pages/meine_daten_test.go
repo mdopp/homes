@@ -102,9 +102,9 @@ func TestMeineDatenSaysEachSourceInItsState(t *testing.T) {
 	_, ben, _ := familyPageAs(t, MeineDaten, cfg, "GET", MeineDatenPath, "ben", "family")
 	mustContain(t, ben, `<div>E-Mail<span class=k>`+texte.T(texte.KontaktKeinArchiv), `<div>Scanner<span class=k>zuletzt heute 09:00 · 1 Dokument`,
 		`<div>WhatsApp<span class=k>in der Homes-App einschalten`, "ben+doc@box.test")
-	mustNotContain(t, ben, "3,2 GB", "11:40", "Passphrase", "Papierstau", "läuft gerade", "Oma")
+	mustNotContain(t, ben, "3,2 GB", "11:40", "Passphrase passt", "Papierstau", "läuft gerade", "Oma")
 	_, admin, _ := familyPageAs(t, MeineDaten, cfg, "GET", MeineDatenPath, "ben", "family,admins") // an admin: their own only too
-	mustNotContain(t, admin, "3,2 GB", "11:40", "Passphrase", "Papierstau", "läuft gerade", "Oma", "anna+doc")
+	mustNotContain(t, admin, "3,2 GB", "11:40", "Passphrase passt", "Papierstau", "läuft gerade", "Oma", "anna+doc")
 	if code, _, _ := familyPageAs(t, MeineDaten, cfg, "GET", MeineDatenPath, "", ""); code != 403 {
 		t.Errorf("without a person → %d", code)
 	}
@@ -161,16 +161,17 @@ func TestMeineDatenQuietByItsThreshold(t *testing.T) {
 }
 
 // Mehr leads to Meine Daten in one entry and says no source's state of its
-// own (homes#342: nothing twice in two words); Daten sichern leads there.
+// own (homes#342: nothing twice in two words); Daten sichern's address
+// leads there, and is no entry of its own (homes#362).
 func TestMehrLeadsToMeineDaten(t *testing.T) {
 	cfg := meineDatenCfg(t, "", "")
 	cfg.Module = modulListe(t, "sicherung", "standort")
 	_, mehr, _ := familyPage(t, Mehr, cfg, "GET", mehrPath, "family")
-	mustContain(t, mehr, `<a href="/meine-daten">Meine Daten</a> <span class=k>Was von dir auf die Box kommt, und wann zuletzt</span>`,
-		`<a href="/daten-sichern">Daten sichern</a> <span class=k>Nachrichten, Kontakte, Mails und Termine in dein Archiv</span>`)
-	mustNotContain(t, mehr, "Zuletzt angekommen", "Noch nicht verbunden", "Noch nichts angekommen")
-	_, daten, _ := familyPage(t, Nachrichten, cfg, "GET", DatenPath, "family")
-	mustContain(t, daten, `<a href="/meine-daten">Meine Daten</a>`)
+	mustContain(t, mehr, `<a href="/meine-daten">Meine Daten</a> <span class=k>Was von dir auf die Box kommt, und wann zuletzt</span>`)
+	mustNotContain(t, mehr, "Zuletzt angekommen", "Noch nicht verbunden", "Noch nichts angekommen", "Daten sichern")
+	if code, _, hdr := familyPage(t, Nachrichten, cfg, "GET", DatenPath, "family"); code != 301 || hdr.Get("Location") != MeineDatenPath {
+		t.Errorf("Daten sichern → %d %q", code, hdr.Get("Location"))
+	}
 	if _, anon, _ := familyPageAs(t, Mehr, cfg, "GET", mehrPath, "", ""); strings.Contains(anon, MeineDatenPath) {
 		t.Error("Meine Daten is a person's: not without one")
 	}

@@ -197,8 +197,8 @@ func TestScannenPassesTheOrderOn(t *testing.T) {
 	}
 	rec = httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest("GET", "/scannen", nil))
-	if rec.Code != http.StatusMethodNotAllowed {
-		t.Errorf("GET → %d", rec.Code)
+	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/dokumente#scannen" { // a link to Scannen: its buttons (homes#362)
+		t.Errorf("GET → %d %q", rec.Code, rec.Header().Get("Location"))
 	}
 
 	// Laib refuses: the page says it did not work, in the family's words

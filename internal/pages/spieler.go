@@ -1,9 +1,7 @@
 package pages
 
 import (
-	"context"
 	"math"
-	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
@@ -13,15 +11,8 @@ import (
 	"github.com/mdopp/homes/internal/ha"
 )
 
-// medienPath is Medien's own path, where its buttons land back.
-const medienPath = "/medien"
-
-// What Medien says when there is nothing to show.
-const (
-	saysNoPlayers    = "Lautsprecher und Fernseher antworten gerade nicht."
-	saysNoPlayersYet = "Im Haus ist noch kein Lautsprecher oder Fernseher eingerichtet."
-	saysNothingPlays = "Gerade läuft nichts."
-)
+// saysNoPlayers is what Was wird genutzt says when the players do not answer.
+const saysNoPlayers = "Lautsprecher und Fernseher antworten gerade nicht."
 
 // HA's media player features (MediaPlayerEntityFeature) a button needs.
 const (
@@ -30,88 +21,8 @@ const (
 	volumeStepFeature = 1024
 )
 
-// Medien answers "what plays where?" (haus#12): Läuft gerade, each
-// playing or paused player with its room and what it plays, and the
-// buttons it can take — Pause or Weiter, Leiser and Lauter — through
-// /schalten, back to Medien; Gerade still, the other players and their
-// state. A group is not a player, what HA hides is not shown. No players
-// is one plain line; HA not answering is one plain line. A path under
-// /medien/ is a 404 with the way back.
-func Medien(cfg StartConfig) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if !showOnly(w, r, "Medien") {
-			return
-		}
-		if cfg.HA == nil {
-			notSetHA.write(w, r, cfg, "Medien")
-			return
-		}
-		if r.URL.Path != medienPath {
-			missing{http.StatusNotFound, "Diese Seite gibt es nicht.", "Medien", medienPath, "Medien"}.write(w, r, cfg)
-			return
-		}
-		var (
-			states []ha.State
-			haErr  error
-			reg    ha.Registry
-		)
-		fetch(r,
-			func(ctx context.Context) { states, haErr = cfg.HA.States(ctx) },
-			// what HA hides stays hidden; until the registry has been read, nothing is, and no room is named
-			func(ctx context.Context) { reg, _ = cfg.HA.CachedRegistry(ctx) })
-		logErrs("medien", map[string]error{"home assistant": haErr})
-		b := familyHead(r, cfg, "Medien", "Medien")
-		b.WriteString(liveRefresh("seite", 120)) // what plays changes by itself: by push
-		b.WriteString("<h1>Medien</h1>")
-		if haErr != nil {
-			b.WriteString("<p class=k>" + saysNoPlayers + "</p>")
-			writePage(w, http.StatusOK, b)
-			return
-		}
-		var on, quiet []ha.State
-		twins := twinPlayers(states, reg, true)
-		for _, s := range states {
-			if !strings.HasPrefix(s.EntityID, "media_player.") || !shown(s, reg.Hidden) || twins[s.EntityID] {
-				continue
-			}
-			if s.State == "playing" || s.State == "paused" {
-				on = append(on, s)
-			} else {
-				quiet = append(quiet, s)
-			}
-		}
-		if len(on)+len(quiet) == 0 {
-			b.WriteString("<p class=k>" + saysNoPlayersYet + "</p>")
-			writePage(w, http.StatusOK, b)
-			return
-		}
-		byName := func(xs []ha.State) {
-			sort.SliceStable(xs, func(i, j int) bool {
-				if (xs[i].State == "playing") != (xs[j].State == "playing") {
-					return xs[i].State == "playing"
-				}
-				return strings.ToLower(friendly(xs[i])) < strings.ToLower(friendly(xs[j]))
-			})
-		}
-		byName(on)
-		byName(quiet)
-		laeuft := playingCard(on, reg, medienPath)
-		if len(on) == 0 {
-			laeuft.Add(saysNothingPlays, "")
-		}
-		b.WriteString(laeuft.HTML())
-		still := cards.Card{Title: "Gerade still"}
-		for i, s := range quiet {
-			if i == maxRoomRows {
-				break
-			}
-			still.AddLink(friendly(s), roomDetail("media_player", s, ""), cards.ThingPage(s.EntityID))
-		}
-		more(&still, len(quiet)-maxRoomRows)
-		b.WriteString(still.HTML())
-		writePage(w, http.StatusOK, b)
-	}
-}
+// The players' words and buttons, on Start's and Räume's „Läuft gerade“
+// (the page Medien went with homes#362: nothing led to it).
 
 // twinPlayers is the media players to leave out, so a thing is one tile
 // (haus#83): of twins (one Chromecast through Cast and through Music
@@ -119,8 +30,8 @@ func Medien(cfg StartConfig) http.HandlerFunc {
 // plays, then the paused one, then the device's own integration over
 // Music Assistant's mirror, which can only steer what Music Assistant
 // plays itself. A Jellyfin session is someone's app, not a thing in the
-// house: left out, unless clients and it plays or is paused.
-func twinPlayers(states []ha.State, reg ha.Registry, clients bool) map[string]bool {
+// house: always left out.
+func twinPlayers(states []ha.State, reg ha.Registry) map[string]bool {
 	rank := func(s ha.State) int {
 		r := 0
 		switch s.State {
@@ -140,7 +51,7 @@ func twinPlayers(states []ha.State, reg ha.Registry, clients bool) map[string]bo
 		if !strings.HasPrefix(s.EntityID, "media_player.") {
 			continue
 		}
-		if reg.Platforms[s.EntityID] == "jellyfin" && !(clients && (s.State == "playing" || s.State == "paused")) {
+		if reg.Platforms[s.EntityID] == "jellyfin" {
 			out[s.EntityID] = true
 			continue
 		}
@@ -233,7 +144,7 @@ func playingCard(on []ha.State, reg ha.Registry, back string) cards.Card {
 // laeuftGerade is Läuft gerade for Geräte: the players that play or are
 // paused, one per thing, playing first; no rows when none does.
 func laeuftGerade(states []ha.State, reg ha.Registry, back string, pinned map[string]bool) cards.Card {
-	twins := twinPlayers(states, reg, false) // a Jellyfin session is someone's app, not a thing in the house
+	twins := twinPlayers(states, reg) // a Jellyfin session is someone's app, not a thing in the house
 	var on []ha.State
 	for _, s := range states {
 		if strings.HasPrefix(s.EntityID, "media_player.") && shown(s, reg.Hidden) && !twins[s.EntityID] && (s.State == "playing" || s.State == "paused") {

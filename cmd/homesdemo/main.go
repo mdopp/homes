@@ -174,13 +174,11 @@ func main() {
 	mux.HandleFunc("/raeume", pages.Raeume(cfg))
 	mux.HandleFunc(cards.ThingPages, pages.Ding(cfg))
 	mux.HandleFunc(cards.SwitchPath, pages.Schalten(cfg))
-	mux.HandleFunc("/medien", pages.Medien(cfg))
 	mux.HandleFunc("/energie", pages.Energie(cfg))
 	mux.HandleFunc("/kalender", pages.Kalender(cfg))
 	mux.HandleFunc("/kalender/verwalten", pages.KalenderVerwalten(cfg))
 	mux.HandleFunc(pages.PlattePath, pages.Platte(cfg))
 	mux.HandleFunc(pages.AktivierungswortPath, pages.Aktivierungswort(cfg))
-	mux.HandleFunc("/aufgaben", pages.DeineAufgaben(cfg))
 	// haus#176: the phone layout gate covers these too
 	upload := filepath.Join(dir, "upload")
 	os.MkdirAll(upload, 0o755)
@@ -258,10 +256,19 @@ func main() {
 	demoLaib.wishes.Status("beets", laibfake.DemoBeets(inbox, time.Now(), false))
 	seiten := mehr // Daten sichern, Netzlaufwerk, Box, Adresse (the Mehr audit)
 	seiten.Reitti = standort.Reitti
-	// Meine Daten (homes#342): Anna's archive fetched her mail an hour ago; her own address for documents
+	// Meine Daten (homes#342): Anna's archive fetched her mail just before each look at the page, so it
+	// says „heute“ at any hour (at 00:30 „an hour ago“ was „gestern“); two questions wait in it (homes#362)
 	seiten.Archive, seiten.ArchivURL, seiten.DocumentsMail = map[string]bool{"anna": true}, "https://archiv.example", "dokumente@example.org"
-	demoLaib.wishes.Status("archiv-anna", `{"letztes_paket":{"mail":{"am":"`+time.Now().Add(-time.Hour).UTC().Format(time.RFC3339)+`"}}}`)
-	mehrSeiten(mux, seiten, dav, dir, store)
+	archivJetzt := func() {
+		demoLaib.wishes.Status("archiv-anna", `{"fragen_offen":2,"letztes_paket":{"mail":{"am":"`+time.Now().UTC().Format(time.RFC3339)+`"}}}`)
+	}
+	archivJetzt()
+	mehrSeiten(mux, seiten, dav, dir, store, archivJetzt)
+	// Deine Aufgaben as Anna, the owner and an admin, sees it (homes#362): the decision waiting, a key
+	// the box waits for, the archive's questions, the household's task; ?nur=box the Box-Aufgaben
+	aufgaben := start
+	aufgaben.Archive, aufgaben.ArchivURL, aufgaben.PublicURL = seiten.Archive, seiten.ArchivURL, "https://homes.example"
+	mux.HandleFunc("/aufgaben", pages.DeineAufgaben(aufgaben))
 	mux.HandleFunc("/demo/wunsch", func(w http.ResponseWriter, r *http.Request) { // a wish moved on in Laib: wartet, abgelehnt, …
 		demoLaib.wishes.Setze(r.URL.Query().Get("modul"), r.URL.Query().Get("stand"), "")
 		mehr.Laib.ForgetWuensche()
@@ -498,7 +505,10 @@ func (f *laibFake) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	text, isErr := "unknown tool "+req.Params.Name, true
 	if req.Params.Name == "laib_aufgabe" {
-		text, isErr = `{"offen":1,"faellig":0,"aufgaben":[{"id":8,"titel":"Homes-App koppeln","warum":"Dann hast du das Haus auf dem Handy.","fuer":"alle","weg":{"seite":"/willkommen"}}]}`, false
+		text, isErr = `{"offen":2,"faellig":0,"aufgaben":[{"id":8,"titel":"Homes-App koppeln","warum":"Dann hast du das Haus auf dem Handy.","fuer":"alle","weg":{"seite":"/willkommen"}},`+
+			`{"id":2,"titel":"Wächter von außen einrichten","warum":"Wie es geht: https://laib.example/hilfe/waechter","fuer":"admins","seit":"2026-11-01","von":"claude"}],`+
+			`"schluessel":[{"name":"DOKUMENTE_MAIL_PASSWORD_ANNA","dienst":"archiv-anna","label":"Dokumenten-Mails: Passwort des Postfachs",`+
+			`"warum":"Damit dein Archiv die Mails an anna+doc abholt.","link":"https://laib.example/schluessel?name=DOKUMENTE_MAIL_PASSWORD_ANNA"}]}`, false
 	}
 	json.NewEncoder(w).Encode(map[string]any{"result": map[string]any{"content": []map[string]string{{"text": text}}, "isError": isErr}})
 }

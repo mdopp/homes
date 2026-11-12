@@ -27,8 +27,6 @@ func Gruppen(cfg StartConfig) map[string][]modul.Route {
 		gs.add("geraete", AktivierungswortPath, Aktivierungswort(cfg))
 	}
 	gs.add("geraete", "/raeume", Raeume(cfg))
-	gs.add("geraete", "/medien", Medien(cfg))
-	gs.add("geraete", "/medien/", Medien(cfg))         // a path it does not serve: 404 and the way back
 	gs.add("geraete", cards.ThingPages, Ding(cfg))     // each thing's own page, which the widgets name (haus#28)
 	gs.add("geraete", cards.SwitchPath, Schalten(cfg)) // a page's switch, the widgets' rule (haus#35)
 	if !cfg.OhneEnergie {

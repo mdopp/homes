@@ -37,5 +37,5 @@ func (c Config) einrichtung(w http.ResponseWriter, r *http.Request) {
 			log.Printf("homes: einrichtung: %d of %s's tasks done, their apps are on the phone", n, uid)
 		}
 	}
-	writeJSON(w, c.Einrichtung.Napi(uid))
+	writeJSON(w, c.Einrichtung.Napi(r.Context(), uid))
 }

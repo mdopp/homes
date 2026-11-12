@@ -88,7 +88,7 @@ func mehrOf(t *testing.T, body string) string {
 // haus#12, haus#35, haus#67, owner 2026-10-24: one selection on every
 // family page, the item pages too. The bar is Start · Geräte · Haushalt ·
 // Energie · Mehr, each with its icon and only when its backend is set;
-// every page is in exactly one: Räume, things and Medien are Geräte;
+// every page is in exactly one: Räume and things are Geräte;
 // Kalender, Einkauf and Notizen Haushalt, with their pills on top; Mehr
 // holds Dokumente (owner 2026-10-27: Dokumente unter Mehr), the settings
 // and, for admins, Box, then who is signed in and Abmelden.
@@ -104,7 +104,7 @@ func TestFamilyTabBar(t *testing.T) {
 		bar  string
 		pill string // the Haushalt pill marked; "": no pills
 	}{{Start, "/start", "/start", ""}, {Raeume, "/raeume", "/raeume", ""}, {Kalender, "/kalender", "/kalender", "/kalender"},
-		{Energie, "/energie", "/energie", ""}, {Medien, "/medien", "/raeume", ""}, {Notizen, "/notizen", "/kalender", "/notizen"},
+		{Energie, "/energie", "/energie", ""}, {Notizen, "/notizen", "/kalender", "/notizen"},
 		{Mehr, "/mehr", "/mehr", ""}, {Ding, "/raeume/light.flur", "/raeume", ""}, {Ding, "/raeume/light.gibtsnicht", "/raeume", ""},
 		{Notizen, "/notizen/einkaufsliste.md", "/kalender", "/notizen"}} {
 		code, body, _ := familyPage(t, p.page, all, "GET", p.path, "family")
@@ -214,7 +214,7 @@ func TestFamilyPagesWithoutBackendSayWhatIsMissing(t *testing.T) {
 	for _, p := range []struct {
 		page       func(StartConfig) http.HandlerFunc
 		path, says string
-	}{{Raeume, "/raeume", "Licht und Geräte"}, {Energie, "/energie", "Licht und Geräte"}, {Medien, "/medien", "Licht und Geräte"},
+	}{{Raeume, "/raeume", "Licht und Geräte"}, {Energie, "/energie", "Licht und Geräte"},
 		{Kalender, "/kalender", "Der Kalender ist hier noch nicht eingerichtet."}, {Notizen, "/notizen", "Die Notizen"}, {Notizen, "/notizen/einkaufsliste.md", "Die Notizen"},
 		{Ding, "/raeume/light.flur", "Licht und Geräte"}, {Erinnerung, "/kalender/erinnerung/a", "Der Kalender"}, {Kontakt, "/kontakte/a", "Die Kontakte"},
 		{Dokument, "/dokumente/2", "Die Dokumente"}} {
@@ -240,7 +240,7 @@ func TestFamilyPagesDecideNothing(t *testing.T) {
 	for _, p := range []struct {
 		page func(StartConfig) http.HandlerFunc
 		path string
-	}{{Raeume, "/raeume"}, {Energie, "/energie"}, {Medien, "/medien"}, {Kalender, "/kalender"}, {Notizen, "/notizen"}, {Notizen, "/notizen/einkaufsliste.md"}} {
+	}{{Raeume, "/raeume"}, {Energie, "/energie"}, {Kalender, "/kalender"}, {Notizen, "/notizen"}, {Notizen, "/notizen/einkaufsliste.md"}} {
 		for _, m := range []string{"POST", "PUT", "DELETE"} {
 			if m == "POST" && strings.HasPrefix(p.path, "/notizen") {
 				continue // a note is written, not a verdict (owner, 2026-10-24): TestNotizenWrite

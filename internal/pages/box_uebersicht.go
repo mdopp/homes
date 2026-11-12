@@ -65,7 +65,7 @@ func achtung(ctx context.Context, r *http.Request, cfg BoxConfig) string {
 		add("gelb", fmt.Sprintf(texte.T("box.drift"), ready.Drift))
 	}
 	if ready.AufgabenFaellig > 0 { // the Box-Aufgaben's badge (haus#115)
-		add("gelb", "<a href="+AufgabenPath+">"+texte.Anzahl(ready.AufgabenFaellig, texte.T("box.faellig"), texte.T("box.faellig.n"))+"</a>")
+		add("gelb", "<a href=\""+boxAufgabenPfad+"\">"+texte.Anzahl(ready.AufgabenFaellig, texte.T("box.faellig"), texte.T("box.faellig.n"))+"</a>")
 	}
 	if ierr != nil {
 		add("gelb", texte.T("box.inbox-stumm"))

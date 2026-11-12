@@ -13,62 +13,30 @@ import (
 	"github.com/mdopp/homes/internal/napi"
 )
 
-// haus#207, owner 2026-11-03: „Daten sichern“ shows the person's state
-// from Homes' ledger and the inbox. Owner 2026-11-08: the page is the one
-// overview — a line per source, a phone source with nothing yet says where
-// to switch it on, E-Mail its way, the keys one button into the archive,
-// what never goes and the phone change folded; no intro, no guide.
-func TestDatenSichernShowsTheStandAndTheGuide(t *testing.T) {
+// haus#207, homes#362 (owner 2026-11-12: one entry in Mehr): what „Daten
+// sichern“ said is on Meine Daten, below the sources — the keys one button
+// into the archive, what never goes and the phone change folded; its
+// addresses lead there, Mehr has Meine Daten only.
+func TestDatenSichernIsOnMeineDaten(t *testing.T) {
 	inbox, data := t.TempDir(), t.TempDir()
 	os.MkdirAll(filepath.Join(data, "sicherung", "anna"), 0o700)
-	os.WriteFile(filepath.Join(data, "sicherung", "anna", "whatsapp.jsonl"), []byte(
-		`{"pfad":"Databases/msgstore.db.crypt15","groesse":3435973837,"zeit":"2026-10-31T02:10:00Z"}`+"\n"+
-			`{"pfad":"Media/WhatsApp Images/IMG-1.jpg","groesse":1000,"zeit":"2026-10-31T02:11:00Z"}`+"\n"), 0o600)
 	os.WriteFile(filepath.Join(data, "sicherung", "anna", "signal.jsonl"), []byte(`{"pfad":"s.backup","groesse":2048,"zeit":"2026-11-04T02:00:00Z"}`+"\n"), 0o600)
-	os.MkdirAll(filepath.Join(inbox, "anna", "whatsapp", "Databases"), 0o755)
-	os.WriteFile(filepath.Join(inbox, "anna", "whatsapp", "Databases", "msgstore.db.crypt15"), []byte("x"), 0o644)
-	os.MkdirAll(filepath.Join(inbox, "anna", ".teil"), 0o755)
-	os.WriteFile(filepath.Join(inbox, "anna", ".teil", "halb"), []byte("x"), 0o644) // a part does not wait
 	now := time.Date(2026, 11, 4, 12, 0, 0, 0, time.UTC)
 	cfg := StartConfig{Sicherung: napi.NewSicherung(inbox, data), Module: modulListe(t, "sicherung"), Loc: berlin(t), Now: func() time.Time { return now }}
-
-	code, body, hdr := familyPage(t, Nachrichten, cfg, "GET", DatenPath, "family")
-	if code != 200 || hdr.Get("Cache-Control") != "no-store" {
-		t.Fatalf("%d %q", code, hdr.Get("Cache-Control"))
-	}
-	for _, want := range []string{"<h1>Daten sichern</h1>", "Dein Stand", `<a href="/meine-daten">Meine Daten</a>`, "Bitwarden",
-		"<summary>Was nie ins Archiv kommt</summary>", "<details class=wechsel><summary>Handy wechseln</summary>"} {
-		if !strings.Contains(body, want) {
-			t.Errorf("the page lacks %q", want)
+	for _, old := range []string{DatenPath, NachrichtenPath} {
+		if code, _, hdr := familyPage(t, Nachrichten, cfg, "GET", old, "family"); code != 301 || hdr.Get("Location") != MeineDatenPath {
+			t.Errorf("%s → %d %q", old, code, hdr.Get("Location"))
 		}
 	}
-	// homes#342: where each source stands is Meine Daten's alone, not said twice
-	for _, gone := range []string{"Discord", "Nachrichten sichern", "Chat-Backups", "64-stelligen Schlüssel verwenden", "„Kontakte übertragen“", "je nach App-Version", "<h2>Signal</h2>",
-		"class=lead", "Das Sichern macht die Homes-App", "Ohne Handy", "/tresor", "3,2 GB", "zuletzt heute", "li class=quelle"} { // no archive for anna here: no link into it
-		if strings.Contains(body, gone) {
-			t.Errorf("the page still says %q", gone)
-		}
-	}
-	mustContain(t, body, texte.T(texte.KontaktKeinArchiv))
-	before(t, body, "Dein Stand", "Bitwarden")
+	_, body, _ := familyPage(t, MeineDaten, cfg, "GET", MeineDatenPath, "family")
+	mustContain(t, body, "<h1>Meine Daten</h1>", "Bitwarden", "<summary>Was nie ins Archiv kommt</summary>", "<details class=wechsel><summary>Handy wechseln</summary>",
+		texte.T(texte.KontaktKeinArchiv)) // no archive for anna here: no link into it
+	mustNotContain(t, body, "/tresor")
+	before(t, body, "li class=quelle", "Bitwarden")
 	before(t, body, "Was nie ins Archiv kommt", "Handy wechseln")
-	if strings.Contains(body, "<form") || strings.Contains(body, "<button") {
-		t.Error("nothing on the page changes anything yet: no form, no button")
-	}
-	if code, _, _ := familyPageAs(t, Nachrichten, cfg, "GET", DatenPath, "", ""); code != 403 {
-		t.Errorf("without a person → %d", code)
-	}
-	if code, _, _ := familyPage(t, Nachrichten, cfg, "POST", DatenPath, "family"); code != 405 {
-		t.Errorf("POST → %d", code)
-	}
-	// Mehr lists it for a signed-in person on a box with the inbox
-	if _, mehr, _ := familyPage(t, Mehr, cfg, "GET", mehrPath, "family"); !strings.Contains(mehr, "href="+DatenPath) || !strings.Contains(mehr, "Daten sichern") {
-		t.Error("Mehr does not lead to Daten sichern")
-	}
-	// the old address still lands
-	if code, _, hdr := familyPage(t, Nachrichten, cfg, "GET", NachrichtenPath, "family"); code != 301 || hdr.Get("Location") != DatenPath {
-		t.Errorf("the old address → %d %q", code, hdr.Get("Location"))
-	}
+	_, mehr, _ := familyPage(t, Mehr, cfg, "GET", mehrPath, "family")
+	mustContain(t, mehr, `href="/meine-daten"`)
+	mustNotContain(t, mehr, "href="+DatenPath, `href="`+DatenPath, ">Daten sichern<")
 }
 
 // haus#209: the page shows what lies ready for a new phone (date, size)
@@ -91,7 +59,7 @@ func TestDatenSichernShowsWhatANewPhoneGetsBack(t *testing.T) {
 		lege("whatsapp/Media/"+m+".age", age, nacht)
 	}
 	cfg := StartConfig{Sicherung: napi.NewSicherung(inbox, data)}
-	_, body, _ := familyPage(t, Nachrichten, cfg, "GET", DatenPath, "family")
+	_, body, _ := familyPage(t, MeineDaten, cfg, "GET", MeineDatenPath, "family")
 	for _, want := range []string{"Zum Zurückholen",
 		"Sicherung vom 2. November 2026, 03:00 · 3,0 MB", // Berlin time
 		"Chats vom 2. November 2026, 04:00 · 2,0 MB · 2 Fotos und Sprachnachrichten, 2,0 KB",
@@ -105,8 +73,8 @@ func TestDatenSichernShowsWhatANewPhoneGetsBack(t *testing.T) {
 	if strings.Count(body, "<summary>Handy wechseln</summary>") != 1 || strings.Count(body[strings.Index(body, "Handy wechseln"):], "<li>") < 3 {
 		t.Error("not three steps")
 	}
-	before(t, body, "Dein Stand", "Zum Zurückholen")
-	_, ben, _ := familyPageAs(t, Nachrichten, cfg, "GET", DatenPath, "ben", "family")
+	before(t, body, "<h1>Meine Daten</h1>", "Zum Zurückholen")
+	_, ben, _ := familyPageAs(t, MeineDaten, cfg, "GET", MeineDatenPath, "ben", "family")
 	if strings.Contains(ben, "3,0 MB") || !strings.Contains(ben, "noch keine Sicherung zum Zurückholen") || !strings.Contains(ben, "noch nichts zum Zurückholen") {
 		t.Errorf("Ben's page:\n%s", ben)
 	}
@@ -118,11 +86,11 @@ func TestDatenSichernShowsWhatANewPhoneGetsBack(t *testing.T) {
 func TestDatenSichernLeadsToTheKeys(t *testing.T) {
 	cfg := StartConfig{Sicherung: napi.NewSicherung(t.TempDir(), t.TempDir()), Archive: map[string]bool{"anna": true}, ArchivURL: "https://archiv.box.test"}
 	seite := func(user, von string) string {
-		req := httptest.NewRequest("GET", DatenPath, nil)
+		req := httptest.NewRequest("GET", MeineDatenPath, nil)
 		req.Header.Set("Remote-User", user)
 		req.Header.Set("X-Forwarded-For", von)
 		rec := httptest.NewRecorder()
-		Nachrichten(cfg).ServeHTTP(rec, req)
+		MeineDaten(cfg).ServeHTTP(rec, req)
 		return rec.Body.String()
 	}
 	mustContain(t, seite("anna", "192.168.1.23"), `<a class=knopf href="https://archiv.box.test/tresor">Schlüssel im Archiv eintragen</a>`,
@@ -136,12 +104,9 @@ func TestDatenSichernLeadsToTheKeys(t *testing.T) {
 }
 
 func TestDatenSichernWithoutTheArchiv(t *testing.T) {
-	code, body, _ := familyPage(t, Nachrichten, StartConfig{}, "GET", DatenPath, "family")
-	if code != 200 || !strings.Contains(body, "Gibt es hier noch nicht") || strings.Contains(body, "Dein Stand") {
+	code, body, _ := familyPage(t, MeineDaten, StartConfig{}, "GET", MeineDatenPath, "family")
+	if code != 200 || strings.Contains(body, "Handy wechseln") || strings.Contains(body, "Bitwarden") {
 		t.Fatalf("%d %s", code, body)
-	}
-	if _, admin, _ := familyPage(t, Nachrichten, StartConfig{}, "GET", DatenPath, "admins"); strings.Contains(admin, "HOMES_ARCHIV_DIR") {
-		t.Error("the trace names no setting, an admin's way is the module's page")
 	}
 	if _, mehr, _ := familyPage(t, Mehr, StartConfig{}, "GET", mehrPath, "family"); strings.Contains(mehr, DatenPath) {
 		t.Error("Mehr lists a page the box does not have")

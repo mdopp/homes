@@ -785,6 +785,7 @@ type Aufgabe struct {
 	Weg  *struct {
 		Seite     string `json:"seite,omitempty"`
 		Gespraech bool   `json:"gespraech,omitempty"`
+		Link      string `json:"link,omitempty"` // an owner's key's form on Laib's page (laib#1195)
 	} `json:"weg,omitempty"`
 	FertigWenn string `json:"fertig_wenn,omitempty"`
 	Erledigt   *struct {
@@ -804,9 +805,20 @@ func (a Aufgabe) Wann() string {
 
 // Aufgaben is the box's to-do list: how many are open, how many due.
 type Aufgaben struct {
-	Offen    int       `json:"offen"`
-	Faellig  int       `json:"faellig"`
-	Aufgaben []Aufgabe `json:"aufgaben"`
+	Offen      int          `json:"offen"`
+	Faellig    int          `json:"faellig"`
+	Aufgaben   []Aufgabe    `json:"aufgaben"`
+	Schluessel []Schluessel `json:"schluessel"` // the owner's keys the box waits for (laib#1195); nil: an older Laib
+}
+
+// Schluessel is one, never its value; Aufgabe an open task that waits for it.
+type Schluessel struct {
+	Name    string `json:"name"`
+	Dienst  string `json:"dienst,omitempty"`
+	Label   string `json:"label"`
+	Warum   string `json:"warum,omitempty"`
+	Link    string `json:"link"`
+	Aufgabe int    `json:"aufgabe,omitempty"`
 }
 
 // BoxAufgaben lists the Box-Aufgaben, the done ones too (haus#115).

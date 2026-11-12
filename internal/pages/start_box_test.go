@@ -135,10 +135,10 @@ func TestStartBoxLineWhenLaibDoesNotAnswer(t *testing.T) {
 	}
 }
 
-// owner 2026-11-07: Braucht dich is one card, only when something is open —
-// the person's own Box-Aufgaben, for an admin the box's red and yellow (a
-// service and a finding beyond it), the Box-Aufgaben due and the decisions
-// waiting on Laib's page; never an optional app; all well, no card.
+// owner 2026-11-07, homes#362: Braucht dich is one card, only when
+// something is open — the first three of Deine Aufgaben in its order (the
+// decisions waiting first, for an admin) and „n weitere“, for an admin the
+// box's red and yellow (a service and a finding beyond it); all well, no card.
 func TestStartBrauchtDich(t *testing.T) {
 	immichRot := []map[string]any{{"name": "immich", "title": "Immich", "beschreibung": "Fotos", "state": "rot"}, {"name": "paperless", "state": "grün"}}
 	ready := allGreen(t)
@@ -146,25 +146,29 @@ func TestStartBrauchtDich(t *testing.T) {
 	more := map[string]string{
 		"laib_befunde": `{"at":"2026-11-06T10:00:00Z","findings":[{"severity":"gelb","probe":"cert","say":"Über die IP-Adresse warnt der Browser."},{"severity":"rot","probe":"immich","service":"immich"},{"severity":"info","probe":"watchdog"}]}`,
 		"laib_inbox":   `[{"id":412,"reason":"Immich: neue Version","status":"open"}]`,
-		"laib_aufgabe": `{"offen":2,"aufgaben":[{"id":7,"titel":"Signal-Nummer eintragen","fuer":"person:anna","weg":{"seite":"/mehr"}},{"id":8,"titel":"Für alle","fuer":"alle"}]}`,
+		"laib_aufgabe": `{"offen":4,"aufgaben":[{"id":7,"titel":"Signal-Nummer eintragen","fuer":"person:anna","weg":{"seite":"/mehr"}},{"id":8,"titel":"Für alle","fuer":"alle"},` +
+			`{"id":9,"titel":"Zweite Platte einbauen","fuer":"admins"},{"id":10,"titel":"Bens Sache","fuer":"person:ben"}]}`,
 	}
 	cfg := StartConfig{Laib: fakeLaibWith(t, ready, immichRot, more), LaibURL: "https://laib.box.test/", Loc: berlin(t)}
 	now := startNow(t)
 	cfg.Now = func() time.Time { return now }
 	h := Start(cfg)
 
+	// the owner, an admin: the decision first, two tasks, one more; the box's red and yellow
 	admin := ask(h, StartBoxPath, "family,admins").Body.String()
 	c := section(t, admin, "karte-braucht-dich")
-	mustContain(t, c, `<a href="/mehr">Signal-Nummer eintragen</a>`, `<a href="/box">Box: 1 rot · 1 gelb · 1 Box-Aufgabe fällig</a>`,
-		`<a href="https://laib.box.test/inbox">1 Entscheidung wartet</a>`)
-	mustNotContain(t, admin, "Für alle", "watchdog", "achtung", "Über die IP-Adresse")
-	before(t, c, "Signal-Nummer", "Box:")
-	before(t, c, "Box:", "Entscheidung")
+	mustContain(t, c, `<a href="https://laib.box.test/inbox">1 Entscheidung wartet</a>`, `<a href="/mehr">Signal-Nummer eintragen</a>`,
+		`<a href="/aufgaben#aufgabe-8">Für alle</a>`, `<a href="/aufgaben">1 weitere Aufgabe</a>`, `<a href="/box">Box: 1 rot · 1 gelb</a>`)
+	mustNotContain(t, admin, "Zweite Platte", "Bens Sache", "watchdog", "achtung", "Über die IP-Adresse", "fällig")
+	before(t, c, "Entscheidung", "Signal-Nummer")
+	before(t, c, "Signal-Nummer", "Für alle")
+	before(t, c, "weitere", "Box:")
 
-	// the family: their own task, and the service down as the box's banner
+	// another person, the family: their own and the household's, the service down as the box's banner
 	fam := ask(h, StartBoxPath, "family").Body.String()
-	mustContain(t, fam, "Signal-Nummer eintragen", "Gerade nicht erreichbar: Immich (Fotos).")
-	mustNotContain(t, fam, "Box:", "Entscheidung", "Box-Aufgabe")
+	mustContain(t, section(t, fam, "karte-braucht-dich"), "Signal-Nummer eintragen", "Für alle")
+	mustContain(t, fam, "Gerade nicht erreichbar: Immich (Fotos).")
+	mustNotContain(t, fam, "Box:", "Entscheidung", "Zweite Platte", "weitere", "Bens Sache")
 
 	// all well, nothing of one's own: nothing at all
 	calm := Start(StartConfig{Laib: fakeLaib(t, allGreen(t), nil), Loc: berlin(t), Now: cfg.Now})

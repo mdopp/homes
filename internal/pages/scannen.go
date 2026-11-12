@@ -90,9 +90,8 @@ var scanPerson = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,31}$`)
 // a scan, it decides nothing about the box (haus#1).
 func Scannen(cfg StartConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			w.Header().Set("Allow", "POST")
-			http.Error(w, "Scannen geht nur mit dem Knopf auf der Seite.", http.StatusMethodNotAllowed)
+		if r.Method != http.MethodPost { // a link to Scannen (Meine Daten): its buttons on Dokumente (homes#362)
+			http.Redirect(w, r, DokumentePath+"#scannen", http.StatusSeeOther)
 			return
 		}
 		if cfg.Laib == nil {
@@ -404,7 +403,7 @@ func scanSection(r *http.Request, cfg StartConfig, s scanning) string {
 		return `<section class=weg><h2>Scannen</h2><p class=k>` + html.EscapeString(saysScanOld+" "+saysScanOldAd) + `</p></section>`
 	}
 	var b strings.Builder
-	b.WriteString(`<section class="weg scannen" aria-live=polite><h2>Scannen</h2>`)
+	b.WriteString(`<section class="weg scannen" id=scannen aria-live=polite><h2>Scannen</h2>`)
 	if s.err != nil {
 		log.Printf("homes: dokumente page: scan: %v", s.err)
 		b.WriteString(`<p>` + html.EscapeString(saysScanSilent) + `</p></section>`)

@@ -24,7 +24,7 @@ func TestFamilyPagesCarryTheHomesScript(t *testing.T) {
 		page  func(StartConfig) http.HandlerFunc
 		path  string
 		every string // the marker after data-auffrischen=; "": none
-	}{{Start, "/start", "120 data-live=alle"}, {Raeume, "/raeume", "120 data-live=seite"}, {Medien, "/medien", "120 data-live=seite"}, {Energie, "/energie", "60"},
+	}{{Start, "/start", "120 data-live=alle"}, {Raeume, "/raeume", "120 data-live=seite"}, {Energie, "/energie", "60"},
 		{Kalender, "/kalender", ""}, {Notizen, "/notizen", ""}, {Mehr, "/mehr", ""}} {
 		_, body, _ := familyPage(t, p.page, all, "GET", p.path, "family")
 		mustContain(t, body, homesScript, homesStyle)

@@ -121,10 +121,7 @@ func Schalten(cfg StartConfig) http.HandlerFunc {
 		}
 		log.Printf("homes: schalten %q on %q: %v", do, id, err)
 		m := missing{http.StatusOK, saysSwitchFailed, "Homes", back, "Zurück"}
-		switch {
-		case back == medienPath:
-			m.page = "Medien"
-		case back != "/start":
+		if back != "/start" {
 			m.page = "Räume"
 		}
 		var no *schalter.Refusal
@@ -159,10 +156,10 @@ func wertOf(v string) (wert int, given, ok bool) {
 	return n, true, true
 }
 
-// backTo is where a switch lands: Start, Räume (one room on it), Medien,
+// backTo is where a switch lands: Start, Räume (one room on it),
 // or the page of a thing that has one; anything else is Start.
 func backTo(path string) string {
-	if path == medienPath || inRaeume.MatchString(path) {
+	if inRaeume.MatchString(path) {
 		return path
 	}
 	if id, ok := strings.CutPrefix(path, cards.ThingPages); ok && ha.EntityRE.MatchString(id) {

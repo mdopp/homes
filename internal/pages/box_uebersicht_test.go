@@ -81,8 +81,8 @@ func TestBoxOverviewShowsWhatNeedsTheAdmin(t *testing.T) {
 	}, 2, diag, func(r map[string]any) { r["aufgabenFaellig"] = 1 }, &asked)
 	page := get(BoxPage(cfg), "admins")
 	mustContain(t, page, "<b>Dokumente</b>", "Redis langsam", "<b>Fotos</b>", "startet nicht",
-		"<b>Signal kommt vielleicht nicht an.</b>", "Der Bote antwortet nicht", "<b>raid</b>", `<a href="/box/aufgaben#aufgabe-3">Box-Aufgabe #3</a>`,
-		"<a href=/box/aufgaben>1 Box-Aufgabe fällig</a>", `<a href="https://laib.box.test/inbox">2 Entscheidungen warten</a>`,
+		"<b>Signal kommt vielleicht nicht an.</b>", "Der Bote antwortet nicht", "<b>raid</b>", `<a href="/aufgaben?nur=box#aufgabe-3">Box-Aufgabe #3</a>`,
+		"<a href=\"/aufgaben?nur=box\">1 Box-Aufgabe fällig</a>", `<a href="https://laib.box.test/inbox">2 Entscheidungen warten</a>`,
 		"Letzte Sicherung", "Letzte Änderung: Paperless wird installiert", "Befunde gemessen vor 12 min", "<h2>Morgenbericht</h2>", `<details id=operator>`)
 	mustNotContain(t, page, "Werbefilter", "kein Wächter", "immich.service ist failed", "Alles in Ordnung", "immich: mehr Speicher", "Laib das Verb befunde kennt")
 	before(t, page, "<b>Fotos</b>", "<b>raid</b>")              // red first

@@ -2,7 +2,6 @@ package pages
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"html"
 	"log"
@@ -19,8 +18,8 @@ import (
 
 // MeineDatenPath is „Meine Daten“ (homes#342): every way a person's data
 // reaches the box on one page, each with when something last came, how
-// much, and the next step. Mehr and Daten sichern lead here; the app's
-// Daten sichern too.
+// much, and the next step; below, what Daten sichern said (homes#362: one
+// entry in Mehr). The app's Daten sichern leads here.
 const MeineDatenPath = "/meine-daten"
 
 // stillNach is the quiet threshold of each source that comes by itself:
@@ -49,6 +48,10 @@ type archivStand struct {
 		Quelle string
 		Satz   string
 	} `json:"letzter_fehler"`
+	// what waits for the person in the archive, counts only, for Deine
+	// Aufgaben (homes#362; the archive's side is to come: absent is 0)
+	Fragen     int `json:"fragen_offen"`
+	Aufraeumen int `json:"aufraeumen_offen"`
 }
 
 // MeineDaten is the page: per source a dot and one line, the sources not
@@ -88,6 +91,7 @@ func MeineDaten(cfg StartConfig) http.HandlerFunc {
 				b.WriteString(c.html())
 			}
 		}
+		b.WriteString(sichernTeil(r, cfg, person)) // Daten sichern's, one page since homes#362
 		writePage(w, http.StatusOK, b)
 	}
 }
@@ -101,10 +105,7 @@ func meineZeilen(r *http.Request, cfg StartConfig, person string) (zs []datenZei
 	var ar archivStand
 	arOK, kn, scan, scanOK := false, -1, laib.Scan{}, false
 	fetch(r, func(ctx context.Context) {
-		if cfg.Laib != nil && cfg.Archive[person] {
-			_, own, err := cfg.Laib.ServiceStatus(ctx, "archiv-"+person)
-			arOK = err == nil && json.Unmarshal(own, &ar) == nil
-		}
+		ar, arOK = archivVon(ctx, cfg, person)
 	}, func(ctx context.Context) {
 		if cfg.Laib != nil && cfg.Docs != nil {
 			var err error

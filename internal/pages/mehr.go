@@ -16,7 +16,7 @@ const mehrPath = "/mehr"
 // What Mehr says of each of its pages, in a line.
 var mehrSays = map[string]string{
 	"Dokumente":                    "Briefe, Rechnungen und Verträge ablegen und wiederfinden",
-	"Deine Aufgaben":               "Was du einmal einrichtest, offen und erledigt",
+	"Deine Aufgaben":               "Was du tun kannst, das Wichtigste zuerst",
 	"Podcasts":                     "Podcasts per Link abonnieren; Bescheid bei jeder neuen Folge",
 	"Gesehen & Gehört":             "Was du geschaut und gehört hast; was als Nächstes auf die Wunschliste kommt",
 	"Platte erfassen":              "Eine Schallplatte fotografieren und in deine Discogs-Sammlung eintragen",
@@ -24,7 +24,6 @@ var mehrSays = map[string]string{
 	"Musik":                        "Hinzufügen und was beim Einsortieren hängt, Platten erfassen, die Musik-Wunschliste",
 	"Netzlaufwerk":                 "Dein Passwort für das Netzlaufwerk",
 	"Standortverlauf":              "Wo du unterwegs warst, in deiner eigenen Zeitleiste",
-	"Daten sichern":                "Nachrichten, Kontakte, Mails und Termine in dein Archiv",
 	"Box":                          "Wie es der Box geht, für Admins",
 	texte.T("zusammen.titel"):      texte.T("zusammen.mehr"),
 	texte.T("archiv.titel"):        texte.T("archiv.mehr"),
@@ -32,7 +31,7 @@ var mehrSays = map[string]string{
 }
 
 // einmalig are the pages a person sets up once and then rarely opens, and Box.
-var einmalig = map[string]bool{StandortPath: true, netzlaufwerkPath: true, DatenPath: true, DiscogsPath: true, aufgabenPath: true, "/box": true}
+var einmalig = map[string]bool{StandortPath: true, netzlaufwerkPath: true, DiscogsPath: true, aufgabenPath: true, "/box": true}
 
 // mehrStand is where a page stands for the person, from what Homes keeps
 // itself (Mehr never waits for a backend); "" where there is nothing cheap to

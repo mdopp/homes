@@ -51,8 +51,7 @@ func twinPlayersHouse(t *testing.T, fake *hafake.HA, tvState, maState string) {
 // haus#83: a Chromecast that Music Assistant mirrors is one thing, so one
 // row, steered through the entity that plays — Cast's, which pauses
 // Netflix too, while both play; Music Assistant's while only it does. A
-// Jellyfin session is not a thing in the house: not on Start or Räume,
-// on Medien only while it plays.
+// Jellyfin session is not a thing in the house: not on Start or Räume.
 func TestOnePlayerPerThing(t *testing.T) {
 	fake, hc := house(t)
 	twinPlayersHouse(t, fake, "playing", "playing")
@@ -61,13 +60,6 @@ func TestOnePlayerPerThing(t *testing.T) {
 	im := section(t, body, "karte-im-haus")
 	mustContain(t, im, "Küche und TV spielen", `value="media_player.media_pause"`) // one line, one Pause (owner 2026-11-07)
 	mustNotContain(t, im, "media_player.tv_2", "media_player.a_kuche", "Annas Handy", "Tatort")
-
-	_, body, _ = familyPage(t, Medien, StartConfig{HA: hc}, "GET", "/medien", "family")
-	laeuft := section(t, body, "karte-laeuft-gerade")
-	mustContain(t, laeuft, `<a href="/raeume/media_player.tv">TV</a>`, `<a href="/raeume/media_player.kuche">Küche</a>`,
-		`<a href="/raeume/media_player.handy">Annas Handy</a>`)
-	mustNotContain(t, body, "media_player.tv_2", "media_player.a_kuche", "media_player.t\"", ">t</a>")
-	mustContain(t, section(t, body, "karte-gerade-still"), "media_player.nest", "Radio Bad", "Radio Flur")
 
 	_, body, _ = familyPage(t, Raeume, StartConfig{HA: hc}, "GET", "/raeume", "family")
 	if n := strings.Count(body, ">TV</a>"); n != 1 {
@@ -81,11 +73,4 @@ func TestOnePlayerPerThing(t *testing.T) {
 	im = section(t, body, "karte-im-haus")
 	mustContain(t, im, `value="media_player.tv_2"`)
 	mustNotContain(t, im, `value="media_player.tv"`)
-
-	// both quiet: the device's own, once
-	twinPlayersHouse(t, fake, "off", "idle")
-	_, body, _ = familyPage(t, Medien, StartConfig{HA: hc}, "GET", "/medien", "family")
-	still := section(t, body, "karte-gerade-still")
-	mustContain(t, still, `<a href="/raeume/media_player.tv">TV</a>`)
-	mustNotContain(t, still, "media_player.tv_2")
 }

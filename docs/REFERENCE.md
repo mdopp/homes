@@ -28,15 +28,11 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   *Homes* and the day, then at most four blocks in this order, each its
   state and at most one action, and the Sprechen field (below); no lead paragraph, no setup or Netzlaufwerk line, no
   two-week preview.
-  *Braucht dich*, only while something is open: the person's important
-  tasks (Homes' own, e.g. the Netzlaufwerk password, and Laib's
-  `person:<login>` Box-Aufgaben), Immich's questions (*Dieselbe Person?*),
-  at most three and *N weitere Aufgaben* to Deine Aufgaben; for an admin
-  *Box: 1 rot · 2 gelb · 1 Box-Aufgabe fällig* (the services not green and
-  laib diag's red and yellow findings beyond them, the Übersicht's rule) to
-  /box and *1 Entscheidung wartet* to Laib's inbox, and one row per open
-  *Zugangsanfrage von <Name>* (its contact as the detail) to /zugang.
-  Never an optional app.
+  *Braucht dich*, only while something is open: the first three open rows
+  of *Deine Aufgaben* (below, homes#362), each with its line and its one
+  tap, and *N weitere Aufgaben* to `/aufgaben`; for an admin then
+  *Box: 1 rot · 2 gelb* (the services not green and laib diag's red and
+  yellow findings beyond them, the Übersicht's rule) to /box.
   For the family a service they use down or the data not backed up is a
   banner above it (*Gerade nicht erreichbar: Immich (Fotos).*, *Eure Daten
   sind seit 3 Tagen nicht gesichert.*, who is on it): amber when the box
@@ -44,7 +40,8 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   Start does not wait for Laib (haus#67): the card comes with Homes' own
   tasks and the status as kept (45 s, at most 5 min), and fills itself
   from `GET /start/box` (HTML, "" when nothing is open; the status, the
-  person's kept Box-Aufgaben, for admins `laib befunde` and `laib inbox`).
+  person's kept Box-Aufgaben and keys, the person's archive's counts, for
+  admins `laib befunde` and `laib inbox`).
   Laib not answering says nothing to the family, to an admin *Wie es der
   Box geht, lässt sich gerade nicht sagen.*
   *Deine Geräte*: the person's own things as the app's tiles (homes-android
@@ -79,12 +76,13 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   `entity_id` list, is not a lamp), what plays, and Energie now (*Dach
   3,2 kW · Haus 800 W · Akku 74 %*, a link to /energie) — with one button:
   *Aus*/*Alle aus* while a lamp is on, else *Pause* for a player that can.
-  One thing is one row, on Start, Medien and Räume alike (haus#83): HA
+  One thing is one row, on Start and Räume alike (haus#83): HA
   devices that share an identifier (dashes and case aside: a Chromecast
   through Cast and through Music Assistant) are twins, shown and steered
   through the one that plays, else the paused one, else not Music
-  Assistant's mirror; a Jellyfin session is someone's app, on Medien only
-  while it plays. A player refusing a command (HA 500) is said as such.
+  Assistant's mirror; a Jellyfin session is someone's app, not shown. The
+  page Medien went with homes#362 (nothing led to it): `/medien` is a 404.
+  A player refusing a command (HA 500) is said as such.
   Each part only when its backend is set (`HOMES_HA_URL` + `HOMES_HA_TOKEN`,
   `HOMES_RADICALE_*`); one not set is not mentioned. One not
   answering within 4s is one plain line where its rows would be (*Licht
@@ -110,8 +108,7 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   (haus#67; owner 2026-10-24: every page in exactly one tab, the page named
   like its tab): on the phone a bar at the bottom, icon and name — Start ·
   Geräte (`/raeume`: what plays on top as *Läuft gerade* with its buttons
-  and ☆, once; then the rooms; `/medien` stays reachable and counts as
-  Geräte) · Haushalt (Kalender, Einkauf, Notizen as pills on top of each;
+  and ☆, once; then the rooms) · Haushalt (Kalender, Einkauf, Notizen as pills on top of each;
   the tab leads to the first this box has) · Energie · Mehr — each only
   when its backend is set. `GET /mehr` holds Dokumente (owner 2026-10-27:
   Dokumente unter Mehr, haus#159), the music, Aufgaben, the
@@ -153,11 +150,38 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   (`/podcasts`, `/sprechen`) on top while the task is open,
   and shrinks to a quiet „Auf einem weiteren Gerät einrichten“ at the
   bottom once done; a module without a page has `/einrichten/<name>`.
-  *Deine Aufgaben* (`/aufgaben`) lists them with Homes' other tasks
-  (Netzlaufwerk-Passwort, Discogs) and Laib's for the person (one a check
-  raised, laib#1168: Vaultwarden's second factor, the network-drive
-  password; Laib's task with the way `/netzlaufwerk` is left out where
-  Homes shows its own from the same file); the number
+  *Deine Aufgaben* (`/aufgaben`, homes#362, owner 2026-11-12: „einen
+  zentralen Punkt“) is everything a person has to do, one list per viewer,
+  in the owner's order: (1) decisions waiting — for admins *N
+  Entscheidungen warten* to Laib's inbox (deciding is Laib's page's) and
+  each *Zugangsanfrage* to /zugang; (2) keys and permissions — for admins
+  the owner's keys something on the box waits for (`laib_aufgabe list`'s
+  `schluessel`, laib#1195: name, label, why, never a value; an optional
+  key nobody waits for is not there), each to its form on Laib's page
+  `…/schluessel?name=<NAME>&zurueck=<Homes>/aufgaben`, and for the Immich
+  key's owner the permissions the key lacks (*In Immich öffnen*, its API
+  keys page); (3) questions — Immich's (*Dieselbe Person?*), for admins the
+  scans nobody could be given (*Wem gehört dieser Scan?*), the contacts'
+  answers to review, and the person's own archive's open counts (*Im
+  Archiv: N Fragen offen* / *N Dinge zum Aufräumen*, read from
+  `laib status archiv-<login>`'s `fragen_offen` and `aufraeumen_offen`;
+  absent is none — the archive's side is still to come); (4) setup —
+  Homes' own (Netzlaufwerk-Passwort, the modules' apps, Discogs) and Laib's
+  tasks: `alle`, `person:<login>`, and for admins `admins` (laib#878,
+  formerly Box → Aufgaben only). Each row is its title (the one tap), one
+  line why (Laib's `https://…` in it are links) and, where the tap leaves
+  Homes, a button (*Schlüssel eintragen*, *In Laib entscheiden*, *Im
+  Archiv öffnen*). A Laib task's `weg` leads: a Homes page, a conversation
+  with the Bote (*Gemeinsam mit …*), or `{"schluessel","link"}` (its key's
+  form; the key and its task are one row). A row is gone once done: Laib
+  ticks its own (a done Laib task is not shown), a task deferred to a later
+  day waits in the Box filter. Homes' own done setups are listed below,
+  *Erledigt*, to do again. Laib's task with the way `/netzlaufwerk` is left
+  out where Homes shows its own from the same file (laib#1168). A Laib
+  without `schluessel` (before laib#1195) or without the verb shows the rest,
+  without a word. For an admin *Alle · Box* above: `/aufgaben?nur=box` is
+  the Box-Aufgaben (below, formerly the tab Box → Aufgaben) with
+  *Erledigt* and *Später*, a key no task names on top. The number
   open stands beside its heading, beside *Mehr* in the bar, beside
   *Aufgaben* in Mehr's list and in its row on `/mehr` — Homes' own, plus
   Laib's once a page has read Laib's list (never asked for the counter).
@@ -288,7 +312,8 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     and for the key's owner *Ist das …?* (its picture) and *Dieselbe
     Person?* (the pairs of which the contact's Immich person is one side).
     There are no list pages of questions or answers. Their tasks on Deine
-    Aufgaben keep their addresses: `/kontakte/antworten` opens the contact
+    Aufgaben keep their addresses, and Kontakte's head has the answers'
+    row while one waits for the viewer (homes#362): `/kontakte/antworten` opens the contact
     of the oldest answer waiting (an answer whose contact is gone opens
     that contact's address with its name and the review), and
     `/kontakte/dieselbe` the next contact with a question (Meine Kontakte
@@ -563,7 +588,9 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     the admin saw). The page shows the sender, the date, the pages and when
     it came, a button per person and *Haushalt*; an answer says *Gemerkt*,
     the scan then *Geht an …, sobald Dokumente das nächste Mal läuft*.
-    While any is unanswered, the admins' *Deine Aufgaben* lead with it.
+    While any is unanswered, it is a question on the admins' *Deine
+    Aufgaben*, and Dokumente's head has *Scans zuordnen (n)* for them
+    (homes#362).
   - *Ins Adressbuch übernehmen* (archiv#27 step 2, ADR 0002;
     `POST /intern/uebernahme`, `internal/uebernahme`): no page. A tap on an
     answer in the person's own open archive is their consent (owner
@@ -737,7 +764,9 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     every 5 s. *Stapel scannen* only with a SANE scanner (`scanner: true`)
     and nothing running; after a jam *Weiter*, *Abschließen*, *Verwerfen*.
     Each button is `POST /scannen`, one `laib_scan` order for the person who
-    pressed it (#35's rule), then back. Below, the inbox folder for a
+    pressed it (#35's rule), then back; a `GET /scannen` (a link to it) leads
+    to `/dokumente#scannen`, and while the section is not on top a
+    *Scannen* button at the page's head jumps there (homes#362). Below, the inbox folder for a
     scanner that scans to the network drive
     (`\\<HOMES_SAMBA_HOST>\data\scan-eingang`) and the last five stacks,
     each one folded line (haus#197: when, who, „nur für“ whom, pages, how
@@ -834,7 +863,8 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   `/start` with 303, since Authelia here only restricts per host. That
   says who sees the admin page; it is not a verdict on anything, and
   `/napi` and `/pair-device` are untouched. It does not repeat Laib's own
-  page (haus#157, owner 2026-10-27) and has four tabs (owner 2026-11-06),
+  page (haus#157, owner 2026-10-27) and has three tabs (owner 2026-11-06;
+  the fourth, Aufgaben, is Deine Aufgaben's Box filter since homes#362),
   which fit a 411 px phone without scrolling sideways:
   *Übersicht* (`/box`), „Was braucht mich?“: on top only what needs the
   admin, red before yellow — the services not green by Laib's names
@@ -851,8 +881,8 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   link to Laib's journal (`<laib>/journal`; no journal copy), and the
   Operator folded (`<details id=operator>`): its state, then only the
   skills whose last run was not good (or that Laib refuses); *Alle Skills
-  zeigen* shows the rest. *Aufgaben* (`/box/aufgaben`): the Box-Aufgaben
-  and the Werkstatt's tickets when set. *Auslastung* (`/box/auslastung`, laib#1076, owner
+  zeigen* shows the rest; below, the Werkstatt's tickets when set. A GET
+  of `/box/aufgaben` leads (302) to `/aufgaben?nur=box`. *Auslastung* (`/box/auslastung`, laib#1076, owner
   2026-11-06) shows `laib auslastung`: a bar per disk (system, data,
   boot; yellow above 85 %, red from 95 %), rings for the processor, the
   memory and the GPU, who holds the GPU by the lease, the temperatures
@@ -870,7 +900,7 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   `/box#operator`. It comes at once
   (haus#81): the frame and each part's place with „lädt …“; its script
   fetches every part at the same time from `GET /box/teil?was=<part>`
-  (`stand`, `operator`, `aufgaben`, `werkstatt`, `auslastung`, `haushalt`, `einladen`, `module`, `genutzt`: JSON,
+  (`stand`, `operator`, `werkstatt`, `auslastung`, `haushalt`, `einladen`, `module`, `genutzt`: JSON,
   `{"box-<part>": HTML}`), each within 10 s, a failed one said in its place.
   `?ganz=1`, where `<noscript>` sends, reads all parts at the same time
   and comes whole. *Person einladen* (`POST /box/einladen`, haus#56) takes
@@ -971,21 +1001,34 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   same line Mehr shows for that page (*Zuletzt aufgezeichnet heute 08:40*,
   *Noch nicht verbunden*; for `musik` *2 Dateien nicht übernommen*, *1
   Datei wird einsortiert*, *Alles einsortiert*). Both absent elsewhere; an
-  older app ignores them. An entry that is no module comes after
-  the modules: `immich-pruefen`, the Immich key owner's open questions
-  („Dieselbe Person?“ and „Ist das …?“, owner 2026-11-07) as one open
-  task with the count as it is now, `web` and `einrichten` on
-  `/kontakte/dieselbe`, `nur_web` true, sent only to that person and only
-  while one is open; it counts in `offen`. An older app shows it among the
-  tasks like any web-only task and opens its page. `web` is the module's page in Homes where it has one, else its
+  older app ignores them. The other open rows of *Deine Aufgaben*
+  (homes#362: the same list as the page, for the same person) are entries
+  of their own, each `nur_web` true, `oeffnen` false, with `web` and
+  `aufgabe.einrichten` the row's whole address (https only; a Homes page as
+  `https://<Homes>/…`, a key's form on Laib's page, the archive, Laib's
+  inbox), `aufgabe.erledigt` false and `aufgabe.warum` its line (added for
+  homes#362; an app that does not read it shows its own line). Decisions,
+  keys and questions come before the modules, the other tasks (Laib's,
+  the network drive's password, Discogs) after them; the app lists the
+  open tasks in the answer's order, so it shows the page's order unchanged.
+  Their `name`s: `entscheiden`, `zugang`, `schluessel-<NAME>`,
+  `immich-rechte`, `immich-pruefen` (the Immich key owner's open
+  questions, owner 2026-11-07), `scans`, `antworten`, `archiv-fragen`,
+  `archiv-aufraeumen`, `netzlaufwerk`, `discogs`, `aufgabe-<id>` (a Laib
+  task); `icon` a module's key where one fits, else `box`, `archiv` or
+  `aufgabe` (the app's default picture). Each counts in `offen`. The
+  admins' rows (decisions, keys, the admins' Laib tasks, the scans) go to
+  a person Homes last saw among Authelia's `admins` on a page
+  (`HOMES_DATA/admins.json`, `{"anna": true}`: the app sends no groups).
+  Laib is read as Deine Aufgaben does (its list kept a minute); Laib away,
+  the rows Homes knows itself. `web` is the module's page in Homes where it has one, else its
   service's own address; absent when there is none. `app` is absent and
   `nur_web` true for a module without its own app. `aufgabe` is the
   person's task, only for a module with an app: `erledigt`, since `am`,
   and `wie` (`app`: the phone said it is installed, `hand`: ticked on the
   page, `erkannt`: the service knows a device of theirs); `einrichten` is
   the page with the module's steps, for the app to open. `offen` is how
-  many of these tasks are open (the web's counter adds Homes' other tasks
-  — the network drive's password, Discogs — and Laib's for the person).
+  many of these tasks and rows are open.
   `ziele` are the launcher's shortcuts this box has, each only when its
   module is on: `einkauf` the shopping list's page, `zeitleiste` Reitti
   (`HOMES_REITTI_PUBLIC_URL`), `scannen` the camera capture into Paperless
@@ -1224,10 +1267,10 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   507 when the disk lacks the rest of the file plus 1 GB, 503 without
   `HOMES_ARCHIV_DIR` (*Das Archiv ist auf dieser Box nicht
   eingerichtet.*). A piece may stall 45 s; parts untouched for seven days
-  go (at start and daily). The page *Daten sichern* (`/daten-sichern`;
-  the old `/nachrichten-sichern` redirects there; under Mehr when the box
-  has the inbox) leads to *Meine Daten* (`/meine-daten`, homes#342, under
-  Mehr for everyone signed in), which says where each source of the
+  go (at start and daily). *Daten sichern* is one page with *Meine Daten*
+  since homes#362 (owner 2026-11-12: one entry in Mehr): `/daten-sichern`
+  and the old `/nachrichten-sichern` redirect (301) to *Meine Daten*
+  (`/meine-daten`, homes#342, under Mehr for everyone signed in), which says where each source of the
   signed-in person stands, once: per source a dot and one line — current
   (*zuletzt …* with how much), quiet past its threshold (*still seit …* and
   the next step; the threshold is written under each line: two days for
@@ -1245,7 +1288,8 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   sentence, never content, ADR 0002); each row only while the box has its
   module. Mehr's own rows no longer say a source's state, and the app's
   Standortverlauf row says Meine Daten's words. Below
-  the card, *Schlüssel im Archiv eintragen* opens the archive's `/tresor`
+  the cards, while the box has the inbox, what Daten sichern said: the
+  way to the Homes app while there is none, *Schlüssel im Archiv eintragen* opens the archive's `/tresor`
   (`HOMES_ARCHIV_INTERN`'s persons, at home; away or without an archive
   the plain reason instead), *Was nie ins Archiv kommt* and *Handy wechseln*
   folded at
@@ -1909,6 +1953,6 @@ instead (owner 2026-10-24): with `data-live` the script listens on
 `GET /live` (server-sent events, behind Authelia like every page; one
 `state_changed` subscription to HA while anyone listens, sensors left
 out) and fetches the page in place as soon as a thing on it changes —
-Räume, a thing, Medien (`seite`), Start any thing (`alle`); their N=120
+Räume, a thing (`seite`), Start any thing (`alle`); their N=120
 is only the fallback and for the day's calendar and Braucht dich. `data-ganz`
 leaves a form to the browser.

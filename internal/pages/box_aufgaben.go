@@ -1,12 +1,14 @@
 package pages
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
 	"html"
 	"log"
 	"net/http"
+	"net/url"
 	"regexp"
 	"sort"
 	"strconv"
@@ -16,11 +18,15 @@ import (
 	"github.com/mdopp/homes/internal/laib"
 )
 
-// AufgabenPath is where the Box page ticks off a Box-Aufgabe or moves its
-// reminder (haus#115, laib#667): the box's own to-dos — a second disk, the
-// off-box backup, flashing the Voice PE — that are box topics, not code.
-// Admins only; laib records homes:<who> as who did it.
+// AufgabenPath is where Deine Aufgaben's Box filter ticks off a Box-Aufgabe
+// or moves its reminder (haus#115, laib#667): the box's own to-dos — a
+// second disk, the off-box backup, flashing the Voice PE — that are box
+// topics, not code. Admins only; laib records homes:<who> as who did it.
+// A GET (the Box tab's old address) leads to the filter (homes#362).
 const AufgabenPath = "/box/aufgaben"
+
+// boxAufgabenPfad is the Box filter of Deine Aufgaben.
+const boxAufgabenPfad = aufgabenPath + "?nur=box"
 
 // aufgabeWait is how long a tick may take before the page says so.
 var aufgabeWait = 20 * time.Second
@@ -38,7 +44,7 @@ var aufgabeRef = regexp.MustCompile(`Box-Aufgabe #(\d+)`)
 // linkAufgaben makes each "Box-Aufgabe #N" in escaped text a link to its
 // place on the page (a finding deferred to it, laib#667).
 func linkAufgaben(escaped string) string {
-	return aufgabeRef.ReplaceAllString(escaped, `<a href="`+AufgabenPath+`#aufgabe-$1">Box-Aufgabe #$1</a>`)
+	return aufgabeRef.ReplaceAllString(escaped, `<a href="`+boxAufgabenPfad+`#aufgabe-$1">Box-Aufgabe #$1</a>`)
 }
 
 // Aufgaben answers the card's two POSTs: tun=erledigt (id) and tun=spaeter
@@ -47,7 +53,7 @@ func linkAufgaben(escaped string) string {
 func Aufgaben(cfg BoxConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
-			BoxPage(cfg)(w, r) // the page Box-Aufgaben
+			http.Redirect(w, r, boxAufgabenPfad, http.StatusFound)
 			return
 		}
 		if !adminOnly(w, r) {
@@ -92,8 +98,9 @@ func Aufgaben(cfg BoxConfig) http.HandlerFunc {
 			return
 		}
 		log.Printf("homes: box-aufgabe #%d %s by %s", id, r.PostForm.Get("tun"), who)
-		card := aufgabenCard(r.Context(), cfg.Laib, time.Now(), said, "")
-		writeBox(w, r, cfg, http.StatusOK, invitation{}, map[string]string{"aufgaben": card})
+		fam := cfg.Family
+		fam.Laib = cfg.Laib
+		boxAufgabenSeite(w, r, fam, said)
 	}
 }
 
@@ -119,11 +126,12 @@ func day(s string) string {
 	return t.Format("02.01.")
 }
 
-// aufgabenCard is the card: open ones, the due first, then those without
-// a reminder, then the deferred by date; each with Erledigt and Später;
-// below, those ticked off in the last week, a person's tick apart from
-// Laib's own. said is a POST's outcome on top.
-func aufgabenCard(ctx context.Context, c *laib.Client, now time.Time, said, problem string) string {
+// aufgabenCard is the Box filter: the keys the box waits for (laib#1195),
+// each to its form and back to homes (Homes' address); the open tasks, the
+// due first, then those without a reminder, then the deferred by date;
+// each with Erledigt and Später; below, those ticked off in the last week,
+// a person's tick apart from Laib's own. said is a POST's outcome on top.
+func aufgabenCard(ctx context.Context, c *laib.Client, now time.Time, homes, said, problem string) string {
 	var b strings.Builder
 	all, err := c.BoxAufgaben(ctx)
 	if err != nil {
@@ -178,6 +186,8 @@ func aufgabenCard(ctx context.Context, c *laib.Client, now time.Time, said, prob
 	}
 	b.WriteString("<p class=k>" + extra + "</p>") // the page's h1 names it
 	b.WriteString(gesagt(said, problem))
+	zurueck := "&zurueck=" + url.QueryEscape(homes+boxAufgabenPfad)
+	waits := boxSchluessel(&b, all.Schluessel, zurueck)
 	if len(open) == 0 {
 		b.WriteString("<p class=k>" + saysAufgabenNone + "</p>")
 	}
@@ -186,9 +196,9 @@ func aufgabenCard(ctx context.Context, c *laib.Client, now time.Time, said, prob
 	b.WriteString("<ul class=aufgaben>")
 	for _, a := range open {
 		id := strconv.Itoa(a.ID)
-		fmt.Fprintf(&b, "<li id=aufgabe-%s><b>%s</b>", id, html.EscapeString(a.Titel))
+		fmt.Fprintf(&b, "<li id=aufgabe-%s><b>%s</b>", id, boxTitel(a, cmp.Or(waits[a.ID], keyWay(a, zurueck))))
 		if a.Warum != "" {
-			b.WriteString("<span class=text>" + html.EscapeString(a.Warum) + "</span>")
+			b.WriteString("<span class=text>" + mitLinks(a.Warum) + "</span>")
 		}
 		meta := "#" + id + " · seit " + day(a.Seit)
 		switch rank(a) {
@@ -222,6 +232,36 @@ func aufgabenCard(ctx context.Context, c *laib.Client, now time.Time, said, prob
 		b.WriteString("</ul></details>")
 	}
 	return aufgabenStyle + b.String()
+}
+
+// boxSchluessel writes the keys the box waits for that no task names, each
+// to its form; the others are their task's way, by its id.
+func boxSchluessel(b *strings.Builder, keys []laib.Schluessel, zurueck string) map[int]string {
+	waits := map[int]string{}
+	for _, k := range keys {
+		if k.Aufgabe > 0 {
+			waits[k.Aufgabe] = k.Link + zurueck
+		} else if k.Link != "" {
+			b.WriteString(`<ul class=aufgaben>` + aufgabeZeile(aufgabe{titel: cmp.Or(k.Label, k.Name), warum: k.Warum, href: k.Link + zurueck, extern: "Schlüssel eintragen"}) + `</ul>`)
+		}
+	}
+	return waits
+}
+
+// boxTitel is a task's title, a link to its key's form on Laib's page when weg is one.
+func boxTitel(a laib.Aufgabe, weg string) string {
+	if weg == "" {
+		return html.EscapeString(a.Titel)
+	}
+	return `<a href="` + html.EscapeString(weg) + `">` + html.EscapeString(a.Titel) + `</a>`
+}
+
+// keyWay is a task's key form with the way back; "" for another way.
+func keyWay(a laib.Aufgabe, zurueck string) string {
+	if a.Weg != nil && a.Weg.Link != "" {
+		return a.Weg.Link + zurueck
+	}
+	return ""
 }
 
 const aufgabenStyle = `<style>.aufgaben{list-style:none;margin:10px 0 0;padding:0}.aufgaben>li{padding:12px 0;border-top:1px solid var(--line)}.aufgaben b{display:block}

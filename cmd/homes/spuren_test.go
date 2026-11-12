@@ -192,7 +192,7 @@ func TestModulSeiteIsTheAdmins(t *testing.T) {
 		t.Errorf("a family member → %d, want 404", rec.Code)
 	}
 	body := as(h, "GET", "/module/standort", "anna", "family,admins", nil).Body.String()
-	for _, want := range []string{"<h1>Standortverlauf</h1>", "reitti", "Auf dieser Box läuft kein Reitti.", "wartet auf Freigabe", "/box/aufgaben"} {
+	for _, want := range []string{"<h1>Standortverlauf</h1>", "reitti", "Auf dieser Box läuft kein Reitti.", "wartet auf Freigabe", "/aufgaben?nur=box"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("/module/standort lacks %q", want)
 		}

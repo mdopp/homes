@@ -80,14 +80,14 @@ func pagesLike(status map[string]int, body map[string]string) http.Handler {
 func TestPageViewsPerPage(t *testing.T) {
 	fake, c := metrics(t)
 	h := Counted(c, pagesLike(map[string]int{"/gibtsnicht": 404, "/notizen": 302}, nil))
-	for _, p := range []string{"/start", "/start", "/raeume", "/raeume/light.flur", "/energie", "/medien", "/kalender",
+	for _, p := range []string{"/start", "/start", "/raeume", "/raeume/light.flur", "/energie", "/kalender",
 		"/kalender/erinnerung/abc", "/kontakte/x", "/dokumente/12", "/notizen/einkauf.md", "/sprechen", "/box", "/box/geraete", "/pair-device",
 		"/gibtsnicht", "/notizen", "/schrift/geist-1b5ebf.woff2", "/healthz", "/einkauf", "/musik", "/musik/stand", "/daten-sichern",
 		"/kalender/verwalten", "/box/einladen", "/live", "/abmelden"} {
 		serve(h, "GET", p, "anna")
 	}
 	serve(h, "HEAD", "/start", "anna")
-	want := map[string]int64{"seite.start": 2, "seite.raeume": 1, "seite.ding": 1, "seite.energie": 1, "seite.medien": 1, "seite.kalender": 1,
+	want := map[string]int64{"seite.start": 2, "seite.raeume": 1, "seite.ding": 1, "seite.energie": 1, "seite.kalender": 1,
 		"seite.erinnerung": 1, "seite.kontakt": 1, "seite.dokument": 1, "seite.notiz": 1, "seite.sprechen": 1, "seite.box": 1,
 		"seite.geraete": 1, "seite.koppeln": 1, "seite.einkauf": 1, "seite.musik": 1, "seite.daten": 1, "seite.kalender-verwalten": 1,
 		"seite.einladen": 1}

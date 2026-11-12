@@ -108,6 +108,7 @@ body>*{grid-column:1/-1}body>.karte{grid-column:auto}body>.karte.geraete{grid-co
 // (haus#61, haus#67: Abmelden is under Mehr). The page writes its own h1.
 func familyHead(r *http.Request, cfg StartConfig, title, current string) *strings.Builder {
 	cfg.Gesichter.Merke(r.Header.Get("Remote-User"), r.Header.Get("Remote-Email")) // whose Handy-Kontakte go to Immich
+	cfg.Einrichtung.SahAdmin(r.Header.Get("Remote-User"), isAdmin(r))              // the app's Deine Aufgaben: an admin's rows too (homes#362)
 	b := &strings.Builder{}
 	if title != "Homes" {
 		title += " · Homes"

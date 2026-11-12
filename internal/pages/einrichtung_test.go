@@ -15,9 +15,8 @@ import (
 )
 
 // haus#188 (owner 2026-10-28): what a person sets up once is a task — open
-// ones in Mehr's „Einrichtung“, the important first, gone once done; Start's
-// Braucht dich has an important one, never an optional one; Deine Aufgaben lists them all, the done
-// ones to do again
+// ones in Mehr's „Einrichtung“, gone once done; Start's Braucht dich has the
+// first three (homes#362); Deine Aufgaben lists them all, the done ones to do again
 func TestEinrichtungKommtUndGeht(t *testing.T) {
 	fs := sambafake.New(t, map[string]int64{"anna": 0, "ben": 1777777777}, true)
 	dc, _ := discogsFake(t) // anna has connected hers
@@ -42,12 +41,13 @@ func TestEinrichtungKommtUndGeht(t *testing.T) {
 	mustNotContain(t, start, "karte-braucht-dich", "Netzlaufwerk")
 
 	_, body, _ = familyPage(t, DeineAufgaben, cfg, "GET", aufgabenPath, "family")
-	mustContain(t, body, "<h1>Deine Aufgaben</h1>", "Alles eingerichtet.", "<h2 id=karte-erledigt>Erledigt</h2>", "Noch einmal: Damit du die Dateien", `<a href="/discogs">Discogs verbinden</a>`)
+	mustContain(t, body, "<h1>Deine Aufgaben</h1>", "Alles erledigt.", "<h2 id=karte-erledigt>Erledigt</h2>", "Noch einmal: Damit du die Dateien", `<a href="/discogs">Discogs verbinden</a>`)
 }
 
-// laib#878: Laib's tasks for the person and the household join Einrichtung
-// (the admins' stay on Box); one with a Homes page leads there, one done
-// together with the Bote has „Gemeinsam mit Ada“
+// laib#878: Laib's tasks for the person and the household join Deine
+// Aufgaben (the admins' for admins only, homes#362); one with a Homes page
+// leads there, one done together with the Bote has „Gemeinsam mit Ada“, a
+// done one is gone
 func TestEinrichtungMitLaibsAufgaben(t *testing.T) {
 	named(t, "Ada")
 	var asked map[string]any
@@ -80,9 +80,12 @@ func TestEinrichtungMitLaibsAufgaben(t *testing.T) {
 	mustContain(t, body, `<a href="/aufgaben#aufgabe-7">Strato-Eintrag für fotos setzen</a>`, `<a href="/willkommen">Homes-App koppeln</a>`)
 	mustNotContain(t, body, "RAID prüfen", "Bens Sache", "Alte Aufgabe")
 	_, body, _ = familyPage(t, DeineAufgaben, cfg, "GET", aufgabenPath, "family")
-	mustContain(t, body, `<section class=karte id=aufgabe-7><h2>Strato-Eintrag für fotos setzen</h2>`,
-		`<input type=hidden name=nachricht value="Aufgabe #7 mit dir erledigen"><button data-laeuft="Fragt Ada …">Gemeinsam mit Ada</button>`,
-		"<h2 id=karte-erledigt>Erledigt</h2>", "Alte Aufgabe")
+	mustContain(t, body, `<li id=aufgabe-7><b>Strato-Eintrag für fotos setzen</b>`,
+		`<input type=hidden name=nachricht value="Aufgabe #7 mit dir erledigen"><button data-laeuft="Fragt Ada …">Gemeinsam mit Ada</button>`)
+	mustNotContain(t, body, "RAID prüfen", "Bens Sache", "Alte Aufgabe", "karte-erledigt")
+	_, body, _ = familyPage(t, DeineAufgaben, cfg, "GET", aufgabenPath, "family,admins")
+	mustContain(t, body, "<li id=aufgabe-9><b>RAID prüfen</b>")
+	mustNotContain(t, body, "Bens Sache", "Alte Aufgabe")
 }
 
 // laib#1168: file-share's check asks Laib for the person's password task
