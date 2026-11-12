@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"html"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -14,6 +15,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/mdopp/homes/internal/assistent"
 	"github.com/mdopp/homes/internal/cards"
@@ -85,14 +87,23 @@ func aufgabenListe(r *http.Request, cfg StartConfig, l laibTeil) []aufgabe {
 			as = append(as, aufgabe{titel: row[0], warum: row[1], href: ZugangPath, art: artEntscheiden, name: "zugang", icon: "box"})
 		}
 	}
-	if ar := l.archiv; cfg.ArchivURL != "" { // the archive's counts, the person's own (owner 2026-11-12)
-		if ar.Fragen > 0 {
-			as = append(as, aufgabe{titel: "Im Archiv: " + texte.Anzahl(ar.Fragen, "Frage", "Fragen") + " offen", warum: "Wer zu wem gehört: dein Archiv fragt nach.",
-				href: cfg.ArchivURL + "/tresor?tab=fragen", extern: "Im Archiv öffnen", art: artFrage, name: "archiv-fragen", icon: "archiv"})
+	if z := l.archiv; cfg.ArchivURL != "" { // the viewer's own archive's counts (owner 2026-11-12, archiv#60)
+		now, loc := cfg.clock()
+		stand := ""
+		if !z.Offen && !z.Am.IsZero() { // the last count, kept while the vault is closed
+			stand = "Stand: " + dayWord(z.Am, now, loc)
 		}
-		if ar.Aufraeumen > 0 {
-			as = append(as, aufgabe{titel: "Im Archiv: " + texte.Anzahl(ar.Aufraeumen, "Ding", "Dinge") + " zum Aufräumen", warum: "Dein Archiv hat etwas zum Aufräumen gefunden.",
-				href: cfg.ArchivURL + "/tresor", extern: "Im Archiv öffnen", art: artFrage, name: "archiv-aufraeumen", icon: "archiv"})
+		if z.SchluesselFehlt {
+			as = append(as, aufgabe{titel: "Im Archiv fehlt ein Schlüssel", warum: "Ohne ihn kommt nicht alles in dein Archiv.",
+				href: cfg.ArchivURL + "/tresor/quellen", extern: "Im Archiv öffnen", art: artSchluessel, name: "archiv-schluessel", icon: "archiv"})
+		}
+		if z.Fragen > 0 {
+			as = append(as, aufgabe{titel: "Im Archiv: " + texte.Anzahl(z.Fragen, "Frage", "Fragen") + " offen", stand: stand, warum: "Wer zu wem gehört: dein Archiv fragt nach.",
+				href: cfg.ArchivURL + "/tresor", extern: "Im Archiv öffnen", art: artFrage, name: "archiv-fragen", icon: "archiv"})
+		}
+		if z.Aufraeumen > 0 {
+			as = append(as, aufgabe{titel: texte.Anzahl(z.Aufraeumen, "Ding", "Dinge") + " zum Aufräumen im Archiv", stand: stand, warum: "Dein Archiv hat etwas zum Aufräumen gefunden.",
+				href: cfg.ArchivURL + "/tresor/pflege", extern: "Im Archiv öffnen", art: artFrage, name: "archiv-aufraeumen", icon: "archiv"})
 		}
 	}
 	slices.SortStableFunc(as, func(a, b aufgabe) int { return a.art - b.art })
@@ -145,7 +156,7 @@ func logLaibAufgaben(err error) {
 
 // aufgabenLesen reads what Deine Aufgaben needs of Laib and the archive at
 // once: the tasks and keys (kept is the list kept a minute, else anew),
-// an admin's decisions waiting, the person's archive's counts.
+// an admin's decisions waiting, the viewer's own archive's counts.
 func aufgabenLesen(r *http.Request, cfg StartConfig, kept bool) (l laibTeil, err error) {
 	user := r.Header.Get("Remote-User")
 	if cfg.Laib == nil || user == "" {
@@ -162,7 +173,7 @@ func aufgabenLesen(r *http.Request, cfg StartConfig, kept bool) (l laibTeil, err
 		if ok && err == nil {
 			l.aufgaben = &la
 		}
-	}, func(ctx context.Context) { l.archiv, _ = archivVon(ctx, cfg, user) }}
+	}, func(ctx context.Context) { l.archiv = archivZahlen(ctx, cfg, user) }}
 	if isAdmin(r) {
 		reads = append(reads, func(ctx context.Context) { l.wartet, _ = cfg.Laib.Inbox(ctx) })
 	}
@@ -182,6 +193,37 @@ func archivVon(ctx context.Context, cfg StartConfig, person string) (ar archivSt
 	}
 	_, own, err := cfg.Laib.ServiceStatus(ctx, "archiv-"+person)
 	return ar, err == nil && json.Unmarshal(own, &ar) == nil
+}
+
+// archivAufgaben is what the person's own archive counts for them
+// (archiv#60, GET /intern/aufgaben): counts only, and never through Laib's
+// status, which the admins see (owner 2026-11-12: the archive's owner's only).
+type archivAufgaben struct {
+	Offen           bool      `json:"offen"` // false: the counts of Am, the vault closed since
+	Am              time.Time `json:"am"`
+	Fragen          int       `json:"fragen"`
+	Aufraeumen      int       `json:"aufraeumen"`
+	SchluesselFehlt bool      `json:"schluessel_fehlt"`
+}
+
+// archivZahlen asks person's own archive, the way the media come
+// (X-Archiv-Homes, ArchivIntern); none without one or when it did not answer.
+func archivZahlen(ctx context.Context, cfg StartConfig, person string) (z archivAufgaben) {
+	a, ok := cfg.ArchivIntern[person]
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, a.URL+"/intern/aufgaben", nil)
+	if !ok || err != nil {
+		return z
+	}
+	req.Header.Set("X-Archiv-Homes", a.Secret)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return z
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK || json.NewDecoder(io.LimitReader(resp.Body, 4<<10)).Decode(&z) != nil {
+		return archivAufgaben{}
+	}
+	return z
 }
 
 // mitAssistent is a task's „Gemeinsam mit <name>“: the Sprechen field's

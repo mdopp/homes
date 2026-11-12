@@ -7,14 +7,15 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mdopp/homes/internal/einrichten"
 	"github.com/mdopp/homes/internal/laib"
+	"github.com/mdopp/homes/internal/napi"
 )
 
 // laib362 is a Laib after laib#1195: the tasks with the keys the box waits
-// for, two decisions waiting, anna's archive with its counts. old: a Laib
-// before it, no schluessel and no counts.
+// for, two decisions waiting. old: a Laib before it, no schluessel.
 func laib362(t *testing.T, old bool) *laib.Client {
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -42,10 +43,6 @@ func laib362(t *testing.T, old bool) *laib.Client {
 			text += "}"
 		case "laib_inbox":
 			text = `[{"id":1,"status":"open"},{"id":2,"status":"open"}]`
-		case "laib_status":
-			if req.Params.Args["service"] == "archiv-anna" && !old {
-				text = `{"services":[{"name":"archiv-anna","eigenes":{"fragen_offen":3,"aufraeumen_offen":0}}]}`
-			}
 		}
 		json.NewEncoder(w).Encode(map[string]any{"result": map[string]any{"content": []map[string]string{{"text": text}}}})
 	}))
@@ -53,9 +50,31 @@ func laib362(t *testing.T, old bool) *laib.Client {
 	return &laib.Client{URL: srv.URL, Token: "t"}
 }
 
+// archiv362 is anna's archive after archiv#60: its counts at
+// /intern/aufgaben for her secret alone, answer its JSON; old: an archive
+// before it (404). It counts who asked.
+func archiv362(t *testing.T, old bool, answer string) (napi.ArchivIntern, *int) {
+	t.Helper()
+	asked := new(int)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		*asked++
+		if old || r.URL.Path != "/intern/aufgaben" || r.Header.Get("X-Archiv-Homes") != "anna-geheim" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Write([]byte(answer))
+	}))
+	t.Cleanup(srv.Close)
+	return napi.ArchivIntern{URL: srv.URL, Secret: "anna-geheim"}, asked
+}
+
+// cfg362 is a box where anna's and clara's archives are there; clara's
+// does not answer.
 func cfg362(t *testing.T, old bool) StartConfig {
+	anna, _ := archiv362(t, old, `{"offen":true,"fragen":3,"aufraeumen":0,"schluessel_fehlt":false}`)
 	return StartConfig{Laib: laib362(t, old), LaibURL: "https://laib.box.test", PublicURL: "https://www.box.test",
-		Archive: map[string]bool{"anna": true, "clara": true}, ArchivURL: "https://archiv.box.test"}
+		Archive: map[string]bool{"anna": true, "clara": true}, ArchivURL: "https://archiv.box.test",
+		ArchivIntern: map[string]napi.ArchivIntern{"anna": anna, "clara": {URL: "http://127.0.0.1:1", Secret: "clara-geheim"}}}
 }
 
 // homes#362: Deine Aufgaben is the one list, per viewer, in the owner's
@@ -72,7 +91,7 @@ func TestDeineAufgabenPerViewer(t *testing.T) {
 	mustContain(t, offen, `<a href="https://laib.box.test/inbox">2 Entscheidungen warten</a>`,
 		`<a href="https://laib.box.test/schluessel?name=WHO_MAIL`+back+`">Whoami: Post</a>`, "Damit whoami Post liest.", ">Schlüssel eintragen</a>",
 		`<a href="https://laib.box.test/schluessel?name=ARCHIV_IMAP`+back+`">Archiv: Postfach</a>`, "Ohne ihn wartet archiv-anna.",
-		`<a href="https://archiv.box.test/tresor?tab=fragen">Im Archiv: 3 Fragen offen</a>`, ">Im Archiv öffnen</a>",
+		`<a href="https://archiv.box.test/tresor">Im Archiv: 3 Fragen offen</a>`, ">Im Archiv öffnen</a>",
 		`<li id=aufgabe-20><b>Zweite Platte einbauen</b><span class=text>Anleitung: <a href="https://laib.box.test/hilfe/platte">https://laib.box.test/hilfe/platte</a>.</span>`,
 		`<li id=aufgabe-23><b>Für alle</b>`)
 	mustNotContain(t, owner, "Post-Passwort eintragen", "Später erst", "Bens Sache", "Discogs-Schlüssel", "aufräumen")
@@ -83,7 +102,7 @@ func TestDeineAufgabenPerViewer(t *testing.T) {
 
 	_, admin, _ := familyPageAs(t, DeineAufgaben, cfg, "GET", aufgabenPath, "clara", "family,admins")
 	mustContain(t, admin, "2 Entscheidungen warten", "Whoami: Post", "Zweite Platte einbauen", "Für alle")
-	mustNotContain(t, admin, "3 Fragen offen", "Bens Sache") // laib's status of archiv-clara has no counts here
+	mustNotContain(t, admin, "3 Fragen offen", "Im Archiv", "Bens Sache") // her own archive does not answer: no row, no error
 
 	_, ben, _ := familyPageAs(t, DeineAufgaben, cfg, "GET", aufgabenPath, "ben", "family")
 	mustContain(t, section(t, ben, "karte-offen"), `<a href="/netzlaufwerk">Bens Sache</a>`, `Für alle`,
@@ -112,8 +131,8 @@ func TestDeineAufgabenBoxFilter(t *testing.T) {
 	mustContain(t, ben, "Bens Sache")
 }
 
-// A Laib before laib#1195 (the box's v2.24.0): no key rows, no counts, no
-// error on the page or on Start.
+// A Laib before laib#1195 (the box's v2.24.0) and an archive before
+// archiv#60: no key rows, no counts, no error on the page or on Start.
 func TestDeineAufgabenWithAnOlderLaib(t *testing.T) {
 	cfg := cfg362(t, true)
 	_, body, _ := familyPageAs(t, DeineAufgaben, cfg, "GET", aufgabenPath, "anna", "family,admins")
@@ -173,4 +192,45 @@ func TestDokumenteLeadsToScannenAndZuordnen(t *testing.T) {
 	mustContain(t, admin, `<a class=knopf href=/dokumente/zuordnen>Scans zuordnen (1)</a>`)
 	_, fam, _ := familyPage(t, Dokumente, cfg, "GET", DokumentePath, "family")
 	mustNotContain(t, fam, "zuordnen")
+}
+
+// archiv#60, owner 2026-11-12: the archive's counts are its owner's only.
+// anna sees hers — a missing key among the keys, the questions and the
+// clean-up among the questions, with the day they were counted while her
+// vault is closed — on Deine Aufgaben, Start and in the app; ben (family)
+// and clara (an admin) never, and Homes does not even ask anna's archive
+// for them.
+func TestArchivZahlenOnlyForItsOwner(t *testing.T) {
+	cfg := cfg362(t, false)
+	gestern := time.Date(2026, 11, 11, 20, 0, 0, 0, time.UTC)
+	cfg.Now, cfg.Loc = func() time.Time { return gestern.Add(14 * time.Hour) }, time.UTC
+	anna, asked := archiv362(t, false, `{"offen":false,"am":"`+gestern.Format(time.RFC3339)+`","fragen":1,"aufraeumen":4,"schluessel_fehlt":true}`)
+	cfg.ArchivIntern["anna"] = anna
+	_, page, _ := familyPageAs(t, DeineAufgaben, cfg, "GET", aufgabenPath, "anna", "family")
+	offen := section(t, page, "karte-offen")
+	mustContain(t, offen, `<a href="https://archiv.box.test/tresor/quellen">Im Archiv fehlt ein Schlüssel</a>`,
+		`<a href="https://archiv.box.test/tresor">Im Archiv: 1 Frage offen</a>`, "Stand: gestern · Wer zu wem gehört",
+		`<a href="https://archiv.box.test/tresor/pflege">4 Dinge zum Aufräumen im Archiv</a>`)
+	before(t, offen, "fehlt ein Schlüssel", "1 Frage offen")
+	before(t, offen, "1 Frage offen", "Für alle")
+	_, start, _ := familyPageAs(t, Start, cfg, "GET", StartBoxPath, "anna", "family")
+	mustContain(t, section(t, start, "karte-braucht-dich"), "Im Archiv fehlt ein Schlüssel", "Im Archiv: 1 Frage offen")
+	if *asked != 2 {
+		t.Fatalf("anna's archive asked %d times for anna's two pages", *asked)
+	}
+
+	for _, v := range [][2]string{{"ben", "family"}, {"clara", "family,admins"}} {
+		_, page, _ := familyPageAs(t, DeineAufgaben, cfg, "GET", aufgabenPath, v[0], v[1])
+		_, start, _ := familyPageAs(t, Start, cfg, "GET", StartBoxPath, v[0], v[1])
+		mustNotContain(t, page+start, "Im Archiv", "Aufräumen", "/tresor")
+	}
+	cfg.Einrichtung = &einrichten.Quellen{Module: modulListe(t), Admins: einrichten.OpenAdmins(t.TempDir())}
+	for _, z := range AppListe(cfg)(context.Background(), "ben") {
+		if strings.HasPrefix(z.Name, "archiv-") {
+			t.Errorf("ben's app has anna's %+v", z)
+		}
+	}
+	if *asked != 2 {
+		t.Errorf("anna's archive asked for another viewer: %d", *asked)
+	}
 }

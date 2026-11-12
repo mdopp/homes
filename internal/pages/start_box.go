@@ -126,7 +126,7 @@ type laibTeil struct {
 	aufgaben  *laib.Aufgaben  // the person's own Box-Aufgaben (laib#878)
 	befunde   laib.Befunde    // laib diag's, for an admin
 	wartet    []laib.Proposal // decisions waiting, for an admin
-	archiv    archivStand     // the person's archive's counts (homes#362)
+	archiv    archivAufgaben  // the viewer's own archive's counts (homes#362, archiv#60)
 }
 
 // brauchtDichSpaeter is Braucht dich's place on Start: what Homes knows at
@@ -213,7 +213,7 @@ func startBox(w http.ResponseWriter, r *http.Request, cfg StartConfig, box *boxS
 		})
 	}
 	if user != "" {
-		reads = append(reads, func(ctx context.Context) { l.archiv, _ = archivVon(ctx, cfg, user) })
+		reads = append(reads, func(ctx context.Context) { l.archiv = archivZahlen(ctx, cfg, user) })
 	}
 	if isAdmin(r) {
 		reads = append(reads, func(ctx context.Context) { l.befunde, derr = cfg.Laib.Befunde(ctx) },

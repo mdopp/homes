@@ -177,7 +177,7 @@ func familyOf(s site) pages.StartConfig {
 		DocumentsMail: s.docsMail, PaperlessPublicURL: s.paperlessPublic, PaperlessLANOnly: s.paperlessLAN, Sicherung: s.napi.Sicherung,
 		Reitti: s.napi.Reitti, Module: s.napi.Module, Einrichtung: s.napi.Einrichtung, PhoneCountry: s.hh.PhoneCountry, Gesichter: s.gesichter, Netz: s.netz}
 	family.Archive, family.ArchivURL = archivOf(s)
-	family.Antworten, family.DNS, family.KontaktURL = s.antworten, net.DefaultResolver, s.kontaktURL
+	family.Antworten, family.DNS, family.KontaktURL, family.ArchivIntern = s.antworten, net.DefaultResolver, s.kontaktURL, s.archive
 	family.Zugang = s.zugang // the teaser's access requests, for the admins' Start and /zugang (owner 2026-11-08)
 	if s.zuordnen != nil {
 		family.Zuordnen = s.zuordnen

@@ -38,7 +38,7 @@ type datenZeile struct {
 
 // archivStand is what the person's archive says of itself in its status
 // for Laib (archiv README „Status for laib“), read through `laib status
-// archiv-<person>`: times, counts and its own sentence of a failure — no
+// archiv-<person>`: times and its own sentence of a failure — no
 // content (homes ADR 0002).
 type archivStand struct {
 	Paket  map[string]struct{ Am time.Time } `json:"letztes_paket"`
@@ -48,10 +48,6 @@ type archivStand struct {
 		Quelle string
 		Satz   string
 	} `json:"letzter_fehler"`
-	// what waits for the person in the archive, counts only, for Deine
-	// Aufgaben (homes#362; the archive's side is to come: absent is 0)
-	Fragen     int `json:"fragen_offen"`
-	Aufraeumen int `json:"aufraeumen_offen"`
 }
 
 // MeineDaten is the page: per source a dot and one line, the sources not

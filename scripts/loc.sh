@@ -95,7 +95,10 @@ budget() { # budget <name> <cap> <dir…>
 # +99 net after the page Medien, the Box tab Aufgaben and Daten sichern's own page went, -190): the list per viewer in the owner's order
 # (decisions, keys and permissions, questions, setup), the keys' and the archive's rows, the Box filter, AppListe for /napi/einrichtung,
 # Scannen and Scans zuordnen on Dokumente, the answers' row on Kontakte
-budget pages 19220 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-12, owner's request homes#362 with archiv#60 (the count is the archive's owner's only, not in Laib's status): the archive's
+# counts from the viewer's own archive (pages 19,220 -> 19,257; 19,256 used, the minimum): GET /intern/aufgaben with X-Archiv-Homes,
+# the missing key's row, the clean-up's own link, „Stand: <Tag>“ while the vault is closed; the laib-status fields went (-4)
+budget pages 19257 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted

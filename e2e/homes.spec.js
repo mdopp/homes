@@ -366,7 +366,7 @@ test('Deine Aufgaben: one list in the owner\'s order, each row one tap away', as
   await expect(rows.first()).toHaveText('1 Entscheidung wartet');
   const key = offen.getByRole('link', { name: 'Dokumenten-Mails: Passwort des Postfachs' });
   await expect(key).toHaveAttribute('href', /schluessel\?name=DOKUMENTE_MAIL_PASSWORD_ANNA&zurueck=https%3A%2F%2Fhomes\.example%2Faufgaben$/);
-  await expect(offen.getByRole('link', { name: 'Im Archiv: 2 Fragen offen' })).toHaveAttribute('href', 'https://archiv.example/tresor?tab=fragen');
+  await expect(offen.getByRole('link', { name: 'Im Archiv: 2 Fragen offen' })).toHaveAttribute('href', 'https://archiv.example/tresor');
   await expect(offen.getByRole('link', { name: 'https://laib.example/hilfe/waechter' })).toBeVisible();
   expect(await above(page, 'text=1 Entscheidung wartet', 'text=Dokumenten-Mails: Passwort')).toBe(true);
   expect(await above(page, 'text=Dokumenten-Mails: Passwort', 'text=Im Archiv: 2 Fragen offen')).toBe(true);
