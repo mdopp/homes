@@ -162,10 +162,14 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   key's owner the permissions the key lacks (*In Immich öffnen*, its API
   keys page); (3) questions — Immich's (*Dieselbe Person?*), for admins the
   scans nobody could be given (*Wem gehört dieser Scan?*), the contacts'
-  answers to review, and the person's own archive's open counts (*Im
-  Archiv: N Fragen offen* / *N Dinge zum Aufräumen*, read from
-  `laib status archiv-<login>`'s `fragen_offen` and `aufraeumen_offen`;
-  absent is none — the archive's side is still to come); (4) setup —
+  answers to review, and the viewer's own archive's open counts (*Im
+  Archiv: N Fragen offen* → `<archiv>/tresor`, *N Dinge zum Aufräumen im
+  Archiv* → `<archiv>/tresor/pflege`, and among the keys *Im Archiv fehlt
+  ein Schlüssel* → `<archiv>/tresor/quellen`), read from the viewer's own
+  archive only: `GET /intern/aufgaben` with `X-Archiv-Homes` (archiv#60,
+  the way of `HOMES_ARCHIV_INTERN`), never from Laib's status, which the
+  admins see; a count from a closed vault says *Stand: <day>*; an archive
+  that does not answer is no row; (4) setup —
   Homes' own (Netzlaufwerk-Passwort, the modules' apps, Discogs) and Laib's
   tasks: `alle`, `person:<login>`, and for admins `admins` (laib#878,
   formerly Box → Aufgaben only). Each row is its title (the one tap), one
@@ -1013,7 +1017,7 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   open tasks in the answer's order, so it shows the page's order unchanged.
   Their `name`s: `entscheiden`, `zugang`, `schluessel-<NAME>`,
   `immich-rechte`, `immich-pruefen` (the Immich key owner's open
-  questions, owner 2026-11-07), `scans`, `antworten`, `archiv-fragen`,
+  questions, owner 2026-11-07), `scans`, `antworten`, `archiv-schluessel`, `archiv-fragen`,
   `archiv-aufraeumen`, `netzlaufwerk`, `discogs`, `aufgabe-<id>` (a Laib
   task); `icon` a module's key where one fits, else `box`, `archiv` or
   `aufgabe` (the app's default picture). Each counts in `offen`. The

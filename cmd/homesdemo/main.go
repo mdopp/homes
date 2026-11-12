@@ -257,10 +257,10 @@ func main() {
 	seiten := mehr // Daten sichern, Netzlaufwerk, Box, Adresse (the Mehr audit)
 	seiten.Reitti = standort.Reitti
 	// Meine Daten (homes#342): Anna's archive fetched her mail just before each look at the page, so it
-	// says „heute“ at any hour (at 00:30 „an hour ago“ was „gestern“); two questions wait in it (homes#362)
+	// says „heute“ at any hour (at 00:30 „an hour ago“ was „gestern“)
 	seiten.Archive, seiten.ArchivURL, seiten.DocumentsMail = map[string]bool{"anna": true}, "https://archiv.example", "dokumente@example.org"
 	archivJetzt := func() {
-		demoLaib.wishes.Status("archiv-anna", `{"fragen_offen":2,"letztes_paket":{"mail":{"am":"`+time.Now().UTC().Format(time.RFC3339)+`"}}}`)
+		demoLaib.wishes.Status("archiv-anna", `{"letztes_paket":{"mail":{"am":"`+time.Now().UTC().Format(time.RFC3339)+`"}}}`)
 	}
 	archivJetzt()
 	mehrSeiten(mux, seiten, dav, dir, store, archivJetzt)
@@ -268,6 +268,11 @@ func main() {
 	// the box waits for, the archive's questions, the household's task; ?nur=box the Box-Aufgaben
 	aufgaben := start
 	aufgaben.Archive, aufgaben.ArchivURL, aufgaben.PublicURL = seiten.Archive, seiten.ArchivURL, "https://homes.example"
+	// two questions wait in Anna's own archive (archiv#60: /intern/aufgaben with her secret, never in Laib's status)
+	aufgaben.ArchivIntern = map[string]napi.ArchivIntern{"anna": {URL: "http://" + *addr + "/demo/archiv", Secret: "demo"}}
+	mux.HandleFunc("/demo/archiv/intern/aufgaben", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"offen":true,"fragen":2,"aufraeumen":0,"schluessel_fehlt":false}`))
+	})
 	mux.HandleFunc("/aufgaben", pages.DeineAufgaben(aufgaben))
 	mux.HandleFunc("/demo/wunsch", func(w http.ResponseWriter, r *http.Request) { // a wish moved on in Laib: wartet, abgelehnt, …
 		demoLaib.wishes.Setze(r.URL.Query().Get("modul"), r.URL.Query().Get("stand"), "")

@@ -113,6 +113,7 @@ type StartConfig struct {
 	// the house's network only) and the house's calling code for its search
 	Archive      map[string]bool
 	ArchivURL    string
+	ArchivIntern map[string]napi.ArchivIntern // the way into each one's archive, for the viewer's own counts on Deine Aufgaben
 	PhoneCountry string
 	// Gesichter is Immich for the contacts (owner 2026-11-05): their „Fotos“,
 	// a face for a card without a picture, the suggestions; nil: none of it
