@@ -44,11 +44,8 @@ func Energie(cfg StartConfig) http.HandlerFunc {
 			haErr, prefErr error
 		)
 		view := zeitraumOf(r)
-		reads := []func(context.Context){func(ctx context.Context) { states, haErr = cfg.HA.States(ctx) }}
-		if view == "tag" { // the chosen hour's battery and devices
-			reads = append(reads, func(ctx context.Context) { prefs, prefErr = cfg.HA.EnergyPrefs(ctx) })
-		}
-		fetch(r, reads...)
+		fetch(r, func(ctx context.Context) { states, haErr = cfg.HA.States(ctx) },
+			func(ctx context.Context) { prefs, prefErr = cfg.HA.EnergyPrefs(ctx) }) // the chosen bar's battery and devices
 		logErrs("energie", map[string]error{"home assistant": haErr, "energy dashboard": prefErr})
 		b := familyHead(r, cfg, "Energie", "Energie")
 		b.WriteString(refreshEvery(60)) // Jetzt follows the sun; the history is HA's statistics, not every second
@@ -71,11 +68,11 @@ func Energie(cfg StartConfig) http.HandlerFunc {
 			daily, hourly   amounts
 			dailyE, hourlyE error
 		)
-		reads = nil
+		var reads []func(context.Context)
 		if stats.Any() { // the history from HA's long-term statistics (haus#65)
 			reads = append(reads, func(ctx context.Context) {
 				// last year's January on: the comparisons and the forecast
-				daily, dailyE = statsFor(ctx, cfg.HA, historySlots(stats), time.Date(today.Year()-1, time.January, 1, 0, 0, 0, 0, loc), today.AddDate(0, 0, 1), "day", loc)
+				daily, dailyE = statsFor(ctx, cfg.HA, append(historySlots(stats), stundeSlots(prefs)...), time.Date(today.Year()-1, time.January, 1, 0, 0, 0, 0, loc), today.AddDate(0, 0, 1), "day", loc)
 			})
 			if view == "tag" {
 				reads = append(reads, func(ctx context.Context) {

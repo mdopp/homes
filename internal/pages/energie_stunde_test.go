@@ -21,25 +21,26 @@ func TestEnergieStundeSaysWhatWasUsed(t *testing.T) {
 	_, body, _ := familyPage(t, Energie, cfg, "GET", "/energie", "family")
 	line := "<p><b>9–10 Uhr:</b> 0,4 kWh verbraucht · 0,2 selbst erzeugt · 0,2 aus dem Netz · 0,1 ins Netz</p>"
 	mustContain(t, body, "<div class=stunde aria-live=polite>"+line+"</div>",
-		`<g class=gewaehlt aria-pressed=true tabindex=0 data-stunde=`, `data-zeile="&lt;p&gt;&lt;b&gt;9–10 Uhr:&lt;/b&gt; 0,4 kWh verbraucht`,
+		`<g aria-pressed=true tabindex=0 data-stunde=`, `data-zeile="&lt;p&gt;&lt;b&gt;9–10 Uhr:&lt;/b&gt; 0,4 kWh verbraucht`,
 		`role=button aria-label="9–10 Uhr"`, `data-zeile="&lt;p&gt;&lt;b&gt;12–13 Uhr:&lt;/b&gt; noch keine Werte&lt;/p&gt;"`,
 		`data-zeile="&lt;p&gt;&lt;b&gt;23–24 Uhr:`,
 		"<th scope=col>Verbrauch</th>", "<tr><th scope=row>09 Uhr</th><td>0,3 kWh</td><td>0,1 kWh</td><td>0,2 kWh</td><td>0,4 kWh</td></tr>")
-	if n := strings.Count(body, "aria-pressed=true"); n != 1 {
+	if n := strings.Count(body, "aria-pressed=true tabindex=0"); n != 1 {
 		t.Fatalf("%d hours chosen, want one", n)
 	}
 	mustNotContain(t, body, "class=geraete", "Akku")
-	// the other spans: no hour to choose, no prefs asked
+	// the other spans too (owner, 2026-11-11: „Das sollte bei jedem
+	// stehen“): today, the day HA has summed so far, is chosen
 	_, body, _ = familyPage(t, Energie, cfg, "GET", "/energie?zeitraum=woche", "family")
-	mustNotContain(t, body, "class=stunde", "data-zeile", "<th scope=col>Verbrauch</th>")
-	mustContain(t, body, "role=img")
+	mustContain(t, body, "<div class=stunde aria-live=polite><p><b>Mittwoch, 14. Oktober:</b> 4 kWh verbraucht · 2 selbst erzeugt · 2 aus dem Netz · 1 ins Netz</p></div>",
+		`role=button aria-label="Dienstag, 13. Oktober"`, "<th scope=col>Verbrauch</th>", "role=group aria-label=\"Die letzten sieben Tage")
 }
 
 // With a battery and devices in the dashboard: the battery counts (out of
 // it used, into it not), and the three devices that used most stand under
 // the line with the rest — never a part of another device; an hour the
-// devices have no numbers for has no device line. Only the day by the
-// hour asks for their statistics.
+// devices have no numbers for has no device line. The days ask for them
+// too, for the other spans.
 func TestEnergieStundeWithBatteryAndDevices(t *testing.T) {
 	fake, hc := house(t)
 	cfg := senecSince2June(t, fake)
@@ -72,12 +73,46 @@ func TestEnergieStundeWithBatteryAndDevices(t *testing.T) {
 	mustNotContain(t, body, "sensor.dose", "Router", "<unten>")
 	for _, a := range fake.StatisticsAsked() {
 		ids := a["statistic_ids"].([]any)
-		if a["period"] == "day" && len(ids) != 3 {
-			t.Errorf("the days asked for %v, want the three counters alone", ids)
+		if a["period"] == "day" && len(ids) != 10 {
+			t.Errorf("the days asked for %v, want the counters, the battery's two and the five devices", ids)
 		}
 		if a["period"] == "hour" && len(ids) != 10 {
 			t.Errorf("the hours asked for %v, want the counters, the battery's two and the five devices", ids)
 		}
+	}
+}
+
+// Woche and Jahr: a day's and a month's battery and devices come from the
+// days HA has summed, a month's as the sum of its days; the estimate never
+// counts, a month still to come has no values; the sun's share is what
+// neither went into the grid nor into the battery.
+func TestEnergieChosenDayAndMonth(t *testing.T) {
+	fake, hc := house(t)
+	cfg := senecSince2June(t, fake)
+	cfg.HA = hc
+	fake.SetEnergyPrefs(map[string]any{
+		"energy_sources":     []any{map[string]any{"type": "battery", "stat_energy_from": "sensor.akku_aus", "stat_energy_to": "sensor.akku_ein"}},
+		"device_consumption": []any{map[string]any{"stat_consumption": "sensor.wp_energie", "name": "Wärmepumpe"}},
+	})
+	loc := berlin(t)
+	nine, first, second := time.Date(2026, 10, 14, 9, 0, 0, 0, loc), time.Date(2026, 10, 1, 12, 0, 0, 0, loc), time.Date(2026, 10, 2, 12, 0, 0, 0, loc)
+	fake.SetStatistics("sensor.akku_aus", []hafake.Stat{{Start: first, Change: 1}, {Start: nine, Change: 0.3}})
+	fake.SetStatistics("sensor.akku_ein", []hafake.Stat{{Start: nine, Change: 0.1}})
+	fake.SetStatistics("sensor.wp_energie", []hafake.Stat{{Start: second, Change: 2}, {Start: nine, Change: 0.3}})
+	// Woche: today, with its battery and device; 1 and 2 October are not in it
+	_, body, _ := familyPage(t, Energie, cfg, "GET", "/energie?zeitraum=woche", "family")
+	mustContain(t, body, "<div class=stunde aria-live=polite><p><b>Mittwoch, 14. Oktober:</b> 4,2 kWh verbraucht · 1,9 selbst erzeugt · 0,3 aus dem Akku · 2 aus dem Netz · 1 ins Netz · 0,1 in den Akku</p>"+
+		"<p class=geraete>Wärmepumpe 0,3 kWh · Rest 3,9 kWh</p></div>",
+		"<tr><th scope=row>Mittwoch, 14. Oktober</th><td>3 kWh</td><td>1 kWh</td><td>2 kWh</td><td>4,2 kWh</td></tr>",
+		`data-zeile="&lt;p&gt;&lt;b&gt;Dienstag, 13. Oktober:&lt;/b&gt; 7 kWh verbraucht · 4 selbst erzeugt · 3 aus dem Netz · 6 ins Netz&lt;/p&gt;"`)
+	// Jahr: October, its days summed — the battery's 1 + 0,3, the device's 2 + 0,3
+	_, body, _ = familyPage(t, Energie, cfg, "GET", "/energie?zeitraum=jahr", "family")
+	mustContain(t, body, "<div class=stunde aria-live=polite><p><b>Oktober 2026:</b> 96,2 kWh verbraucht · 53,9 selbst erzeugt · 1,3 aus dem Akku · 41 aus dem Netz · 79 ins Netz · 0,1 in den Akku</p>"+
+		"<p class=geraete>Wärmepumpe 2,3 kWh · Rest 93,9 kWh</p></div>",
+		`data-zeile="&lt;p&gt;&lt;b&gt;November 2026:&lt;/b&gt; noch keine Werte&lt;/p&gt;"`,
+		`data-zeile="&lt;p&gt;&lt;b&gt;September 2026:&lt;/b&gt; 180 kWh verbraucht · 120 selbst erzeugt · 60 aus dem Netz · 180 ins Netz&lt;/p&gt;"`)
+	if n := strings.Count(body, "aria-pressed=true tabindex=0"); n != 1 {
+		t.Fatalf("%d months chosen, want one", n)
 	}
 }
 

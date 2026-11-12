@@ -404,11 +404,13 @@ func TestEnergieYearChartCarriesTheForecast(t *testing.T) {
 		`aria-label="Das Jahr 2026 als Balken, der Rest des Jahres geschätzt (schraffiert); die Zahlen stehen in der Tabelle darunter"`,
 		"<title>Juni 2026: Erzeugt 290 kWh · Ins Netz 174 kWh · Netzbezug 58 kWh</title>",
 		"<title>Oktober 2026: Erzeugt 133 kWh · Ins Netz 79 kWh · Netzbezug 41 kWh; dazu geschätzt: Erzeugt etwa 177 kWh · Ins Netz etwa 107 kWh · Netzbezug etwa 36 kWh</title>",
-		"<g class=geschaetzt><title>November 2026, geschätzt: Erzeugt etwa 300 kWh · Ins Netz etwa 180 kWh · Netzbezug etwa 63 kWh</title>",
+		"<g class=geschaetzt aria-pressed=false tabindex=-1 data-stunde=",
+		`aria-label="November 2026"><title>November 2026, geschätzt: Erzeugt etwa 300 kWh · Ins Netz etwa 180 kWh · Netzbezug etwa 63 kWh</title>`,
 		`<rect class="schaetzung solar"`, `<rect class="schaetzung bezug"`, `<rect class="schaetzung einsp"`,
 		"<line class=heute", ">heute</text>", "<li><i class=schaetzung></i>geschätzt</li>",
-		"<tr><th scope=row>November 2026</th><td>etwa 300 kWh</td><td>etwa 180 kWh</td><td>etwa 63 kWh</td></tr>",
-		"<tr><th scope=row>Oktober 2026</th><td>133 kWh + etwa 177 kWh</td><td>79 kWh + etwa 107 kWh</td><td>41 kWh + etwa 36 kWh</td></tr>")
+		"<tr><th scope=row>November 2026</th><td>etwa 300 kWh</td><td>etwa 180 kWh</td><td>etwa 63 kWh</td><td>–</td></tr>",
+		// the Verbrauch column is what was, never the estimate
+		"<tr><th scope=row>Oktober 2026</th><td>133 kWh + etwa 177 kWh</td><td>79 kWh + etwa 107 kWh</td><td>41 kWh + etwa 36 kWh</td><td>95 kWh</td></tr>")
 	mustNotContain(t, fig, "class=vorjahr", "<th scope=col>Vorjahr</th>", "<th scope=row>Mai 2026</th>")
 	if n := strings.Count(fig, `<rect class="schaetzung bezug"`); n != 3 {
 		t.Fatalf("%d hatched Bezug bars, want October, November and December", n)
@@ -426,7 +428,7 @@ func TestEnergieYearChartCarriesTheForecast(t *testing.T) {
 	// Monat: the days still to come hatched, by the same rule
 	_, body, _ = familyPage(t, Energie, cfg, "GET", "/energie?zeitraum=monat", "family")
 	fig = between(t, body, "<figure class=verlauf>", "</figure>")
-	mustContain(t, fig, "<g class=geschaetzt><title>15. Oktober, geschätzt: Erzeugt etwa 10 kWh · Ins Netz etwa 6 kWh · Netzbezug etwa 2,1 kWh</title>",
+	mustContain(t, fig, `aria-label="15. Oktober"><title>15. Oktober, geschätzt: Erzeugt etwa 10 kWh · Ins Netz etwa 6 kWh · Netzbezug etwa 2,1 kWh</title>`,
 		"<line class=heute", `<rect class="schaetzung bezug"`)
 	mustContain(t, body, `aria-labelledby=karte-oktober-2026-bis-heute>`)
 	before(t, body, "karte-dieser-monat-und-der-im-vorjahr", "karte-prognose-bis-jahresende-2026-geschaetzt")
@@ -451,7 +453,7 @@ func TestEnergieYearChartWithLastYear(t *testing.T) {
 		"<title>Oktober 2026: Netzbezug 26 kWh; dazu geschätzt: Netzbezug etwa 18 kWh · Vorjahr 31 kWh</title>",
 		"<title>November 2026, geschätzt: Netzbezug etwa 30 kWh · Vorjahr 30 kWh</title>",
 		`<path class="vorjahr rein" d="M`, "<li><i class=vorjahr></i>2025</li>", "<th scope=col>Vorjahr</th>",
-		"<tr><th scope=row>November 2026</th><td>etwa 30 kWh</td><td>30 kWh</td></tr>")
+		"<tr><th scope=row>November 2026</th><td>etwa 30 kWh</td><td>30 kWh</td><td>–</td></tr>")
 	// last year is a line across the months, one stretch: all twelve there
 	line := between(t, fig, `<path class="vorjahr rein" d="`, `"`)
 	if m, l := strings.Count(line, "M"), strings.Count(line, "L"); m != 1 || l != 11 {
@@ -491,6 +493,6 @@ func TestEnergieLastYearLineHasGaps(t *testing.T) {
 	// April 2025: came in 30 × (8 + 2) = 300, fed in 30 × 5
 	mustContain(t, fig, "<title>April 2026: Erzeugt 240 kWh · Ins Netz 150 kWh · Netzbezug 60 kWh · Vorjahr 300 kWh, eingespeist 150 kWh</title>",
 		"<th scope=col>Vorjahr</th><th scope=col>Vorjahr eingespeist</th>",
-		"<tr><th scope=row>März 2026</th><td>248 kWh</td><td>155 kWh</td><td>62 kWh</td><td>–</td><td>–</td></tr>")
+		"<tr><th scope=row>März 2026</th><td>248 kWh</td><td>155 kWh</td><td>62 kWh</td><td>–</td><td>–</td><td>155 kWh</td></tr>")
 	mustContain(t, fig, "<title>März 2026: Erzeugt 248 kWh · Ins Netz 155 kWh · Netzbezug 62 kWh</title>")
 }

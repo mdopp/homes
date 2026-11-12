@@ -135,7 +135,7 @@ func back(t time.Time, years, months int, end bool) time.Time {
 // bucket is one bar of the chart: when it starts, its label on the axis
 // (may be ""), its name in words, and each series' amount.
 type bucket struct {
-	at          int64 // the Tag chart's hour, its start (Unix seconds)
+	at          int64 // the bar's hour, day or month, its start (Unix seconds)
 	label, long string
 	v           map[string]float64
 	// est is the estimate for the rest of the bar's period (Jahr, Monat:
@@ -171,7 +171,7 @@ func buckets(view string, now time.Time, loc *time.Location, daily, hourly amoun
 	case "woche":
 		title = "Die letzten sieben Tage"
 		for d := today.AddDate(0, 0, -6); !d.After(today); d = d.AddDate(0, 0, 1) {
-			b := bucket{label: weekdays[d.Weekday()][:2], long: weekdays[d.Weekday()] + ", " + strconv.Itoa(d.Day()) + ". " + months[d.Month()-1], v: map[string]float64{}}
+			b := bucket{at: d.Unix(), label: weekdays[d.Weekday()][:2], long: weekdays[d.Weekday()] + ", " + strconv.Itoa(d.Day()) + ". " + months[d.Month()-1], v: map[string]float64{}}
 			take(daily, d, &b)
 			out = append(out, b)
 		}
@@ -179,7 +179,7 @@ func buckets(view string, now time.Time, loc *time.Location, daily, hourly amoun
 		first := time.Date(today.Year(), today.Month(), 1, 0, 0, 0, 0, loc)
 		title = months[today.Month()-1] + " " + strconv.Itoa(today.Year())
 		for d := first; d.Month() == first.Month(); d = d.AddDate(0, 0, 1) {
-			b := bucket{long: strconv.Itoa(d.Day()) + ". " + months[d.Month()-1], v: map[string]float64{}}
+			b := bucket{at: d.Unix(), long: strconv.Itoa(d.Day()) + ". " + months[d.Month()-1], v: map[string]float64{}}
 			if d.Day() == 1 || d.Day()%7 == 1 {
 				b.label = strconv.Itoa(d.Day())
 			}
@@ -189,8 +189,8 @@ func buckets(view string, now time.Time, loc *time.Location, daily, hourly amoun
 	default: // jahr
 		title = "Das Jahr " + strconv.Itoa(today.Year())
 		for m := time.January; m <= time.December; m++ {
-			b := bucket{label: string([]rune(months[m-1])[:1]), long: months[m-1] + " " + strconv.Itoa(today.Year()), v: map[string]float64{}}
 			from := time.Date(today.Year(), m, 1, 0, 0, 0, 0, loc)
+			b := bucket{at: from.Unix(), label: string([]rune(months[m-1])[:1]), long: months[m-1] + " " + strconv.Itoa(today.Year()), v: map[string]float64{}}
 			for _, s := range energySeries {
 				if v, ok := sumDays(daily[s.key], from, from.AddDate(0, 1, 0)); ok {
 					b.v[s.key] = v
@@ -243,10 +243,11 @@ func verlaufHTML(view string, now time.Time, loc *time.Location, daily, hourly a
 		b.WriteString(flussHTML(flussSpanne(flowTitle, bs, daily, hourly)))
 		heute := schaetze(view, now, loc, daily, bs)
 		rest := map[string]string{"jahr": "der Rest des Jahres", "monat": "der Rest des Monats"}[view]
-		var hours *stundenTag
+		a := daily // the bars' battery and devices
 		if view == "tag" {
-			hours = stundenOf(bs, hourly, geraete, now.In(loc))
+			a = hourly
 		}
+		hours := wahlOf(view, bs, a, geraete, now.In(loc))
 		b.WriteString(energyChart(title, bs, heute, rest, hours))
 	}
 	today := midnight(now, loc)
@@ -417,7 +418,7 @@ const (
 // numbers on hover (a title); the legend names the colours; the table
 // under it says the same in numbers. No library; on the Tag chart (hours
 // not nil) a bar chooses its hour (energie_stunde.go).
-func energyChart(title string, bs []bucket, heute float64, rest string, hours *stundenTag) string {
+func energyChart(title string, bs []bucket, heute float64, rest string, hours *wahlBalken) string {
 	var up, down float64
 	anyEst, anyVorjahr, anyVorjahrEins := false, false, false
 	for _, b := range bs {
@@ -475,14 +476,14 @@ func energyChart(title string, bs []bucket, heute float64, rest string, hours *s
 		left := cx - barW/2
 		measured, estimated := words(x.v, ""), words(x.est, "etwa ")
 		tip := x.long
-		group := "<g>"
+		group := "" // the bar's class
 		switch {
 		case len(measured) > 0 && len(estimated) > 0:
 			tip += ": " + strings.Join(measured, " · ") + "; dazu geschätzt: " + strings.Join(estimated, " · ")
-			group = "<g class=teils>"
+			group = "teils"
 		case len(estimated) > 0:
 			tip += ", geschätzt: " + strings.Join(estimated, " · ")
-			group = "<g class=geschaetzt>"
+			group = "geschaetzt"
 		case len(measured) > 0:
 			tip += ": " + strings.Join(measured, " · ")
 		}
@@ -614,7 +615,7 @@ func energyChart(title string, bs []bucket, heute float64, rest string, hours *s
 // chartTable is the chart's numbers as a table, in a fold: a row a bar
 // with numbers, a column a series it has; Vorjahr's when it has them; the
 // Tag chart's Verbrauch.
-func chartTable(b *strings.Builder, bs []bucket, has map[string]bool, anyVorjahr, anyVorjahrEins bool, hours *stundenTag) {
+func chartTable(b *strings.Builder, bs []bucket, has map[string]bool, anyVorjahr, anyVorjahrEins bool, hours *wahlBalken) {
 	b.WriteString("<details><summary>Als Tabelle</summary><table><thead><tr><th scope=col>Zeit</th>")
 	for _, s := range energySeries {
 		if has[s.key] {

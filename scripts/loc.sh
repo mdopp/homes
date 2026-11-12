@@ -89,7 +89,9 @@ budget() { # budget <name> <cap> <dir…>
 # 186 lines removed: kontakte_netz.go, „Steht nahe“; one link „Dein Netzwerk im Archiv ›“ instead), and one tap first on the faces
 # 2026-11-11, owner OK'd the needed raise 2026-11-11: Energie – what the chosen hour used (pages 18,844 -> 19,110; 19,097 used): energie_stunde.go, the line under
 # the Tag chart for the tapped hour, its devices, the Verbrauch column, the script choosing an hour; the scale's 0 and its negative bottom
-budget pages 19110 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-11, owner's wish 2026-11-11 „Das sollte bei jedem stehen“ (pages 19,110 -> 19,118; 19,117 used): the chosen bar's line,
+# its devices and the Verbrauch column on Woche, Monat and Jahr too, from the daily statistics
+budget pages 19118 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
