@@ -451,9 +451,19 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     (`HOMES_TEASER_HOST`, `pages.Teaser`; unset: no teaser and no Host
     check; any other Host there is 404): `GET /` the page
     (`internal/pages/teaser.html`, a file of its own so a word is changed
-    without code; no script, inline SVG, Google Fonts; wrapped by Homes,
-    *Anmelden* to `HOMES_PUBLIC_URL`; may be indexed), `GET /robots.txt`
-    allows it and not `/zugang`, `POST /zugang` the request (`name` ≤ 80,
+    without code; no script, inline SVG, nothing fetched from elsewhere,
+    not even a font (owner 2026-11-12); wrapped by Homes, *Anmelden* to
+    `HOMES_PUBLIC_URL`; *Was die Box kann*, who reaches what from outside,
+    and *Welche Daten wir annehmen* per public entry; may be indexed),
+    `GET /robots.txt` allows it and not `/zugang`. *Zugang anfragen* only
+    from the house's own network (owner 2026-11-12, after spam): the
+    client address Caddy saw (`clientIP`, X-Forwarded-For's last entry,
+    which Caddy sets and never takes from a client) private (`fc00::/7`
+    too), loopback or link-local; the box's public address counts as
+    outside, at home too. Outside the section is one sentence (*Zugang
+    fragst du bei uns persönlich an, oder auf dieser Seite, wenn du bei
+    uns zuhause bist.*) and `POST /zugang` answers it with 403, nothing
+    kept or told. At home `POST /zugang` takes the request (`name` ≤ 80,
     `kontakt` ≤ 120, `nachricht` ≤ 300, the hidden `website` a bot fills:
     thanked and dropped; same-origin only, else 403; a wrong field said
     before the button with the words kept, 422), everything else 404.

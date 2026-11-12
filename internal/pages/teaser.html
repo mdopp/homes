@@ -1,8 +1,7 @@
 <title>Die Box</title>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&display=swap">
 <style>
-/* Layout: one narrow column, five short stops top to bottom; the picture is the page, the words frame it. */
+/* Layout: one narrow column, short stops top to bottom; the picture is the page, the words frame it.
+   No font, script or picture from elsewhere (owner 2026-11-12): what a visitor's browser fetches comes from the box. */
 :root {
   --bg: #F3F5F1;
   --fg: #1B2823;
@@ -119,7 +118,8 @@ footer .laib:hover { color: var(--fg); }
 /* Zugang anfragen: quiet, one column, the same card tone as the list */
 .zugang { width: 100%; max-width: 24rem; display: grid; gap: 6px; padding-top: 20px; border-top: 1px solid var(--edge); }
 .zugang h2 { font-size: 1.15rem; }
-.zugang .hinweis { margin: 0 0 8px; color: var(--muted); font-size: 0.95rem; }
+.hinweis { margin: 0 0 8px; color: var(--muted); font-size: 0.95rem; }
+.draussen { margin: 0; padding-top: 20px; border-top: 1px solid var(--edge); }
 .zugang form { display: grid; gap: 6px; }
 .zugang label { font-size: 0.9rem; font-weight: 700; margin-top: 8px; }
 .zugang label small { font-weight: 400; color: var(--muted); }
@@ -145,6 +145,11 @@ footer .laib:hover { color: var(--fg); }
   display: grid; grid-template-columns: 22px 1fr; gap: 12px; align-items: center; margin: 0;
   padding: 14px 16px; border-radius: 14px; background: var(--tint); color: var(--fg); font-weight: 700;
 }
+.daten { display: grid; gap: 14px; }
+.daten p { margin: 0; }
+.daten dl { margin: 0; display: grid; gap: 14px; }
+.daten dt { font-weight: 700; }
+.daten dd { margin: 4px 0 0; color: var(--fg); }
 .danke svg { width: 22px; height: 22px; stroke: var(--accent); fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 </style>
 
@@ -152,7 +157,7 @@ footer .laib:hover { color: var(--fg); }
 
 <header>
   <h1>Die Box</h1>
-  <p class="lead">Der eigene Server deiner Familie, <b>zuhause</b>: alles an einem Ort, nichts bei einer Firma.</p>
+  <p class="lead">Ein kleiner Server, der bei einer Familie <b>zuhause</b> steht. Fotos, Dokumente, Kalender, Nachrichten und das Haus selbst laufen hier zusammen, auf einem eigenen Gerät.</p>
 </header>
 
 <figure>
@@ -223,25 +228,45 @@ footer .laib:hover { color: var(--fg); }
   <text class="n" x="180" y="592">Computer</text>
   <text class="n" x="288" y="592">Lautsprecher</text>
 </svg>
-<figcaption>Was reinkommt, kennt einander. Und ist auf jedem Gerät da.</figcaption>
+<figcaption>Was reinkommt, wird verbunden: ein Gesicht mit dem Kontakt, ein Brief mit dem Absender.</figcaption>
 </figure>
 
 <section>
-  <h2>Das heißt für dich</h2>
+  <h2>Was die Box kann</h2>
   <ul class="heisst">
-    <li>Ein Foto von Oma findet ihre Briefe und Nachrichten.</li>
-    <li>Eine Rechnung landet beim richtigen Vertrag.</li>
-    <li>Nachrichten aus allen Messengern, über Jahre auffindbar.</li>
-    <li>Wo du warst, siehst nur du.</li>
-    <li>Ein Lied geteilt, auf jedem Lautsprecher da.</li>
-    <li>Die Waschmaschine ist fertig, die Box sagt Bescheid.</li>
+    <li>Fotos der Familie, die Gesichter mit den Kontakten verbunden.</li>
+    <li>Briefe und Rechnungen, abfotografiert oder gemailt, landen sortiert bei den Dokumenten.</li>
+    <li>Nachrichten aus Signal, WhatsApp, SMS und Mail, über Jahre durchsuchbar. Jede Person hat ihr eigenes Archiv, das nur ihr Passwort öffnet.</li>
+    <li>Wo jemand war, sieht nur er selbst.</li>
+    <li>Ein gemeinsamer Kalender, die Einkaufsliste und Notizen.</li>
+    <li>Musik, Filme, Hörbücher und Podcasts. Musik spielt auch auf den Lautsprechern im Haus.</li>
+    <li>Licht, Rollläden und Strom im Haus. Ist die Waschmaschine fertig, kommt eine Nachricht.</li>
   </ul>
 </section>
 
 <p class="sicher">
   <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10.5" width="16" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>
-  <span>Sie steht bei euch zuhause, jeder hat sein eigenes Login, und niemand sonst liest mit.</span>
+  <span>Jeder in der Familie hat ein eigenes Login. Ohne Login sieht man von außen nur diese Seite und Links, die jemand aus der Familie selbst verschickt: ein Fotoalbum, eine Datei oder die Bitte, die eigenen Kontaktdaten zu prüfen. Alles andere geht nur angemeldet, das meiste nur zuhause.</span>
 </p>
+
+<section class="daten" aria-labelledby="daten-h">
+  <h2 id="daten-h">Welche Daten wir annehmen</h2>
+  <p>Was die Box von dir als Besucher bekommt, je nachdem, was du öffnest:</p>
+  <dl>
+    <dt>Diese Seite</dt>
+    <dd>Sie setzt keine Cookies und lädt nichts von anderen Servern.</dd>
+    <dt>Zugang anfragen (nur bei uns zuhause)</dt>
+    <dd>Dein Name, wie wir dich erreichen, deine Nachricht und die Uhrzeit. Dazu eine Prüfsumme deiner Internetadresse, nicht die Adresse selbst: Sie sorgt nur dafür, dass von einer Adresse höchstens eine Anfrage pro Stunde kommt. Die Admins der Box sehen die Anfrage, eine Person aus der Familie bekommt sie als Nachricht. Eine Frist, nach der sie von selbst gelöscht wird, gibt es nicht.</dd>
+    <dt>Kontakt prüfen (der Link, den dir jemand geschickt hat)</dt>
+    <dd>Was du dort einträgst: Name, Firma, Telefonnummern, E-Mail- und Postadressen, Geburtstag, eine Nachricht und, wenn du willst, ein Foto (die Box speichert es verkleinert neu). Ob eine E-Mail-Adresse ankommen kann, fragt die Box im DNS nach. Nur wer dir den Link geschickt hat, sieht deine Antwort und entscheidet, was ins Adressbuch kommt. Der Link gilt einmal und 14 Tage; deine Antwort wird 30 Tage nach dieser Entscheidung gelöscht, ohne Entscheidung 30 Tage nach deiner Antwort.</dd>
+    <dt>Geteilte Fotoalben und Dateien</dt>
+    <dd>Du gibst nichts ein, höchstens das Passwort des Links.</dd>
+    <dt>Anmeldung</dt>
+    <dd>Nur für die Familie. Bei jedem Versuch speichert die Box den Namen, die Uhrzeit, die Internetadresse und ob es geklappt hat; nach zu vielen Fehlversuchen ist der Name eine Weile gesperrt, und die Box sagt in der Familie Bescheid.</dd>
+    <dt>Protokolle</dt>
+    <dd>Der Webserver der Box schreibt kein Zugriffsprotokoll. Schickt eine Adresse zu viele Anfragen an „Kontakt prüfen“, notiert die Box nur ihr grobes Netz, nicht die ganze Adresse. Die Betriebsprotokolle der Box werden nach vier Wochen gelöscht.</dd>
+  </dl>
+</section>
 
 <footer>
   <p class="frage">Du bist Familie? <a class="btn" href="{{ANMELDEN}}">Anmelden</a></p>
@@ -249,7 +274,7 @@ footer .laib:hover { color: var(--fg); }
   <section class="zugang" aria-labelledby="zugang-h">
     <h2 id="zugang-h">Zugang anfragen</h2>
     <p class="hinweis">Ein Mensch aus der Familie liest das und meldet sich.</p>
-    <!-- Homes (internal/pages/teaser.go) fills {{ANMELDEN}}, puts a .fehler line before the button, and on success renders template#zugang-danke in place of this form. -->
+    <!-- Homes (internal/pages/teaser.go) shows this section only at home, fills {{ANMELDEN}}, puts a .fehler line before the button, and on success renders template#zugang-danke in place of this form. -->
     <form method="post" action="/zugang">
       <label for="z-name">Name</label>
       <input id="z-name" name="name" type="text" required autocomplete="name" maxlength="80">
@@ -263,15 +288,21 @@ footer .laib:hover { color: var(--fg); }
     </form>
   </section>
 
-  <!-- Result state: the server swaps the form for this block after a successful post. -->
-  <template id="zugang-danke">
-    <p class="danke" role="status">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
-      <span>Danke, deine Anfrage ist angekommen.</span>
-    </p>
-  </template>
-
   <a class="laib" href="https://github.com/mdopp/laib">Diese Box läuft mit Laib</a>
 </footer>
 
 </main>
+
+<!-- Outside the house's own network (owner 2026-11-12): the server puts this in the whole section's place, and a POST gets it with 403. -->
+<template id="zugang-draussen">
+  <p class="draussen">Zugang fragst du bei uns persönlich an, oder auf dieser Seite, wenn du bei uns zuhause bist.</p>
+</template>
+
+<!-- Result state: the server swaps the form for this block after a successful post. -->
+<template id="zugang-danke">
+  <p class="danke" role="status">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+    <span>Danke, deine Anfrage ist angekommen.</span>
+  </p>
+</template>
+

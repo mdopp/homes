@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -22,7 +23,8 @@ import (
 // trusts no header. The page is teaser.html, a file of its own so a word is
 // changed without touching code; Homes wraps it, fills the login link and
 // swaps the form for its thanks. A request is kept (zugang.Store), told to
-// the box's notify person over Laib, and shown to the admins on Start.
+// the box's notify person over Laib, and shown to the admins on Start; only
+// from the house's own network (owner 2026-11-12, after spam).
 
 //go:embed teaser.html
 var teaserHTML string
@@ -33,7 +35,7 @@ const (
 	ZugangPath = "/zugang"
 )
 
-const teaserCSP = "default-src 'none'; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src fonts.gstatic.com; img-src 'self' data:; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
+const teaserCSP = "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
 
 // Teaser serves the teaser host: GET / the page, POST /zugang the request,
 // robots.txt allows the page and not the form; everything else is 404.
@@ -51,11 +53,15 @@ func Teaser(cfg StartConfig) http.HandlerFunc {
 		case r.URL.Path == "/favicon.ico":
 			w.WriteHeader(http.StatusNoContent)
 		case r.URL.Path == "/" && (r.Method == http.MethodGet || r.Method == http.MethodHead):
-			h.Set("Cache-Control", "public, max-age=600")
-			teaserSeite(w, http.StatusOK, cfg, teaserForm(zugang.Anfrage{}, ""))
+			h.Set("Cache-Control", "private, no-cache") // the form at home, the sentence outside
+			teaserSeite(w, http.StatusOK, cfg, map[bool]string{true: teaserForm(zugang.Anfrage{}, ""), false: teaserVorlage("zugang-draussen")}[zuhause(r)])
 		case r.URL.Path == TeaserPath && r.Method == http.MethodPost:
 			h.Set("Cache-Control", "no-store")
 			h.Set("X-Robots-Tag", "noindex, nofollow")
+			if !zuhause(r) {
+				teaserSeite(w, http.StatusForbidden, cfg, teaserVorlage("zugang-draussen"))
+				return
+			}
 			zugangAnfragen(w, r, cfg)
 		case r.URL.Path == TeaserPath:
 			http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -123,10 +129,18 @@ func zugangMelden(cfg StartConfig, a zugang.Anfrage) {
 	}
 }
 
-// teaserForm is the page's form with the visitor's words kept and, problem
-// set, the one line that says what to change before the button.
+// zuhause is a request from the house's own network as Caddy saw it
+// (clientIP: Caddy sets X-Forwarded-For, never a client): private
+// (fc00::/7 too), loopback or link-local; via the public address it is not.
+func zuhause(r *http.Request) bool {
+	ip := net.ParseIP(clientIP(r))
+	return ip != nil && (ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast())
+}
+
+// teaserForm is the page's request section with the visitor's words kept
+// and, problem set, the one line that says what to change before the button.
 func teaserForm(a zugang.Anfrage, problem string) string {
-	form := teaserPart("<form method=\"post\" action=\"/zugang\">", "</form>")
+	form := teaserPart(`<section class="zugang"`, "</section>")
 	form = strings.Replace(form, `name="name"`, `name="name" value="`+html.EscapeString(a.Name)+`"`, 1)
 	form = strings.Replace(form, `name="kontakt"`, `name="kontakt" value="`+html.EscapeString(a.Kontakt)+`"`, 1)
 	form = strings.Replace(form, `></textarea>`, `>`+html.EscapeString(a.Nachricht)+`</textarea>`, 1)
@@ -136,10 +150,14 @@ func teaserForm(a zugang.Anfrage, problem string) string {
 	return form
 }
 
-// teaserDanke is the thanks the file carries as a template, in the form's place.
+// teaserDanke is the section with the thanks in the form's place.
 func teaserDanke() string {
-	t := teaserPart(`<template id="zugang-danke">`, "</template>")
-	return strings.TrimSuffix(strings.TrimPrefix(t, `<template id="zugang-danke">`), "</template>")
+	return strings.Replace(teaserPart(`<section class="zugang"`, "</section>"), teaserPart(`<form method="post" action="/zugang">`, "</form>"), teaserVorlage("zugang-danke"), 1)
+}
+
+// teaserVorlage is what the file carries as template id: the thanks, the sentence outside.
+func teaserVorlage(id string) string {
+	return strings.TrimSuffix(strings.TrimPrefix(teaserPart(`<template id="`+id+`">`, "</template>"), `<template id="`+id+`">`), "</template>")
 }
 
 // teaserPart is the file from the first from to the end of to, inclusive.
@@ -149,16 +167,15 @@ func teaserPart(from, to string) string {
 	return teaserHTML[i : i+j]
 }
 
-// teaserSeite writes the page with form in the form's place: the file's
-// head and body, wrapped, the login link filled, the thanks template left out.
-func teaserSeite(w http.ResponseWriter, code int, cfg StartConfig, form string) {
+// teaserSeite writes the page with teil in the request section's place:
+// the file's head and main, wrapped, the login link filled, the templates after main left out.
+func teaserSeite(w http.ResponseWriter, code int, cfg StartConfig, teil string) {
 	head, body, _ := strings.Cut(teaserHTML, "<main>")
-	body = strings.Replace("<main>"+body, teaserPart("<form method=\"post\" action=\"/zugang\">", "</form>"), form, 1)
-	body = strings.Replace(body, teaserPart(`<template id="zugang-danke">`, "</template>"), "", 1)
+	body, _, _ = strings.Cut(strings.Replace("<main>"+body, teaserPart(`<section class="zugang"`, "</section>"), teil, 1), "</main>")
 	body = strings.ReplaceAll(body, "{{ANMELDEN}}", html.EscapeString(strings.TrimRight(cfg.PublicURL, "/")+"/"))
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(code)
-	w.Write([]byte(`<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">` + head + "</head><body>" + body + "</body></html>"))
+	w.Write([]byte(`<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">` + head + "</head><body>" + body + "</main></body></html>"))
 }
 
 // Zugang is the admins' page behind the login: the open requests, each
