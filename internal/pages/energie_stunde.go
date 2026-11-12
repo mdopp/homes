@@ -11,12 +11,14 @@ import (
 	"github.com/mdopp/homes/internal/ha"
 )
 
-// The chosen hour (owner, 2026-11-11: „Bei Energie sollte angezeigt
+// The chosen bar (owner, 2026-11-11: „Bei Energie sollte angezeigt
 // werden, was in der Stunde, die ich ausgewählt habe, auch verbraucht
-// wurde“): under the Tag chart one line says what the house used in the
-// hour tapped — from the sun, the grid, the battery — and, when HA's energy
-// dashboard counts devices, the three that used most. The latest hour HA
-// has summed is chosen at first; the table has a Verbrauch column.
+// wurde“, and „Das sollte bei jedem stehen“): under every span's chart one
+// line says what the house used in the hour, day or month tapped — from
+// the sun, the grid, the battery — and, when HA's energy dashboard counts
+// devices, the three that used most. Only what was, never the estimate.
+// The latest bar HA has values for is chosen at first; the table has a
+// Verbrauch column.
 
 // statSlot is one statistic the history reads, and the key its amounts
 // are kept under.
@@ -27,7 +29,7 @@ func historySlots(st energie.Stats) []statSlot {
 	return []statSlot{{"solar", st.Solar}, {"bezug", st.Bezug}, {"einsp", st.Einspeisung}}
 }
 
-// stundeSlots are what the chosen hour reads besides them: each battery's
+// stundeSlots are what the chosen bar reads besides them: each battery's
 // counters and each device's, from HA's energy dashboard.
 func stundeSlots(p ha.EnergyPrefs) []statSlot {
 	var out []statSlot
@@ -69,9 +71,10 @@ func geraeteOf(p ha.EnergyPrefs, states []ha.State) []geraet {
 	return out
 }
 
-// stundenTag is the Tag chart's hours: each bar's line, what the house
-// used (hat: HA has a number for that hour), and the bar chosen at first.
-type stundenTag struct {
+// wahlBalken are the chart's bars to choose from: each bar's line, what
+// the house used (hat: HA has a number for that bar), and the bar chosen
+// at first.
+type wahlBalken struct {
 	zeile     []string
 	name      []string
 	verbrauch []float64
@@ -79,34 +82,48 @@ type stundenTag struct {
 	wahl      int
 }
 
-// stundenOf reads each hour of the Tag chart's bars from hourly; the bar
-// chosen at first is the latest hour HA has summed, else the hour now.
-func stundenOf(bs []bucket, hourly amounts, geraete []geraet, now time.Time) *stundenTag {
-	t := &stundenTag{wahl: -1}
+// wahlOf reads each bar's battery and devices from a (hourly on the Tag
+// chart, else daily; a Jahr bar sums its month's days); the bar chosen at
+// first is the latest one HA has values for, else the one now.
+func wahlOf(view string, bs []bucket, a amounts, geraete []geraet, now time.Time) *wahlBalken {
+	next := func(t time.Time) time.Time { return t.AddDate(0, 0, 1) }
+	switch view {
+	case "tag":
+		next = func(t time.Time) time.Time { return t.Add(time.Hour) }
+	case "jahr":
+		next = func(t time.Time) time.Time { return t.AddDate(0, 1, 0) }
+	}
+	w := &wahlBalken{wahl: -1}
 	jetzt := -1
 	for i, x := range bs {
 		at := time.Unix(x.at, 0).In(now.Location())
-		s := energie.Stunde{Solar: x.v["solar"], Einsp: x.v["einsp"], Bezug: x.v["bezug"],
-			Entladen: hourly["entladen"][x.at], Geladen: hourly["geladen"][x.at]}
-		_, e := hourly["entladen"][x.at]
-		_, g := hourly["geladen"][x.at]
+		sum := func(key string) (float64, bool) { return sumDays(a[key], at, next(at)) }
+		s := energie.Stunde{Solar: x.v["solar"], Einsp: x.v["einsp"], Bezug: x.v["bezug"]}
+		var e, g bool
+		s.Entladen, e = sum("entladen")
+		s.Geladen, g = sum("geladen")
 		hat := len(x.v) > 0 || e || g
 		for _, d := range geraete {
-			s.Geraete = append(s.Geraete, energie.Geraet{Name: d.name, KWh: hourly["geraet:"+d.stat][x.at], Teil: d.teil})
+			kwh, _ := sum("geraet:" + d.stat)
+			s.Geraete = append(s.Geraete, energie.Geraet{Name: d.name, KWh: kwh, Teil: d.teil})
 		}
-		t.zeile, t.name = append(t.zeile, stundeZeile(at, s, hat)), append(t.name, stundeName(at))
-		t.verbrauch, t.hat = append(t.verbrauch, s.Verbrauch()), append(t.hat, hat)
+		name := x.long
+		if view == "tag" {
+			name = stundeName(at)
+		}
+		w.zeile, w.name = append(w.zeile, wahlZeile(name, s, hat)), append(w.name, name)
+		w.verbrauch, w.hat = append(w.verbrauch, s.Verbrauch()), append(w.hat, hat)
 		if hat && !at.After(now) {
-			t.wahl = i
+			w.wahl = i
 		}
-		if !at.After(now) && now.Before(at.Add(time.Hour)) {
+		if !at.After(now) && now.Before(next(at)) {
 			jetzt = i
 		}
 	}
-	if t.wahl < 0 {
-		t.wahl = max(jetzt, 0)
+	if w.wahl < 0 {
+		w.wahl = max(jetzt, 0)
 	}
-	return t
+	return w
 }
 
 // stundeName is an hour as the family says it: „12–13 Uhr“.
@@ -118,10 +135,11 @@ func stundeName(at time.Time) string {
 	return strconv.Itoa(at.Hour()) + "–" + strconv.Itoa(end) + " Uhr"
 }
 
-// stundeZeile is the line under the chart for one hour (HTML): what the
-// house used and where it came from, then the devices that used most.
-func stundeZeile(at time.Time, s energie.Stunde, hat bool) string {
-	head := "<p><b>" + stundeName(at) + ":</b> "
+// wahlZeile is the line under the chart for one bar, by its name (HTML):
+// what the house used and where it came from, then the devices that used
+// most.
+func wahlZeile(name string, s energie.Stunde, hat bool) string {
+	head := "<p><b>" + html.EscapeString(name) + ":</b> "
 	if !hat {
 		return head + "noch keine Werte</p>"
 	}
@@ -149,40 +167,44 @@ func stundeZeile(at time.Time, s energie.Stunde, hat bool) string {
 	return line + "<p class=geraete>" + strings.Join(gs, " · ") + "</p>"
 }
 
-// stundeKWh is an hour's amount: to two places below 0,1 (0,05), else to
-// one (0,9).
+// stundeKWh is a bar's amount: to two places below 0,1 (0,05), to one
+// below 100 (0,9), else whole with the thousands marked (2.130).
 func stundeKWh(v float64) string {
+	if math.Abs(v) >= 99.95 {
+		return strings.TrimSuffix(energyWords(v), " kWh")
+	}
 	if math.Round(v*100) < 10 {
 		return strings.Replace(strconv.FormatFloat(math.Round(v*100)/100, 'f', -1, 64), ".", ",", 1)
 	}
 	return decimal(v)
 }
 
-// bar opens bar i's group: on the Tag chart a button that chooses the
-// hour, the chosen one marked; elsewhere as it was.
-func (t *stundenTag) bar(group string, i int, x bucket) string {
+// bar opens bar i's group, of class cls: a button that chooses the bar,
+// the chosen one pressed; without bars to choose as it was.
+func (t *wahlBalken) bar(cls string, i int, x bucket) string {
+	g := "<g"
+	if cls != "" {
+		g += " class=" + cls
+	}
 	if t == nil {
-		return group
+		return g + ">"
 	}
-	attrs := ` data-stunde=` + strconv.FormatInt(x.at, 10) + ` data-zeile="` + html.EscapeString(t.zeile[i]) +
-		`" role=button aria-label="` + t.name[i] + `"`
-	if i == t.wahl {
-		return strings.Replace(group, "<g", "<g class=gewaehlt aria-pressed=true tabindex=0"+attrs, 1)
-	}
-	return strings.Replace(group, "<g", "<g aria-pressed=false tabindex=-1"+attrs, 1)
+	pressed := map[bool]string{true: " aria-pressed=true tabindex=0", false: " aria-pressed=false tabindex=-1"}[i == t.wahl]
+	return g + pressed + ` data-stunde=` + strconv.FormatInt(x.at, 10) + ` data-zeile="` + html.EscapeString(t.zeile[i]) +
+		`" role=button aria-label="` + html.EscapeString(t.name[i]) + `">`
 }
 
-// role is the chart's: a picture, or on the Tag chart a group of bars to
-// choose from.
-func (t *stundenTag) role() string {
+// role is the chart's: a group of bars to choose from, or without them a
+// picture.
+func (t *wahlBalken) role() string {
 	if t == nil {
 		return "img"
 	}
 	return "group"
 }
 
-// cell is bar i's Verbrauch in the table; "" off the Tag chart.
-func (t *stundenTag) cell(i int) string {
+// cell is bar i's Verbrauch in the table; "" without bars to choose.
+func (t *wahlBalken) cell(i int) string {
 	switch {
 	case t == nil:
 		return ""
@@ -192,19 +214,19 @@ func (t *stundenTag) cell(i int) string {
 	return "<td>–</td>"
 }
 
-// html is the chosen hour's line and the script that changes it.
-func (t *stundenTag) html() string {
+// html is the chosen bar's line and the script that changes it.
+func (t *wahlBalken) html() string {
 	if t == nil || len(t.zeile) == 0 {
 		return ""
 	}
 	return stundeStyle + "<div class=stunde aria-live=polite>" + t.zeile[t.wahl] + "</div>" + stundeScript
 }
 
-// stundeScript chooses an hour: a tap on its bar, or on the keyboard the
+// stundeScript chooses a bar: a tap on its bar, or on the keyboard the
 // arrows, Home and End (one tab stop, the chosen bar), Enter and Space.
 // The choice outlives the page's own refresh (a new swap runs it again).
 const stundeScript = `<script>(function(){var W=window;
-function wahl(g,fokus){var f=g.closest('figure');f.querySelectorAll('g[data-zeile]').forEach(function(x){var an=x===g;x.classList.toggle('gewaehlt',an);x.setAttribute('aria-pressed',an);x.setAttribute('tabindex',an?0:-1)});
+function wahl(g,fokus){var f=g.closest('figure');f.querySelectorAll('g[data-zeile]').forEach(function(x){var an=x===g;x.setAttribute('aria-pressed',an);x.setAttribute('tabindex',an?0:-1)});
 var z=f.querySelector('.stunde');if(z)z.innerHTML=g.getAttribute('data-zeile');W.homesStunde=g.getAttribute('data-stunde');if(fokus)g.focus()}
 if(!W.homesStundeAn){W.homesStundeAn=1;
 document.addEventListener('click',function(e){var g=e.target.closest&&e.target.closest('g[data-zeile]');if(g)wahl(g)});
@@ -215,7 +237,7 @@ if(n===undefined)return;e.preventDefault();wahl(gs[Math.max(0,Math.min(gs.length
 var s=W.homesStunde&&document.querySelector('g[data-stunde="'+W.homesStunde+'"]');if(s)wahl(s)})()</script>`
 
 // stundeStyle is the chosen bar and its line.
-const stundeStyle = `<style>.verlauf g[data-zeile]{cursor:pointer;outline:none}.verlauf g.gewaehlt .treffer{fill:var(--line)}
+const stundeStyle = `<style>.verlauf g[data-zeile]{cursor:pointer;outline:none}.verlauf g[aria-pressed=true] .treffer{fill:var(--line)}
 .verlauf g[data-zeile]:focus-visible .treffer{stroke:var(--accent);stroke-width:1.5}
 .verlauf .stunde{margin:6px 4px 0;font-size:.92rem;color:var(--ink);font-variant-numeric:tabular-nums}.verlauf .stunde p{margin:0}
 .verlauf .stunde .geraete{margin-top:2px;font-size:.85rem;color:var(--e-wort)}</style>`

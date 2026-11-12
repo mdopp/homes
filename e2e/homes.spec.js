@@ -1137,6 +1137,22 @@ test('a tapped hour says what the house used in it', async ({ page }, info) => {
   await expect(page.locator('.verlauf svg text', { hasText: /^−[\d,]*[1-9][\d,]* kWh$/ })).toHaveCount(1); // never „−0 kWh“
   await page.locator('.verlauf').first().screenshot({ path: info.outputPath('energie-stunde.png') });
 });
+// Every span (owner 2026-11-11: „Das sollte bei jedem stehen“): Woche
+// names the day, Jahr the month; a tap on the first bar says its name.
+test('a tapped day and month say what the house used', async ({ page }) => {
+  const line = page.locator('.verlauf .stunde');
+  await page.goto('/energie?zeitraum=woche');
+  await expect(line).toContainText(/^\S+, \d+\. \S+: [\d,.]+ kWh verbraucht/);
+  await expect(page.locator('.verlauf g[aria-pressed=true]')).toHaveCount(1);
+  await expect(page.locator('.verlauf th', { hasText: 'Verbrauch' })).toHaveCount(1);
+  await page.goto('/energie?zeitraum=jahr');
+  await expect(line).toContainText(/^\S+ \d{4}: [\d,.]+ kWh verbraucht/);
+  await expect(line.locator('.geraete')).toContainText(/Wärmepumpe [\d,.]+ kWh/);
+  const first = page.locator('.verlauf g[data-zeile]').first();
+  await first.tap();
+  await expect(line).toContainText(/^Januar \d{4}: /);
+  await expect(first).toHaveAttribute('aria-pressed', 'true');
+});
 test.describe('light', () => {
   test.use({ colorScheme: 'light' });
   test('picture of /energie in the light', async ({ page }, info) => {

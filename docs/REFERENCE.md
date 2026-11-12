@@ -1063,15 +1063,20 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   and Bezug above the line, Einspeisung below, each bar's numbers on
   hover, a legend, the same as a table; three series colours of its own,
   checked for colour blindness, dark and light; the scale reads the top,
-  0 at the line and the bottom negative). In Tag a bar is a button (tap,
+  0 at the line and the bottom negative). In every span a bar is a button (tap,
   or the arrows, Home, End): the line under the chart says what the house
-  used in that hour (*12–13 Uhr: 0,9 kWh verbraucht · 0,6 selbst erzeugt
+  used in that hour, day or month, named as the bar is (*12–13 Uhr*,
+  *Mittwoch, 5. November*, *5. November*, *März 2026*; only what was,
+  never the estimate; a bar without values *noch keine Werte*)
+  (*12–13 Uhr: 0,9 kWh verbraucht · 0,6 selbst erzeugt
   · 0,3 aus dem Netz · 0,05 ins Netz*; Verbrauch = Erzeugt − Ins Netz +
   Netzbezug + aus dem Akku − in den Akku), and when HA's energy dashboard
   (`energy/get_prefs`) counts devices, the three that used most and the
   rest (*Wärmepumpe 0,4 kWh · Trockner 0,2 kWh · Rest 0,3 kWh*; a device
   part of another never added). The battery's counters are the
-  dashboard's too. The latest hour HA has summed is chosen at first; the
+  dashboard's too, read by the hour for Tag and by the day for the
+  others (a month the sum of its days). The latest bar HA has values for
+  is chosen at first (today's day and this month count, partial); the
   table has a Verbrauch column. Then the comparisons,
   whole days only (today is not over): this month against the same days
   of the last and of the same month last year, the year so far against
