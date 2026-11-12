@@ -154,7 +154,7 @@ func TestNapiAnswer(t *testing.T) {
 		return "", ""
 	}
 	q.Installiert("anna", []string{"org.jellyfin.mobile"})
-	got := q.Napi("anna")
+	got := q.Napi(context.Background(), "anna")
 	b, _ := json.Marshal(got)
 	want := `{"version":1,"offen":1,"module":[` +
 		`{"name":"fotos","titel":"Fotos","icon":"fotos","oeffnen":false,"web":"https://photos.box.test","app":{"name":"Immich","paket":"app.alextran.immich","store":"https://play.google.com/store/apps/details?id=app.alextran.immich"},"nur_web":false,` +
@@ -167,7 +167,7 @@ func TestNapiAnswer(t *testing.T) {
 	if string(b) != want {
 		t.Errorf("got\n%s\nwant\n%s", b, want)
 	}
-	if b, _ := json.Marshal(q.Napi("ben")); strings.Contains(string(b), `"ziel"`) || strings.Contains(string(b), `"stand"`) {
+	if b, _ := json.Marshal(q.Napi(context.Background(), "ben")); strings.Contains(string(b), `"ziel"`) || strings.Contains(string(b), `"stand"`) {
 		t.Errorf("ben's rows carry a target or state the hook did not give:\n%s", b)
 	}
 }
@@ -206,8 +206,9 @@ func TestDienste(t *testing.T) {
 
 // The key owner's open questions in Immich are one task while any is open
 // (owner 2026-11-07): with the count as it is now, for them only, in
-// /napi/einrichtung as an entry of its own leading to the questions; none
-// once nothing is open, nor with the fotos module off.
+// /napi/einrichtung as an entry of its own leading to the questions, before
+// the modules (Deine Aufgaben's order, homes#362); none once nothing is
+// open, nor with the fotos module off.
 func TestImmichFragenAlsAufgabe(t *testing.T) {
 	q := box(t, fotos)
 	n := 3
@@ -221,13 +222,13 @@ func TestImmichFragenAlsAufgabe(t *testing.T) {
 	if len(fr) != 1 || fr[0].Modul != ImmichPruefen || fr[0].Titel != "3 Personen in Immich prüfen" || q.Fragen("ben") != nil {
 		t.Fatalf("%+v", fr)
 	}
-	a := q.Napi("anna")
-	last := a.Module[len(a.Module)-1]
+	a := q.Napi(context.Background(), "anna")
+	last := a.Module[0]
 	if a.Offen != 2 || last.Name != ImmichPruefen || last.Icon != "fotos" || !last.NurWeb || last.App != nil || last.Web != "https://homes.box.test/kontakte/dieselbe" ||
 		last.Aufgabe == nil || last.Aufgabe.Erledigt || last.Aufgabe.Einrichten != last.Web || last.Aufgabe.Titel != "3 Personen in Immich prüfen" {
 		t.Fatalf("%d %+v %+v", a.Offen, last, last.Aufgabe)
 	}
-	if b := q.Napi("ben"); b.Offen != 1 || b.Module[len(b.Module)-1].Name == ImmichPruefen {
+	if b := q.Napi(context.Background(), "ben"); b.Offen != 1 || b.Module[0].Name == ImmichPruefen {
 		t.Fatalf("ben: %+v", b)
 	}
 	n = 1
@@ -235,7 +236,7 @@ func TestImmichFragenAlsAufgabe(t *testing.T) {
 		t.Fatal(fr[0].Titel)
 	}
 	n = 0
-	if q.Fragen("anna") != nil || q.Napi("anna").Offen != 1 {
+	if q.Fragen("anna") != nil || q.Napi(context.Background(), "anna").Offen != 1 {
 		t.Fatal("a task with nothing open")
 	}
 	n = 2

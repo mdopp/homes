@@ -91,7 +91,11 @@ budget() { # budget <name> <cap> <dir…>
 # the Tag chart for the tapped hour, its devices, the Verbrauch column, the script choosing an hour; the scale's 0 and its negative bottom
 # 2026-11-11, owner's wish 2026-11-11 „Das sollte bei jedem stehen“ (pages 19,110 -> 19,118; 19,117 used): the chosen bar's line,
 # its devices and the Verbrauch column on Woche, Monat and Jahr too, from the daily statistics
-budget pages 19118 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-12, owner's request homes#362 (needed raise OK'd with it): Deine Aufgaben, the one list (pages 19,118 -> 19,220; 19,217 used;
+# +99 net after the page Medien, the Box tab Aufgaben and Daten sichern's own page went, -190): the list per viewer in the owner's order
+# (decisions, keys and permissions, questions, setup), the keys' and the archive's rows, the Box filter, AppListe for /napi/einrichtung,
+# Scannen and Scans zuordnen on Dokumente, the answers' row on Kontakte
+budget pages 19220 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -107,7 +111,8 @@ budget napi 5225 internal/napi        # the app's widgets' and share sheet's API
 # 2026-11-04, the owner (the caps count production code only): cmd/homesdemo is the demo on
 # fakes for the browser tests and the pictures, never run on a box; it is not counted. The
 # cap stays as it was, now for cmd/homes alone
-budget cmd 1448 cmd/homes             # homes' wiring: 1,018 with the demo then
+# 2026-11-12, owner's request homes#362: the app's Deine Aufgaben wired to the page's list and the admins seen (1,448 -> 1,452; 1,451 used)
+budget cmd 1452 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-04, the caps moved with the packages, none raised (sum 24,134 as before): abs and
 # musicbrainz (1,227 lines, 1,289 of cap) from household to connectors once merken's fetcher
 # was internal/abruf (235 lines of merken, 247 of cap, to shared) and jellyfin.Plain
@@ -211,7 +216,9 @@ budget connectors 15610 $connectors   # one client per service, with its fake: 1
 # 400 lines removed: internal/netz's ties from photos, their ranking, hiding and reasons; the relations stay)
 # 2026-11-11, owner OK'd the needed raise 2026-11-11: Energie – what the chosen hour used (household 14,635 -> 14,700; 14,695 used): energie.Stunde, what the house used
 # in an hour with the battery, and its three devices that used most
-budget household 14700 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-12, owner's request homes#362: einrichten.Admins (who Authelia said is an admin, kept for the app, which has no groups) and
+# the page's rows in /napi/einrichtung before and after the modules (household 14,700 -> 14,780; 14,776 used)
+budget household 14780 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one

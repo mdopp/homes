@@ -54,7 +54,7 @@ var navVon = map[string][]modul.Eintrag{
 	"dokumente":    {{Titel: "Dokumente", Pfad: DokumentePath, Icon: iconDokumente, Ort: modul.Mehr, Rang: 10}},
 	"podcasts":     {{Titel: "Podcasts", Pfad: PodcastsPath, Icon: iconPodcasts, Ort: modul.Mehr, Rang: 40}},
 	"gesehen":      {{Titel: "Gesehen & Gehört", Pfad: GesehenPath, Icon: iconGesehen, Ort: modul.Mehr, Rang: 50, Fuer: angemeldet}},
-	"sicherung":    {{Titel: "Daten sichern", Pfad: DatenPath, Icon: iconDaten, Ort: modul.Mehr, Rang: 80, Fuer: angemeldet}},
+	"sicherung":    {{Titel: texte.T(texte.MeineDatenTitel), Pfad: MeineDatenPath, Ort: modul.Nirgends}}, // Meine Daten is the core's entry (homes#362)
 	"standort":     {{Titel: "Standortverlauf", Pfad: StandortPath, Icon: iconStandort, Ort: modul.Mehr, Rang: 90, Fuer: angemeldet}},
 	"netzlaufwerk": {{Titel: "Netzlaufwerk", Pfad: "/netzlaufwerk", Icon: iconNetzlaufwerk, Ort: modul.Mehr, Rang: 100, Fuer: angemeldet}},
 	// Platte erfassen and Discogs live on Musik (owner 2026-10-26); on their
@@ -95,12 +95,12 @@ func eintraege(r *http.Request, cfg StartConfig, o modul.Ort) []modul.Eintrag {
 	return cfg.Module.Eintraege(r, o, kern(cfg)...)
 }
 
-// tabOf is the bar entry a page belongs to: Räume and Medien are Geräte,
+// tabOf is the bar entry a page belongs to: Räume is Geräte,
 // the Haushalt pills Haushalt, what Mehr can hold (Dokumente too, owner
 // 2026-10-27) Mehr, on this box or not.
 func tabOf(page string) string {
 	switch page {
-	case "Räume", "Medien":
+	case "Räume":
 		return "Geräte"
 	}
 	all := kern(StartConfig{})

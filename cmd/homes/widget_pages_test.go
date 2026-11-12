@@ -471,40 +471,14 @@ func TestEnergieSubpathIsA404(t *testing.T) {
 	}
 }
 
-// haus#12: Homes serves Medien.
-func TestMedienPageServed(t *testing.T) {
-	s, fake, _ := fullSite(t)
-	fake.Set("media_player.wz", "playing", map[string]any{"friendly_name": "Sonos", "media_title": "Abbey Road", "supported_features": 1})
-	rec := page(routes(s), "/medien")
-	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `<a href="/raeume/media_player.wz">Sonos</a> <span class=k>Abbey Road</span>`) {
-		t.Fatalf("/medien → %d:\n%s", rec.Code, rec.Body.String())
-	}
-}
-
-// A path under Medien that Homes does not serve is a 404 with the way back,
-// in the house's frame and never repeating the path (#48's contract); a
-// path that only starts like Medien is Elsewhere's 404, the way to Start.
-func TestMedienSubpathIsA404(t *testing.T) {
+// homes#362: the page Medien is gone (nothing led to it; what plays is
+// on Start and Räume): /medien is the 404 with the way to Start.
+func TestMedienIsGone(t *testing.T) {
 	s, _, _ := fullSite(t)
 	h := routes(s)
-	for _, p := range []string{"/medien/radio", "/medien/", "/medien/x/y", "/medien/%3Cb%3Ex"} {
-		rec := page(h, p)
-		body := rec.Body.String()
-		if rec.Code != http.StatusNotFound {
-			t.Fatalf("%s → %d:\n%s", p, rec.Code, body)
+	for _, p := range []string{"/medien", "/medien/radio"} {
+		if rec := page(h, p); rec.Code != http.StatusNotFound || !strings.Contains(rec.Body.String(), "<p><a href=/start>Zur Startseite</a></p>") {
+			t.Errorf("%s → %d, want the 404:\n%s", p, rec.Code, rec.Body.String())
 		}
-		for _, want := range []string{"<!doctype html>", "<nav class=tabs", "<p>Diese Seite gibt es nicht.</p>", "<p><a href=/medien>Medien</a></p>"} {
-			if !strings.Contains(body, want) {
-				t.Errorf("%s: the 404 lacks %q:\n%s", p, want, body)
-			}
-		}
-		for _, no := range []string{"radio", "x/y", "<b>x", "%3Cb%3E"} {
-			if strings.Contains(body, no) {
-				t.Errorf("%s: the 404 repeats the path (%q):\n%s", p, no, body)
-			}
-		}
-	}
-	if rec := page(h, "/medienx"); rec.Code != http.StatusNotFound || !strings.Contains(rec.Body.String(), "<p><a href=/start>Zur Startseite</a></p>") {
-		t.Errorf("/medienx → %d, want Elsewhere's 404:\n%s", rec.Code, rec.Body.String())
 	}
 }

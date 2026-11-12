@@ -263,7 +263,7 @@ func ModulSeite(cfg StartConfig) http.HandlerFunc {
 		if x := wunschVon(ws, m.Name); x != nil {
 			c.Add(texte.T(texte.ModulWunsch), texte.T(texte.ID("spur."+m.Spur(x)))+" · "+x.Seit)
 		}
-		c.AddLink("Box-Aufgaben", "", AufgabenPath)
+		c.AddLink("Box-Aufgaben", "", boxAufgabenPfad)
 		b.WriteString(c.HTML())
 		b.WriteString(schalterForm(m))
 		writePage(w, http.StatusOK, b)

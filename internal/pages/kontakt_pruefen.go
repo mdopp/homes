@@ -58,6 +58,12 @@ func antwortenAufgabe(n int) string {
 	return fmt.Sprintf(texte.T(texte.AntwortenAufgabe), texte.Anzahl(n, "Kontakt-Antwort", "Kontakt-Antworten"))
 }
 
+// antwortenZeile is Kontakte's row to the answers waiting for the viewer's
+// review, Deine Aufgaben's own, while there are any (homes#362).
+func antwortenZeile(r *http.Request, cfg StartConfig) string {
+	return einrichtungCard(slices.DeleteFunc(einrichtung(r, cfg), func(a aufgabe) bool { return a.name != "antworten" }), "")
+}
+
 // pruefenKontakte are the contacts of buch the viewer may have checked.
 func pruefenKontakte(ctx context.Context, r *http.Request, cfg StartConfig, buch string) ([]caldav.Contact, error) {
 	if buch == kontaktantwort.Haushalt {

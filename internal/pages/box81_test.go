@@ -66,7 +66,7 @@ func TestBoxComesAtOnceAndFillsItsParts(t *testing.T) {
 	mustContain(t, body, `<div id=box-stand data-teil=stand aria-busy=true><h1>Box</h1><p class=k>lädt …</p></div>`,
 		`<div id=box-operator data-teil=operator aria-busy=true><h2>Operator</h2>`,
 		`["stand","operator"].forEach`, "fetch('/box/teil?was='+was", `<noscript><meta http-equiv=refresh content="0;url=/box?ganz=1"></noscript>`, saysPartFailed,
-		`<nav class=unter aria-label=Box><a href=/box aria-current=page>Übersicht</a><a href=/box/aufgaben>Aufgaben</a><a href=/box/auslastung>Auslastung</a><a href=/box/haushalt>Haushalt</a></nav>`)
+		`<nav class=unter aria-label=Box><a href=/box aria-current=page>Übersicht</a><a href=/box/auslastung>Auslastung</a><a href=/box/haushalt>Haushalt</a></nav>`)
 	mustNotContain(t, body, "Was wird genutzt", "Werkstatt", "box-dienste", "box-journal", "box-einladen", "box-aufgaben", ">Nutzung</a>", ">Personen</a>")
 	before(t, body, "box-stand", "box-operator")
 	// four tabs (owner 2026-11-06); Haushalt's rows are pages of their own, Haushalt marked

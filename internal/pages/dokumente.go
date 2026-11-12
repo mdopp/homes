@@ -218,6 +218,7 @@ func writeDokumente(w http.ResponseWriter, r *http.Request, cfg StartConfig, cod
 		b.WriteString(scanning)
 		scanning = ""
 	}
+	b.WriteString(dokWege(r, cfg, scanning != "" && scan.err == nil))
 	if cfg.Ablage != nil { // what the page is for, first and big (the Mehr audit, owner 2026-11-04); the title once a file is chosen
 		b.WriteString(`<form class=ablegen method=post action=` + DokumentePath + ` enctype=multipart/form-data><label class=vorne>Foto machen oder Datei ablegen` +
 			`<input type=file name=file accept="image/jpeg,image/png,image/gif,image/webp,application/pdf" multiple required onchange="this.form.querySelector('.gewaehlt').textContent=[...this.files].map(f=>f.name).join(', ')"></label>` +
@@ -231,6 +232,25 @@ func writeDokumente(w http.ResponseWriter, r *http.Request, cfg StartConfig, cod
 	}
 	b.WriteString(zuletzt.HTML() + scanning)
 	writePage(w, code, b)
+}
+
+// dokWege are Dokumente's ways to what had no way in (homes#362): Scannen
+// to the scan's buttons below when scan, and for an admin the scans
+// nobody could be given while there are any.
+func dokWege(r *http.Request, cfg StartConfig, scan bool) string {
+	out := ""
+	if scan {
+		out = `<a class=knopf href=#scannen>Scannen</a> `
+	}
+	if cfg.Zuordnen != nil && isAdmin(r) {
+		if n := offeneScans(cfg.Zuordnen); n > 0 {
+			out += `<a class=knopf href=` + ZuordnenPath + `>Scans zuordnen (` + strconv.Itoa(n) + `)</a>`
+		}
+	}
+	if out == "" {
+		return ""
+	}
+	return `<p class=dok-wege>` + out + `</p>`
 }
 
 // zuletztAbgelegt is the five documents the archive got last (Recent: by

@@ -118,13 +118,13 @@ func Einrichten(cfg StartConfig) http.HandlerFunc {
 // Homes' own, and Laib's for them when a page has read Laib's list in the
 // last while (laib.Gemerkt: every page's nav shows it, Laib is not asked).
 func offeneZahl(r *http.Request, cfg StartConfig) int {
-	as, user := einrichtung(r, cfg), r.Header.Get("Remote-User")
-	if cfg.Laib != nil && user != "" {
+	var l laibTeil
+	if user := r.Header.Get("Remote-User"); cfg.Laib != nil && user != "" {
 		if la, ok := cfg.Laib.Gemerkt(user); ok {
-			as = mitLaibs(r, cfg, as, la)
+			l.aufgaben = &la
 		}
 	}
-	return len(offen(as))
+	return len(offen(aufgabenListe(r, cfg, l)))
 }
 
 // zahl is the counter beside an entry: the open tasks, none at 0.

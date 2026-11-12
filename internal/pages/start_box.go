@@ -126,6 +126,7 @@ type laibTeil struct {
 	aufgaben  *laib.Aufgaben  // the person's own Box-Aufgaben (laib#878)
 	befunde   laib.Befunde    // laib diag's, for an admin
 	wartet    []laib.Proposal // decisions waiting, for an admin
+	archiv    archivStand     // the person's archive's counts (homes#362)
 }
 
 // brauchtDichSpaeter is Braucht dich's place on Start: what Homes knows at
@@ -139,28 +140,19 @@ func brauchtDichSpaeter(r *http.Request, cfg StartConfig, kept *boxRead) string 
 	return nachladen(StartBoxPath, own, own)
 }
 
-// brauchtDich answers "what needs me?" (owner 2026-11-07; the UX review's
-// one place for it): the person's important tasks and Immich's questions,
-// for an admin the box's red and yellow and the decisions waiting — never
-// an optional app; nothing open, no card. For the family a service down is
+// brauchtDich answers "what needs me?" (owner 2026-11-07; homes#362): the
+// first three of Deine Aufgaben and how many more, for an admin the box's
+// red and yellow — nothing open, no card. For the family a service down is
 // the box's banner above it (boxAchtung).
 func brauchtDich(r *http.Request, cfg StartConfig, l laibTeil) string {
-	as := einrichtung(r, cfg)
-	if l.aufgaben != nil {
-		as = mitLaibs(r, cfg, as, *l.aufgaben)
-	}
 	c := cards.Card{Title: "Braucht dich"}
-	n := 0
-	for _, a := range offen(as) {
-		if !a.wichtig && !a.frage {
-			continue
+	open := offen(aufgabenListe(r, cfg, l))
+	for i, a := range open {
+		if i == maxBraucht {
+			c.AddLink(texte.Anzahl(len(open)-maxBraucht, "weitere Aufgabe", "weitere Aufgaben"), "", aufgabenPath)
+			break
 		}
-		if n++; n <= maxBraucht {
-			c.AddLink(a.titel, a.stand, a.href)
-		}
-	}
-	if n > maxBraucht {
-		c.AddLink(texte.Anzahl(n-maxBraucht, "weitere Aufgabe", "weitere Aufgaben"), "", aufgabenPath)
+		c.AddLink(a.titel, a.sagt(), a.ziel())
 	}
 	if !isAdmin(r) {
 		if l.status == nil {
@@ -181,18 +173,9 @@ func brauchtDich(r *http.Request, cfg StartConfig, l laibTeil) string {
 				says = append(says, strconv.Itoa(count[class])+" "+class)
 			}
 		}
-		if f := l.status.ready.AufgabenFaellig; f > 0 {
-			says = append(says, texte.Anzahl(f, texte.T("box.faellig"), texte.T("box.faellig.n")))
-		}
 		if len(says) > 0 {
 			c.AddLink("Box: "+strings.Join(says, " · "), "", "/box")
 		}
-	}
-	if n := len(l.wartet); n > 0 { // deciding is Laib's page's (ADR 0012, haus#157)
-		c.AddLink(texte.Anzahl(n, texte.T("box.wartet"), texte.T("box.wartet.n")), "", strings.TrimRight(cfg.LaibURL, "/")+"/inbox")
-	}
-	for _, row := range zugangRows(cfg) { // a visitor asking for access (owner 2026-11-08)
-		c.AddLink(row[0], row[1], ZugangPath)
 	}
 	return c.HTML()
 }
@@ -228,6 +211,9 @@ func startBox(w http.ResponseWriter, r *http.Request, cfg StartConfig, box *boxS
 				logLaibAufgaben(err)
 			}
 		})
+	}
+	if user != "" {
+		reads = append(reads, func(ctx context.Context) { l.archiv, _ = archivVon(ctx, cfg, user) })
 	}
 	if isAdmin(r) {
 		reads = append(reads, func(ctx context.Context) { l.befunde, derr = cfg.Laib.Befunde(ctx) },

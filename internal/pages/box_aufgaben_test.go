@@ -89,7 +89,14 @@ func (a *aufgabenLaib) client(t *testing.T) *laib.Client {
 
 func jsonString(v any) string { b, _ := json.Marshal(v); return string(b) }
 
-// haus#115: the Box-Aufgaben on the Box page — the due first, each with
+// boxFilter is Deine Aufgaben's Box filter as an admin sees it (homes#362).
+func boxFilter(t *testing.T, c *laib.Client) string {
+	t.Helper()
+	_, body, _ := familyPage(t, DeineAufgaben, StartConfig{Laib: c, Now: time.Now}, "GET", boxAufgabenPfad, "admins")
+	return body
+}
+
+// haus#115: the Box-Aufgaben, Deine Aufgaben's Box filter since homes#362 — the due first, each with
 // Erledigt and Später; a tick ends in the card saying laib's sentence and
 // the task among the done ones; laib's refusal said as laib says it; a
 // task laib closed itself said apart; admins only, from Homes' own page.
@@ -109,10 +116,7 @@ func TestBoxAufgaben(t *testing.T) {
 	}}
 	cfg := BoxConfig{Laib: fake.client(t), LaibURL: "https://laib.box.test"}
 
-	rec := boxAt(BoxPage(cfg), BoxPartPath+"?was=aufgaben", "admins")
-	var parts map[string]string
-	json.Unmarshal(rec.Body.Bytes(), &parts)
-	card := parts["box-aufgaben"]
+	card := boxFilter(t, cfg.Laib)
 	mustContain(t, card, "<p class=k>3 offen · <span class=gelb>1 fällig</span></p>",
 		"<li id=aufgabe-3><b>Voice PE flashen</b>", "fällig seit ", "erinnert am ", "Laib hakt sie selbst ab, wenn der Befund (backup offsite) weg ist",
 		`<input type=hidden name=tun value=erledigt><input type=hidden name=id value=1><button data-laeuft="Hakt ab …">Erledigt</button>`,
@@ -124,12 +128,15 @@ func TestBoxAufgaben(t *testing.T) {
 	}
 
 	h := Aufgaben(cfg)
+	if rec := boxAt(h, AufgabenPath, "admins"); rec.Code != http.StatusFound || rec.Header().Get("Location") != boxAufgabenPfad {
+		t.Errorf("the Box tab's old address → %d %q", rec.Code, rec.Header().Get("Location"))
+	}
 	admin := map[string]string{"Remote-Groups": "admins"}
-	rec = post(t, h, AufgabenPath, url.Values{"tun": {"erledigt"}, "id": {"3"}}, "anna", admin)
+	rec := post(t, h, AufgabenPath, url.Values{"tun": {"erledigt"}, "id": {"3"}}, "anna", admin)
 	if rec.Code != 200 {
 		t.Fatalf("erledigt → %d %s", rec.Code, rec.Body)
 	}
-	mustContain(t, rec.Body.String(), `<div id=box-aufgaben data-teil=aufgaben aria-busy=false>`, "<div class=gut role=status><span class=punkt></span><p>Box-Aufgabe #3 erledigt.</p>",
+	mustContain(t, rec.Body.String(), "<h1>Deine Aufgaben</h1>", "<div class=gut role=status><span class=punkt></span><p>Box-Aufgabe #3 erledigt.</p>",
 		"Zuletzt erledigt (3)", "von anna")
 	mustNotContain(t, rec.Body.String(), "homes:anna")
 	if got := fake.calls[len(fake.calls)-2]; got["action"] != "erledigt" || got["id"] != "3" || got["von"] != "anna" {
@@ -157,9 +164,7 @@ func TestBoxAufgaben(t *testing.T) {
 
 	// laib without the verb for this hand yet: said what to do, no error page
 	fake.noTool = true
-	rec = boxAt(BoxPage(cfg), BoxPartPath+"?was=aufgaben", "admins")
-	json.Unmarshal(rec.Body.Bytes(), &parts)
-	mustContain(t, parts["box-aufgaben"], saysAufgabenNoTool)
+	mustContain(t, boxFilter(t, cfg.Laib), saysAufgabenNoTool)
 	rec = post(t, h, AufgabenPath, url.Values{"tun": {"erledigt"}, "id": {"1"}}, "anna", admin)
 	if rec.Code != http.StatusForbidden || !strings.Contains(rec.Body.String(), saysAufgabenNoTool) {
 		t.Errorf("no tool → %d %q", rec.Code, rec.Body)
@@ -181,7 +186,7 @@ func TestBoxAufgaben(t *testing.T) {
 		t.Errorf("slow → %d %q", rec.Code, rec.Body)
 	}
 
-	if got := linkAufgaben("gelb (zurückgestellt → Box-Aufgabe #3 „Spiegel“)"); got != `gelb (zurückgestellt → <a href="/box/aufgaben#aufgabe-3">Box-Aufgabe #3</a> „Spiegel“)` {
+	if got := linkAufgaben("gelb (zurückgestellt → Box-Aufgabe #3 „Spiegel“)"); got != `gelb (zurückgestellt → <a href="/aufgaben?nur=box#aufgabe-3">Box-Aufgabe #3</a> „Spiegel“)` {
 		t.Errorf("%q", got)
 	}
 }

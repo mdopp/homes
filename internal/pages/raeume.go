@@ -118,7 +118,7 @@ func roomCards(states []ha.State, reg ha.Registry, pinned, playing map[string]bo
 		state            ha.State
 	}
 	byRoom := map[string][]thing{}
-	twins := twinPlayers(states, reg, false) // one tile per thing (haus#83)
+	twins := twinPlayers(states, reg) // one tile per thing (haus#83)
 	for _, s := range states {
 		domain, _, _ := strings.Cut(s.EntityID, ".")
 		kind, ok := roomKinds[domain]

@@ -28,7 +28,7 @@ import (
 // no page view. Every page cmd/homes serves is here, so a page nobody opens
 // shows up as one (owner, 2026-11-04); the Box card names only the events
 // it has words for, so a page counted here is not shown until it has them.
-var pagePaths = map[string]string{"/start": "start", "/raeume": "raeume", "/energie": "energie", "/medien": "medien",
+var pagePaths = map[string]string{"/start": "start", "/raeume": "raeume", "/energie": "energie",
 	"/kalender": "kalender", KontaktePath: "kontakte", "/notizen": "notizen", "/sprechen": "sprechen", "/box": "box", "/box/geraete": "geraete",
 	"/pair-device": "koppeln", cards.SwitchPath: "schalten", "/mehr": "mehr",
 	EinkaufPath: "einkauf", EinkaufRezeptePath: "rezepte", MusikPath: "musik", PodcastsPath: "podcasts", GesehenPath: "gesehen",
@@ -198,7 +198,6 @@ var features = []feature{
 	{"seite.raeume", "Räume geöffnet", withHouse},
 	{"seite.ding", "Ein Gerät geöffnet", withHouse},
 	{"seite.energie", "Energie geöffnet", withHouse},
-	{"seite.medien", "Medien geöffnet", withHouse},
 	{"seite.kalender", "Kalender geöffnet", withCalendar},
 	{"seite.notizen", "Notizen geöffnet", withNotes},
 	{"suche.notizen", "In den Notizen gesucht", withNotes},

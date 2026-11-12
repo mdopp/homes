@@ -49,12 +49,12 @@ code{overflow-wrap:anywhere;font:.8rem ui-monospace,SFMono-Regular,Menlo,monospa
 // lange Themen vermischt"): where it is, its tab, its heading.
 type boxPage struct{ path, name, title string }
 
-// boxPages are Box's four tabs (owner 2026-11-06), then Haushalt's rows
-// that are pages of their own, under the tab Haushalt; Geräte and Adresse
-// are their own handlers.
+// boxPages are Box's three tabs (owner 2026-11-06; the Aufgaben tab is
+// Deine Aufgaben's Box filter since homes#362), then Haushalt's rows that
+// are pages of their own, under the tab Haushalt; Geräte and Adresse are
+// their own handlers.
 var boxPages = []boxPage{
 	{"/box", "Übersicht", ""},
-	{AufgabenPath, "Aufgaben", "Box-Aufgaben"},
 	{auslastungPath, "Auslastung", "Auslastung"}, // owner 2026-11-06: what the box carries now (laib#1076)
 	{haushaltPath, "Haushalt", "Haushalt"},
 	{"/box/personen", "Haushalt", "Personen"},
@@ -76,11 +76,11 @@ func boxPageOf(path string, cfg BoxConfig) (boxPage, bool) {
 	return boxPage{}, false
 }
 
-// unterNav is Box's four tabs, the current one marked; they fit a phone.
+// unterNav is Box's three tabs, the current one marked; they fit a phone.
 func unterNav(current string) string {
 	var b strings.Builder
 	b.WriteString("<nav class=unter aria-label=Box>")
-	for _, p := range boxPages[:4] {
+	for _, p := range boxPages[:3] {
 		b.WriteString("<a href=" + p.path)
 		if p.name == current {
 			b.WriteString(" aria-current=page")
@@ -150,12 +150,10 @@ type boxSlot struct{ part, title string }
 func boxSlotsOn(cfg BoxConfig, page string) []boxSlot {
 	switch page {
 	case "/box":
-		return []boxSlot{{"stand", ""}, {"operator", "Operator"}}
-	case AufgabenPath:
-		if cfg.Tickets != nil { // owner 2026-11-06: the Werkstatt's tickets beside the Box-Aufgaben
-			return []boxSlot{{"aufgaben", ""}, {"werkstatt", "Werkstatt"}}
+		if cfg.Tickets != nil { // owner 2026-11-06: the Werkstatt's tickets, on the Übersicht since homes#362
+			return []boxSlot{{"stand", ""}, {"operator", "Operator"}, {"werkstatt", "Werkstatt"}}
 		}
-		return []boxSlot{{"aufgaben", ""}}
+		return []boxSlot{{"stand", ""}, {"operator", "Operator"}}
 	case "/box/personen":
 		return []boxSlot{{"einladen", "Person einladen"}}
 	case "/box/nutzung":
@@ -174,8 +172,6 @@ func boxPart(ctx context.Context, r *http.Request, cfg BoxConfig, part string, i
 		return achtung(ctx, r, cfg)
 	case "einladen":
 		return inviteCard(ctx, c, inv)
-	case "aufgaben":
-		return aufgabenCard(ctx, c, time.Now(), "", "")
 	case "haushalt":
 		return haushaltCard(ctx, cfg)
 	case "operator":

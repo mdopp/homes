@@ -265,7 +265,7 @@ test('Deine Geräte are the app\'s tiles', async ({ page }, info) => {
 });
 
 test('a player pauses in place', async ({ page }) => {
-  await page.goto('/medien');
+  await page.goto('/raeume');
   await mark(page);
   await page.getByRole('button', { name: 'Pause' }).first().click();
   await expect(page.getByRole('button', { name: 'Weiter' }).first()).toBeVisible();
@@ -344,16 +344,41 @@ async function above(page, a, b) {
 
 // The Mehr audit (owner 2026-11-04): filing is the first and biggest thing on Dokumente; the title
 // asks once a file is chosen; the mail is one quiet line below.
-// Daten sichern: the way to Meine Daten first (homes#342: each source's state is said there, once),
-// then the way to the keys, what never goes and the phone change folded last.
-test('Daten sichern leads to Meine Daten, the phone change folded', async ({ page }) => {
+// homes#362 (owner 2026-11-12): Daten sichern is one page with Meine Daten — its old address lands
+// there; below the sources the way to the keys, then what never goes and the phone change, folded.
+test('Daten sichern is on Meine Daten, the phone change folded', async ({ page }) => {
   await page.goto('/daten-sichern');
-  await expect(page.locator('li.quelle')).toHaveCount(0);
-  expect(await above(page, 'section.karte a[href="/meine-daten"]', 'p.schluessel')).toBe(true);
+  await expect(page).toHaveURL(/\/meine-daten$/);
+  await expect(page.locator('h1')).toHaveText('Meine Daten');
+  expect(await above(page, 'li.quelle', 'p.schluessel')).toBe(true);
   for (const d of await page.locator('details.wechsel').all()) await expect(d).not.toHaveAttribute('open', '');
   expect(await above(page, 'p.schluessel', 'details.wechsel')).toBe(true);
-  await page.locator('section.karte a[href="/meine-daten"]').click();
-  await expect(page.locator('h1')).toHaveText('Meine Daten');
+});
+
+// homes#362: Deine Aufgaben is the one list — the decision waiting first, then the key the box waits
+// for (its form on Laib's page, and back), the archive's questions, then setup; Laib's address in a
+// task is a link; the Box filter has the Box-Aufgaben with Erledigt and Später.
+test('Deine Aufgaben: one list in the owner\'s order, each row one tap away', async ({ page }, info) => {
+  await page.setViewportSize({ width: 411, height: 900 });
+  await page.goto('/aufgaben');
+  const offen = page.locator('section[aria-labelledby=karte-offen]');
+  const rows = offen.locator('ul.aufgaben > li > b');
+  await expect(rows.first()).toHaveText('1 Entscheidung wartet');
+  const key = offen.getByRole('link', { name: 'Dokumenten-Mails: Passwort des Postfachs' });
+  await expect(key).toHaveAttribute('href', /schluessel\?name=DOKUMENTE_MAIL_PASSWORD_ANNA&zurueck=https%3A%2F%2Fhomes\.example%2Faufgaben$/);
+  await expect(offen.getByRole('link', { name: 'Im Archiv: 2 Fragen offen' })).toHaveAttribute('href', 'https://archiv.example/tresor?tab=fragen');
+  await expect(offen.getByRole('link', { name: 'https://laib.example/hilfe/waechter' })).toBeVisible();
+  expect(await above(page, 'text=1 Entscheidung wartet', 'text=Dokumenten-Mails: Passwort')).toBe(true);
+  expect(await above(page, 'text=Dokumenten-Mails: Passwort', 'text=Im Archiv: 2 Fragen offen')).toBe(true);
+  expect(await above(page, 'text=Im Archiv: 2 Fragen offen', 'text=Wächter von außen einrichten')).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: info.outputPath('deine-aufgaben.png'), fullPage: true });
+  await page.getByRole('link', { name: 'Box', exact: true }).click();
+  await expect(page).toHaveURL(/\/aufgaben\?nur=box$/);
+  await expect(page.locator('#aufgabe-2')).toContainText('Wächter von außen einrichten');
+  await expect(page.locator('#aufgabe-2').getByRole('button', { name: 'Erledigt' })).toBeVisible();
+  await page.goto('/box/aufgaben');
+  await expect(page).toHaveURL(/\/aufgaben\?nur=box$/);
 });
 
 // Meine Daten (homes#342) on a phone: one line per source with its dot and its threshold under it, what
@@ -668,9 +693,9 @@ test('Standortverlauf, connected, leads with the timeline and ends with a quiet 
 // Felder geprüft?"): with every fold open, the page is no wider than the
 // screen, a field to type in has room, a button is big enough for a
 // finger, and no text runs out of its box.
-const PAGES = ['/start', '/raeume', '/raeume/light.kueche', '/medien', '/energie', '/energie?zeitraum=jahr', '/kalender', '/kalender/verwalten', '/kontakte', '/kontakte/h3', '/kontakte/privat', '/kontakte/privat/k0', '/kontakte/dieselbe',
+const PAGES = ['/start', '/raeume', '/raeume/light.kueche', '/energie', '/energie?zeitraum=jahr', '/kalender', '/kalender/verwalten', '/kontakte', '/kontakte/h3', '/kontakte/privat', '/kontakte/privat/k0', '/kontakte/dieselbe',
   '/notizen', '/notizen?tag=kochen', '/notizen/einkaufsliste.md', '/notizen/markdown.md', '/notizen/einkaufsliste.md?bearbeiten=1', '/mehr', '/musik', '/platte', '/discogs', '/aktivierungswort', '/aufgaben', '/dokumente', '/dokumente/zuordnen', '/dokumente/suche?q=strom', '/dokumente/suche?nur=versicherungen', '/willkommen', '/einrichten/fotos', '/box/geraete', '/pair-device', '/podcasts', '/gesehen', '/standort',
-  '/daten-sichern', '/meine-daten', '/netzlaufwerk', '/box', '/box/aufgaben', '/box/auslastung', '/box/haushalt', '/box/personen', '/box/module', '/adresse',
+  '/meine-daten', '/aufgaben?nur=box', '/netzlaufwerk', '/box', '/box/auslastung', '/box/haushalt', '/box/personen', '/box/module', '/adresse',
   '/einkauf', '/einkauf?liste=liste-baumarkt', '/einkauf?liste=liste-musik', '/einkauf/rezepte', '/einkauf/rezepte?n=rezepte%2Flasagne.md', '/notizen/rezepte/lasagne.md'];
 for (const path of PAGES) {
   test(`layout of ${path}`, async ({ page }) => {
@@ -693,7 +718,7 @@ for (const path of PAGES) {
         if (!seen(el)) continue;
         const r = el.getBoundingClientRect();
         if (r.height < 40) out.push(`"${what(el)}" only ${Math.round(r.height)}px high`);
-        if (r.right > vw + 1) out.push(`"${what(el)}" runs off the screen`); // Box's four tabs fit too (owner 2026-11-06)
+        if (r.right > vw + 1) out.push(`"${what(el)}" runs off the screen`); // Box's tabs fit too (owner 2026-11-06)
       }
       for (const el of document.querySelectorAll('p, li, h1, h2, label, td, th, .k')) {
         if (!seen(el)) continue;
@@ -710,15 +735,15 @@ for (const path of PAGES) {
   });
 }
 
-// owner 2026-11-06: Box has four tabs that fit a 411 px phone without scrolling
+// owner 2026-11-06: Box has three tabs (the Aufgaben tab is Deine Aufgaben's Box filter since homes#362) that fit a 411 px phone without scrolling
 // sideways; the Übersicht says only what needs the admin, red before yellow,
 // the Operator folded with only the skills that did not run well; Haushalt
 // is a list of rows with their state, each opening its page.
-test('Box: four tabs fit a phone, the Übersicht says what needs me, Haushalt lists its rows', async ({ page }, info) => {
+test('Box: three tabs fit a phone, the Übersicht says what needs me, Haushalt lists its rows', async ({ page }, info) => {
   await page.setViewportSize({ width: 411, height: 900 });
   await page.goto('/box');
   const tabs = page.locator('nav.unter a');
-  await expect(tabs).toHaveText(['Übersicht', 'Aufgaben', 'Auslastung', 'Haushalt']);
+  await expect(tabs).toHaveText(['Übersicht', 'Auslastung', 'Haushalt']);
   const nav = await page.locator('nav.unter').evaluate((n) => ({ sw: n.scrollWidth, cw: n.clientWidth }));
   expect(nav.sw, 'the tabs do not scroll sideways').toBeLessThanOrEqual(nav.cw);
   for (const t of await tabs.all()) {
@@ -1060,7 +1085,7 @@ test('Ist das …? asks on the contact and takes a Nein', async ({ page }, info)
 
 // Pictures of the main pages as a phone shows them, for a look at the
 // run (the CI keeps them).
-for (const path of ['/start', '/raeume', '/medien', '/energie', '/notizen', '/mehr', '/musik', '/kalender/verwalten', '/kontakte']) {
+for (const path of ['/start', '/raeume', '/energie', '/notizen', '/mehr', '/musik', '/kalender/verwalten', '/kontakte']) {
   test(`picture of ${path}`, async ({ page }, info) => {
     await page.goto(path);
     await page.screenshot({ path: info.outputPath(path.slice(1) + '.png'), fullPage: true });

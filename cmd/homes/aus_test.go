@@ -80,12 +80,12 @@ func TestEachLeafModuleOff(t *testing.T) {
 	type probe struct{ path, on, off string }
 	const wunschliste = "/einkauf?liste=liste-musik" // the Haushalt pills: served with einkauf or musik on
 	probes := map[string][]probe{
-		"werkstatt":    {{"/box/aufgaben", `box-werkstatt`, "!box-werkstatt"}},
+		"werkstatt":    {{"/box", `box-werkstatt`, "!box-werkstatt"}},
 		"netzlaufwerk": {{"/mehr", `href="/netzlaufwerk"`, `!href="/netzlaufwerk"`}, {"/netzlaufwerk", "Passwort", "Gibt es hier noch nicht"}},
 		"podcasts":     {{"/mehr", `href="/podcasts"`, `!href="/podcasts"`}, {"/podcasts", "Podcast abonnieren", "Gibt es hier noch nicht"}},
 		"gesehen":      {{"/mehr", `href="/gesehen"`, `!href="/gesehen"`}, {"/gesehen", "eintragen musst du nichts", "Gibt es hier noch nicht"}},
 		"standort":     {{"/mehr", `href="/standort"`, `!href="/standort"`}, {"/standort", "Reitti", "Gibt es hier noch nicht"}, {"napi:/napi/standort", "#200", "#503"}},
-		"sicherung":    {{"/mehr", `href="/daten-sichern"`, `!href="/daten-sichern"`}, {"/daten-sichern", "WhatsApp", "Gibt es hier noch nicht"}, {"napi:/napi/sicherung/stand", "#200", "#503"}},
+		"sicherung":    {{"/meine-daten", "Handy wechseln", "!Handy wechseln"}, {"napi:/napi/sicherung/stand", "#200", "#503"}},
 		// H4: the tool widgets' catalog, the app's paths and the Bote's tools follow
 		"dokumente": {{"/mehr", `href="/dokumente"`, `!href="/dokumente"`}, {"/dokumente", "scan@example.org", "Gibt es hier noch nicht"},
 			{"napi:/napi/defs/tool", `"tool-id":"doc"`, `!"tool-id":"doc"`}, {"napi:/napi/portal/documents", "#200", "#404"},

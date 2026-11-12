@@ -148,6 +148,11 @@ func TestKontaktPruefenFromTheLinkToTheAddressBook(t *testing.T) {
 	if as := einrichtung(r, cfg); len(as) == 0 || as[0].titel != "1 Kontakt-Antwort prüfen" || as[0].href != AntwortenPath {
 		t.Errorf("tasks %+v", as)
 	}
+	// homes#362: Kontakte has the row while there are any, for the one who asked only
+	_, kontakte, _ := familyPageAs(t, Kontakte, cfg, "GET", KontaktePath, "anna", "family")
+	mustContain(t, kontakte, `<a href="/kontakte/antworten">1 Kontakt-Antwort prüfen</a>`)
+	_, ben, _ := familyPageAs(t, Kontakte, cfg, "GET", KontaktePath, "ben", "family,admins")
+	mustNotContain(t, ben, "Kontakt-Antwort")
 	id := open[0].ID
 	// owner 2026-11-08: no list of answers; the task opens the contact, its row says one waits, the review is on it
 	if rec := frag(Antworten(cfg), "GET", AntwortenPath, "anna", "family", nil); rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/kontakte/h1" {

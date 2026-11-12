@@ -262,7 +262,7 @@ func imHaus(cfg StartConfig, states []ha.State, haErr error, reg ha.Registry) st
 	persons := 0
 	var home, plays []string
 	var pause *cards.Action
-	twins := twinPlayers(states, reg, false)
+	twins := twinPlayers(states, reg)
 	for _, s := range states {
 		if !shown(s, reg.Hidden) || twins[s.EntityID] {
 			continue

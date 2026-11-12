@@ -48,7 +48,7 @@ func TestWemGehoertDieserScanIsTheAdmins(t *testing.T) {
 	mustContain(t, body, "<h1>Wem gehört dieser Scan?</h1>", "Von Praxis Dr. Muster", "2026-11-03 · 2 Seite(n)",
 		`<button name=an value="anna"`, `<button name=an value="ben"`, `<button name=an value="haushalt"`, `name=zeichen value="z7"`, "sieht sie niemand in der Familie")
 	as := einrichtung(withGroups("admins"), cfg)
-	if len(as) == 0 || as[0].titel != "Wem gehört dieser Scan?" || as[0].href != ZuordnenPath || !as[0].wichtig || as[0].stand != "1 offen" {
+	if len(as) == 0 || as[0].titel != "Wem gehört dieser Scan?" || as[0].href != ZuordnenPath || as[0].art != artFrage || as[0].stand != "1 offen" {
 		t.Fatalf("the admins' task: %+v", as)
 	}
 	if as := einrichtung(withGroups("family"), cfg); len(as) != 0 {

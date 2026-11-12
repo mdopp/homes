@@ -31,12 +31,12 @@ import (
 )
 
 // mehrSeiten mounts the Mehr pages the demo had left out (the Mehr audit,
-// owner 2026-11-04): Daten sichern, Netzlaufwerk, Box with its pages and
+// owner 2026-11-04): Meine Daten, Netzlaufwerk, Box with its pages and
 // Adresse, so the browser tests and the pictures cover them. cfg has the
 // demo's Laib (laibFake answers Box's verbs from auditLaib) and Reitti.
 // Anna has backups, a password and contacts; Ben, Clara none (the cookie
 // wer=ben shows another person, in the family only).
-func mehrSeiten(mux *http.ServeMux, cfg pages.StartConfig, dav *davfake.Server, dir string, phones *devices.Store) {
+func mehrSeiten(mux *http.ServeMux, cfg pages.StartConfig, dav *davfake.Server, dir string, phones *devices.Store, archivJetzt func()) {
 	sambaDir := filepath.Join(dir, "samba")
 	os.MkdirAll(sambaDir, 0o755)
 	setSamba := func(gesetzt bool) { // /demo/samba?gesetzt=1: Anna's password is set
@@ -76,7 +76,8 @@ func mehrSeiten(mux *http.ServeMux, cfg pages.StartConfig, dav *davfake.Server, 
 	cfg.Samba, cfg.SambaHost = &samba.Dir{Path: sambaDir}, "box.local"
 	cfg.Sicherung, cfg.Contacts, cfg.LaibURL = napi.NewSicherung(archiv, dir), cfg.Calendar, "https://laib.example"
 	mux.HandleFunc(pages.DatenPath, pages.Nachrichten(cfg))
-	mux.HandleFunc(pages.MeineDatenPath, pages.MeineDaten(cfg)) // every source with its last arrival (homes#342)
+	meine := pages.MeineDaten(cfg)
+	mux.HandleFunc(pages.MeineDatenPath, func(w http.ResponseWriter, r *http.Request) { archivJetzt(); meine(w, r) }) // every source with its last arrival (homes#342)
 	// the household's address book, nine cards as on the box (owner 2026-11-05): the list and each contact's page
 	dav.AddAddressBook("/homes/haushalt-kontakte/", "Haushalt")
 	for i, k := range [][3]string{{"Anna Beispiel", "+49 151 23456789", "anna@example.org"}, {"Ben Beispiel", "+49 160 9876543", ""},
