@@ -2,6 +2,7 @@ package pages
 
 import (
 	"context"
+	"html"
 	"log"
 	"math"
 	"net/http"
@@ -36,6 +37,10 @@ const noRoom = "Ohne Raum"
 // registry failed would be wrong, not just short.
 func Raeume(cfg StartConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost && cfg.HA != nil { // a room's standard speaker (owner 2026-11-12)
+			raeumeStandard(w, r, cfg)
+			return
+		}
 		if !showOnly(w, r, "Räume") {
 			return
 		}
@@ -43,61 +48,70 @@ func Raeume(cfg StartConfig) http.HandlerFunc {
 			notSetHA.write(w, r, cfg, "Räume")
 			return
 		}
-		var (
-			states  []ha.State
-			haErr   error
-			reg     ha.Registry
-			roomsOK bool
-			favs    []string
-			favErr  error
-		)
-		person := r.Header.Get("Remote-User")
-		pins := cfg.Favorites != nil && person != ""
-		reads := []func(context.Context){
-			func(ctx context.Context) { states, haErr = cfg.HA.States(ctx) },
-			func(ctx context.Context) { reg, roomsOK = cfg.HA.CachedRegistry(ctx) }}
-		if pins {
-			reads = append(reads, func(context.Context) { favs, favErr = cfg.Favorites.For(person) })
-		}
-		fetch(r, reads...)
-		states = cfg.allAsSeen(states) // a cover wired the wrong way round, turned over (haus#64)
-		logErrs("räume", map[string]error{"home assistant": haErr, "favorites": favErr})
-		if haErr == nil && !roomsOK {
-			log.Printf("homes: räume page: home assistant's rooms are not known yet; the cards are left out")
-		}
-		b := familyHead(r, cfg, "Geräte", "Räume")
-		b.WriteString(liveRefresh("seite", 120))
-		b.WriteString("<h1>Geräte</h1>") // the tab's name (owner 2026-10-24)
-		if haErr == nil {                // the way on only while HA answers: a line about it never names it (laib ADR 0021)
-			b.WriteString(cfg.homeAssistant().Weiter("/", saysInHA))
-		}
-		switch {
-		case haErr != nil:
-			b.WriteString("<p class=k>" + saysNoHouse + "</p>")
-		case !roomsOK:
-			b.WriteString("<p class=k>" + saysNoRooms + "</p>")
-		default:
-			var pinned map[string]bool
-			switch {
-			case pins && favErr != nil:
-				b.WriteString("<p class=k>" + saysNoFavorites + "</p>")
-			case pins:
-				b.WriteString("<p class=k>" + saysPinWhat + "</p>")
-				pinned = map[string]bool{}
-				for _, id := range favs {
-					pinned[id] = true
-				}
-			}
-			playing := laeuftGerade(states, reg, "/raeume", pinned)
-			if len(playing.Rows) > 0 {
-				b.WriteString(playing.HTML()) // what plays first, with its buttons: Medien's card (owner 2026-10-24)
-			}
-			for _, c := range roomCards(states, reg, pinned, playingIDs(playing)) {
-				b.WriteString(c.HTML())
-			}
-		}
-		writePage(w, http.StatusOK, b)
+		writeRaeume(w, r, cfg, "")
 	}
+}
+
+// writeRaeume is Geräte, with what was just done (said) under its title.
+func writeRaeume(w http.ResponseWriter, r *http.Request, cfg StartConfig, said string) {
+	var (
+		states  []ha.State
+		haErr   error
+		reg     ha.Registry
+		roomsOK bool
+		favs    []string
+		favErr  error
+	)
+	person := r.Header.Get("Remote-User")
+	pins := cfg.Favorites != nil && person != ""
+	reads := []func(context.Context){
+		func(ctx context.Context) { states, haErr = cfg.HA.States(ctx) },
+		func(ctx context.Context) { reg, roomsOK = cfg.HA.CachedRegistry(ctx) }}
+	if pins {
+		reads = append(reads, func(context.Context) { favs, favErr = cfg.Favorites.For(person) })
+	}
+	fetch(r, reads...)
+	states = cfg.allAsSeen(states) // a cover wired the wrong way round, turned over (haus#64)
+	logErrs("räume", map[string]error{"home assistant": haErr, "favorites": favErr})
+	if haErr == nil && !roomsOK {
+		log.Printf("homes: räume page: home assistant's rooms are not known yet; the cards are left out")
+	}
+	b := familyHead(r, cfg, "Geräte", "Räume")
+	b.WriteString(liveRefresh("seite", 120))
+	b.WriteString("<h1>Geräte</h1>") // the tab's name (owner 2026-10-24)
+	if said != "" {
+		b.WriteString("<div class=gut role=status><span class=punkt></span><p>" + html.EscapeString(said) + "</p></div>")
+	}
+	if haErr == nil { // the way on only while HA answers: a line about it never names it (laib ADR 0021)
+		b.WriteString(cfg.homeAssistant().Weiter("/", saysInHA))
+	}
+	switch {
+	case haErr != nil:
+		b.WriteString("<p class=k>" + saysNoHouse + "</p>")
+	case !roomsOK:
+		b.WriteString("<p class=k>" + saysNoRooms + "</p>")
+	default:
+		var pinned map[string]bool
+		switch {
+		case pins && favErr != nil:
+			b.WriteString("<p class=k>" + saysNoFavorites + "</p>")
+		case pins:
+			b.WriteString("<p class=k>" + saysPinWhat + "</p>")
+			pinned = map[string]bool{}
+			for _, id := range favs {
+				pinned[id] = true
+			}
+		}
+		playing := laeuftGerade(states, reg, "/raeume", pinned)
+		if len(playing.Rows) > 0 {
+			b.WriteString(playing.HTML()) // what plays first, with its buttons: Medien's card (owner 2026-10-24)
+		}
+		standard := standardZeilen(states, reg, isAdmin(r))
+		for _, c := range roomCards(states, reg, pinned, playingIDs(playing)) {
+			b.WriteString(strings.Replace(c.HTML(), "</h2>", "</h2>"+standard[c.Title], 1)) // the room's standard speaker under its name
+		}
+	}
+	writePage(w, http.StatusOK, b)
 }
 
 // saysPinWhat is what Räume's ☆ does, once above the rooms.

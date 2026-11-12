@@ -16,6 +16,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -289,6 +290,17 @@ type Registry struct {
 	// not disabled — the same the laib stimme template reads (laib#759).
 	WakeWords map[string]bool
 	TempUnit  string // the house's temperature unit (unit_system.temperature), "" when HA did not say
+	// AreaIDs is a room's name → its area's id
+	AreaIDs map[string]string
+	// Labels is entity → its labels' ids; StandardLabelID the id of the
+	// label named StandardLabel, "" while HA has none
+	Labels          map[string][]string
+	StandardLabelID string
+}
+
+// Standard says whether entity carries the label StandardLabel.
+func (r Registry) Standard(entity string) bool {
+	return r.StandardLabelID != "" && slices.Contains(r.Labels[entity], r.StandardLabelID)
 }
 
 // Areas maps every entity to its room's name: the entity's own area, else
@@ -317,20 +329,22 @@ func (c *Client) registries(ctx context.Context) (Registry, error) {
 		Name   string `json:"name"`
 	}
 	var devices []device
+	var labels []label
 	var entities []struct {
-		EntityID       string `json:"entity_id"`
-		AreaID         string `json:"area_id"`
-		DeviceID       string `json:"device_id"`
-		HiddenBy       string `json:"hidden_by"`
-		EntityCategory string `json:"entity_category"`
-		Platform       string `json:"platform"`
-		TranslationKey string `json:"translation_key"`
-		DisabledBy     string `json:"disabled_by"`
+		Labels         []string `json:"labels"`
+		EntityID       string   `json:"entity_id"`
+		AreaID         string   `json:"area_id"`
+		DeviceID       string   `json:"device_id"`
+		HiddenBy       string   `json:"hidden_by"`
+		EntityCategory string   `json:"entity_category"`
+		Platform       string   `json:"platform"`
+		TranslationKey string   `json:"translation_key"`
+		DisabledBy     string   `json:"disabled_by"`
 	}
 	for _, q := range []struct {
 		cmd string
 		out any
-	}{{"config/area_registry/list", &areas}, {"config/device_registry/list", &devices}, {"config/entity_registry/list", &entities}} {
+	}{{"config/area_registry/list", &areas}, {"config/device_registry/list", &devices}, {"config/entity_registry/list", &entities}, {"config/label_registry/list", &labels}} {
 		id, err := w.send(map[string]any{"type": q.cmd})
 		if err != nil {
 			return Registry{}, err
@@ -339,13 +353,14 @@ func (c *Client) registries(ctx context.Context) (Registry, error) {
 			return Registry{}, err
 		}
 	}
-	name := map[string]string{}
+	name, areaID := map[string]string{}, map[string]string{}
 	for _, a := range areas {
 		if a.AreaID != "" {
 			name[a.AreaID] = a.Name
 			if a.Name == "" {
 				name[a.AreaID] = a.AreaID
 			}
+			areaID[name[a.AreaID]] = a.AreaID
 		}
 	}
 	devArea := map[string]string{}
@@ -353,7 +368,8 @@ func (c *Client) registries(ctx context.Context) (Registry, error) {
 		devArea[d.ID] = d.AreaID
 	}
 	twin := twins(devices)
-	reg := Registry{Rooms: map[string]string{}, Hidden: map[string]bool{}, Devices: map[string]string{}, Platforms: map[string]string{}, Twins: map[string]string{}, WakeWords: map[string]bool{}}
+	reg := Registry{Rooms: map[string]string{}, Hidden: map[string]bool{}, Devices: map[string]string{}, Platforms: map[string]string{}, Twins: map[string]string{}, WakeWords: map[string]bool{},
+		AreaIDs: areaID, Labels: map[string][]string{}, StandardLabelID: standardLabel(labels)}
 	for _, e := range entities {
 		if e.EntityID == "" {
 			continue
@@ -368,6 +384,7 @@ func (c *Client) registries(ctx context.Context) (Registry, error) {
 		if e.DeviceID != "" {
 			reg.Devices[e.EntityID] = e.DeviceID
 		}
+		reg.Labels[e.EntityID] = e.Labels
 		if t := twin[e.DeviceID]; t != "" {
 			reg.Twins[e.EntityID] = t
 		}
