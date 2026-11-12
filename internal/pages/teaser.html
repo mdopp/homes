@@ -88,20 +88,27 @@ figcaption { color: var(--muted); font-size: 0.95rem; text-align: center; text-w
 .bild .mk { fill: var(--line); }
 .bild .mk2 { fill: var(--accent); }
 
-ul.heisst { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 10px; }
-ul.heisst li {
-  display: grid; grid-template-columns: 10px 1fr; gap: 14px; align-items: baseline;
-  padding: 14px 16px; background: var(--card); border: 1px solid var(--edge); border-radius: 14px;
-  min-width: 0;
+/* Was die Box kann: a pictogram and a few words each, two across on a phone, four from a wider column */
+ul.kann { list-style: none; margin: 16px 0 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+ul.kann li {
+  flex: 0 1 calc(50% - 5px); box-sizing: border-box; min-width: 0;
+  display: grid; justify-items: center; gap: 8px; text-align: center;
+  padding: 16px 8px 14px; background: var(--card); border: 1px solid var(--edge); border-radius: 14px;
+  font-weight: 700; font-size: 0.95rem; line-height: 1.25; hyphens: auto;
 }
-ul.heisst li::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); transform: translateY(2px); }
+@media (min-width: 34rem) { ul.kann li { flex-basis: calc(25% - 7.5px); } }
+ul.kann svg, .sicher > svg, .wege svg, .frei svg { stroke: var(--accent); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+ul.kann svg { width: 36px; height: 36px; padding: 9px; border-radius: 50%; background: var(--tint); }
 
 .sicher {
   display: grid; grid-template-columns: 22px 1fr; gap: 14px; align-items: start;
   padding-top: 20px; border-top: 1px solid var(--edge); margin: 0;
-  color: var(--fg);
 }
-.sicher svg { width: 22px; height: 22px; stroke: var(--accent); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; margin-top: 3px; }
+.sicher p { margin: 0; }
+.sicher > svg { width: 22px; height: 22px; margin-top: 3px; }
+details summary { cursor: pointer; color: var(--accent); font-size: 0.9rem; font-weight: 700; width: max-content; }
+details summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+details p { margin: 6px 0 0; font-size: 0.95rem; color: var(--fg); }
 
 footer { display: grid; gap: 22px; justify-items: start; padding-top: 8px; }
 footer .frage { font-size: 1.1rem; margin: 0; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
@@ -145,11 +152,25 @@ footer .laib:hover { color: var(--fg); }
   display: grid; grid-template-columns: 22px 1fr; gap: 12px; align-items: center; margin: 0;
   padding: 14px 16px; border-radius: 14px; background: var(--tint); color: var(--fg); font-weight: 700;
 }
+/* Welche Daten wir annehmen: the badge, then one row per way in, the full sentences under „Genauer“ */
 .daten { display: grid; gap: 14px; }
-.daten p { margin: 0; }
-.daten dl { margin: 0; display: grid; gap: 14px; }
-.daten dt { font-weight: 700; }
-.daten dd { margin: 4px 0 0; color: var(--fg); }
+.daten > p { margin: 0; }
+.daten .k { color: var(--muted); font-size: 0.95rem; }
+.frei {
+  display: flex; gap: 10px; align-items: center; justify-self: start;
+  padding: 10px 16px 10px 12px; border-radius: 14px; background: var(--tint); border: 1.5px solid var(--accent);
+  font-weight: 700; line-height: 1.3;
+}
+.frei svg { width: 24px; height: 24px; }
+ul.wege { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+ul.wege li {
+  display: grid; grid-template-columns: 40px 1fr; gap: 14px; align-items: start; min-width: 0;
+  padding: 14px 16px; background: var(--card); border: 1px solid var(--edge); border-radius: 14px;
+}
+ul.wege svg { width: 40px; height: 40px; padding: 9px; box-sizing: border-box; border-radius: 50%; background: var(--tint); }
+ul.wege h3 { margin: 0; font-family: var(--display); font-size: 1.05rem; line-height: 1.3; }
+ul.wege h3 small { margin-left: 4px; padding: 1px 8px; border-radius: 999px; background: var(--tint); color: var(--accent); font-family: var(--body); font-size: 0.75rem; white-space: nowrap; }
+ul.wege li > div > p { margin: 2px 0 4px; }
 .danke svg { width: 22px; height: 22px; stroke: var(--accent); fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 </style>
 
@@ -157,7 +178,7 @@ footer .laib:hover { color: var(--fg); }
 
 <header>
   <h1>Die Box</h1>
-  <p class="lead">Ein kleiner Server, der bei einer Familie <b>zuhause</b> steht. Fotos, Dokumente, Kalender, Nachrichten und das Haus selbst laufen hier zusammen, auf einem eigenen Gerät.</p>
+  <p class="lead">Ein kleiner Server, der bei einer Familie <b>zuhause</b> steht.</p>
 </header>
 
 <figure>
@@ -233,39 +254,55 @@ footer .laib:hover { color: var(--fg); }
 
 <section>
   <h2>Was die Box kann</h2>
-  <ul class="heisst">
-    <li>Fotos der Familie, die Gesichter mit den Kontakten verbunden.</li>
-    <li>Briefe und Rechnungen, abfotografiert oder gemailt, landen sortiert bei den Dokumenten.</li>
-    <li>Nachrichten aus Signal, WhatsApp, SMS und Mail, über Jahre durchsuchbar. Jede Person hat ihr eigenes Archiv, das nur ihr Passwort öffnet.</li>
-    <li>Wo jemand war, sieht nur er selbst.</li>
-    <li>Ein gemeinsamer Kalender, die Einkaufsliste und Notizen.</li>
-    <li>Musik, Filme, Hörbücher und Podcasts. Musik spielt auch auf den Lautsprechern im Haus.</li>
-    <li>Licht, Rollläden und Strom im Haus. Ist die Waschmaschine fertig, kommt eine Nachricht.</li>
+  <ul class="kann">
+    <li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="12" cy="10.5" r="3"/><path d="M6.5 20c1-2.8 3-4.3 5.5-4.3s4.5 1.5 5.5 4.3"/></svg>Fotos mit Namen</li>
+    <li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3.5 7.5l8.5 6 8.5-6"/></svg>Briefe sortiert</li>
+    <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 9.5V5a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h1v3l4-3h1"/><circle cx="16" cy="15" r="3.5"/><path d="M18.6 17.6l3 3"/></svg>Nachrichten durchsuchbar</li>
+    <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.5s-6.5-5.8-6.5-11.5a6.5 6.5 0 0 1 13 0c0 5.7-6.5 11.5-6.5 11.5z"/><circle cx="12" cy="10" r="2.3"/></svg>Standort nur für dich</li>
+    <li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4M9 15.5l2 2 4-4"/></svg>Kalender &amp; Einkauf</li>
+    <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l11-2.5v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="15.5" r="2.5"/></svg>Musik &amp; Filme</li>
+    <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 17.5h5M10.5 21h3M12 3a6 6 0 0 0-3.4 10.9c.6.4.9 1 .9 1.7v1h5v-1c0-.7.3-1.3.9-1.7A6 6 0 0 0 12 3z"/></svg>Licht &amp; Strom</li>
   </ul>
 </section>
 
-<p class="sicher">
+<div class="sicher">
   <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10.5" width="16" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>
-  <span>Jeder in der Familie hat ein eigenes Login. Ohne Login sieht man von außen nur diese Seite und Links, die jemand aus der Familie selbst verschickt: ein Fotoalbum, eine Datei oder die Bitte, die eigenen Kontaktdaten zu prüfen. Alles andere geht nur angemeldet, das meiste nur zuhause.</span>
-</p>
+  <div>
+    <p><b>Jeder hat ein eigenes Login.</b></p>
+    <details><summary>Genauer</summary><p>Jeder in der Familie hat ein eigenes Login. Ohne Login sieht man von außen nur diese Seite und Links, die jemand aus der Familie selbst verschickt: ein Fotoalbum, eine Datei oder die Bitte, die eigenen Kontaktdaten zu prüfen. Alles andere geht nur angemeldet, das meiste nur zuhause.</p></details>
+  </div>
+</div>
 
 <section class="daten" aria-labelledby="daten-h">
   <h2 id="daten-h">Welche Daten wir annehmen</h2>
-  <p>Was die Box von dir als Besucher bekommt, je nachdem, was du öffnest:</p>
-  <dl>
-    <dt>Diese Seite</dt>
-    <dd>Sie setzt keine Cookies und lädt nichts von anderen Servern.</dd>
-    <dt>Zugang anfragen (nur bei uns zuhause)</dt>
-    <dd>Dein Name, wie wir dich erreichen, deine Nachricht und die Uhrzeit. Dazu eine Prüfsumme deiner Internetadresse, nicht die Adresse selbst: Sie sorgt nur dafür, dass von einer Adresse höchstens eine Anfrage pro Stunde kommt. Die Admins der Box sehen die Anfrage, eine Person aus der Familie bekommt sie als Nachricht. Eine Frist, nach der sie von selbst gelöscht wird, gibt es nicht.</dd>
-    <dt>Kontakt prüfen (der Link, den dir jemand geschickt hat)</dt>
-    <dd>Was du dort einträgst: Name, Firma, Telefonnummern, E-Mail- und Postadressen, Geburtstag, eine Nachricht und, wenn du willst, ein Foto (die Box speichert es verkleinert neu). Ob eine E-Mail-Adresse ankommen kann, fragt die Box im DNS nach. Nur wer dir den Link geschickt hat, sieht deine Antwort und entscheidet, was ins Adressbuch kommt. Der Link gilt einmal und 14 Tage; deine Antwort wird 30 Tage nach dieser Entscheidung gelöscht, ohne Entscheidung 30 Tage nach deiner Antwort.</dd>
-    <dt>Geteilte Fotoalben und Dateien</dt>
-    <dd>Du gibst nichts ein, höchstens das Passwort des Links.</dd>
-    <dt>Anmeldung</dt>
-    <dd>Nur für die Familie. Bei jedem Versuch speichert die Box den Namen, die Uhrzeit, die Internetadresse und ob es geklappt hat; nach zu vielen Fehlversuchen ist der Name eine Weile gesperrt, und die Box sagt in der Familie Bescheid.</dd>
-    <dt>Protokolle</dt>
-    <dd>Der Webserver der Box schreibt kein Zugriffsprotokoll. Schickt eine Adresse zu viele Anfragen an „Kontakt prüfen“, notiert die Box nur ihr grobes Netz, nicht die ganze Adresse. Die Betriebsprotokolle der Box werden nach vier Wochen gelöscht.</dd>
-  </dl>
+  <p class="frei"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7.5 3v5.5c0 4.4-3.1 8-7.5 9.8-4.4-1.8-7.5-5.4-7.5-9.8V6z"/><path d="M8.8 12.2l2.2 2.2 4.3-4.4"/></svg><span>Keine Cookies, nichts von fremden Servern</span></p>
+  <p class="k">Diese Seite setzt keine Cookies und lädt nichts von anderen Servern. Was die Box von dir als Besucher bekommt, je nachdem, was du öffnest:</p>
+  <ul class="wege">
+    <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="8" r="3.5"/><path d="M3.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5M19 8v6M16 11h6"/></svg><div>
+      <h3>Zugang anfragen <small>nur zuhause</small></h3>
+      <p>Name, wie wir dich erreichen, Nachricht, Uhrzeit.</p>
+      <details><summary>Genauer</summary><p>Dein Name, wie wir dich erreichen, deine Nachricht und die Uhrzeit. Dazu eine Prüfsumme deiner Internetadresse, nicht die Adresse selbst: Sie sorgt nur dafür, dass von einer Adresse höchstens eine Anfrage pro Stunde kommt. Die Admins der Box sehen die Anfrage, eine Person aus der Familie bekommt sie als Nachricht. Eine Frist, nach der sie von selbst gelöscht wird, gibt es nicht.</p></details>
+    </div></li>
+    <li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2"/><circle cx="8.5" cy="10.5" r="2.2"/><path d="M5.3 16c.6-1.6 1.8-2.4 3.2-2.4s2.6.8 3.2 2.4M14.5 11.5l1.8 1.8 3.2-3.4"/></svg><div>
+      <h3>Kontakt prüfen</h3>
+      <p>Was du einträgst, sieht nur, wer dir den Link geschickt hat.</p>
+      <details><summary>Genauer</summary><p>Der Link, den dir jemand geschickt hat. Was du dort einträgst: Name, Firma, Telefonnummern, E-Mail- und Postadressen, Geburtstag, eine Nachricht und, wenn du willst, ein Foto (die Box speichert es verkleinert neu). Ob eine E-Mail-Adresse ankommen kann, fragt die Box im DNS nach. Nur wer dir den Link geschickt hat, sieht deine Antwort und entscheidet, was ins Adressbuch kommt. Der Link gilt einmal und 14 Tage; deine Antwort wird 30 Tage nach dieser Entscheidung gelöscht, ohne Entscheidung 30 Tage nach deiner Antwort.</p></details>
+    </div></li>
+    <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><div>
+      <h3>Geteilte Alben &amp; Dateien</h3>
+      <p>Du gibst nichts ein, höchstens das Passwort des Links.</p>
+    </div></li>
+    <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l2.5 2.5M13.5 9.5l2 2"/></svg><div>
+      <h3>Anmeldung <small>nur Familie</small></h3>
+      <p>Jeder Versuch wird mit Name, Uhrzeit und Adresse gespeichert.</p>
+      <details><summary>Genauer</summary><p>Nur für die Familie. Bei jedem Versuch speichert die Box den Namen, die Uhrzeit, die Internetadresse und ob es geklappt hat; nach zu vielen Fehlversuchen ist der Name eine Weile gesperrt, und die Box sagt in der Familie Bescheid.</p></details>
+    </div></li>
+    <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9 12h7M9 16h5"/></svg><div>
+      <h3>Protokolle</h3>
+      <p>Kein Zugriffsprotokoll; Betriebsprotokolle nach vier Wochen gelöscht.</p>
+      <details><summary>Genauer</summary><p>Der Webserver der Box schreibt kein Zugriffsprotokoll. Schickt eine Adresse zu viele Anfragen an „Kontakt prüfen“, notiert die Box nur ihr grobes Netz, nicht die ganze Adresse. Die Betriebsprotokolle der Box werden nach vier Wochen gelöscht.</p></details>
+    </div></li>
+  </ul>
 </section>
 
 <footer>

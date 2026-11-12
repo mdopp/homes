@@ -469,8 +469,11 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     (`internal/pages/teaser.html`, a file of its own so a word is changed
     without code; no script, inline SVG, nothing fetched from elsewhere,
     not even a font (owner 2026-11-12); wrapped by Homes, *Anmelden* to
-    `HOMES_PUBLIC_URL`; *Was die Box kann*, who reaches what from outside,
-    and *Welche Daten wir annehmen* per public entry; may be indexed),
+    `HOMES_PUBLIC_URL`; in pictures more than words (owner 2026-11-12):
+    *Was die Box kann* as pictograms with a few words, who reaches what
+    from outside, and *Welche Daten wir annehmen* as the badge *Keine
+    Cookies, nichts von fremden Servern* and one row per public entry,
+    its full sentences under a native *Genauer*; may be indexed),
     `GET /robots.txt` allows it and not `/zugang`. *Zugang anfragen* only
     from the house's own network (owner 2026-11-12, after spam): the
     client address Caddy saw (`clientIP`, X-Forwarded-For's last entry,

@@ -282,7 +282,7 @@ func TestZugangNurZuhause(t *testing.T) {
 	}
 	for _, ip := range []string{"", "203.0.113.7", "2001:db8::1", "100.64.0.1", "unknown", "192.168.1.5, 203.0.113.7"} {
 		rec := holVon(pub, "https://box.example.org/", ip)
-		mustContain(t, rec.Body.String(), "<h1>Die Box</h1>", "Welche Daten wir annehmen", `<p class="draussen">`+draussen+"</p>", "Anmelden")
+		mustContain(t, rec.Body.String(), "<h1>Die Box</h1>", "Welche Daten wir annehmen", "Keine Cookies, nichts von fremden Servern", `<p class="draussen">`+draussen+"</p>", "Anmelden")
 		mustNotContain(t, rec.Body.String(), "<form", `name="kontakt"`, "Anfrage schicken", "Ein Mensch aus der Familie", "<template")
 		if rec.Code != 200 {
 			t.Errorf("outside from %q: %d", ip, rec.Code)
