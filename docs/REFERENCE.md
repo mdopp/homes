@@ -226,10 +226,13 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   template plays music asked for by voice there (its README, „Radio and
   music by voice“). A player that is not one of the room's: 409 with a
   sentence; HA not answering or refusing: 503/502 with a sentence. Then
-  Geräte with „<Raum>: Standard-Lautsprecher ist jetzt <Name>.“ on top. On
-  Geräte an admin chooses it under each room's name (a select that sends
-  itself, *Speichert …* on its button); the others read
-  „Standard-Lautsprecher: <Name>“ there once one is set. Homes itself
+  Geräte, the room's row saying „Gespeichert“ for a moment. On Geräte it is
+  the room card's last row, and only in a room with two or more such
+  speakers (one is the room's anyway, owner 2026-11-13): „Musik spielt auf
+  [automatisch ▾]“ for an admin, a small select that sends itself (its
+  words read „Speichert …“ meanwhile; on a refusal it goes back to what it
+  showed; without script a Speichern button); the others read „Musik
+  spielt auf <Name>“ there once one is set. Homes itself
   starts no music, so nothing else of Homes plays on it.
 - `GET /raeume`, `/kalender`, `/kontakte`, `/notizen` — the family's other pages
   (haus#12), from the same cards, in the family's frame. A page whose

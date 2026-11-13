@@ -103,7 +103,10 @@ budget() { # budget <name> <cap> <dir…>
 # 2026-11-12, owner's wish 2026-11-12 („ein Ausgabegerät in einem Raum zum Standard erheben … konfigurierbar im System“, the needed
 # raise OK'd with it): Standard-Lautsprecher per room on Geräte (pages 19,274 -> 19,414; 19,413 used, the minimum): standard.go, the
 # room's Music Assistant players, the admins' choice and its POST, the family's line; raeume.go's page split for the answer
-budget pages 19414 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-13, owner's request 2026-11-13 („sieht noch nicht harmonisch aus … braucht man die Wahl nur, wenn es mehrere Geräte
+# im Raum gibt“, which counts as the OK; pages 19,414 -> 19,425; 19,424 used, the minimum): the standard speaker as the room card's
+# quiet last row (its style and pictogram), shown only with two or more speakers; a failed self-sending select goes back (skript.go)
+budget pages 19425 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
