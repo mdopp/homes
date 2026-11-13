@@ -245,6 +245,9 @@ func TestFamilyPagesDecideNothing(t *testing.T) {
 			if m == "POST" && strings.HasPrefix(p.path, "/notizen") {
 				continue // a note is written, not a verdict (owner, 2026-10-24): TestNotizenWrite
 			}
+			if m == "POST" && p.path == "/raeume" {
+				continue // a room's standard speaker is a setting, not a verdict (owner 2026-11-12): TestRaeumeStandardSpeakerPerViewer
+			}
 			if code, _, _ := familyPage(t, p.page, all, m, p.path, "admins"); code != http.StatusMethodNotAllowed {
 				t.Fatalf("%s %s → %d, want 405", m, p.path, code)
 			}

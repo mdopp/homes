@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -51,6 +52,7 @@ type HA struct {
 	areas    []map[string]any
 	devices  []map[string]any
 	entities []map[string]any
+	labels   []map[string]any // the label registry: label_id, name
 	regsDown bool
 	tempUnit string // /api/config's unit_system.temperature; "" makes /api/config fail
 	subs     []*conn
@@ -418,6 +420,49 @@ func (h *HA) SetRegistries(areas, devices, entities []map[string]any) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.areas, h.devices, h.entities = areas, devices, entities
+}
+
+// SetLabels sets the label registry ({label_id, name} each).
+func (h *HA) SetLabels(labels []map[string]any) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.labels = labels
+}
+
+// Entity is one entry of the entity registry as it is now (nil: none).
+func (h *HA) Entity(id string) map[string]any {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	i := slices.IndexFunc(h.entities, func(e map[string]any) bool { return e["entity_id"] == id })
+	if i < 0 {
+		return nil
+	}
+	return maps.Clone(h.entities[i])
+}
+
+// registryWrite answers a label's creation (its id the name lower case,
+// "-" as "_", as HA makes it) and an entity's get and update (labels,
+// area_id); ok false for an entity it does not have. h.mu is held.
+func (h *HA) registryWrite(m map[string]any) (any, bool) {
+	if name := fmt.Sprint(m["name"]); m["type"] == "config/label_registry/create" {
+		h.labels = append(h.labels, map[string]any{"label_id": strings.ReplaceAll(strings.ToLower(name), "-", "_"), "name": name})
+		return h.labels[len(h.labels)-1], true
+	}
+	i := slices.IndexFunc(h.entities, func(e map[string]any) bool { return e["entity_id"] == m["entity_id"] })
+	if i < 0 {
+		return nil, false
+	}
+	e := maps.Clone(h.entities[i])
+	if m["type"] == "config/entity_registry/update" {
+		for _, k := range []string{"labels", "area_id"} {
+			if v, ok := m[k]; ok {
+				e[k] = v
+			}
+		}
+		h.entities = slices.Clone(h.entities) // the test's own slice stays as it set it
+		h.entities[i] = e
+	}
+	return e, true
 }
 
 // SetTemperatureUnit is the house's temperature unit in /api/config
@@ -790,6 +835,16 @@ func (h *HA) websocket(w http.ResponseWriter, r *http.Request) {
 			result = h.devices
 		case "config/entity_registry/list":
 			result = h.entities
+		case "config/label_registry/list":
+			result = h.labels
+		case "config/label_registry/create", "config/entity_registry/get", "config/entity_registry/update":
+			res, ok := h.registryWrite(m)
+			if !ok {
+				h.mu.Unlock()
+				c.send(map[string]any{"id": m["id"], "type": "result", "success": false, "error": map[string]any{"code": "not_found", "message": "Entity not found"}})
+				continue
+			}
+			result = res
 		}
 		h.mu.Unlock()
 		if result == nil {

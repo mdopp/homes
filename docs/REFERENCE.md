@@ -215,6 +215,22 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   to the person's *Deine Geräte* or takes it off (`favoriten.json`, their
   own list only, at most 50, the file replaced whole, a file that does not
   read never written over); same guards as `/schalten`, then 303 back.
+- `POST /raeume` `raum=<area name>&standard=<entity>|` — a room's
+  *Standard-Lautsprecher* (owner 2026-11-12), admins only and from Homes'
+  own page (else 403). It is Home Assistant's label „Standard-Lautsprecher“
+  (made once, `mdi:speaker`) on a Music Assistant player of that room: one
+  in the room, or the Music Assistant twin of a player that is (haus#83);
+  the room's other players lose it, their other labels stay, and a Music
+  Assistant player without an area is put into the room. Empty
+  `standard` (*automatisch*) only takes it off. laib's home-assistant
+  template plays music asked for by voice there (its README, „Radio and
+  music by voice“). A player that is not one of the room's: 409 with a
+  sentence; HA not answering or refusing: 503/502 with a sentence. Then
+  Geräte with „<Raum>: Standard-Lautsprecher ist jetzt <Name>.“ on top. On
+  Geräte an admin chooses it under each room's name (a select that sends
+  itself, *Speichert …* on its button); the others read
+  „Standard-Lautsprecher: <Name>“ there once one is set. Homes itself
+  starts no music, so nothing else of Homes plays on it.
 - `GET /raeume`, `/kalender`, `/kontakte`, `/notizen` — the family's other pages
   (haus#12), from the same cards, in the family's frame. A page whose
   backend is not set has no tab and, reached anyway, says in one sentence
@@ -222,7 +238,7 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   redirect to Start (laib#418); one
   not answering within 4s is Start's plain line where its rows would be,
   once, never its name or error, which go to the log; the page is a 200
-  (haus#33). Anything but GET/HEAD is 405.
+  (haus#33). Anything but GET/HEAD is 405, except `POST /raeume` above.
   - *Räume*: one card per Home Assistant area (the entity's own, else its
     device's), rooms by name: lights (on/off, brightness), heating (current
     and target temperature), covers (open/closed, position), media (what

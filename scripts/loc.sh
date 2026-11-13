@@ -100,7 +100,10 @@ budget() { # budget <name> <cap> <dir…>
 # the missing key's row, the clean-up's own link, „Stand: <Tag>“ while the vault is closed; the laib-status fields went (-4)
 # 2026-11-12, owner's request (after contact-form spam): Zugang anfragen only at home (pages 19,257 -> 19,274; 19,273 used, the
 # minimum): zuhause (the address Caddy saw, private or link-local), the sentence outside in the section's place, POST 403 (teaser.go)
-budget pages 19274 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-12, owner's wish 2026-11-12 („ein Ausgabegerät in einem Raum zum Standard erheben … konfigurierbar im System“, the needed
+# raise OK'd with it): Standard-Lautsprecher per room on Geräte (pages 19,274 -> 19,414; 19,413 used, the minimum): standard.go, the
+# room's Music Assistant players, the admins' choice and its POST, the family's line; raeume.go's page split for the answer
+budget pages 19414 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -168,7 +171,10 @@ budget cmd 1452 cmd/homes             # homes' wiring: 1,018 with the demo then
 # writes of `homes nummern-bereinigen`
 # 2026-11-11, owner OK'd the needed raise 2026-11-11: Energie – what the chosen hour used (connectors 15,500 -> 15,610; 15,597 used): ha.EnergyPrefs (energy/get_prefs:
 # the battery's counters and the devices), one command on its own connection, and hafake's energy dashboard
-budget connectors 15610 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
+# 2026-11-12, owner's wish 2026-11-12, the needed raise OK'd with it: Standard-Lautsprecher per room (connectors 15,610 -> 15,777;
+# 15,776 used, the minimum): ha.SetStandard (HA's label registry, the entity's labels and area), the labels and area ids in the
+# registry, and hafake's label registry and entity get/update
+budget connectors 15777 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
 # 2026-11-04, internal/jsonfile (47 lines, 50 of cap) from household's cap to shared's: it
 # replaces nine copies of a save, 62 of their lines in household
 # 2026-11-05, owner 2026-11-05 yes: Immich for the contacts (9,583 -> 9,874):
