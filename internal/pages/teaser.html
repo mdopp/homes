@@ -171,6 +171,21 @@ ul.wege svg { width: 40px; height: 40px; padding: 9px; box-sizing: border-box; b
 ul.wege h3 { margin: 0; font-family: var(--display); font-size: 1.05rem; line-height: 1.3; }
 ul.wege h3 small { margin-left: 4px; padding: 1px 8px; border-radius: 999px; background: var(--tint); color: var(--accent); font-family: var(--body); font-size: 0.75rem; white-space: nowrap; }
 ul.wege li > div > p { margin: 2px 0 4px; }
+/* Was die Box von euch annimmt: per way in what it becomes and who sees it, as a badge:
+   nur du (tint), die Familie (outlined), nur in deinem Archiv (filled) */
+ul.wege .wird { margin: 2px 0 0; }
+ul.wege .wird span { color: var(--accent); font-weight: 700; }
+ul.wege .wer { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+.wer span {
+  display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px 2px 8px; border-radius: 999px;
+  font-size: 0.8rem; font-weight: 700; line-height: 1.5; border: 1px solid transparent;
+}
+.wer .du { background: var(--tint); color: var(--accent); }
+.wer .fam { border-color: var(--edge); color: var(--fg); }
+.wer .arch { background: var(--accent); color: var(--accent-ink); }
+.daten > details p { color: var(--muted); }
+ul.wege .wer svg { width: 14px; height: 14px; padding: 0; border-radius: 0; background: none; flex: none; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.zeichen { position: absolute; width: 0; height: 0; overflow: hidden; }
 .danke svg { width: 22px; height: 22px; stroke: var(--accent); fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 </style>
 
@@ -272,6 +287,75 @@ ul.wege li > div > p { margin: 2px 0 4px; }
     <details><summary>Genauer</summary><p>Jeder in der Familie hat ein eigenes Login. Ohne Login sieht man von außen nur diese Seite und Links, die jemand aus der Familie selbst verschickt: ein Fotoalbum, eine Datei oder die Bitte, die eigenen Kontaktdaten zu prüfen. Alles andere geht nur angemeldet, das meiste nur zuhause.</p></details>
   </div>
 </div>
+
+<section class="daten" aria-labelledby="rein-h">
+  <h2 id="rein-h">Was die Box von euch annimmt</h2>
+  <p class="k">Was die Familie selbst hineingibt, was die Box daraus macht und wer es sieht:</p>
+  <svg class="zeichen" aria-hidden="true"><symbol id="w-du" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/></symbol><symbol id="w-fam" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3"/><path d="M3 19c.6-3 2.9-4.6 6-4.6s5.4 1.6 6 4.6"/><circle cx="16.5" cy="7.5" r="2.5"/><path d="M16 12.6c2.6 0 4.4 1.4 5 4"/></symbol><symbol id="w-arch" viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="2.5"/><circle cx="12" cy="12" r="3.5"/><path d="M12 8.5v1M12 14.5v1M8.5 12h1M14.5 12h1"/></symbol></svg>
+  <ul class="wege rein">
+    <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.5s-6.5-5.8-6.5-11.5a6.5 6.5 0 0 1 13 0c0 5.7-6.5 11.5-6.5 11.5z"/><circle cx="12" cy="10" r="2.3"/></svg><div>
+      <h3>Standort &amp; Google-Takeout als ZIP</h3>
+      <p class="wird"><span aria-hidden="true">→ </span>dein Standortverlauf</p>
+      <p class="wer"><span class="du"><svg aria-hidden="true"><use href="#w-du"/></svg>nur du</span></p>
+      <details><summary>Genauer</summary><p>Wenn du es einschaltest, zeichnet die Homes-App auf, wo du bist, und schickt die Punkte gesammelt an die Box. Einen alten Verlauf teilst du als Datei an die App: Googles Takeout als ZIP, Timeline.json, GPX oder GeoJSON. Die Box liest ihn Punkt für Punkt in deinen eigenen Standortverlauf und löscht die Datei danach. Andere aus der Familie sehen ihn nicht; deinen Standort teilst du nur, wenn du es dort selbst einstellst.</p></details>
+    </div></li>
+    <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 3.5h11v17l-5.5-4-5.5 4z"/><path d="M9.5 8h5M9.5 11.5h3"/></svg><div>
+      <h3>Links aus dem Browser</h3>
+      <p class="wird"><span aria-hidden="true">→ </span>eine Notiz, ein Rezept mit Zutaten &amp; Schritten</p>
+      <p class="wer"><span class="fam"><svg aria-hidden="true"><use href="#w-fam"/></svg>die Familie</span></p>
+      <details><summary>Genauer</summary><p>Teilst du einen Link an die Homes-App, holt die Box die Seite selbst aus dem Internet und schreibt eine Notiz mit dem Link: bei einem Rezept Zutaten, Schritte und Zeit, bei einem Hotel oder Album das Wichtigste, sonst eine Kurzfassung von ihrem eigenen Sprachmodell. Die Notizen sind ein gemeinsamer Ordner der Familie. Ein Podcast wird abonniert, ein Lied oder Album kommt mit deinem Namen auf die Musik-Wunschliste.</p></details>
+    </div></li>
+    <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l11-2.5v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="15.5" r="2.5"/></svg><div>
+      <h3>Lieder &amp; Alben als ZIP</h3>
+      <p class="wird"><span aria-hidden="true">→ </span>Musiksammlung, mit Cover</p>
+      <p class="wer"><span class="fam"><svg aria-hidden="true"><use href="#w-fam"/></svg>die Familie</span></p>
+      <details><summary>Genauer</summary><p>Ein Lied oder ein ganzes Album als ZIP, aus der Homes-App geteilt, legt die Box in den Musik-Eingang. Sie ergänzt Interpret, Album und Cover und stellt es in die gemeinsame Musiksammlung; wer es geschickt hat, bekommt eine Nachricht, was ankam. Was keine Musik ist, übernimmt sie nicht.</p></details>
+    </div></li>
+    <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9 12h7M9 16h5"/></svg><div>
+      <h3>Briefe: Foto, Scan oder Mail</h3>
+      <p class="wird"><span aria-hidden="true">→ </span>gelesen, sortiert, wiederzufinden</p>
+      <p class="wer"><span class="du"><svg aria-hidden="true"><use href="#w-du"/></svg>nur du</span><span class="fam"><svg aria-hidden="true"><use href="#w-fam"/></svg>Haushaltspost: die Familie</span></p>
+      <details><summary>Genauer</summary><p>Ein Foto oder PDF, aus der Homes-App geteilt, ein Stapel aus dem Scanner oder eine Mail an deine eigene Dokumenten-Adresse landet im Dokumentenarchiv. Die Box liest es mit ihrem eigenen Sprachmodell und sortiert es. Was du schickst, gehört von Anfang an dir; einen Scan gibt die Sortierung dem, an den er gerichtet ist. Die Familie sieht nur, was sie sicher als Haushaltssache erkennt (Haus, Auto, Versicherung, Steuer, nie Medizinisches), oder was du selbst teilst. Findet sie niemanden, fragt die Box ihre Admins, wem es gehört; sie sehen dabei nur Absender, Datum und Seitenzahl.</p></details>
+    </div></li>
+    <li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="12" cy="10.5" r="3"/><path d="M6.5 20c1-2.8 3-4.3 5.5-4.3s4.5 1.5 5.5 4.3"/></svg><div>
+      <h3>Fotos vom Handy</h3>
+      <p class="wird"><span aria-hidden="true">→ </span>Gesichter erkannt, nach Personen zu finden</p>
+      <p class="wer"><span class="du"><svg aria-hidden="true"><use href="#w-du"/></svg>nur du, bis du teilst</span></p>
+      <details><summary>Genauer</summary><p>Die Fotos-App der Box lädt die Bilder deines Handys hoch und erkennt darauf Gesichter, damit du nach Personen suchen kannst. Jeder hat seine eigene Sammlung; andere sehen ein Foto nur, wenn du es teilst, als gemeinsames Album oder als Link. Nur aus den Fotos des Box-Besitzers kann ein Gesichtsausschnitt das Bild einer Karte im gemeinsamen Adressbuch werden.</p></details>
+    </div></li>
+    <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h3v3.5l4.5-3.5H20a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1z"/><path d="M7 9h10M7 12.5h6"/></svg><div>
+      <h3>WhatsApp, Signal, SMS, Mail</h3>
+      <p class="wird"><span aria-hidden="true">→ </span>durchsuchbar, über Jahre</p>
+      <p class="wer"><span class="arch"><svg aria-hidden="true"><use href="#w-arch"/></svg>nur in deinem Archiv</span></p>
+      <details><summary>Genauer</summary><p>„Daten sichern“ in der Homes-App schickt die Sicherungen von WhatsApp und Signal, dazu SMS und Anrufliste, in dein eigenes Archiv; SMS und Anrufe verschlüsselt schon das Handy. Deine Postfächer holt das Archiv stündlich selbst ab. Das Archiv ist ein Tresor mit deinem eigenen Passwort: Niemand sonst aus der Familie kommt hinein, und solange er zu ist, auch kein Admin. Ist er offen, liest das Archiv kurze Ausschnitte mit dem Sprachmodell der Box, um zu erkennen, wer zu wem gehört. Bilder aus WhatsApp kommen unverschlüsselt an und bleiben es, bis dein Archiv sie verschlüsselt.</p></details>
+    </div></li>
+    <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="20" r="2"/><path d="M6.5 7.5l3.3 2.8M17.5 7.5l-3.3 2.8M12 15v3"/></svg><div>
+      <h3>Facebook- &amp; LinkedIn-Export</h3>
+      <p class="wird"><span aria-hidden="true">→ </span>nur die Namen: wer wen kennt</p>
+      <p class="wer"><span class="arch"><svg aria-hidden="true"><use href="#w-arch"/></svg>nur in deinem Archiv</span></p>
+      <details><summary>Genauer</summary><p>Teilst du einen Export von Facebook oder LinkedIn an die Homes-App, nimmt sie daraus nur die Freundes- oder Kontaktliste, verschlüsselt sie schon auf dem Handy für dein Archiv und schickt nur das. Das Archiv nutzt die Namen als Hinweise, wer wen kennt; ins Adressbuch kommen sie nicht.</p></details>
+    </div></li>
+    <li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="15" height="18" rx="2"/><circle cx="12.5" cy="10" r="2.6"/><path d="M8.5 17c.6-2 2.1-3.1 4-3.1s3.4 1.1 4 3.1M3 7.5h3M3 12h3M3 16.5h3"/></svg><div>
+      <h3>Telefonbuch des Handys</h3>
+      <p class="wird"><span aria-hidden="true">→ </span>dein Adressbuch auf der Box</p>
+      <p class="wer"><span class="du"><svg aria-hidden="true"><use href="#w-du"/></svg>nur du</span></p>
+      <details><summary>Genauer</summary><p>Die Homes-App schickt die Kontakte deines Handys an die Box. Sie hält sie als dein eigenes Adressbuch, das nur du siehst; dein Archiv liest es mit. Was das Handy nicht mehr hat, verschwindet auch dort. Nur beim Box-Besitzer kennt der Haushalts-Assistent die Firmen daraus, ohne Notizen.</p></details>
+    </div></li>
+    <li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4M8 14.5h2M14 14.5h2M8 17.5h2"/></svg><div>
+      <h3>Google-Kalender &amp; Feiertage</h3>
+      <p class="wird"><span aria-hidden="true">→ </span>im Kalender der Box</p>
+      <p class="wer"><span class="du"><svg aria-hidden="true"><use href="#w-du"/></svg>Google: nur du</span><span class="fam"><svg aria-hidden="true"><use href="#w-fam"/></svg>Feiertage: wie du wählst</span></p>
+      <details><summary>Genauer</summary><p>Einen Google-Kalender bindest du mit seiner geheimen iCal-Adresse ein: Die Box holt ihn regelmäßig, nur für dich, und zeigt die Adresse nie wieder. Feiertage, Schulferien oder eine andere öffentliche Kalenderadresse abonnierst du für die Familie oder nur für dich. Die Kalender der Familie bekommt auch die Haussteuerung.</p></details>
+    </div></li>
+    <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 11L12 4l8.5 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M12.8 10.5l-2.6 4h3.6l-2.6 4"/></svg><div>
+      <h3>Zähler &amp; Sensoren im Haus</h3>
+      <p class="wird"><span aria-hidden="true">→ </span>Strom und Geräte auf einen Blick</p>
+      <p class="wer"><span class="fam"><svg aria-hidden="true"><use href="#w-fam"/></svg>die Familie</span></p>
+      <details><summary>Genauer</summary><p>Lichter, Heizung, Sensoren und der Stromzähler melden sich bei der Box. Daraus zeigt sie, was im Haus gerade an ist und wie viel Strom es verbraucht. Es ist ein Haus für alle: Jeder aus der Familie sieht und schaltet dieselben Geräte.</p></details>
+    </div></li>
+  </ul>
+  <details><summary>Für alles gilt</summary><p>Gelesen und zusammengefasst wird auf der Box selbst, mit ihrem eigenen Sprachmodell. Nach außen fragt sie nur, wo es nicht anders geht: bei der Webseite, die du teilst, bei deinen Kalendern und Postfächern, und für Musik nach Album und Cover. Wer die Box selbst verwaltet, kann technisch alles lesen, was nicht in einem verschlossenen Archiv oder im Passwort-Tresor liegt; die Sicherungen der Box enthalten dasselbe.</p></details>
+</section>
 
 <section class="daten" aria-labelledby="daten-h">
   <h2 id="daten-h">Welche Daten wir annehmen</h2>

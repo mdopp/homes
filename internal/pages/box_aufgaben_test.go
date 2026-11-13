@@ -101,9 +101,12 @@ func boxFilter(t *testing.T, c *laib.Client) string {
 // the task among the done ones; laib's refusal said as laib says it; a
 // task laib closed itself said apart; admins only, from Homes' own page.
 func TestBoxAufgaben(t *testing.T) {
-	today := time.Now().Format("2006-01-02")
-	past := time.Now().AddDate(0, 0, -2).Format("2006-01-02")
-	future := time.Now().AddDate(0, 0, 9).Format("2006-01-02")
+	// The card's days are the house's (familyPage's Loc, Berlin), not the test
+	// machine's: from 23:00 UTC Berlin is a day ahead of a UTC runner.
+	now := time.Now().In(berlin(t))
+	today := now.Format("2006-01-02")
+	past := now.AddDate(0, 0, -2).Format("2006-01-02")
+	future := now.AddDate(0, 0, 9).Format("2006-01-02")
 	fake := &aufgabenLaib{tasks: []map[string]any{
 		{"id": 1, "titel": "Sicherung außer Haus einrichten", "warum": "Das Backup liegt nur auf der Datenplatte.", "seit": "2026-10-25", "von": "claude", "befund": "backup offsite"},
 		{"id": 2, "titel": "Später erst", "seit": "2026-10-25", "von": "claude", "erinnern": future},
@@ -120,7 +123,7 @@ func TestBoxAufgaben(t *testing.T) {
 	mustContain(t, card, "<p class=k>3 offen · <span class=gelb>1 fällig</span></p>",
 		"<li id=aufgabe-3><b>Voice PE flashen</b>", "fällig seit ", "erinnert am ", "Laib hakt sie selbst ab, wenn der Befund (backup offsite) weg ist",
 		`<input type=hidden name=tun value=erledigt><input type=hidden name=id value=1><button data-laeuft="Hakt ab …">Erledigt</button>`,
-		`<input type=date name=erinnern value=`+time.Now().AddDate(0, 0, 7).Format("2006-01-02"), "Zuletzt erledigt (2)", "Laib: erledigt, der Befund ist weg", "von ben")
+		`<input type=date name=erinnern value=`+now.AddDate(0, 0, 7).Format("2006-01-02"), "Zuletzt erledigt (2)", "Laib: erledigt, der Befund ist weg", "von ben")
 	mustNotContain(t, card, "haus:ben")
 	mustNotContain(t, card, "Netzlaufwerk einrichten", "Signal verbinden") // laib#878: the household's and a person's are under Einrichtung
 	if i3, i1, i2 := strings.Index(card, "aufgabe-3"), strings.Index(card, "aufgabe-1>"), strings.Index(card, "aufgabe-2>"); !(i3 < i1 && i1 < i2) {
@@ -145,7 +148,9 @@ func TestBoxAufgaben(t *testing.T) {
 
 	rec = post(t, h, AufgabenPath, url.Values{"tun": {"spaeter"}, "id": {"1"}, "erinnern": {future}}, "anna", admin)
 	mustContain(t, rec.Body.String(), "Box-Aufgabe #1 erinnert am "+future+".")
-	for _, bad := range []url.Values{{"tun": {"spaeter"}, "id": {"1"}, "erinnern": {today}}, {"tun": {"spaeter"}, "id": {"1"}, "erinnern": {"1.12."}}, {"tun": {"erledigt"}}, {"tun": {"weg"}, "id": {"1"}}} {
+	// Später reads its date in time.Local (on the box TZ, the house's zone too), so
+	// "not after today" is the test machine's today there.
+	for _, bad := range []url.Values{{"tun": {"spaeter"}, "id": {"1"}, "erinnern": {time.Now().Format("2006-01-02")}}, {"tun": {"spaeter"}, "id": {"1"}, "erinnern": {"1.12."}}, {"tun": {"erledigt"}}, {"tun": {"weg"}, "id": {"1"}}} {
 		if rec := post(t, h, AufgabenPath, bad, "anna", admin); rec.Code != http.StatusBadRequest {
 			t.Errorf("%v → %d", bad, rec.Code)
 		}

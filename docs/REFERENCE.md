@@ -471,9 +471,14 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     not even a font (owner 2026-11-12); wrapped by Homes, *Anmelden* to
     `HOMES_PUBLIC_URL`; in pictures more than words (owner 2026-11-12):
     *Was die Box kann* as pictograms with a few words, who reaches what
-    from outside, and *Welche Daten wir annehmen* as the badge *Keine
-    Cookies, nichts von fremden Servern* and one row per public entry,
-    its full sentences under a native *Genauer*; may be indexed),
+    from outside, *Was die Box von euch annimmt* (owner 2026-11-13: what
+    the family gives the box, in pictures) as one row per way in — what
+    comes in, what it becomes, and who sees it as a badge (*nur du*, *die
+    Familie*, *nur in deinem Archiv*), each as laib's docs/DATA.md says
+    it, the details under *Genauer* — and *Welche Daten wir annehmen* as
+    the badge *Keine Cookies, nichts von fremden Servern* and one row per
+    public entry, its full sentences under a native *Genauer*; may be
+    indexed),
     `GET /robots.txt` allows it and not `/zugang`. *Zugang anfragen* only
     from the house's own network (owner 2026-11-12, after spam): the
     client address Caddy saw (`clientIP`, X-Forwarded-For's last entry,
