@@ -2,7 +2,6 @@ package pages
 
 import (
 	"context"
-	"html"
 	"log"
 	"math"
 	"net/http"
@@ -52,8 +51,8 @@ func Raeume(cfg StartConfig) http.HandlerFunc {
 	}
 }
 
-// writeRaeume is Geräte, with what was just done (said) under its title.
-func writeRaeume(w http.ResponseWriter, r *http.Request, cfg StartConfig, said string) {
+// writeRaeume is Geräte; saved is the room whose standard speaker was just chosen.
+func writeRaeume(w http.ResponseWriter, r *http.Request, cfg StartConfig, saved string) {
 	var (
 		states  []ha.State
 		haErr   error
@@ -78,11 +77,8 @@ func writeRaeume(w http.ResponseWriter, r *http.Request, cfg StartConfig, said s
 	}
 	b := familyHead(r, cfg, "Geräte", "Räume")
 	b.WriteString(liveRefresh("seite", 120))
-	b.WriteString("<h1>Geräte</h1>") // the tab's name (owner 2026-10-24)
-	if said != "" {
-		b.WriteString("<div class=gut role=status><span class=punkt></span><p>" + html.EscapeString(said) + "</p></div>")
-	}
-	if haErr == nil { // the way on only while HA answers: a line about it never names it (laib ADR 0021)
+	b.WriteString(standardStyle + "<h1>Geräte</h1>") // the tab's name (owner 2026-10-24)
+	if haErr == nil {                                // the way on only while HA answers: a line about it never names it (laib ADR 0021)
 		b.WriteString(cfg.homeAssistant().Weiter("/", saysInHA))
 	}
 	switch {
@@ -106,9 +102,13 @@ func writeRaeume(w http.ResponseWriter, r *http.Request, cfg StartConfig, said s
 		if len(playing.Rows) > 0 {
 			b.WriteString(playing.HTML()) // what plays first, with its buttons: Medien's card (owner 2026-10-24)
 		}
-		standard := standardZeilen(states, reg, isAdmin(r))
+		standard := standardZeilen(states, reg, isAdmin(r), saved)
 		for _, c := range roomCards(states, reg, pinned, playingIDs(playing)) {
-			b.WriteString(strings.Replace(c.HTML(), "</h2>", "</h2>"+standard[c.Title], 1)) // the room's standard speaker under its name
+			h := c.HTML()
+			if end := strings.LastIndex(h, "</ul>"); end >= 0 {
+				h = h[:end] + standard[c.Title] + h[end:] // the room's standard speaker, its last row
+			}
+			b.WriteString(h)
 		}
 	}
 	writePage(w, http.StatusOK, b)

@@ -10,19 +10,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mdopp/homes/internal/cards"
 	"github.com/mdopp/homes/internal/ha"
 )
 
 // A room's standard speaker (owner 2026-11-12: „ein Ausgabegerät in einem Raum zum Standard
 // erheben … konfigurierbar im System“) is HA's label ha.StandardLabel on the Music Assistant
 // player there, in HA for anyone to see (laib ADR 0017); laib's home-assistant template plays
-// music asked for by voice on it. Geräte shows it under the room's name; an admin chooses it,
-// as it is the household's, not one person's.
+// music asked for by voice on it. Geräte shows it as the room card's last row; an admin chooses
+// it, as it is the household's, not one person's.
 
-const (
-	saysStandard    = "Standard-Lautsprecher"
-	saysAutomatisch = "automatisch"
-)
+const saysAutomatisch = "automatisch"
 
 // standardWahl is a speaker a room's standard can be: Music Assistant's entity, the thing's name.
 type standardWahl struct{ entity, name string }
@@ -51,28 +49,44 @@ func standardWahlen(states []ha.State, reg ha.Registry, room string) (out []stan
 	return out
 }
 
-// standardZeilen is each room's line under its name, by the card's title: for an admin the
-// choice, for the others the standard once one is set; none where Music Assistant plays nowhere.
-func standardZeilen(states []ha.State, reg ha.Registry, admin bool) map[string]string {
+// standardZeilen is each room's last row, by the card's title, where the choice matters: two or
+// more speakers Music Assistant plays on (one is the room's anyway, owner 2026-11-13). An admin
+// chooses there, sent on change (homesScript; a no-script page keeps a button), and after the
+// room's choice (saved) the row says so; the others read the standard once one is set.
+func standardZeilen(states []ha.State, reg ha.Registry, admin bool, saved string) map[string]string {
 	out := map[string]string{}
 	for room := range reg.AreaIDs {
 		wahl := standardWahlen(states, reg, room)
 		jetzt := slices.IndexFunc(wahl, func(c standardWahl) bool { return reg.Standard(c.entity) })
-		switch {
-		case len(wahl) > 0 && admin:
-			var b strings.Builder
-			b.WriteString(`<form method=post action=/raeume class=standard><input type=hidden name=raum value="` + html.EscapeString(room) + `"><label>` +
-				saysStandard + ` <select name=standard onchange="this.form.requestSubmit()"><option value="">` + saysAutomatisch + `</option>`)
-			for i, c := range wahl {
-				b.WriteString(`<option value="` + html.EscapeString(c.entity) + `"` + map[bool]string{true: " selected"}[i == jetzt] + ">" + html.EscapeString(c.name) + "</option>")
-			}
-			out[trimRunes(room, 60)] = b.String() + `</select></label> <button data-laeuft="Speichert …">Speichern</button></form>`
-		case jetzt >= 0:
-			out[trimRunes(room, 60)] = "<p class=hinweis>" + saysStandard + ": " + html.EscapeString(wahl[jetzt].name) + "</p>"
+		if len(wahl) < 2 || (!admin && jetzt < 0) {
+			continue
 		}
+		b := strings.Builder{}
+		b.WriteString(`<li class="tu standard"><div>` + lautsprecherIcon + `<span class=was>Musik spielt auf</span>` + map[bool]string{true: `<span class=gespeichert role=status>Gespeichert</span>`}[room == saved])
+		if !admin {
+			out[trimRunes(room, 60)] = b.String() + `</div><span class=wahl>` + html.EscapeString(wahl[jetzt].name) + `</span></li>`
+			continue
+		}
+		id := cards.Card{Title: room}.ID() + "-standard"
+		b.WriteString(`</div><form method=post action="/raeume#` + id + `"><input type=hidden name=raum value="` + html.EscapeString(room) + `">` +
+			`<select id=` + id + ` name=standard aria-label="Musik im Raum ` + html.EscapeString(room) + ` spielt auf" onchange="this.setAttribute('aria-busy','true');this.form.requestSubmit()">` +
+			`<option value="">` + saysAutomatisch + `</option>`)
+		for i, c := range wahl {
+			b.WriteString(`<option value="` + html.EscapeString(c.entity) + `"` + map[bool]string{true: " selected"}[i == jetzt] + ">" + html.EscapeString(c.name) + "</option>")
+		}
+		out[trimRunes(room, 60)] = b.String() + `</select><noscript><button>Speichern</button></noscript></form></li>`
 	}
 	return out
 }
+
+// lautsprecherIcon is the standard's row's small speaker.
+const lautsprecherIcon = `<svg viewBox="0 0 24 24" aria-hidden=true><path d="M4 9.5v5h3.5L12 18V6L7.5 9.5zM15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>`
+
+// standardStyle is that row, as quiet as the room's other rows, the choice a small chip; over its
+// words for a moment „Gespeichert“ after a choice, „Speichert …“ while one is sent.
+const standardStyle = `<style>.karte li.standard>div{position:relative;flex:1 1 auto;display:flex;align-items:center;gap:8px;min-width:0;color:var(--muted);font-size:.9rem}.standard .wahl{flex:none;max-width:55%;text-align:right}
+.standard svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}.standard form{flex:0 1 auto;min-width:0}.standard select{max-width:min(11rem,40vw);min-height:40px;padding:0 10px;border-radius:999px;background:var(--card);font-size:.9rem}.standard select[aria-busy=true]{opacity:.6}
+.standard .gespeichert,.standard:has([aria-busy=true])>div::after{position:absolute;inset:0 0 0 26px;display:flex;align-items:center;background:var(--card);color:var(--ink)}.standard:has([aria-busy=true])>div::after{content:"Speichert …"}.gespeichert{animation:weg 4s forwards}@keyframes weg{0%,75%{opacity:1}100%{opacity:0;visibility:hidden}}</style>`
 
 // raeumeStandard takes an admin's choice (raum; standard, one of standardWahlen or "" for
 // automatisch), writes it into HA and shows Geräte with what changed.
@@ -118,9 +132,5 @@ func raeumeStandard(w http.ResponseWriter, r *http.Request, cfg StartConfig) {
 		return
 	}
 	log.Printf("homes: räume: %s set the standard speaker of %s to %q", r.Header.Get("Remote-User"), room, entity)
-	said := room + ": " + saysStandard + " " + saysAutomatisch + "."
-	if i >= 0 {
-		said = room + ": " + saysStandard + " ist jetzt " + wahl[i].name + "."
-	}
-	writeRaeume(w, r, cfg, said)
+	writeRaeume(w, r, cfg, room)
 }

@@ -8,7 +8,8 @@ import "strconv"
 // with data-laeuft says what runs — and the answer replaces the page in
 // place: the scroll stays, the focus stays, open folds stay open, the
 // address follows a redirect. A refusal the server says in a sentence
-// (text/plain) is shown at the bottom and the page stays as it was.
+// (text/plain) is shown at the bottom and the page stays as it was, a select
+// that sent itself (aria-busy) back on what it showed.
 //
 // A page that changes by itself carries <div hidden data-auffrischen=N>:
 // it is fetched again every N seconds, in place, while the page is seen
@@ -71,7 +72,7 @@ e.preventDefault();var b=or(e.submitter,f.querySelector('button')),was=null,sw=b
 if(b){if(sw)flip(b);if(b.hasAttribute('data-laeuft')){was=b.textContent;b.textContent=b.getAttribute('data-laeuft')}b.disabled=true;b.setAttribute('aria-busy','true')}
 var body=new FormData(f);if(e.submitter&&e.submitter.name)body.append(e.submitter.name,e.submitter.value);
 if(f.enctype!=='multipart/form-data')body=new URLSearchParams(body);
-function back(){if(!b)return;b.disabled=false;b.removeAttribute('aria-busy');if(was!==null)b.textContent=was;if(sw)flip(b)}
+function back(){f.querySelectorAll('select[aria-busy]').forEach(function(s){s.removeAttribute('aria-busy');[].forEach.call(s.options,function(o){o.selected=o.defaultSelected})});if(!b)return;b.disabled=false;b.removeAttribute('aria-busy');if(was!==null)b.textContent=was;if(sw)flip(b)}
 var ctl=window.AbortController?new AbortController():null,lang=false,uhr=setTimeout(function(){lang=true;if(ctl)ctl.abort()},60*sec);
 fetch(or(f.getAttribute('action'),location.pathname+location.search),{method:'POST',body:body,credentials:'same-origin',headers:{'X-Homes-Skript':'1'},signal:ctl?ctl.signal:undefined}).then(function(r){clearTimeout(uhr);var ct=or(r.headers.get('Content-Type'),'');
 return r.text().then(function(t){busy--;if(ct.indexOf('text/html')===0){swap(t,r.url);return}back();say(or(t.trim(),'Das hat nicht geklappt.'))})})
