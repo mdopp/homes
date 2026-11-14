@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mdopp/homes/internal/drucker"
 	"github.com/mdopp/homes/internal/erreichbar"
 	"github.com/mdopp/homes/internal/ha"
 	"github.com/mdopp/homes/internal/jsonfile"
@@ -196,14 +197,14 @@ func pruefen(ctx context.Context, cfg StartConfig, id string, reg ha.Registry, i
 	} else {
 		s = frisch(ctx, cfg, id, before)
 	}
-	if (printer{status: s}).reachable() {
-		word := printerWords[s.State]
+	if (printer{drucker.Drucker{Status: s}}).Reachable() {
+		word := drucker.Words[s.State]
 		if word == "" {
 			word = roomDetail("sensor", s, "")
 		}
 		p, _ := thisPrinter(ctx, cfg, id, reg)
 		entryHost(ctx, cfg, reg, id) // kept while HA's diagnostics answer, for when they do not
-		into.wieder = !(printer{status: before}).reachable()
+		into.wieder = !(printer{drucker.Drucker{Status: before}}).Reachable()
 		into.html = "<p class=zustand><span class=punkt></span>Drucker erreichbar · " + html.EscapeString(word) + "</p>" + out.String() + p.inksLine()
 		return
 	}
@@ -239,7 +240,7 @@ func frisch(ctx context.Context, cfg StartConfig, id string, before ha.State) ha
 		if n, err := cfg.HA.State(ctx, id); err == nil {
 			s = n
 		}
-		if (printer{status: s}).reachable() && (s.LastUpdated != before.LastUpdated || !(printer{status: before}).reachable()) {
+		if (printer{drucker.Drucker{Status: s}}).Reachable() && (s.LastUpdated != before.LastUpdated || !(printer{drucker.Drucker{Status: before}}).Reachable()) {
 			return s
 		}
 	}

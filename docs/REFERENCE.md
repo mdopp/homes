@@ -282,8 +282,13 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     the ☆ pins it to Start; every row has its ☆ here too.
     A printer (Home Assistant's IPP integration, its sensors by device,
     owner 2026-11-14) is one quiet last row of its room: *Drucker ·
-    erreichbar* with *Schwarz 42 %* (the marker named Black or Schwarz; the
-    IPP sensors carry no colour), under 15 % *Schwarz fast leer · 12 %* in
+    bereit* (idle, the word the printer's page uses; *druckt*, *angehalten*;
+    another state *erreichbar*) with what asks for a hand, from IPP's
+    `state_reason` keywords (*Papier leer*, *Papierstau*, *Tinte leer*,
+    *Klappe offen*, *Papierfach fehlt*, *Ausgabefach voll*,
+    *Resttintenbehälter voll*; a `-report`, `state_message` in the
+    printer's language and the rest not shown), then *Schwarz 42 %* (the
+    marker named Black or Schwarz; the IPP sensors carry no colour), under 15 % *Schwarz fast leer · 12 %* in
     the warning colour; or *Drucker · nicht erreichbar* with since when and
     the button *Prüfen und neu verbinden* (owner 2026-11-14: its words
     *Prüfe …* at once, then the row says what the check found — *wieder
@@ -1255,7 +1260,14 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   is `{ok, favorites:[card]}`, the device's person's ☆ things (the same
   `favoriten.json` the pages pin to), in their order; a pinned thing HA
   lost, or one Homes draws no card for, is left out, none is `[]`, and a
-  file that does not read is a 500 `favorites_unreadable`.
+  file that does not read is a 500 `favorites_unreadable`. A card may
+  carry `text`, the thing in the family's words where Homes has its own,
+  for the app to show instead of the raw `state` (owner 2026-11-14: „in
+  der App und auf der Webseite gleich“): today an IPP printer's state
+  sensor (`internal/drucker`), as on Geräte: *druckt · Schwarz 42 %*,
+  *bereit · Papier leer · Schwarz 40 %*, *nicht erreichbar*. The same on
+  `/napi/portal/state` and the stream's `card_state` (from the states the
+  stream has seen; a marker's change sends its printer's card again).
 - The tool widgets, from the Haushalt source's backends (haus#10, the
   same variables as below; none set, they are 404): `GET /napi/defs/tool`
   lists a tool per backend that is set: `task` (*Erinnerungen*,

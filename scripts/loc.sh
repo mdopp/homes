@@ -26,7 +26,7 @@ bad=0
 p() { for x in "$@"; do printf 'internal/%s ' "$x"; done; }
 connectors=$(p abs bote caldav discogs ha immich jellyfin judge laib musicbrainz paperless qmd reitti samba werkstatt)
 shared=$(p abruf app assistent cards code128 erreichbar jsonfile markdown mcpserver modul namen texte)
-household=$(p ansicht devices dokumente einkauf einrichten energie favoriten gesehen gesichter haushalt kontaktantwort library merken musik netz notes papierkorb podcasts schalter takeout uebernahme usage zugang)
+household=$(p ansicht devices dokumente drucker einkauf einrichten energie favoriten gesehen gesichter haushalt kontaktantwort library merken musik netz notes papierkorb podcasts schalter takeout uebernahme usage zugang)
 
 budget() { # budget <name> <cap> <dir…>
   name=$1 cap=$2; shift 2
@@ -112,12 +112,16 @@ budget() { # budget <name> <cap> <dir…>
 # its button while unreachable, its colours and the connection's check on its own page (drucker_pruefen.go: reload_config_entry,
 # the fresh state, the address from the config entry or the configuration_url, the network's answer, kept for the row),
 # roomCards' row split out, nachladen by POST, the host HA's diagnostics last gave kept in HOMES_DATA/drucker.json
-budget pages 20075 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-14, the same request's follow-up („Wird auch der Status ‚druckt‘ dargestellt?“, „Bitte in der App und auf der Webseite
+# gleich“): pages 20,075 -> 19,950, ratcheted down by the printer's reading moved to internal/drucker (household)
+budget pages 19950 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
 # corrections of its own contacts, GET and POST /napi/kontakte/korrekturen (korrekturen.go)
-budget napi 5225 internal/napi        # the app's widgets' and share sheet's API: 4,793
+# 2026-11-14, owner's request 2026-11-14 („Bitte in der App und auf der Webseite gleich“; napi 5,225 -> 5,280; 5,274 used, to be
+# OK'd in the PR): a card's text, a printer's words on the favorites, its state and the stream (withText, live.card)
+budget napi 5280 internal/napi        # the app's widgets' and share sheet's API: 4,793
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): the module catalog,
 # cmd/homes/module.go, 1,150 with it; plus 5 %. H3–H6 move the routes out of main.go into it
 # 2026-11-04, step H8 (§10, owner: „Keine Funktion soll versteckt werden“): the routes of the traces
@@ -243,7 +247,10 @@ budget connectors 15830 $connectors   # one client per service, with its fake: 1
 # in an hour with the battery, and its three devices that used most
 # 2026-11-12, owner's request homes#362: einrichten.Admins (who Authelia said is an admin, kept for the app, which has no groups) and
 # the page's rows in /napi/einrichtung before and after the modules (household 14,700 -> 14,780; 14,776 used)
-budget household 14780 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-14, owner's request 2026-11-14 („Wird auch der Status ‚druckt‘ dargestellt?“, „… gleich“; household 14,780 -> 15,035;
+# 15,030 used, to be OK'd in the PR): internal/drucker, the printers read from HA's IPP sensors (moved from pages, -122 there),
+# their state in words, IPP's state reasons in short German, one line for the app
+budget household 15035 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one

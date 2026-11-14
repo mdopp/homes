@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/mdopp/homes/internal/cards"
+	"github.com/mdopp/homes/internal/drucker"
 	"github.com/mdopp/homes/internal/favoriten"
 	"github.com/mdopp/homes/internal/ha"
 	"github.com/mdopp/homes/internal/schalter"
@@ -136,6 +137,18 @@ func card(s ha.State) map[string]any {
 	return c
 }
 
+// withText adds the card's family words where Homes has its own, as
+// Geräte says them (owner 2026-11-14: „Bitte in der App und auf der
+// Webseite gleich“): a printer's state sensor, „druckt · Schwarz 12 %“,
+// „nicht erreichbar“ (internal/drucker). The app shows text instead of the
+// raw state; absent for everything else.
+func withText(c map[string]any, states []ha.State, reg ha.Registry) {
+	id, _ := c["entity_id"].(string)
+	if p, ok := drucker.Of(states, reg, id); ok && p.Status.EntityID == id {
+		c["text"] = p.Text()
+	}
+}
+
 // GET /napi/portal/state?entity_id= → {ok, card}
 func (h *homeAPI) state(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("entity_id")
@@ -156,6 +169,11 @@ func (h *homeAPI) state(w http.ResponseWriter, r *http.Request) {
 	if c == nil {
 		refuse(w, http.StatusNotFound, "no_card")
 		return
+	}
+	if reg, ok := h.ha.CachedRegistry(r.Context()); ok && reg.Platforms[id] == "ipp" { // a printer: its words need its inks
+		if states, err := h.ha.States(r.Context()); err == nil {
+			withText(c, states, reg)
+		}
 	}
 	answer(w, http.StatusOK, map[string]any{"ok": true, "card": c})
 }
@@ -223,12 +241,14 @@ func (h *homeAPI) favorites(w http.ResponseWriter, r *http.Request) {
 	for _, s := range states {
 		byID[s.EntityID] = s
 	}
+	reg, _ := h.ha.CachedRegistry(r.Context())
 	for _, id := range ids {
 		s, ok := byID[id]
 		if !ok {
 			continue
 		}
 		if c := card(s); c != nil {
+			withText(c, states, reg)
 			out = append(out, c)
 		}
 	}
