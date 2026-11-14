@@ -80,7 +80,7 @@ func newFakeArchiv(t *testing.T, secret string) *fakeArchiv {
 			http.Error(w, `{"fehler":"zu"}`, http.StatusLocked)
 			return
 		}
-		b, ok := f.media[strings.TrimPrefix(r.URL.Path, "/intern/whatsapp/medien/")]
+		b, ok := f.media[strings.TrimPrefix(r.URL.Path, "/intern/letzte/")]
 		if !ok {
 			http.Error(w, `{"fehler":"weg"}`, 404)
 			return
@@ -229,7 +229,7 @@ func TestLetzteMediaOnlyWhileTheArchiveIsOpen(t *testing.T) {
 	a.lege("anna", "whatsapp/Databases/msgstore.db.crypt15", []byte("WA-DB"))
 	a.lege("anna", "whatsapp/Media/WhatsApp Images/IMG 1.jpg.age", ageGestalt(11))
 	arch := newFakeArchiv(t, "anna-geheim")
-	arch.media["WhatsApp Images/IMG 1.jpg"] = []byte("BILD-INHALT")
+	arch.media["whatsapp/Media/WhatsApp Images/IMG 1.jpg"] = []byte("BILD-INHALT")
 	medium := "/napi/sicherung/letzte/whatsapp/Media/WhatsApp%20Images/IMG%201.jpg"
 
 	// no way into Anna's archive configured: a sentence, not a hang
@@ -242,7 +242,7 @@ func TestLetzteMediaOnlyWhileTheArchiveIsOpen(t *testing.T) {
 	if rec.Code != 200 || rec.Body.String() != "BILD-INHALT" || rec.Header().Get("Content-Type") != "image/jpeg" || rec.Header().Get("Content-Length") != "11" {
 		t.Fatalf("open → %d %q %v", rec.Code, rec.Body, rec.Header())
 	}
-	if got := arch.saw[len(arch.saw)-1]; got != "/intern/whatsapp/medien/WhatsApp Images/IMG 1.jpg" {
+	if got := arch.saw[len(arch.saw)-1]; got != "/intern/letzte/whatsapp/Media/WhatsApp Images/IMG 1.jpg" {
 		t.Errorf("asked the archive for %q", got)
 	}
 	rec, _ = a.do("GET", medium, "anna2", map[string]string{"Range": "bytes=5-"}, nil)
@@ -264,6 +264,7 @@ func TestLetzteMediaOnlyWhileTheArchiveIsOpen(t *testing.T) {
 	}
 	// an archive refusing Homes' secret is the admin's matter, said so
 	arch.offen = true
+	a.lege("ben", "whatsapp/Media/WhatsApp Images/IMG 1.jpg.age", ageGestalt(11))
 	if rec, out := a.do("GET", medium, "ben1", nil, nil); rec.Code != http.StatusBadGateway || out["fehler"] != saysArchivSchweigt {
 		t.Errorf("wrong secret → %d %v", rec.Code, out)
 	}
@@ -284,5 +285,45 @@ func TestArchivInternFromEnv(t *testing.T) {
 	got := ArchivInternFromEnv(func(k string) string { return env[k] })
 	if len(got) != 2 || got["anna"] != (ArchivIntern{"http://host.containers.internal:18540", "a"}) || got["max-mueller"] != (ArchivIntern{"http://host.containers.internal:18541", "m"}) {
 		t.Errorf("%v", got)
+	}
+}
+
+// archiv#64: Signal's backup and WhatsApp's database came age-encrypted from
+// the phone and lie so in letzte/: listed as the phone names them, with
+// their plaintext's size, and given back only through the open archive —
+// the messenger's own file. One kept before (no .age) still comes straight.
+func TestLetzteAgeBackupsComeThroughTheOpenArchive(t *testing.T) {
+	a := newLetzte(t)
+	a.lege("anna", "signal/signal-2026-11-02.backup.age", ageGestalt(70_000))
+	a.lege("anna", "whatsapp/Databases/msgstore.db.crypt15.age", ageGestalt(5))
+	a.lege("ben", "signal/signal-alt.backup", []byte("VORHER"))
+	arch := newFakeArchiv(t, "anna-geheim")
+	arch.media["signal/signal-2026-11-02.backup"] = []byte("SIGNAL-EIGENE-VERSCHLUESSELUNG")
+	arch.media["whatsapp/Databases/msgstore.db.crypt15"] = []byte("CRYPT")
+	a.s.SetArchive(map[string]ArchivIntern{"anna": {URL: arch.URL, Secret: "anna-geheim"}})
+
+	_, out := a.do("GET", "/napi/sicherung/letzte", "anna2", nil, nil)
+	q := out["quellen"].(map[string]any)
+	sig, wa := q["signal"].([]any), q["whatsapp"].([]any)
+	if len(sig) != 1 || sig[0].(map[string]any)["pfad"] != "signal-2026-11-02.backup" || sig[0].(map[string]any)["groesse"] != 70000.0 {
+		t.Errorf("signal: %v", sig)
+	}
+	if len(wa) != 1 || wa[0].(map[string]any)["pfad"] != "Databases/msgstore.db.crypt15" || wa[0].(map[string]any)["groesse"] != 5.0 {
+		t.Errorf("whatsapp: %v", wa)
+	}
+	for p, want := range map[string]string{"signal/signal-2026-11-02.backup": "SIGNAL-EIGENE-VERSCHLUESSELUNG", "whatsapp/Databases/msgstore.db.crypt15": "CRYPT"} {
+		if rec, _ := a.do("GET", "/napi/sicherung/letzte/"+p, "anna2", nil, nil); rec.Code != 200 || rec.Body.String() != want {
+			t.Errorf("open, %s → %d %q", p, rec.Code, rec.Body)
+		}
+	}
+	arch.offen = false
+	if rec, out := a.do("GET", "/napi/sicherung/letzte/signal/signal-2026-11-02.backup", "anna2", nil, nil); rec.Code != http.StatusLocked || out["fehler"] != saysMedienZu {
+		t.Errorf("closed → %d %v", rec.Code, out)
+	}
+	if rec, _ := a.do("GET", "/napi/sicherung/letzte/signal/signal-2026-11-02.backup.age", "anna2", nil, nil); rec.Code == 200 {
+		t.Errorf("the age file itself is served: %d", rec.Code)
+	}
+	if rec, _ := a.do("GET", "/napi/sicherung/letzte/signal/signal-alt.backup", "ben1", nil, nil); rec.Code != 200 || rec.Body.String() != "VORHER" {
+		t.Errorf("one kept before archiv#64 → %d %q", rec.Code, rec.Body)
 	}
 }

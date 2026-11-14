@@ -123,7 +123,10 @@ budget pages 19970 internal/pages     # the family's pages, one per file: 14,684
 # corrections of its own contacts, GET and POST /napi/kontakte/korrekturen (korrekturen.go)
 # 2026-11-14, owner's request 2026-11-14 („Bitte in der App und auf der Webseite gleich“; napi 5,225 -> 5,280; 5,274 used, to be
 # OK'd in the PR): a card's text, a printer's words on the favorites, its state and the stream (withText, live.card)
-budget napi 5280 internal/napi        # the app's widgets' and share sheet's API: 4,793
+# 2026-11-14, owner's request 2026-11-14 („Build the sealed-archive path for the phone's WhatsApp and Signal backups“,
+# archiv#64; napi 5,280 -> 5,340; 5,337 used): only age-encrypted uploads (ageLeser), a medium sent before still counts in
+# /fehlend, every .age file of letzte/ back through the open archive (ausArchiv, ageKlar)
+budget napi 5340 internal/napi        # the app's widgets' and share sheet's API: 4,793
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): the module catalog,
 # cmd/homes/module.go, 1,150 with it; plus 5 %. H3–H6 move the routes out of main.go into it
 # 2026-11-04, step H8 (§10, owner: „Keine Funktion soll versteckt werden“): the routes of the traces

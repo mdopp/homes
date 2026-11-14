@@ -1335,21 +1335,35 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   a Facebook or LinkedIn export (`sozial`, age-encrypted on the phone to the
   person's archive like the SMS; Homes never reads it, archiv `sozial.go`) into
   `HOMES_ARCHIV_DIR/<person>/<quelle>/<pfad>`, where that person's archive
-  imports them. The person is the device's (the uid it was paired with),
+  imports them. **Homes takes only what the phone encrypted for the
+  person's archive** (archiv#64, the owner: messages live in the person's
+  sealed archive): every file of every source is age-encrypted on the phone
+  to `GET /napi/sicherung/schluessel` and named `<the phone's name>.age` —
+  `Databases/msgstore.db.crypt15.age`, `Media/<pfad>.age`,
+  `signal-*.backup.age`, `sms-<zeit>.xml.age`, … A name without `.age`, a
+  file shorter than an age header, and a piece whose bytes do not begin as
+  age with one X25519 recipient (`age-encryption.org/v1\n-> X25519 `,
+  checked as they arrive) are refused: 400 at the name, 415 at the bytes
+  (*Homes nimmt nur Sicherungen an, die die Homes-App schon auf dem Handy
+  für dein Archiv verschlüsselt hat. Aktualisiere die Homes-App.*). Homes
+  never holds a key that opens them. The person is the device's (the uid it was paired with),
   never the request's. `GET /napi/sicherung/stand` → `{quellen:{whatsapp|
   signal|sms|sozial:{zuletzt, dateien, bytes, wartend}}, frei_bytes}`;
   `POST /napi/sicherung/fehlend {quelle, dateien:[{pfad, groesse}]}` (≤ 5000)
   → `{fehlend:[pfad]}`, against Homes' ledger
   (`HOMES_DATA/sicherung/<person>/<quelle>.jsonl`: the size each pfad last
   arrived with; the importer deletes what it took, so the folder cannot
-  say). The upload resumes: `POST /napi/sicherung/uploads {quelle, pfad,
+  say; a medium the phone sent as plaintext before archiv#64 counts for its
+  `.age` name when the size is that file's as age to one X25519 recipient,
+  so the phone does not send it again). The upload resumes: `POST /napi/sicherung/uploads {quelle, pfad,
   groesse}` → 201 `{id, offset}` (the same file again is the same upload,
   where it is), `HEAD …/uploads/{id}` → 204 `Upload-Offset`, `PATCH
   …/uploads/{id}` with `Upload-Offset` and `application/offset+octet-stream`,
   ≤ 16 MB → `{offset, fertig}`. A piece lands in `<person>/.teil/<id>`,
   synced, and is kept when the connection breaks mid-piece; the last one
-  renames the file into place (replacing one of that name: WhatsApp's
-  `msgstore.db.crypt15` keeps its name) and notes it in the ledger. pfad:
+  renames the file into place (one of that name still waiting is kept
+  beside it as `<pfad>.<its mtime>`: WhatsApp's `msgstore.db.crypt15.age`
+  keeps its name) and notes it in the ledger. pfad:
   relative, no `..`, nothing empty or hidden, ≤ 512 bytes, through
   `os.Root`; ≤ 20 GB a file. Refusals are `{fehler: <a German sentence>}`:
   400 a bad name or more bytes than declared, 404 an id that is not this
@@ -1400,21 +1414,26 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   Archiv-Seite ein, …*), 500 when the file holds anything else.
 - A new phone gets the newest backup back (haus#209, laib ADR 0029
   amendment 2026-11-01): the person's archive keeps it in
-  `HOMES_ARCHIV_DIR/<person>/letzte/` — `signal/signal-*.backup` and
-  `whatsapp/Databases/msgstore.db.crypt15`, encrypted by the messenger,
-  and `whatsapp/Media/<pfad>.age`, encrypted to the archive.
+  `HOMES_ARCHIV_DIR/<person>/letzte/` as it came from the phone, encrypted
+  to the archive (archiv#64) — `signal/signal-*.backup.age`,
+  `whatsapp/Databases/msgstore.db.crypt15.age` and
+  `whatsapp/Media/<pfad>.age`; a Signal backup or WhatsApp database kept
+  before without `.age` (encrypted by the messenger only) comes straight
+  from there.
   `GET /napi/sicherung/letzte` → `{quellen:{signal|whatsapp:[{pfad,
-  groesse, geaendert}]}}` (epoch ms; a medium's `pfad` without `.age`, its
-  `groesse` the plaintext's, read from the age header). `GET|HEAD
+  groesse, geaendert}]}}` (epoch ms; an `.age` file's `pfad` without `.age`,
+  its `groesse` the plaintext's, read from the age header). `GET|HEAD
   /napi/sicherung/letzte/<quelle>/<pfad>` gives the file with `Range` and a
   strong `ETag` (send it as `If-Range` when resuming: a backup replaced in
   the meantime comes whole, never mixed). The person is the device's, so
-  another person's device gets 404. Media (`whatsapp/Media/…`) come only
-  from the person's open archive: Homes asks its
-  `/intern/whatsapp/medien/<pfad>` with `X-Archiv-Homes` and passes Range
-  and the answer on; a closed vault is 423 (*Öffne dein Archiv, dann
-  kommen auch die Fotos und Sprachnachrichten zurück.*), an archive Homes
-  has no way into 503. The ways in: `HOMES_ARCHIV_INTERN="<person>=<url>
+  another person's device gets 404. Every `.age` file comes only from the
+  person's open archive, decrypted there to the messenger's own file
+  (Signal's backup and WhatsApp's database still encrypted by the
+  messenger): Homes asks its `/intern/letzte/<quelle>/<pfad>` with
+  `X-Archiv-Homes` and passes Range and the answer on; a closed vault is
+  423 (*Öffne dein Archiv, dann kommt deine Sicherung zurück: die
+  Nachrichten, Fotos und Sprachnachrichten.*), an archive Homes has no way
+  into 503. The ways in: `HOMES_ARCHIV_INTERN="<person>=<url>
   …"` (each archive as Homes' pod reaches it) and
   `HOMES_ARCHIV_SECRET_<PERSON>` (laib's per-person suffix: upper case,
   `-` as `_`), the instance's `ARCHIV_HOMES_SECRET`.

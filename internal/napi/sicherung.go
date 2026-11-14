@@ -61,10 +61,19 @@ var (
 )
 
 // Quellen are the folders of a person's inbox, in the order the page shows
-// them. sms holds the phone's SMS and call log, which the app encrypts to
-// the person's archive (GET /napi/sicherung/schluessel) before it sends
-// them: sms-<zeit>.xml.age, anrufe-<zeit>.xml.age; sozial a Facebook or LinkedIn export the app encrypted the same way (archiv sozial.go).
+// them. Every file of every quelle is encrypted on the phone to the
+// person's archive (GET /napi/sicherung/schluessel) before it is sent, so
+// Homes relays only bytes it cannot read (archiv#64, the owner: messages
+// live in the person's sealed archive): WhatsApp's database and media and
+// Signal's backup as <the phone's name>.age, the SMS and call log as
+// sms-<zeit>.xml.age, anrufe-<zeit>.xml.age, a Facebook or LinkedIn export
+// as sozial/<…>.age. A file that is not age (its name, its first bytes) is
+// refused with saysOnlyEncrypted.
 var Quellen = []string{"whatsapp", "signal", "sms", "sozial"} // Discord dropped (owner, 2026-11-03)
+
+// ageAnfang is how every file the app sends begins: age v1 with one
+// X25519 recipient, the archive's key (age-encryption.org/v1).
+const ageAnfang = "age-encryption.org/v1\n-> X25519 "
 
 // teil is the hidden folder of the parts in a person's inbox.
 const teil = ".teil"
@@ -90,6 +99,7 @@ const (
 	saysStoreFailed   = "Die Box konnte die Datei nicht speichern. Versuch es später noch einmal; hilft das nicht, sag dem Admin Bescheid."
 	saysNoKey         = "Dein Archiv ist noch nicht eingerichtet. Richte es einmal auf der Archiv-Seite ein, dann sichert die Homes-App deine SMS und Anrufe verschlüsselt."
 	saysBadKey        = "Der Schlüssel deines Archivs auf der Box ist unlesbar. Sag dem Admin Bescheid."
+	saysOnlyEncrypted = "Homes nimmt nur Sicherungen an, die die Homes-App schon auf dem Handy für dein Archiv verschlüsselt hat. Aktualisiere die Homes-App."
 )
 
 // briefkasten is the file in a person's inbox where their archive leaves
@@ -214,8 +224,31 @@ func checkFile(quelle, pfad string, groesse int64) string {
 		return saysBadSize
 	case groesse > sicherungMaxGroesse:
 		return saysTooBig
+	case !strings.HasSuffix(pfad, ".age") || groesse < int64(len(ageAnfang)):
+		return saysOnlyEncrypted
 	}
 	return ""
+}
+
+// ageLeser passes a piece's bytes on while they begin as ageAnfang does
+// (the piece is at pos of the file): the bytes up to the first that
+// differs, then errNotAge. As they come, so a cut piece leaves what came.
+type ageLeser struct {
+	r   io.Reader
+	pos int64
+}
+
+var errNotAge = errors.New("no age file")
+
+func (l *ageLeser) Read(p []byte) (int, error) {
+	n, err := l.r.Read(p)
+	for i := 0; i < n && l.pos < int64(len(ageAnfang)); i++ {
+		if p[i] != ageAnfang[l.pos] {
+			return i, errNotAge
+		}
+		l.pos++
+	}
+	return n, err
 }
 
 // QuelleStand is what arrived from one quelle: the last file, how many
@@ -402,9 +435,16 @@ func (s *Sicherung) fehlend(w http.ResponseWriter, r *http.Request, person strin
 	missing := []string{}
 	s.mu.Lock()
 	for _, d := range in.Dateien {
-		if g, ok := j.files[d.Pfad]; !ok || g != d.Groesse {
-			missing = append(missing, d.Pfad)
+		if g, ok := j.files[d.Pfad]; ok && g == d.Groesse {
+			continue
 		}
+		// a medium taken as plaintext before archiv#64, the same file: the
+		// archive keeps it (encrypted there), so the phone need not send it again
+		alt, aok := j.files[strings.TrimSuffix(d.Pfad, ".age")]
+		if klar, err := ageKlar(d.Groesse, ageKopfX25519); aok && err == nil && alt == klar {
+			continue
+		}
+		missing = append(missing, d.Pfad)
 	}
 	s.mu.Unlock()
 	answer(w, http.StatusOK, map[string]any{"fehlend": missing})
@@ -734,7 +774,7 @@ func (s *Sicherung) patch(w http.ResponseWriter, r *http.Request, person string)
 			return
 		}
 	}
-	written, code, say := s.write(root, id, have, min(rest, sicherungMaxStueck), rest, body)
+	written, code, say := s.write(root, id, have, min(rest, sicherungMaxStueck), rest, &ageLeser{r: body, pos: have})
 	now := have + written
 	if code != 0 {
 		log.Printf("homes: sicherung: %s/%s/%s at %d: %s", person, a.Quelle, a.Pfad, now, say)
@@ -820,6 +860,9 @@ func (s *Sicherung) write(root *os.Root, id string, have, limit, rest int64, bod
 	switch {
 	case err == nil:
 		return n, 0, ""
+	case errors.Is(err, errNotAge):
+		log.Printf("homes: sicherung: part %s is no age file: refused", id)
+		return n, http.StatusUnsupportedMediaType, saysOnlyEncrypted
 	case errors.As(err, &de):
 		log.Printf("homes: sicherung: write part %s: %v", id, err)
 		return n, storeStatus(err), storeSays(err)
