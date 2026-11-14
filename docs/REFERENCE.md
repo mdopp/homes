@@ -234,6 +234,20 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   showed; without script a Speichern button); the others read „Musik
   spielt auf <Name>“ there once one is set. Homes itself
   starts no music, so nothing else of Homes plays on it.
+- `POST /drucker/pruefen?geraet=<entity_id>` — a printer's connection
+  checked (owner 2026-11-14), what its own page's place sends by script
+  when the page is opened (not when it is fetched again in place). Only the
+  state sensor of an IPP printer (registry platform `ipp`), only from
+  Homes' own page (else 404, 403). Home Assistant reloads the printer's
+  config entry (`homeassistant.reload_config_entry` with `entity_id`, an
+  admin's service; Homes' HA user `homes` is an administrator), Homes
+  reads its state for up to 4 s, and says *Drucker erreichbar · bereit*
+  with its colours, or *Drucker nicht erreichbar* and what the printer's
+  own address answers (its device's `configuration_url` in HA; never an
+  address from the request): a ping over an unprivileged ICMP socket, else
+  a TCP connect to 631 or 80, 2 s at most (`internal/erreichbar`). One
+  check per printer at a time, its answer kept 10 minutes;
+  `GET` only reads it (empty: none).
 - `GET /raeume`, `/kalender`, `/kontakte`, `/notizen` — the family's other pages
   (haus#12), from the same cards, in the family's frame. A page whose
   backend is not set has no tab and, reached anyway, says in one sentence
@@ -257,6 +271,14 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     Raum. HA not answering: *Licht und Geräte antworten gerade nicht.* Each
     thing links to its own page, where a lamp or a switch is switched and
     the ☆ pins it to Start; every row has its ☆ here too.
+    A printer (Home Assistant's IPP integration, its sensors by device,
+    owner 2026-11-14) is one quiet last row of its room: *Drucker ·
+    erreichbar* with *Schwarz 42 %* (the marker named Black or Schwarz; the
+    IPP sensors carry no colour), under 15 % *Schwarz fast leer · 12 %* in
+    the warning colour; or *Drucker · nicht erreichbar* with since when.
+    It opens the state sensor's page, which says *bereit*, *druckt* or
+    *angehalten*, all colours on one line, and checks the connection
+    (`POST /drucker/pruefen` above). No IPP printer, no row.
     A lamp HA can dim (a `brightness`, or a colour mode other than
     `onoff`) has a slider 0–100 % beside its switch (haus#64; a tap on the
     switch still switches); a cover with a `current_position` its slider,

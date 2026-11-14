@@ -103,7 +103,8 @@ func writeRaeume(w http.ResponseWriter, r *http.Request, cfg StartConfig, saved 
 			b.WriteString(playing.HTML()) // what plays first, with its buttons: Medien's card (owner 2026-10-24)
 		}
 		standard := standardZeilen(states, reg, isAdmin(r), saved)
-		for _, c := range roomCards(states, reg, pinned, playingIDs(playing)) {
+		now, loc := cfg.clock()
+		for _, c := range roomCards(states, reg, pinned, playingIDs(playing), printerRows(states, reg, now, loc)) {
 			h := c.HTML()
 			if end := strings.LastIndex(h, "</ul>"); end >= 0 {
 				h = h[:end] + standard[c.Title] + h[end:] // the room's standard speaker, its last row
@@ -121,17 +122,12 @@ const saysPinWhat = "Mit ☆ steht ein Gerät auf Start unter „Deine Geräte�
 const saysInHA = "Für alles, was Homes nicht kann: Automationen, Einstellungen, Verlauf."
 
 // roomCards groups the states by room: rooms by name, "Ohne Raum" last;
-// in a room lights, heating, covers, media, each by name, each leading to
-// its own page; a lamp HA reaches with its switch. pinned is the person's
-// Start (nil: no ☆). What HA hides (hidden, config, diagnostic) is left
-// out.
-func roomCards(states []ha.State, reg ha.Registry, pinned, playing map[string]bool) []cards.Card {
-	type thing struct {
-		kind             int
-		id, name, detail string
-		state            ha.State
-	}
-	byRoom := map[string][]thing{}
+// in a room lights, heating, covers, media, locks, each by name, each
+// leading to its own page; a lamp HA reaches with its switch; then the
+// extra rows (a printer, owner 2026-11-14). pinned is the person's Start
+// (nil: no ☆). What HA hides (hidden, config, diagnostic) is left out.
+func roomCards(states []ha.State, reg ha.Registry, pinned, playing map[string]bool, extra []roomExtra) []cards.Card {
+	byRoom := map[string][]roomThing{}
 	twins := twinPlayers(states, reg) // one tile per thing (haus#83)
 	for _, s := range states {
 		domain, _, _ := strings.Cut(s.EntityID, ".")
@@ -146,7 +142,10 @@ func roomCards(states []ha.State, reg ha.Registry, pinned, playing map[string]bo
 			continue
 		}
 		room := oneLine(reg.Rooms[s.EntityID])
-		byRoom[room] = append(byRoom[room], thing{kind, s.EntityID, friendly(s), roomDetail(domain, s, reg.TempUnit), s})
+		byRoom[room] = append(byRoom[room], roomThing{kind, s.EntityID, friendly(s), roomDetail(domain, s, reg.TempUnit), s, nil})
+	}
+	for _, e := range extra {
+		byRoom[e.room] = append(byRoom[e.room], roomThing{kind: len(roomKinds), name: e.name, row: &e.row})
 	}
 	names := make([]string, 0, len(byRoom))
 	for n := range byRoom {
@@ -177,26 +176,49 @@ func roomCards(states []ha.State, reg ha.Registry, pinned, playing map[string]bo
 			if i == maxRoomRows {
 				break
 			}
-			row := cards.Row{Text: t.name, Detail: t.detail, Href: cards.ThingPage(t.id)}
-			switch domain, _, _ := strings.Cut(t.id, "."); domain {
-			case "light": // a tap switches; a dimmer has its slider too (haus#64)
-				row.Action = umschalten(t.state, back)
-				row.Slider = dimmer(t.state, back)
-			case "cover": // Hoch, Stopp, Runter and the position (haus#64)
-				if bs := coverButtons(t.state, back); len(bs) > 0 {
-					row.Also = bs
-				}
-				row.Slider = coverSlider(t.state, back)
-			}
-			if pinned != nil {
-				row.Pin = &cards.Pin{Entity: t.id, Name: t.name, On: pinned[t.id], Back: back}
-			}
-			c.Rows = append(c.Rows, row)
+			c.Rows = append(c.Rows, t.cardRow(pinned, back))
 		}
 		more(&c, len(things)-maxRoomRows)
 		out = append(out, c)
 	}
 	return out
+}
+
+// roomThing is one thing on a room card; row, when set, is its row as it is.
+type roomThing struct {
+	kind             int
+	id, name, detail string
+	state            ha.State
+	row              *cards.Row
+}
+
+// roomExtra is a row a room card shows that is not one entity's (a printer).
+type roomExtra struct {
+	room, name string
+	row        cards.Row
+}
+
+// cardRow is the thing's row: a lamp switched and dimmed on it, a cover's
+// buttons and position (haus#64), the ☆ when pinned is set.
+func (t roomThing) cardRow(pinned map[string]bool, back string) cards.Row {
+	if t.row != nil {
+		return *t.row
+	}
+	row := cards.Row{Text: t.name, Detail: t.detail, Href: cards.ThingPage(t.id)}
+	switch domain, _, _ := strings.Cut(t.id, "."); domain {
+	case "light": // a tap switches; a dimmer has its slider too (haus#64)
+		row.Action = umschalten(t.state, back)
+		row.Slider = dimmer(t.state, back)
+	case "cover": // Hoch, Stopp, Runter and the position (haus#64)
+		if bs := coverButtons(t.state, back); len(bs) > 0 {
+			row.Also = bs
+		}
+		row.Slider = coverSlider(t.state, back)
+	}
+	if pinned != nil {
+		row.Pin = &cards.Pin{Entity: t.id, Name: t.name, On: pinned[t.id], Back: back}
+	}
+	return row
 }
 
 // roomDetail says a thing's state in the family's words: the room kinds,
