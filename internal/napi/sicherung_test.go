@@ -124,9 +124,9 @@ func (c chunked) Read(p []byte) (int, error) { return c.r.Read(p) }
 
 func TestSicherungResumesAfterACut(t *testing.T) {
 	a := newArchiv(t)
-	content := []byte("WhatsApp-Sicherung: eine verschlüsselte Datenbank")
+	content := []byte(ageAnfang + "WhatsApp-Sicherung: eine verschlüsselte Datenbank")
 	n := int64(len(content))
-	const pfad = "Databases/msgstore.db.crypt15"
+	const pfad = "Databases/msgstore.db.crypt15.age"
 	id, off := a.start("anna1", "whatsapp", pfad, n)
 	if off != 0 || len(id) != 32 {
 		t.Fatalf("a new upload: id %q offset %d", id, off)
@@ -175,8 +175,8 @@ func TestSicherungResumesAfterACut(t *testing.T) {
 
 func TestSicherungWrongOffsetIs409(t *testing.T) {
 	a := newArchiv(t)
-	id, _ := a.start("anna1", "signal", "signal-2026-11-01-03-00-00.backup", 20)
-	a.piece("anna1", id, 0, strings.NewReader("12345"))
+	id, _ := a.start("anna1", "signal", "signal-2026-11-01-03-00-00.backup.age", 40)
+	a.piece("anna1", id, 0, strings.NewReader(ageAnfang[:5]))
 	for _, at := range []int64{0, 4, 6, 19} {
 		rec, out := a.piece("anna1", id, at, strings.NewReader("abc"))
 		if rec.Code != 409 || out["offset"] != 5.0 || out["fehler"] == "" {
@@ -192,7 +192,7 @@ func TestSicherungWrongOffsetIs409(t *testing.T) {
 	if !a.s.claim("anna", id, nil, 0) {
 		t.Fatal("claim")
 	}
-	rec, out := a.piece("anna1", id, 5, strings.NewReader("abc"))
+	rec, out := a.piece("anna1", id, 5, strings.NewReader(ageAnfang[5:8]))
 	a.s.release("anna", id)
 	if rec.Code != 409 || out["offset"] != 5.0 {
 		t.Errorf("a piece while another is written → %d %v", rec.Code, out)
@@ -202,7 +202,7 @@ func TestSicherungWrongOffsetIs409(t *testing.T) {
 	if !a.s.claim("anna", id, func() { stopped = true; go a.s.release("anna", id) }, 0) {
 		t.Fatal("claim")
 	}
-	if rec, out := a.piece("anna1", id, 5, strings.NewReader("abc")); rec.Code != 200 || out["offset"] != 8.0 || !stopped {
+	if rec, out := a.piece("anna1", id, 5, strings.NewReader(ageAnfang[5:8])); rec.Code != 200 || out["offset"] != 8.0 || !stopped {
 		t.Errorf("a piece after a hanging one → %d %v (stopped %v)", rec.Code, out, stopped)
 	}
 	if rec, out := a.do("PATCH", "/napi/sicherung/uploads/"+id, "anna1", map[string]string{"Content-Type": "application/offset+octet-stream"}, strings.NewReader("abc")); rec.Code != 400 || out["fehler"] == nil {
@@ -215,11 +215,11 @@ func TestSicherungWrongOffsetIs409(t *testing.T) {
 
 func TestSicherungRefusesMoreThanTheFile(t *testing.T) {
 	a := newArchiv(t)
-	id, _ := a.start("anna1", "signal", "kurz.backup", 5)
-	if rec, out := a.piece("anna1", id, 0, strings.NewReader("123456")); rec.Code != 400 || out["fehler"] != saysMoreThanSaid {
+	id, _ := a.start("anna1", "signal", "kurz.backup.age", int64(len(ageAnfang)+5))
+	if rec, out := a.piece("anna1", id, 0, strings.NewReader(ageAnfang+"123456")); rec.Code != 400 || out["fehler"] != saysMoreThanSaid {
 		t.Errorf("six bytes for five, with a length → %d %v", rec.Code, out)
 	}
-	if rec, out := a.piece("anna1", id, 0, chunked{strings.NewReader("123456")}); rec.Code != 400 || out["fehler"] != saysMoreThanSaid {
+	if rec, out := a.piece("anna1", id, 0, chunked{strings.NewReader(ageAnfang + "123456")}); rec.Code != 400 || out["fehler"] != saysMoreThanSaid {
 		t.Errorf("six bytes for five, streamed → %d %v", rec.Code, out)
 	}
 	if _, at := a.head("anna1", id); at != "0" {
@@ -242,9 +242,9 @@ func TestSicherungRefusesMoreThanTheFile(t *testing.T) {
 func TestSicherungThreeGigabytes(t *testing.T) {
 	a := newArchiv(t)
 	const groesse int64 = 3 << 30
-	const pfad = "signal-2026-11-01-03-00-00.backup"
+	const pfad = "signal-2026-11-01-03-00-00.backup.age"
 	id, _ := a.start("anna1", "signal", pfad, groesse)
-	if rec, out := a.piece("anna1", id, 0, bytes.NewReader(make([]byte, 1<<20))); rec.Code != 200 || out["offset"] != float64(1<<20) {
+	if rec, out := a.piece("anna1", id, 0, bytes.NewReader(append([]byte(ageAnfang), make([]byte, 1<<20-len(ageAnfang))...))); rec.Code != 200 || out["offset"] != float64(1<<20) {
 		t.Fatalf("the first MB → %d %v", rec.Code, out)
 	}
 	if err := os.Truncate(filepath.Join(a.dir, "anna", teil, id), groesse-6); err != nil {
@@ -275,12 +275,12 @@ func TestSicherungThreeGigabytes(t *testing.T) {
 		t.Errorf("stand → %d %v", rec.Code, out)
 	}
 	// a 3 GB file on a disk that cannot take it is refused before its first byte
-	id2, _ := a.start("anna1", "signal", "zweite.backup", groesse)
+	id2, _ := a.start("anna1", "signal", "zweite.backup.age", groesse)
 	free(t, 2<<30)
 	if rec, _ := a.piece("anna1", id2, 0, strings.NewReader("x")); rec.Code != 507 {
 		t.Errorf("3 GB on 2 GB free → %d, want 507", rec.Code)
 	}
-	if b, _ := json.Marshal(map[string]any{"quelle": "signal", "pfad": "riesig.backup", "groesse": int64(21 << 30)}); true {
+	if b, _ := json.Marshal(map[string]any{"quelle": "signal", "pfad": "riesig.backup.age", "groesse": int64(21 << 30)}); true {
 		if rec, out := a.do("POST", "/napi/sicherung/uploads", "anna1", nil, bytes.NewReader(b)); rec.Code != 400 || out["fehler"] != saysTooBig {
 			t.Errorf("21 GB → %d %v", rec.Code, out)
 		}
@@ -295,11 +295,11 @@ func TestSicherungRefusesPathsOutOfTheInbox(t *testing.T) {
 		{"whatsapp", ""}, {"whatsapp", "x/"}, {"whatsapp", "a\x00b"}, {"whatsapp", strings.Repeat("a", 513)},
 		{"../ben", "x.jpg"}, {"telegram", "x.jpg"}, {"", "x.jpg"},
 	} {
-		b, _ := json.Marshal(map[string]any{"quelle": f.quelle, "pfad": f.pfad, "groesse": 3})
-		if rec, out := a.do("POST", "/napi/sicherung/uploads", "anna1", nil, bytes.NewReader(b)); rec.Code != 400 || out["fehler"] == nil {
-			t.Errorf("%q/%q → %d %v, want 400", f.quelle, f.pfad, rec.Code, out)
+		b, _ := json.Marshal(map[string]any{"quelle": f.quelle, "pfad": f.pfad, "groesse": 300})
+		if rec, out := a.do("POST", "/napi/sicherung/uploads", "anna1", nil, bytes.NewReader(b)); rec.Code != 400 || out["fehler"] == nil || out["fehler"] == saysOnlyEncrypted {
+			t.Errorf("%q/%q → %d %v, want 400 for the path", f.quelle, f.pfad, rec.Code, out)
 		}
-		b, _ = json.Marshal(map[string]any{"quelle": f.quelle, "dateien": []datei{{f.pfad, 3}}})
+		b, _ = json.Marshal(map[string]any{"quelle": f.quelle, "dateien": []datei{{f.pfad, 300}}})
 		if rec, _ := a.do("POST", "/napi/sicherung/fehlend", "anna1", nil, bytes.NewReader(b)); rec.Code != 400 {
 			t.Errorf("fehlend %q/%q → %d, want 400", f.quelle, f.pfad, rec.Code)
 		}
@@ -310,8 +310,8 @@ func TestSicherungRefusesPathsOutOfTheInbox(t *testing.T) {
 	if err := os.Symlink(outside, filepath.Join(a.dir, "anna", "whatsapp", "Media")); err != nil {
 		t.Fatal(err)
 	}
-	id, _ := a.start("anna1", "whatsapp", "Media/x.jpg", 3)
-	if rec, _ := a.piece("anna1", id, 0, strings.NewReader("abc")); rec.Code != 500 {
+	id, _ := a.start("anna1", "whatsapp", "Media/x.jpg.age", int64(len(ageAnfang)+3))
+	if rec, _ := a.piece("anna1", id, 0, strings.NewReader(ageAnfang+"abc")); rec.Code != 500 {
 		t.Errorf("placing through a link out → %d, want 500", rec.Code)
 	}
 	if es, _ := os.ReadDir(outside); len(es) != 0 {
@@ -321,8 +321,9 @@ func TestSicherungRefusesPathsOutOfTheInbox(t *testing.T) {
 
 func TestSicherungIsThePersonOfTheDevice(t *testing.T) {
 	a := newArchiv(t)
-	id, _ := a.start("anna1", "whatsapp", "Databases/msgstore.db.crypt15", 6)
-	a.piece("anna1", id, 0, strings.NewReader("abc"))
+	n := int64(len(ageAnfang) + 6)
+	id, _ := a.start("anna1", "whatsapp", "Databases/msgstore.db.crypt15.age", n)
+	a.piece("anna1", id, 0, strings.NewReader(ageAnfang[:3]))
 	if code, _ := a.head("ben1", id); code != 404 {
 		t.Errorf("Ben's HEAD of Anna's upload → %d, want 404", code)
 	}
@@ -338,15 +339,15 @@ func TestSicherungIsThePersonOfTheDevice(t *testing.T) {
 		}
 	}
 	// the same file from Ben's phone is Ben's, in Ben's folder
-	bid, off := a.start("ben1", "whatsapp", "Databases/msgstore.db.crypt15", 6)
+	bid, off := a.start("ben1", "whatsapp", "Databases/msgstore.db.crypt15.age", n)
 	if off != 0 {
 		t.Errorf("Ben's upload starts at %d", off)
 	}
-	a.piece("ben1", bid, 0, strings.NewReader("BENBEN"))
-	if b, err := os.ReadFile(filepath.Join(a.dir, "ben", "whatsapp", "Databases", "msgstore.db.crypt15")); err != nil || string(b) != "BENBEN" {
+	a.piece("ben1", bid, 0, strings.NewReader(ageAnfang+"BENBEN"))
+	if b, err := os.ReadFile(filepath.Join(a.dir, "ben", "whatsapp", "Databases", "msgstore.db.crypt15.age")); err != nil || string(b) != ageAnfang+"BENBEN" {
 		t.Errorf("Ben's file: %q %v", b, err)
 	}
-	if got := a.fehlend("anna1", "whatsapp", datei{"Databases/msgstore.db.crypt15", 6}); len(got) != 1 {
+	if got := a.fehlend("anna1", "whatsapp", datei{"Databases/msgstore.db.crypt15.age", n}); len(got) != 1 {
 		t.Errorf("Ben's arrival counts for Anna: %v", got)
 	}
 	// a device of nobody writes nowhere
@@ -361,25 +362,27 @@ func TestSicherungIsThePersonOfTheDevice(t *testing.T) {
 func TestSicherungFehlendFromTheLedger(t *testing.T) {
 	a := newArchiv(t)
 	put := func(pfad, content string) {
+		content = ageAnfang + content
 		id, _ := a.start("anna1", "whatsapp", pfad, int64(len(content)))
 		if rec, out := a.piece("anna1", id, 0, strings.NewReader(content)); out["fertig"] != true {
 			t.Fatalf("%s → %d %v", pfad, rec.Code, out)
 		}
 	}
-	put("Media/WhatsApp Images/IMG-20261101-WA0001.jpg", "bild")
-	put("Databases/msgstore.db.crypt15", "gestern")
-	put("Databases/msgstore.db.crypt15", "heute!!!") // the daily backup keeps its name: replaced
-	if b, _ := os.ReadFile(filepath.Join(a.dir, "anna", "whatsapp", "Databases", "msgstore.db.crypt15")); string(b) != "heute!!!" {
+	k := int64(len(ageAnfang))
+	put("Media/WhatsApp Images/IMG-20261101-WA0001.jpg.age", "bild")
+	put("Databases/msgstore.db.crypt15.age", "gestern")
+	put("Databases/msgstore.db.crypt15.age", "heute!!!") // the daily backup keeps its name: replaced
+	if b, _ := os.ReadFile(filepath.Join(a.dir, "anna", "whatsapp", "Databases", "msgstore.db.crypt15.age")); string(b) != ageAnfang+"heute!!!" {
 		t.Errorf("the daily backup was not replaced: %q", b)
 	}
 	os.RemoveAll(filepath.Join(a.dir, "anna", "whatsapp")) // the archive imported it
 	ask := []datei{
-		{"Media/WhatsApp Images/IMG-20261101-WA0001.jpg", 4}, // arrived
-		{"Media/WhatsApp Images/IMG-20261101-WA0002.jpg", 4}, // never
-		{"Databases/msgstore.db.crypt15", 7},                 // yesterday's size: today's arrived
-		{"Databases/msgstore.db.crypt15", 8},
+		{"Media/WhatsApp Images/IMG-20261101-WA0001.jpg.age", k + 4}, // arrived
+		{"Media/WhatsApp Images/IMG-20261101-WA0002.jpg.age", k + 4}, // never
+		{"Databases/msgstore.db.crypt15.age", k + 7},                 // yesterday's size: today's arrived
+		{"Databases/msgstore.db.crypt15.age", k + 8},
 	}
-	want := "Media/WhatsApp Images/IMG-20261101-WA0002.jpg,Databases/msgstore.db.crypt15"
+	want := "Media/WhatsApp Images/IMG-20261101-WA0002.jpg.age,Databases/msgstore.db.crypt15.age"
 	if got := strings.Join(a.fehlend("anna1", "whatsapp", ask...), ","); got != want {
 		t.Errorf("fehlend = %s, want %s", got, want)
 	}
@@ -393,7 +396,7 @@ func TestSicherungFehlendFromTheLedger(t *testing.T) {
 		t.Errorf("after a restart fehlend = %s, want %s", got, want)
 	}
 	st, err := again.s.Stand("anna")
-	if wa := st.Quellen["whatsapp"]; err != nil || wa.Dateien != 2 || wa.Bytes != 12 || wa.Wartend != 0 || wa.Zuletzt == nil {
+	if wa := st.Quellen["whatsapp"]; err != nil || wa.Dateien != 2 || wa.Bytes != 2*k+12 || wa.Wartend != 0 || wa.Zuletzt == nil {
 		t.Errorf("stand after the import: %+v %v", st, err)
 	}
 	if _, ok := st.Quellen["discord"]; ok {
@@ -412,13 +415,51 @@ func TestSicherungFehlendFromTheLedger(t *testing.T) {
 	}
 }
 
-func TestSicherungEmptyFileArrivesAtOnce(t *testing.T) {
+// archiv#64: Homes relays only what the phone encrypted for the person's
+// archive. A name without .age, a file too short to be age (an empty one),
+// and a first piece that does not begin as age does are refused, in words;
+// nothing of them reaches the inbox.
+func TestSicherungTakesOnlyWhatIsEncryptedForTheArchive(t *testing.T) {
 	a := newArchiv(t)
-	if _, off := a.start("anna1", "signal", "leer.txt", 0); off != 0 {
-		t.Fatalf("offset %d", off)
+	for _, f := range []struct {
+		quelle, pfad string
+		groesse      int64
+	}{
+		{"whatsapp", "Databases/msgstore.db.crypt15", 300}, {"whatsapp", "Media/WhatsApp Images/IMG-1.jpg", 300},
+		{"signal", "signal-2026-11-01-03-00-00.backup", 300}, {"sms", "sms-20261102T120000Z.xml", 300},
+		{"signal", "leer.backup.age", 0}, {"signal", "kurz.backup.age", int64(len(ageAnfang) - 1)},
+	} {
+		b, _ := json.Marshal(map[string]any{"quelle": f.quelle, "pfad": f.pfad, "groesse": f.groesse})
+		if rec, out := a.do("POST", "/napi/sicherung/uploads", "anna1", nil, bytes.NewReader(b)); rec.Code != 400 || out["fehler"] != saysOnlyEncrypted {
+			t.Errorf("%s/%s (%d) → %d %v, want 400 %q", f.quelle, f.pfad, f.groesse, rec.Code, out, saysOnlyEncrypted)
+		}
+		b, _ = json.Marshal(map[string]any{"quelle": f.quelle, "dateien": []datei{{f.pfad, f.groesse}}})
+		if rec, out := a.do("POST", "/napi/sicherung/fehlend", "anna1", nil, bytes.NewReader(b)); rec.Code != 400 || out["fehler"] != saysOnlyEncrypted {
+			t.Errorf("fehlend %s/%s → %d %v", f.quelle, f.pfad, rec.Code, out)
+		}
 	}
-	if fi, err := os.Stat(filepath.Join(a.dir, "anna", "signal", "leer.txt")); err != nil || fi.Size() != 0 {
-		t.Fatalf("an empty file: %v %v", fi, err)
+	// a .age name around the messenger's plain file: its first bytes give it away
+	plain := "SQLite format 3\x00 eine ganz normale Datenbank"
+	id, _ := a.start("anna1", "whatsapp", "Databases/msgstore.db.crypt15.age", int64(len(plain)))
+	if rec, out := a.piece("anna1", id, 0, strings.NewReader(plain)); rec.Code != 415 || out["fehler"] != saysOnlyEncrypted {
+		t.Errorf("a plain file named .age → %d %v, want 415", rec.Code, out)
+	}
+	// split anywhere in the first bytes: each piece is checked from where it starts
+	id, _ = a.start("anna1", "signal", "signal-2026-11-02.backup.age", int64(len(ageAnfang)+4))
+	if rec, out := a.piece("anna1", id, 0, strings.NewReader(ageAnfang[:10])); rec.Code != 200 || out["offset"] != 10.0 {
+		t.Fatalf("the first ten bytes → %d %v", rec.Code, out)
+	}
+	if rec, out := a.piece("anna1", id, 10, strings.NewReader("-> X25519 ????????????????")); rec.Code != 415 || out["fehler"] != saysOnlyEncrypted {
+		t.Errorf("a piece that goes on unlike age → %d %v", rec.Code, out)
+	}
+	if rec, out := a.piece("anna1", id, 10, strings.NewReader(ageAnfang[10:]+"ende")); rec.Code != 200 || out["fertig"] != true {
+		t.Fatalf("the rest → %d %v", rec.Code, out)
+	}
+	if es, _ := os.ReadDir(filepath.Join(a.dir, "anna", "whatsapp", "Databases")); len(es) != 0 {
+		t.Errorf("a refused file reached the inbox: %v", es)
+	}
+	if b, _ := os.ReadFile(filepath.Join(a.dir, "anna", "signal", "signal-2026-11-02.backup.age")); string(b) != ageAnfang+"ende" {
+		t.Errorf("in the inbox: %q", b)
 	}
 }
 
@@ -451,9 +492,9 @@ func TestSicherungWithoutArchivDirIs503(t *testing.T) {
 
 func TestSicherungGivesUpOldParts(t *testing.T) {
 	a := newArchiv(t)
-	old, _ := a.start("anna1", "signal", "alt.backup", 10)
-	a.piece("anna1", old, 0, strings.NewReader("abc"))
-	fresh, _ := a.start("anna1", "signal", "neu.backup", 10)
+	old, _ := a.start("anna1", "signal", "alt.backup.age", 40)
+	a.piece("anna1", old, 0, strings.NewReader(ageAnfang[:3]))
+	fresh, _ := a.start("anna1", "signal", "neu.backup.age", 40)
 	week := time.Now().Add(-8 * 24 * time.Hour)
 	for _, n := range []string{old, old + ".json"} {
 		os.Chtimes(filepath.Join(a.dir, "anna", teil, n), week, week)
@@ -479,7 +520,7 @@ func TestSicherungResumesOverARealConnection(t *testing.T) {
 	a := newArchiv(t)
 	srv := httptest.NewServer(a.h)
 	defer srv.Close()
-	id, _ := a.start("anna1", "signal", "netz.backup", 8)
+	id, _ := a.start("anna1", "signal", "netz.backup.age", int64(len(ageAnfang)+8))
 	pr, pw := io.Pipe()
 	req, _ := http.NewRequest("PATCH", srv.URL+"/napi/sicherung/uploads/"+id, pr)
 	req.Header.Set("Authorization", "Bearer anna1")
@@ -493,7 +534,7 @@ func TestSicherungResumesOverARealConnection(t *testing.T) {
 			resp.Body.Close()
 		}
 	}()
-	pw.Write([]byte("abc"))
+	pw.Write([]byte(ageAnfang[:3]))
 	at := ""
 	for range 50 {
 		if _, at = a.head("anna1", id); at == "3" {
@@ -504,7 +545,7 @@ func TestSicherungResumesOverARealConnection(t *testing.T) {
 	if at != "3" {
 		t.Fatalf("after the drop the box has %q, want 3", at)
 	}
-	req, _ = http.NewRequest("PATCH", srv.URL+"/napi/sicherung/uploads/"+id, strings.NewReader("defgh"))
+	req, _ = http.NewRequest("PATCH", srv.URL+"/napi/sicherung/uploads/"+id, strings.NewReader(ageAnfang[3:]+"abcdefgh"))
 	req.Header.Set("Authorization", "Bearer anna1")
 	req.Header.Set("Upload-Offset", "3")
 	req.Header.Set("Content-Type", "application/offset+octet-stream")
@@ -518,7 +559,7 @@ func TestSicherungResumesOverARealConnection(t *testing.T) {
 	if resp.StatusCode != 200 || out["fertig"] != true {
 		t.Fatalf("the rest → %d %v", resp.StatusCode, out)
 	}
-	if b, _ := os.ReadFile(filepath.Join(a.dir, "anna", "signal", "netz.backup")); string(b) != "abcdefgh" {
+	if b, _ := os.ReadFile(filepath.Join(a.dir, "anna", "signal", "netz.backup.age")); string(b) != ageAnfang+"abcdefgh" {
 		t.Fatalf("in the inbox: %q", b)
 	}
 }
@@ -528,9 +569,9 @@ func TestSicherungResumesOverARealConnection(t *testing.T) {
 // resumed or yesterday's finished upload answered as whole.
 func TestSicherungTodaysFileIsNotYesterdays(t *testing.T) {
 	a := newArchiv(t)
-	const pfad = "Databases/msgstore.db.crypt15"
+	const pfad = "Databases/msgstore.db.crypt15.age"
 	start := func(geaendert int64) (string, int64) {
-		b, _ := json.Marshal(map[string]any{"quelle": "whatsapp", "pfad": pfad, "groesse": 8, "geaendert": geaendert})
+		b, _ := json.Marshal(map[string]any{"quelle": "whatsapp", "pfad": pfad, "groesse": len(ageAnfang) + 8, "geaendert": geaendert})
 		rec, out := a.do("POST", "/napi/sicherung/uploads", "anna1", nil, bytes.NewReader(b))
 		if rec.Code != 201 {
 			t.Fatalf("start → %d %s", rec.Code, rec.Body)
@@ -539,17 +580,17 @@ func TestSicherungTodaysFileIsNotYesterdays(t *testing.T) {
 		return out["id"].(string), int64(off)
 	}
 	gestern, _ := start(1_793_500_000_000)
-	if rec, out := a.piece("anna1", gestern, 0, bytes.NewReader([]byte("gestern!"))); rec.Code != 200 || out["fertig"] != true {
+	if rec, out := a.piece("anna1", gestern, 0, strings.NewReader(ageAnfang+"gestern!")); rec.Code != 200 || out["fertig"] != true {
 		t.Fatalf("yesterday's file → %d %v", rec.Code, out)
 	}
 	heute, off := start(1_793_586_400_000)
 	if heute == gestern || off != 0 {
 		t.Fatalf("today's file got %q at %d, yesterday's was %q: want a new upload at 0", heute, off, gestern)
 	}
-	if rec, out := a.piece("anna1", heute, 0, bytes.NewReader([]byte("heute!!!"))); rec.Code != 200 || out["fertig"] != true {
+	if rec, out := a.piece("anna1", heute, 0, strings.NewReader(ageAnfang+"heute!!!")); rec.Code != 200 || out["fertig"] != true {
 		t.Fatalf("today's file → %d %v", rec.Code, out)
 	}
-	if got, _ := os.ReadFile(filepath.Join(a.dir, "anna", "whatsapp", pfad)); string(got) != "heute!!!" {
+	if got, _ := os.ReadFile(filepath.Join(a.dir, "anna", "whatsapp", pfad)); string(got) != ageAnfang+"heute!!!" {
 		t.Errorf("in the inbox: %q, want today's file", got)
 	}
 	// yesterday's, not imported yet, may hold a chat deleted since: kept beside, not replaced
@@ -557,7 +598,7 @@ func TestSicherungTodaysFileIsNotYesterdays(t *testing.T) {
 	if len(beside) != 1 {
 		t.Fatalf("beside today's file: %v, want yesterday's", beside)
 	}
-	if got, _ := os.ReadFile(beside[0]); string(got) != "gestern!" {
+	if got, _ := os.ReadFile(beside[0]); string(got) != ageAnfang+"gestern!" {
 		t.Errorf("%s holds %q, want yesterday's file", beside[0], got)
 	}
 	if st, err := os.Stat(filepath.Join(a.dir, "anna", "whatsapp", pfad)); err != nil || st.ModTime().UnixMilli() != 1_793_586_400_000 {
@@ -635,5 +676,28 @@ func TestSicherungTakesSMS(t *testing.T) {
 	}
 	if say := checkFile("telegram", "x", 1); !strings.Contains(say, "whatsapp, signal, sms und sozial") {
 		t.Fatalf("the sentence lists the sources wrong: %s", say)
+	}
+}
+
+// The media the phone sent as plaintext before archiv#64 are in the
+// archive already (it encrypted them there): asked about again as the
+// app now names them — <pfad>.age, the age file's size — they are not
+// missing. ageKopfX25519 is the header the app and the archive write.
+func TestSicherungMediaTakenBeforeAreNotMissingAsAge(t *testing.T) {
+	a := newArchiv(t)
+	os.MkdirAll(filepath.Join(a.data, "sicherung", "anna"), 0o755)
+	os.WriteFile(filepath.Join(a.data, "sicherung", "anna", "whatsapp.jsonl"),
+		[]byte(`{"pfad":"Media/WhatsApp Images/IMG-1.jpg","groesse":100000,"zeit":"2026-11-01T02:00:00Z"}`+"\n"), 0o644)
+	// 100000 bytes of plaintext: two chunks of 64 KiB, each with its tag
+	const alsAge = ageKopfX25519 + 16 + 100000 + 2*16
+	got := a.fehlend("anna1", "whatsapp",
+		datei{"Media/WhatsApp Images/IMG-1.jpg.age", alsAge},
+		datei{"Media/WhatsApp Images/IMG-1.jpg.age", alsAge + 1}, // another file of that name
+		datei{"Media/WhatsApp Images/IMG-2.jpg.age", alsAge})
+	if strings.Join(got, ",") != "Media/WhatsApp Images/IMG-1.jpg.age,Media/WhatsApp Images/IMG-2.jpg.age" {
+		t.Fatalf("fehlend = %v", got)
+	}
+	if ageKopfX25519 != len("age-encryption.org/v1\n-> X25519 "+strings.Repeat("A", 43)+"\n"+strings.Repeat("B", 43)+"\n--- "+strings.Repeat("C", 43)+"\n") {
+		t.Fatalf("ageKopfX25519 = %d", ageKopfX25519)
 	}
 }

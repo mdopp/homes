@@ -399,7 +399,7 @@ var de = map[ID]string{
 	"daten.bitwarden":            "Leg Archiv-Passwort, Signal-Passphrase und WhatsApp-Schlüssel auch in Bitwarden ab: wer einen verliert, kann diese Sicherungen nicht mehr lesen.",
 	"daten.nie.titel":            "Was nie ins Archiv kommt",
 	"daten.wechsel":              "Auf dem neuen Handy die Homes-App installieren und mit deinem Namen koppeln.\nIn der Homes-App: Mehr → Daten sichern → „Sicherung zurückholen“. Für Signal einen Ordner wählen, etwa „Dokumente/Signal“. WhatsApp vorher installieren, aber noch nicht öffnen, und den Ordner „Android/media/com.whatsapp/WhatsApp“ freigeben (gibt es ihn noch nicht: „Android/media“).\nSignal neu installieren, bei der Einrichtung „Aus Sicherung wiederherstellen“ wählen, die Datei auswählen und die 30-stellige Passphrase aus Bitwarden eingeben. WhatsApp öffnen, mit derselben Nummer anmelden und „Wiederherstellen“ wählen.",
-	"daten.wechsel.medien":       "Fotos und Sprachnachrichten kommen nur zurück, während dein Archiv offen ist. Die App überschreibt nichts, ohne zu fragen.",
+	"daten.wechsel.medien":       "Die Sicherung kommt nur zurück, während dein Archiv offen ist: die Homes-App hat sie auf dem Handy für dein Archiv verschlüsselt, und nur das offene Archiv kann sie öffnen. Die App überschreibt nichts, ohne zu fragen.",
 	"daten.nie":                  "Nachrichten, die sich selbst löschen, und Fotos oder Videos zur einmaligen Ansicht: sie stehen in keiner Sicherung.",
 	"modul.geraete":              "Geräte",
 	"modul.energie":              "Energie",

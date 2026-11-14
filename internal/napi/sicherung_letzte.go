@@ -19,21 +19,24 @@ import (
 )
 
 // Sicherung zurückholen (haus#209, laib ADR 0029 amendment 2026-11-01 §3–4):
-// a person's archive keeps their newest raw backup per source in
-// archiv-eingang/<person>/letzte/ — Signal's signal-*.backup and WhatsApp's
-// Databases/msgstore.db.crypt15, both encrypted by the messenger, and
-// WhatsApp's media age-encrypted to the person's archive (Media/<pfad>.age).
+// a person's archive keeps their newest backup per source in
+// archiv-eingang/<person>/letzte/ as it came from the phone, age-encrypted
+// to the person's archive (archiv#64): Signal's signal-*.backup.age,
+// WhatsApp's Databases/msgstore.db.crypt15.age and Media/<pfad>.age.
 // A new phone of the same person (the device's Whoami, never the request's)
 // gets them back:
 //
 //	GET /napi/sicherung/letzte                  {quellen: {signal: [{pfad, groesse, geaendert}], whatsapp: […]}}
 //	GET /napi/sicherung/letzte/<quelle>/<pfad>  the file, with Range (a backup is several GB, a phone's line drops)
 //
-// Signal and the WhatsApp database come straight from letzte/. The media
-// only the open archive can decrypt: Homes asks the person's archive
-// (/intern/whatsapp/medien/<pfad>, ARCHIV_HOMES_SECRET in X-Archiv-Homes) and
-// passes its answer on; a closed vault is 423 with the sentence the app
-// shows. Another person's device asks its own letzte/, so their file is 404.
+// Each is named without .age, as the phone has it. Only the open archive
+// can decrypt them: Homes asks the person's archive
+// (/intern/letzte/<quelle>/<pfad>, ARCHIV_HOMES_SECRET in X-Archiv-Homes)
+// and passes its answer on — the messenger's own file, Signal's backup and
+// WhatsApp's database still encrypted by the messenger; a closed vault is
+// 423 with the sentence the app shows. A Signal backup or WhatsApp database
+// without .age (kept before archiv#64) comes straight from letzte/.
+// Another person's device asks its own letzte/, so their file is 404.
 
 // letzte is the archive's folder of the newest backups in a person's inbox
 // (archiv's Briefkasten.Letzte, /eingang/letzte inside the archive).
@@ -43,14 +46,14 @@ const letzte = "letzte"
 // page shows them.
 var letzteQuellen = []string{"signal", "whatsapp"}
 
-// medienPrefix is where WhatsApp's media lie in letzte/whatsapp/, each as
-// <pfad>.age; the phone names them without .age.
+// medienPrefix is where WhatsApp's media lie in letzte/whatsapp/; only
+// their .age files are the archive's.
 const medienPrefix = "Media/"
 
 const (
 	saysLetzteNichtDa   = "Diese Sicherung gibt es auf der Box nicht (mehr). Lade die Liste neu."
-	saysMedienZu        = "Öffne dein Archiv, dann kommen auch die Fotos und Sprachnachrichten zurück."
-	saysMedienNichtHier = "Die Fotos und Sprachnachrichten lassen sich auf dieser Box noch nicht zurückholen. Sag dem Admin Bescheid."
+	saysMedienZu        = "Öffne dein Archiv, dann kommt deine Sicherung zurück: die Nachrichten, Fotos und Sprachnachrichten."
+	saysMedienNichtHier = "Deine Sicherung lässt sich auf dieser Box noch nicht zurückholen. Sag dem Admin Bescheid."
 	saysArchivSchweigt  = "Dein Archiv antwortet gerade nicht. Versuch es gleich noch einmal; hilft das nicht, sag dem Admin Bescheid."
 )
 
@@ -88,13 +91,13 @@ func ArchivInternFromEnv(getenv func(string) string) map[string]ArchivIntern {
 	return out
 }
 
-// SetArchive gives Homes the way into each person's archive, for the media.
+// SetArchive gives Homes the way into each person's archive, for a restore.
 func (s *Sicherung) SetArchive(intern map[string]ArchivIntern) {
 	s.intern = intern
 }
 
-// archivClient fetches a medium from an archive: no overall timeout (a
-// video may take minutes on a slow phone line), but an archive that does
+// archivClient fetches a file from an archive: no overall timeout (a
+// backup may take minutes on a slow phone line), but an archive that does
 // not answer is let go of.
 var archivClient = &http.Client{Transport: &http.Transport{
 	DialContext:           (&net.Dialer{Timeout: 5 * time.Second}).DialContext,
@@ -109,7 +112,7 @@ type LetzteDatei struct {
 }
 
 // Letzte lists what lies in person's letzte/, per source; a source with
-// nothing is an empty list. The media's groesse is their plaintext's.
+// nothing is an empty list. An .age file's groesse is its plaintext's.
 func (s *Sicherung) Letzte(person string) (map[string][]LetzteDatei, error) {
 	out := map[string][]LetzteDatei{}
 	for _, q := range letzteQuellen {
@@ -149,10 +152,10 @@ func (s *Sicherung) Letzte(person string) (map[string][]LetzteDatei, error) {
 				return nil // gone meanwhile
 			}
 			e := LetzteDatei{Pfad: rel, Groesse: fi.Size(), Geaendert: fi.ModTime().UnixMilli()}
-			if q == "whatsapp" && strings.HasPrefix(rel, medienPrefix) {
-				if !strings.HasSuffix(rel, ".age") {
-					return nil // only the encrypted media are the archive's
-				}
+			if q == "whatsapp" && strings.HasPrefix(rel, medienPrefix) && !strings.HasSuffix(rel, ".age") {
+				return nil // only the encrypted media are the archive's
+			}
+			if strings.HasSuffix(rel, ".age") {
 				e.Pfad = strings.TrimSuffix(rel, ".age")
 				f, err := root.Open(p)
 				if err != nil {
@@ -199,6 +202,18 @@ func ageKlarGroesse(r io.Reader, size int64) (int64, error) {
 			break
 		}
 	}
+	return ageKlar(size, hdr)
+}
+
+// ageKopfX25519 is the length of the header of an age file to one X25519
+// recipient, as the app and the archive write it: the version line, the
+// stanza (its share and body in unpadded base64) and the MAC line.
+const ageKopfX25519 = 22 + 54 + 44 + 48
+
+// ageKlar is the plaintext length of an age file of size bytes whose
+// header is hdr bytes: a 16-byte nonce, then chunks of 64 KiB, each with
+// a 16-byte tag (the last one shorter, never empty unless the file is).
+func ageKlar(size, hdr int64) (int64, error) {
 	const nonce, chunk, tag = 16, 64 << 10, 16
 	payload := size - hdr - nonce
 	if payload < tag {
@@ -225,12 +240,8 @@ func (s *Sicherung) letzteListe(w http.ResponseWriter, r *http.Request, person s
 // (WhatsApp's database keeps its name every night).
 func (s *Sicherung) letzteDatei(w http.ResponseWriter, r *http.Request, person string) {
 	quelle, pfad := r.PathValue("quelle"), r.PathValue("pfad")
-	if (quelle != "signal" && quelle != "whatsapp") || !validPfad(pfad) {
+	if (quelle != "signal" && quelle != "whatsapp") || !validPfad(pfad) || strings.HasSuffix(pfad, ".age") { // an .age file is the archive's to open
 		fehler(w, http.StatusNotFound, saysLetzteNichtDa)
-		return
-	}
-	if quelle == "whatsapp" && strings.HasPrefix(pfad, medienPrefix) {
-		s.medium(w, r, person, strings.TrimPrefix(pfad, medienPrefix))
 		return
 	}
 	root, err := os.OpenRoot(filepath.Join(s.dir, person, letzte, quelle))
@@ -239,6 +250,14 @@ func (s *Sicherung) letzteDatei(w http.ResponseWriter, r *http.Request, person s
 		return
 	}
 	defer root.Close()
+	if fi, err := root.Lstat(filepath.FromSlash(pfad) + ".age"); err == nil && fi.Mode().IsRegular() {
+		s.ausArchiv(w, r, person, quelle, pfad)
+		return
+	}
+	if quelle == "whatsapp" && strings.HasPrefix(pfad, medienPrefix) {
+		fehler(w, http.StatusNotFound, saysLetzteNichtDa) // a medium is the archive's only
+		return
+	}
 	f, err := root.Open(filepath.FromSlash(pfad))
 	if err != nil {
 		fehler(w, http.StatusNotFound, saysLetzteNichtDa)
@@ -255,9 +274,10 @@ func (s *Sicherung) letzteDatei(w http.ResponseWriter, r *http.Request, person s
 	http.ServeContent(w, r, "", fi.ModTime(), f)
 }
 
-// medium passes one WhatsApp medium on from the person's open archive,
-// Range and all; a closed vault is 423 with the sentence the app shows.
-func (s *Sicherung) medium(w http.ResponseWriter, r *http.Request, person, rel string) {
+// ausArchiv passes one file of letzte/ on from the person's open archive,
+// decrypted there, Range and all; a closed vault is 423 with the sentence
+// the app shows.
+func (s *Sicherung) ausArchiv(w http.ResponseWriter, r *http.Request, person, quelle, rel string) {
 	a, ok := s.intern[person]
 	if !ok {
 		fehler(w, http.StatusServiceUnavailable, saysMedienNichtHier)
@@ -267,7 +287,7 @@ func (s *Sicherung) medium(w http.ResponseWriter, r *http.Request, person, rel s
 	for i, seg := range segs {
 		segs[i] = url.PathEscape(seg)
 	}
-	req, err := http.NewRequestWithContext(r.Context(), r.Method, a.URL+"/intern/whatsapp/medien/"+strings.Join(segs, "/"), nil)
+	req, err := http.NewRequestWithContext(r.Context(), r.Method, a.URL+"/intern/letzte/"+quelle+"/"+strings.Join(segs, "/"), nil)
 	if err != nil {
 		fehler(w, http.StatusNotFound, saysLetzteNichtDa)
 		return
@@ -301,7 +321,7 @@ func (s *Sicherung) medium(w http.ResponseWriter, r *http.Request, person, rel s
 	case http.StatusNotFound:
 		fehler(w, http.StatusNotFound, saysLetzteNichtDa)
 	default:
-		log.Printf("homes: sicherung: archive of %s answered %d for a medium", person, resp.StatusCode)
+		log.Printf("homes: sicherung: archive of %s answered %d for %s/%s", person, resp.StatusCode, quelle, rel)
 		fehler(w, http.StatusBadGateway, saysArchivSchweigt)
 	}
 }
