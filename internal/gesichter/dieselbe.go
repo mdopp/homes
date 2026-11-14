@@ -419,7 +419,8 @@ func (g *Gesichter) Paare() []Paar {
 		for i, b := range st.Naehe[a].Kandidaten {
 			key := paarKey(a, b)
 			_, nein := st.Nein[key]
-			if nein || gesehen[key] || wer[b].ID == "" || wer[a].ID == "" || a == b || strings.TrimSpace(wer[b].Name) != "" { // two named: two persons
+			_, versteckt := st.Versteckt[b]
+			if nein || versteckt || gesehen[key] || wer[b].ID == "" || wer[a].ID == "" || a == b || strings.TrimSpace(wer[b].Name) != "" { // two named: two persons
 				continue
 			}
 			gesehen[key] = true

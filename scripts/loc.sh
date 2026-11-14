@@ -116,7 +116,9 @@ budget() { # budget <name> <cap> <dir…>
 # gleich“): pages 20,075 -> 19,950, ratcheted down by the printer's reading moved to internal/drucker (household)
 # 2026-11-14, owner's request 2026-11-14 („In der Liste hat der Drucker keinen Stern für Favoriten“; pages 19,950 -> 19,970;
 # 19,965 used, to be OK'd in the PR): the printer row's ☆ (roomThing.ownRow split from cardRow), Start's tile in its words
-budget pages 19970 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-14, owner's request 2026-11-14 („Kein Mensch“ on „Wer ist das?“: a toy's face asked as a person; pages 19,970 -> 19,990;
+# 19,984 used, to be OK'd in the PR): the card's third choice and „Ausgeblendet.“ with its Rückgängig (kontakte_wer.go)
+budget pages 19990 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -197,7 +199,9 @@ budget cmd 1455 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-14, owner's request 2026-11-14 (the printer, its address; connectors 15,777 -> 15,830; 15,824 used): the device
 # registry's configuration_url (Registry.ConfigURLs), the entity's config entry (Registry.Entries) and its host from
 # HA's diagnostics (ha.EntryHost), hafake's diagnostics
-budget connectors 15830 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
+# 2026-11-14, owner's request 2026-11-14 („Kein Mensch“ on „Wer ist das?“: a toy's face asked as a person; connectors 15,830 -> 15,850;
+# 15,847 used, to be OK'd in the PR): immich.Verstecken (PUT isHidden), immichfake taking isHidden and a field left out
+budget connectors 15850 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
 # 2026-11-04, internal/jsonfile (47 lines, 50 of cap) from household's cap to shared's: it
 # replaces nine copies of a save, 62 of their lines in household
 # 2026-11-05, owner 2026-11-05 yes: Immich for the contacts (9,583 -> 9,874):
@@ -255,7 +259,9 @@ budget connectors 15830 $connectors   # one client per service, with its fake: 1
 # 2026-11-14, owner's request 2026-11-14 („Wird auch der Status ‚druckt‘ dargestellt?“, „… gleich“; household 14,780 -> 15,035;
 # 15,030 used, to be OK'd in the PR): internal/drucker, the printers read from HA's IPP sensors (moved from pages, -122 there),
 # their state in words, IPP's state reasons in short German, one line for the app
-budget household 15035 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-14, owner's request 2026-11-14 („Kein Mensch“ on „Wer ist das?“: a toy's face asked as a person; household 15,035 -> 15,095;
+# 15,092 used, to be OK'd in the PR): gesichter.Ausblenden and Einblenden (Rückgängig), the hidden kept with their faces
+budget household 15095 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one

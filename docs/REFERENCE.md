@@ -607,7 +607,13 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     *Orte*, *Auch dabei*, a name field, *Speichern* (`PUT
     /api/people/<id>`, `person.update`; a person of that name already is
     merged into it by the next run) and *Kenne ich nicht* (kept,
-    `unbekannt`: never offered again). Not counted in the task: unnamed
+    `unbekannt`: never offered again; Homes keeps it, Immich is not
+    told) and *Kein Mensch* (owner 2026-11-14: a toy's face; hidden in
+    Immich, `PUT /api/people/<id>` with `isHidden` alone, as Immich's own
+    „ausblenden“: Immich leaves it out of its people, faces and photos
+    stay; kept as `versteckt`, so never offered again; „Ausgeblendet.“
+    with *Rückgängig* beside it, `antwort=zurueck`, which shows it in
+    Immich again and asks again). Not counted in the task: unnamed
     faces never run out. After a pair's *Nein* (owner 2026-11-11: „bei Nein
     gleich den richtigen Namen“) the answer's page (`/kontakte/dieselbe` or
     the contact's) opens with *Wer ist das dann?*: the pair's unnamed face

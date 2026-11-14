@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image/color"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
@@ -139,4 +140,54 @@ func TestDieselbeWerVorschlagAusKontaktfoto(t *testing.T) {
 	}
 	fake.Close()
 	mustContain(t, antworte(cfg, "anna", url.Values{"wer": {"u17"}, "name": {"Kerstin Kühn"}, "antwort": {"ja"}}).Body.String(), "Immich hat gerade nicht geantwortet, nichts wurde gespeichert.")
+}
+
+// „Kein Mensch“ (owner 2026-11-14: a toy's face asked as a person): a
+// quiet third choice on the card; it hides the face in Immich at once,
+// says „Ausgeblendet.“ with Rückgängig beside it and the next question
+// follows; Rückgängig shows it in Immich again and asks again; Immich
+// refusing is said and the face stays. Only the key's owner may: another
+// person and an admin are sent away and nothing is hidden.
+func TestDieselbeKeinMensch(t *testing.T) {
+	cfg, fake := dieselbeConfig(t, "a|Anna||")
+	mustContain(t, as(Dieselbe, cfg, dieselbeAlle, "anna", "anna@box.test").Body.String(),
+		`>Kenne ich nicht</button><button name=antwort value=kein class=leise formnovalidate data-laeuft="Blendet aus …">Kein Mensch</button></form>`)
+
+	for _, groups := range []string{"family", "family,admins"} {
+		req := httptest.NewRequest("POST", dieselbeAlle, strings.NewReader(url.Values{"wer": {"u16"}, "antwort": {"kein"}}.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Sec-Fetch-Site", "same-origin")
+		req.Header.Set("Remote-User", "ben")
+		req.Header.Set("Remote-Email", "ben@box.test")
+		req.Header.Set("Remote-Groups", groups)
+		rec := httptest.NewRecorder()
+		Dieselbe(cfg).ServeHTTP(rec, req)
+		if rec.Code != http.StatusSeeOther || fake.Versteckt("u16") {
+			t.Fatalf("%s hid a face: %d", groups, rec.Code)
+		}
+	}
+
+	alle := len(fake.Alle())
+	rec := antworte(cfg, "anna", url.Values{"wer": {"u16"}, "antwort": {"kein"}})
+	body := rec.Body.String()
+	mustContain(t, body, `<div class=gut role=status><span class=punkt></span><p>Ausgeblendet.</p><form method=post class=rueck action="/kontakte/dieselbe?alle=1"><input type=hidden name=wer value="u16"><button name=antwort value=zurueck class=leise data-laeuft="Holt zurück …">Rückgängig</button></form></div>`,
+		"<h2>Wer ist das?</h2>")
+	mustNotContain(t, body, `<input type=hidden name=wer value="u16"><input name=name`)
+	if !fake.Versteckt("u16") || len(fake.Alle()) != alle {
+		t.Fatal("not hidden in Immich, or a person deleted")
+	}
+	rec = antworte(cfg, "anna", url.Values{"wer": {"u16"}, "antwort": {"zurueck"}})
+	mustContain(t, rec.Body.String(), "Wieder da: Das Gesicht ist in Immich wieder zu sehen, und Homes fragt wieder danach.", `<input type=hidden name=wer value="u16"><input name=name`)
+	if fake.Versteckt("u16") {
+		t.Fatal("still hidden")
+	}
+	mustContain(t, antworte(cfg, "anna", url.Values{"wer": {"u16"}, "antwort": {"zurueck"}}).Body.String(), "Diesen Vorschlag gibt es nicht mehr.")
+
+	fake.Ohne = []string{"person.update"}
+	rec = antworte(cfg, "anna", url.Values{"wer": {"u16"}, "antwort": {"kein"}})
+	mustContain(t, rec.Body.String(), "person.update", `<input type=hidden name=wer value="u16"><input name=name`)
+	mustNotContain(t, rec.Body.String(), "Ausgeblendet.")
+	if fake.Versteckt("u16") {
+		t.Fatal("hidden without the right")
+	}
 }
