@@ -2,16 +2,20 @@ package pages
 
 import (
 	"context"
+	"encoding/json"
 	"html"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/mdopp/homes/internal/erreichbar"
 	"github.com/mdopp/homes/internal/ha"
+	"github.com/mdopp/homes/internal/jsonfile"
 )
 
 // Opening a printer's own page connects it again (owner 2026-11-14: „Beim
@@ -198,6 +202,7 @@ func pruefen(ctx context.Context, cfg StartConfig, id string, reg ha.Registry, i
 			word = roomDetail("sensor", s, "")
 		}
 		p, _ := thisPrinter(ctx, cfg, id, reg)
+		entryHost(ctx, cfg, reg, id) // kept while HA's diagnostics answer, for when they do not
 		into.wieder = !(printer{status: before}).reachable()
 		into.html = "<p class=zustand><span class=punkt></span>Drucker erreichbar · " + html.EscapeString(word) + "</p>" + out.String() + p.inksLine()
 		return
@@ -251,21 +256,67 @@ var saysNetz = map[erreichbar.Antwort]string{erreichbar.Ping: saysPingJa, erreic
 // a .local name, which resolves only with mDNS). Never one from a request.
 func printerHosts(ctx context.Context, cfg StartConfig, reg ha.Registry, id string) []string {
 	var hosts []string
-	if entry := reg.Entries[id]; entry != "" {
-		ctx, cancel := context.WithTimeout(ctx, backendWait)
-		host, err := cfg.HA.EntryHost(ctx, entry)
-		cancel()
-		if err != nil {
-			log.Printf("homes: drucker %q: its config entry's address: %v", id, err)
-		}
-		if host != "" {
-			hosts = append(hosts, host)
-		}
+	if host := entryHost(ctx, cfg, reg, id); host != "" {
+		hosts = append(hosts, host)
 	}
 	if u, err := url.Parse(reg.ConfigURLs[reg.Devices[id]]); err == nil && (u.Scheme == "http" || u.Scheme == "https") && u.Hostname() != "" {
 		hosts = append(hosts, u.Hostname())
 	}
 	return hosts
+}
+
+// entryHost is the host of the printer's IPP config entry: from HA's
+// diagnostics, kept in drucker.json by device; while they fail (HA's IPP
+// diagnostics read the coordinator's data, which an unreachable printer's
+// entry lacks: a 500 just when it is needed) the one kept. "" when HA never said one.
+func entryHost(ctx context.Context, cfg StartConfig, reg ha.Registry, id string) string {
+	entry, key := reg.Entries[id], reg.Devices[id]
+	if key == "" {
+		key = id
+	}
+	if entry == "" {
+		return druckerGemerkt(cfg.Daten)[key]
+	}
+	ctx, cancel := context.WithTimeout(ctx, backendWait)
+	host, err := cfg.HA.EntryHost(ctx, entry)
+	cancel()
+	if err != nil || host == "" {
+		log.Printf("homes: drucker %q: its config entry's address: %v; the one kept", id, err)
+		return druckerGemerkt(cfg.Daten)[key]
+	}
+	druckerMerken(cfg.Daten, key, host)
+	return host
+}
+
+// druckerDatei is drucker.json's lock: device → host.
+var druckerDatei sync.Mutex
+
+// druckerGemerkt are the printers' hosts kept in dir; empty without dir or file.
+func druckerGemerkt(dir string) map[string]string {
+	m := map[string]string{}
+	if dir == "" {
+		return m
+	}
+	druckerDatei.Lock()
+	defer druckerDatei.Unlock()
+	if b, err := os.ReadFile(filepath.Join(dir, "drucker.json")); err == nil {
+		json.Unmarshal(b, &m)
+	}
+	return m
+}
+
+// druckerMerken keeps host as the printer's (device key) in dir, written only when it changed.
+func druckerMerken(dir, key, host string) {
+	m := druckerGemerkt(dir)
+	if dir == "" || m[key] == host {
+		return
+	}
+	m[key] = host
+	druckerDatei.Lock()
+	defer druckerDatei.Unlock()
+	if err := jsonfile.Save(filepath.Join(dir, "drucker.json"), m); err != nil {
+		log.Printf("homes: drucker.json: %v", err)
+	}
 }
 
 // printerCheck is the check's place on the printer's own page: on opening

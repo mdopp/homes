@@ -108,11 +108,11 @@ budget() { # budget <name> <cap> <dir…>
 # quiet last row (its style and pictogram), shown only with two or more speakers; a failed self-sending select goes back (skript.go)
 # 2026-11-14, owner's request 2026-11-14 („Können wir ihn [den Epson-Drucker] über Home Assistant überwachen und in der App
 # darstellen?“, with „neu verbinden“, „ob ein Ping funktioniert“ and „einen Button auf der Karte … ‚Prüfen und neu verbinden‘“;
-# the raise to be OK'd in the PR; pages 19,425 -> 20,020; 20,014 used): the printer's row on its room's card (drucker.go) with
+# the raise to be OK'd in the PR; pages 19,425 -> 20,075; 20,068 used): the printer's row on its room's card (drucker.go) with
 # its button while unreachable, its colours and the connection's check on its own page (drucker_pruefen.go: reload_config_entry,
 # the fresh state, the address from the config entry or the configuration_url, the network's answer, kept for the row),
-# roomCards' row split out, nachladen by POST
-budget pages 20020 internal/pages     # the family's pages, one per file: 14,684
+# roomCards' row split out, nachladen by POST, the host HA's diagnostics last gave kept in HOMES_DATA/drucker.json
+budget pages 20075 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -129,7 +129,9 @@ budget napi 5225 internal/napi        # the app's widgets' and share sheet's API
 # fakes for the browser tests and the pictures, never run on a box; it is not counted. The
 # cap stays as it was, now for cmd/homes alone
 # 2026-11-12, owner's request homes#362: the app's Deine Aufgaben wired to the page's list and the admins seen (1,448 -> 1,452; 1,451 used)
-budget cmd 1452 cmd/homes             # homes' wiring: 1,018 with the demo then
+# 2026-11-14, owner's request 2026-11-14 (the printer; 1,452 -> 1,455; 1,452 used): HOMES_DATA handed to the pages, where
+# drucker.json keeps each printer's last known address
+budget cmd 1455 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-04, the caps moved with the packages, none raised (sum 24,134 as before): abs and
 # musicbrainz (1,227 lines, 1,289 of cap) from household to connectors once merken's fetcher
 # was internal/abruf (235 lines of merken, 247 of cap, to shared) and jellyfin.Plain

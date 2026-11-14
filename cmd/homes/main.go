@@ -189,6 +189,7 @@ func familyOf(s site) pages.StartConfig {
 	}
 	family.OhneEnergie = s.napi.OhneEnergie
 	family.Papierkorb = &papierkorb.Korb{Dir: s.dataDir} // haus#174: family deletes, for 30 days
+	family.Daten = s.dataDir                             // the printers' last known addresses (owner 2026-11-14)
 	family.MusicInbox = s.musik
 	if family.MusicInbox != "" { // haus#107: the music inbox beets sorts in
 		if fi, err := os.Stat(family.MusicInbox); err != nil || !fi.IsDir() {

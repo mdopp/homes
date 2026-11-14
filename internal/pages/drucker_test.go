@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -462,4 +464,53 @@ func TestDruckerRowWhileChecking(t *testing.T) {
 	_, body, _ := familyPage(t, Raeume, druckerCfg(hc), "GET", "/raeume", "")
 	mustContain(t, body, `Drucker · nicht erreichbar</a> <span class=k>Prüfe Verbindung …</span>`)
 	mustNotContain(t, body, "Prüfen und neu verbinden")
+}
+
+// HA's IPP diagnostics answer 500 while the printer is unreachable (they
+// read the coordinator's data). The host they gave while it was reachable
+// is kept in HOMES_DATA/drucker.json by device and asked then, before the
+// .local name; without a kept one the .local name alone.
+func TestDruckerRemembersTheAddress(t *testing.T) {
+	fastChecks(t)
+	dir := t.TempDir()
+	fake, hc := house(t)
+	epsonAt(t, fake, "idle")
+	cfg := druckerCfg(hc)
+	cfg.Daten = dir
+	pruefe(t, cfg, "POST", "sensor.epson_wf_3540_series") // reachable: the diagnostics answer, the host is kept
+	if b, err := os.ReadFile(filepath.Join(dir, "drucker.json")); err != nil || !strings.Contains(string(b), `"dev-epson": "192.168.178.87"`) {
+		t.Fatalf("drucker.json %s %v", b, err)
+	}
+
+	fake, hc = house(t) // later, another start of Homes: the printer off, its diagnostics a 500
+	epsonAt(t, fake, "unavailable")
+	fake.SetDiagnostics("entry-ipp", nil)
+	cfg = druckerCfg(hc)
+	cfg.Daten = dir
+	var asked []string
+	cfg.Probe = func(_ context.Context, host string) erreichbar.Antwort {
+		asked = append(asked, host)
+		return erreichbar.Nicht
+	}
+	_, body := pruefe(t, cfg, "POST", "sensor.epson_wf_3540_series")
+	mustContain(t, body, "Der Drucker antwortet nicht im Netz. Ist er an und im WLAN?")
+	if strings.Join(asked, ",") != "192.168.178.87" {
+		t.Errorf("asked %v, want the kept host", asked)
+	}
+
+	fake, hc = house(t) // nothing kept: the .local name, not known here
+	epsonAt(t, fake, "unavailable")
+	fake.SetDiagnostics("entry-ipp", nil)
+	cfg = druckerCfg(hc)
+	cfg.Daten = t.TempDir()
+	asked = nil
+	cfg.Probe = func(_ context.Context, host string) erreichbar.Antwort {
+		asked = append(asked, host)
+		return erreichbar.Unbekannt
+	}
+	_, body = pruefe(t, cfg, "POST", "sensor.epson_wf_3540_series")
+	mustContain(t, body, "Die Adresse des Druckers ist nicht bekannt.")
+	if strings.Join(asked, ",") != "EPSON0A36A8.local." {
+		t.Errorf("asked %v", asked)
+	}
 }

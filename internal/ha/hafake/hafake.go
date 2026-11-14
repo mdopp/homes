@@ -70,7 +70,8 @@ type HA struct {
 }
 
 // SetDiagnostics sets what a config entry's diagnostics answer under
-// "data", the integration's own shape (IPP's: {entry: {data: {host, …}}}).
+// "data", the integration's own shape (IPP's: {entry: {data: {host, …}}});
+// nil answers 500, as IPP's do while the printer is unreachable.
 func (h *HA) SetDiagnostics(entryID string, data map[string]any) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -565,8 +566,12 @@ func (h *HA) serve(w http.ResponseWriter, r *http.Request) {
 			"unit_system": map[string]any{"length": "km", "mass": "g", "temperature": h.tempUnit, "volume": "L"}})
 	case r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/api/diagnostics/config_entry/"):
 		d, ok := h.diag[strings.TrimPrefix(r.URL.Path, "/api/diagnostics/config_entry/")]
-		if !ok {
+		switch {
+		case !ok:
 			http.NotFound(w, r)
+			return
+		case d == nil: // IPP's diagnostics while the printer is unreachable (no coordinator data)
+			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]any{"home_assistant": map[string]any{"version": "2026.11.0"}, "data": d})

@@ -81,7 +81,10 @@ type StartConfig struct {
 	Now         func() time.Time  // for the tests; default time.Now
 	// Probe asks whether a printer's own address answers on the network
 	// (owner 2026-11-14); nil: erreichbar.Pruefe, the tests' a fake
-	Probe     func(ctx context.Context, host string) erreichbar.Antwort
+	Probe func(ctx context.Context, host string) erreichbar.Antwort
+	// Daten is HOMES_DATA, where drucker.json keeps each printer's address
+	// as HA last said it; "": none kept (the demo)
+	Daten     string
 	Usage     *usage.Counter // what the family uses, anonymously (haus#50); nil: nothing counted
 	PublicURL string         // Homes' own address, https://homes.<domain>
 	Welcome   bool           // Start sends a person to Willkommen the first time a device opens it (haus#56)

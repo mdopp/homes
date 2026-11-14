@@ -246,7 +246,9 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   own address answers, never an address from the request: first the host
   its IPP config entry was set up with (HA's diagnostics of that entry,
   `GET /api/diagnostics/config_entry/<id>`, an admin's; HA's
-  `config_entries` answers leave the entry's data out), then its device's
+  `config_entries` answers leave the entry's data out; they answer 500
+  while the printer is unreachable, so the host they last gave is kept by
+  device in `HOMES_DATA/drucker.json` and used then), then its device's
   `configuration_url` (often a `.local` name, which Homes' container
   cannot resolve). No address that resolves: *Die Adresse des Druckers ist
   nicht bekannt.*, never „antwortet nicht“. The answer: a ping over an unprivileged ICMP socket, else
