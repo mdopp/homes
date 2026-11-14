@@ -22,8 +22,8 @@ import (
 // reload_config_entry, an admin's service: HOMES_HA_TOKEN is the user
 // homes's, an administrator), waits a few seconds for the fresh state and,
 // while HA still cannot reach it, asks the printer's own address (its
-// device's configuration_url in HA, never one a person sent) whether it
-// answers on the network („Sollte er nicht erreichbar sein, wird
+// IPP config entry's host, else its device's configuration_url in HA,
+// never one a person sent) whether it answers on the network („Sollte er nicht erreichbar sein, wird
 // angezeigt, ob ein Ping auf die Adresse funktioniert“). One check per
 // printer at a time; its answer is kept a while, so the page fetched
 // again in place (a push, the fallback) shows it instead of checking
@@ -41,21 +41,36 @@ var (
 const pruefenMS = "12e3"
 
 const (
-	saysPruefe         = "Prüfe Verbindung …"
-	saysPruefenLange   = "Die Prüfung hat zu lange gedauert. Öffne die Seite noch einmal, um es neu zu versuchen."
-	saysNoReload       = "Home Assistant hat den Drucker nicht neu verbunden."
-	saysPingJa         = "Der Drucker antwortet im Netz (Ping), aber Home Assistant erreicht ihn nicht."
-	saysPortJa         = "Der Drucker antwortet im Netz, aber Home Assistant erreicht ihn nicht."
-	saysNetzNein       = "Der Drucker antwortet nicht im Netz. Ist er an und im WLAN?"
-	saysPruefenFremd   = "Prüfen geht nur von Homes' eigener Seite."
-	saysPruefenUnknown = "Diesen Drucker gibt es nicht."
+	saysPruefe           = "Prüfe Verbindung …"
+	saysPruefenLange     = "Die Prüfung hat zu lange gedauert. Öffne die Seite noch einmal, um es neu zu versuchen."
+	saysNoReload         = "Home Assistant hat den Drucker nicht neu verbunden."
+	saysPingJa           = "Der Drucker antwortet im Netz (Ping), aber Home Assistant erreicht ihn nicht."
+	saysPortJa           = "Der Drucker antwortet im Netz, aber Home Assistant erreicht ihn nicht."
+	saysNetzNein         = "Der Drucker antwortet nicht im Netz. Ist er an und im WLAN?"
+	saysPruefenFremd     = "Prüfen geht nur von Homes' eigener Seite."
+	saysAdresseUnbekannt = "Die Adresse des Druckers ist nicht bekannt."
+	saysPruefenUnknown   = "Diesen Drucker gibt es nicht."
 )
 
-// pruefung is one printer's check: done is closed when html is its answer.
+// pruefung is one printer's check: done is closed when it has its answer,
+// html on the printer's page, netz the row's sentence while it stays
+// unreachable, wieder when it was unreachable and is reachable again.
 type pruefung struct {
-	done chan struct{}
-	html string
-	at   time.Time
+	done   chan struct{}
+	html   string
+	netz   string
+	wieder bool
+	at     time.Time
+}
+
+// answered says whether the check has its answer.
+func (p *pruefung) answered() bool {
+	select {
+	case <-p.done:
+		return true
+	default:
+		return false
+	}
 }
 
 // pruefungen are the checks, by Home Assistant and entity.
@@ -88,7 +103,7 @@ func laufend(c *ha.Client, id string) *pruefung {
 }
 
 // starten is a new check of the printer, or the one still running.
-func starten(c *ha.Client, id string, check func() string) *pruefung {
+func starten(c *ha.Client, id string, check func(*pruefung)) *pruefung {
 	pruefungen.Lock()
 	if p := pruefungen.m[pruefKey{c, id}]; p != nil {
 		select {
@@ -102,7 +117,8 @@ func starten(c *ha.Client, id string, check func() string) *pruefung {
 	pruefungen.m[pruefKey{c, id}] = p
 	pruefungen.Unlock()
 	go func() {
-		p.html, p.at = check(), time.Now()
+		check(p)
+		p.at = time.Now()
 		close(p.done)
 	}()
 	return p
@@ -110,10 +126,13 @@ func starten(c *ha.Client, id string, check func() string) *pruefung {
 
 // DruckerPruefen is the check's answer for the place on the printer's page:
 // POST starts it (or joins the one running), GET only reads it; either
-// waits for it as long as the page's script does.
+// waits for it as long as the page's script does. The row's button on
+// Geräte (zurueck: Räume, a room's card) lands back there with 303 once
+// the check has answered, the row then saying it.
 func DruckerPruefen(cfg StartConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		id := r.URL.Query().Get("geraet")
+		r.Body = http.MaxBytesReader(w, r.Body, 1<<10)
+		id := r.FormValue("geraet")
 		var reg ha.Registry
 		ok := cfg.HA != nil && ha.EntityRE.MatchString(id)
 		if ok {
@@ -129,7 +148,7 @@ func DruckerPruefen(cfg StartConfig) http.HandlerFunc {
 			http.Error(w, saysPruefenFremd, http.StatusForbidden)
 			return
 		case r.Method == http.MethodPost:
-			p = starten(cfg.HA, id, func() string { return pruefen(context.WithoutCancel(r.Context()), cfg, id, reg) })
+			p = starten(cfg.HA, id, func(p *pruefung) { pruefen(context.WithoutCancel(r.Context()), cfg, id, reg, p) })
 		case r.Method != http.MethodGet:
 			http.Error(w, "Nur GET und POST.", http.StatusMethodNotAllowed)
 			return
@@ -138,10 +157,19 @@ func DruckerPruefen(cfg StartConfig) http.HandlerFunc {
 		if p == nil {
 			return // nothing checked: the place goes
 		}
+		back := r.PostFormValue("zurueck")
 		select {
 		case <-p.done:
+			if inRaeume.MatchString(back) {
+				http.Redirect(w, r, back, http.StatusSeeOther)
+				return
+			}
 			w.Write([]byte(p.html))
 		case <-time.After(12 * time.Second):
+			if inRaeume.MatchString(back) {
+				http.Redirect(w, r, back, http.StatusSeeOther) // the row says „Prüfe …“ while it runs
+				return
+			}
 			w.Write([]byte("<p class=k>" + saysPruefenLange + "</p>"))
 		case <-r.Context().Done():
 		}
@@ -151,7 +179,7 @@ func DruckerPruefen(cfg StartConfig) http.HandlerFunc {
 // pruefen reloads the printer's config entry, waits for its fresh state,
 // and says it: reachable with its state and colours, or not with what the
 // network says.
-func pruefen(ctx context.Context, cfg StartConfig, id string, reg ha.Registry) string {
+func pruefen(ctx context.Context, cfg StartConfig, id string, reg ha.Registry, into *pruefung) {
 	before, _ := cfg.HA.State(ctx, id)
 	call, cancel := context.WithTimeout(ctx, 3*time.Second)
 	_, err := cfg.HA.Call(call, "homeassistant", "reload_config_entry", map[string]any{"entity_id": id})
@@ -170,18 +198,27 @@ func pruefen(ctx context.Context, cfg StartConfig, id string, reg ha.Registry) s
 			word = roomDetail("sensor", s, "")
 		}
 		p, _ := thisPrinter(ctx, cfg, id, reg)
-		return "<p class=zustand><span class=punkt></span>Drucker erreichbar · " + html.EscapeString(word) + "</p>" + out.String() + p.inksLine()
+		into.wieder = !(printer{status: before}).reachable()
+		into.html = "<p class=zustand><span class=punkt></span>Drucker erreichbar · " + html.EscapeString(word) + "</p>" + out.String() + p.inksLine()
+		return
 	}
 	out.WriteString("<p class=zustand><span class=\"punkt gelb\"></span>Drucker nicht erreichbar</p>")
-	if host := printerHost(reg, id); host != "" {
-		probe := cfg.Probe
-		if probe == nil {
-			probe = erreichbar.Pruefe
-		}
-		out.WriteString("<p class=k>" + map[erreichbar.Antwort]string{erreichbar.Ping: saysPingJa, erreichbar.Port: saysPortJa,
-			erreichbar.Nicht: saysNetzNein}[probe(ctx, host)] + "</p>")
+	probe := cfg.Probe
+	if probe == nil {
+		probe = erreichbar.Pruefe
 	}
-	return out.String()
+	answer := erreichbar.Unbekannt
+	for _, host := range printerHosts(ctx, cfg, reg, id) {
+		if answer = probe(ctx, host); answer != erreichbar.Unbekannt {
+			break
+		}
+	}
+	into.netz = saysNetz[answer]
+	if err != nil {
+		into.netz = saysNoReload + " " + into.netz
+	}
+	out.WriteString("<p class=k>" + saysNetz[answer] + "</p>")
+	into.html = out.String()
 }
 
 // frisch waits up to pruefenWarte for the printer's state after the reload:
@@ -204,14 +241,31 @@ func frisch(ctx context.Context, cfg StartConfig, id string, before ha.State) ha
 	return s
 }
 
-// printerHost is the printer's address: its device's configuration_url's
-// host in HA's registry; "" when HA has none.
-func printerHost(reg ha.Registry, id string) string {
-	u, err := url.Parse(reg.ConfigURLs[reg.Devices[id]])
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
-		return ""
+// saysNetz is what the printer's address answered, in the family's words.
+var saysNetz = map[erreichbar.Antwort]string{erreichbar.Ping: saysPingJa, erreichbar.Port: saysPortJa,
+	erreichbar.Nicht: saysNetzNein, erreichbar.Unbekannt: saysAdresseUnbekannt}
+
+// printerHosts are the printer's addresses, the best first: the host its
+// IPP config entry was set up with (HA's diagnostics of that entry: an IP
+// address on the box), then its device's configuration_url's host (often
+// a .local name, which resolves only with mDNS). Never one from a request.
+func printerHosts(ctx context.Context, cfg StartConfig, reg ha.Registry, id string) []string {
+	var hosts []string
+	if entry := reg.Entries[id]; entry != "" {
+		ctx, cancel := context.WithTimeout(ctx, backendWait)
+		host, err := cfg.HA.EntryHost(ctx, entry)
+		cancel()
+		if err != nil {
+			log.Printf("homes: drucker %q: its config entry's address: %v", id, err)
+		}
+		if host != "" {
+			hosts = append(hosts, host)
+		}
 	}
-	return u.Hostname()
+	if u, err := url.Parse(reg.ConfigURLs[reg.Devices[id]]); err == nil && (u.Scheme == "http" || u.Scheme == "https") && u.Hostname() != "" {
+		hosts = append(hosts, u.Hostname())
+	}
+	return hosts
 }
 
 // printerCheck is the check's place on the printer's own page: on opening

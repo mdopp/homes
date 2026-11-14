@@ -82,6 +82,10 @@ type Action struct {
 	On     bool   `json:"on,omitempty"`
 	Bild   string `json:"bild,omitempty"`
 	Frage  *Frage `json:"frage,omitempty"`
+	// Path is where it posts instead of SwitchPath, Laeuft what its button
+	// says meanwhile instead of „Schaltet …“ (a printer's „Prüfe …“)
+	Path   string `json:"path,omitempty"`
+	Laeuft string `json:"laeuft,omitempty"`
 }
 
 // Frage is what an Action asks before it is sent (a garage opening, as the
@@ -276,6 +280,9 @@ func what(b *strings.Builder, r Row) {
 // too), whose Ja posts with bestaetigt.
 func (a *Action) Form() string {
 	laeuft := `data-laeuft="Schaltet …"`
+	if a.Laeuft != "" {
+		laeuft = `data-laeuft="` + html.EscapeString(a.Laeuft) + `"`
+	}
 	if a.Bild != "" {
 		laeuft = `data-laeuft=""` // a picture stays; the tile says „schaltet …“
 	}
@@ -297,7 +304,7 @@ func (a *Action) FrageID() string { return "frage-" + slug(a.Entity) + "-" + slu
 // post is the action's form around button.
 func (a *Action) post(button string) string {
 	var b strings.Builder
-	b.WriteString("<form method=post action=" + SwitchPath + ">")
+	b.WriteString("<form method=post action=" + map[bool]string{true: SwitchPath, false: html.EscapeString(a.Path)}[a.Path == ""] + ">")
 	if a.Entity != "" {
 		b.WriteString(`<input type=hidden name=geraet value="` + html.EscapeString(a.Entity) + `">`)
 	}

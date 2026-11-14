@@ -243,11 +243,18 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   admin's service; Homes' HA user `homes` is an administrator), Homes
   reads its state for up to 4 s, and says *Drucker erreichbar · bereit*
   with its colours, or *Drucker nicht erreichbar* and what the printer's
-  own address answers (its device's `configuration_url` in HA; never an
-  address from the request): a ping over an unprivileged ICMP socket, else
+  own address answers, never an address from the request: first the host
+  its IPP config entry was set up with (HA's diagnostics of that entry,
+  `GET /api/diagnostics/config_entry/<id>`, an admin's; HA's
+  `config_entries` answers leave the entry's data out), then its device's
+  `configuration_url` (often a `.local` name, which Homes' container
+  cannot resolve). No address that resolves: *Die Adresse des Druckers ist
+  nicht bekannt.*, never „antwortet nicht“. The answer: a ping over an unprivileged ICMP socket, else
   a TCP connect to 631 or 80, 2 s at most (`internal/erreichbar`). One
   check per printer at a time, its answer kept 10 minutes;
-  `GET` only reads it (empty: none).
+  `GET` only reads it (empty: none). The row's button on Geräte sends the
+  same as a form (`geraet`, `zurueck=/raeume#karte-…`) and lands back on
+  the card with 303 once the check answered (after 12 s at the latest).
 - `GET /raeume`, `/kalender`, `/kontakte`, `/notizen` — the family's other pages
   (haus#12), from the same cards, in the family's frame. A page whose
   backend is not set has no tab and, reached anyway, says in one sentence
@@ -275,7 +282,12 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     owner 2026-11-14) is one quiet last row of its room: *Drucker ·
     erreichbar* with *Schwarz 42 %* (the marker named Black or Schwarz; the
     IPP sensors carry no colour), under 15 % *Schwarz fast leer · 12 %* in
-    the warning colour; or *Drucker · nicht erreichbar* with since when.
+    the warning colour; or *Drucker · nicht erreichbar* with since when and
+    the button *Prüfen und neu verbinden* (owner 2026-11-14: its words
+    *Prüfe …* at once, then the row says what the check found — *wieder
+    erreichbar · Schwarz 12 %*, or the network's sentence; while a check
+    runs, *Prüfe Verbindung …* and no button). A reachable printer's row
+    has no button.
     It opens the state sensor's page, which says *bereit*, *druckt* or
     *angehalten*, all colours on one line, and checks the connection
     (`POST /drucker/pruefen` above). No IPP printer, no row.

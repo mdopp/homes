@@ -3,6 +3,7 @@ package pages
 import (
 	"context"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -107,7 +108,7 @@ func TestDruckerBlackAmongMarkers(t *testing.T) {
 	if _, ok := colour.black(); ok {
 		t.Error("a printer with only cyan has black")
 	}
-	if r := colour.row("Drucker", time.Now(), time.UTC); r.Text != "Drucker · erreichbar" || r.Detail != "" {
+	if r := colour.row("Drucker", time.Now(), time.UTC, nil, "/raeume"); r.Text != "Drucker · erreichbar" || r.Detail != "" {
 		t.Errorf("row without black %+v", r)
 	}
 }
@@ -134,11 +135,11 @@ func TestDruckerUnreachable(t *testing.T) {
 	mustContain(t, body, `<a href="/raeume/sensor.epson_wf_3540_series">Drucker · nicht erreichbar</a> <span class=k>seit heute 10:00</span>`)
 	mustNotContain(t, body, "Schwarz", "Drucker · erreichbar")
 	p := printer{status: ha.State{EntityID: "sensor.p", State: "unknown"}}
-	if r := p.row("Drucker", time.Now(), time.UTC); r.Text != "Drucker · nicht erreichbar" || r.Detail != "" {
+	if r := p.row("Drucker", time.Now(), time.UTC, nil, "/raeume"); r.Text != "Drucker · nicht erreichbar" || r.Detail != "" {
 		t.Errorf("unknown %+v", r)
 	}
 	gone := printer{inks: []ha.State{{EntityID: "sensor.p_black", State: "unavailable", Attributes: map[string]any{"friendly_name": "P Black"}}}}
-	if r := gone.row("Drucker", time.Now(), time.UTC); r.Text != "Drucker · nicht erreichbar" || r.Href != "/raeume/sensor.p_black" {
+	if r := gone.row("Drucker", time.Now(), time.UTC, nil, "/raeume"); r.Text != "Drucker · nicht erreichbar" || r.Href != "/raeume/sensor.p_black" {
 		t.Errorf("missing state sensor %+v", r)
 	}
 }
@@ -153,7 +154,7 @@ func TestDruckerInkWarning(t *testing.T) {
 	}{{12, "Schwarz fast leer · 12 %", true}, {14.6, "Schwarz 15 %", false}, {15, "Schwarz 15 %", false}, {0, "Schwarz fast leer · 0 %", true}} {
 		p := printer{status: ha.State{EntityID: "sensor.p", State: "printing"}, inks: []ha.State{{EntityID: "sensor.p_k",
 			State: decimalDot(c.level), Attributes: map[string]any{"friendly_name": "P Black ink"}}}}
-		if r := p.row("Drucker", time.Now(), time.UTC); r.Detail != c.detail || r.Warn != c.warn {
+		if r := p.row("Drucker", time.Now(), time.UTC, nil, "/raeume"); r.Detail != c.detail || r.Warn != c.warn {
 			t.Errorf("%v: %+v", c.level, r)
 		}
 	}
@@ -208,17 +209,21 @@ func fastChecks(t *testing.T) {
 	t.Cleanup(func() { pruefenWarte, pruefenTakt = w, k })
 }
 
-// a printer with its address in HA (the device's configuration_url)
+// a printer with its addresses in HA as on the box (2026-11-14): its
+// device's configuration_url a .local name, its IPP config entry's host
+// (its diagnostics) an IP address
 func epsonAt(t *testing.T, fake *hafake.HA, status string) {
 	t.Helper()
 	epson(t, fake, status, 12)
 	fake.SetRegistries(
 		[]map[string]any{{"area_id": "buero", "name": "Büro"}},
-		[]map[string]any{{"id": "dev-epson", "area_id": "buero", "configuration_url": "http://192.168.178.40:80/PRESENTATION/BONJOUR"}},
+		[]map[string]any{{"id": "dev-epson", "area_id": "buero", "configuration_url": "http://EPSON0A36A8.local.:80/PRESENTATION/BONJOUR"}},
 		[]map[string]any{
-			{"entity_id": "sensor.epson_wf_3540_series", "device_id": "dev-epson", "platform": "ipp"},
-			{"entity_id": "sensor.epson_wf_3540_series_black_ink", "device_id": "dev-epson", "platform": "ipp"},
+			{"entity_id": "sensor.epson_wf_3540_series", "device_id": "dev-epson", "platform": "ipp", "config_entry_id": "entry-ipp"},
+			{"entity_id": "sensor.epson_wf_3540_series_black_ink", "device_id": "dev-epson", "platform": "ipp", "config_entry_id": "entry-ipp"},
 		})
+	fake.SetDiagnostics("entry-ipp", map[string]any{"entry": map[string]any{"data": map[string]any{"host": "192.168.178.87", "port": 631,
+		"base_path": "/Epson_IPP_Printer", "ssl": false, "verify_ssl": false}, "unique_id": "cfe92100-67c4-11d4-a45f-9caed30a36a8"}})
 }
 
 // Opening the printer's page answers at once with „Prüfe Verbindung …“ in
@@ -294,7 +299,7 @@ func TestDruckerCheckUnreachableProbes(t *testing.T) {
 		cfg.Probe = func(_ context.Context, host string) erreichbar.Antwort { asked = append(asked, host); return c.a }
 		_, body := pruefe(t, cfg, "POST", "sensor.epson_wf_3540_series&host=10.0.0.1") // a host sent along is never asked
 		mustContain(t, body, "Drucker nicht erreichbar", c.says)
-		if strings.Join(asked, ",") != "192.168.178.40" {
+		if strings.Join(asked, ",") != "192.168.178.87" { // the config entry's host first
 			t.Errorf("%v: probed %v", c.a, asked)
 		}
 	}
@@ -313,8 +318,48 @@ func TestDruckerCheckReloadRefused(t *testing.T) {
 		return erreichbar.Nicht
 	}
 	_, body := pruefe(t, cfg, "POST", "sensor.epson_wf_3540_series")
-	mustContain(t, body, "Home Assistant hat den Drucker nicht neu verbunden.", "Drucker nicht erreichbar")
+	mustContain(t, body, "Home Assistant hat den Drucker nicht neu verbunden.", "Drucker nicht erreichbar",
+		"Die Adresse des Druckers ist nicht bekannt.")
 	mustNotContain(t, body, "im Netz")
+}
+
+// The box's case (2026-11-14): HA's diagnostics give no host, the
+// device's configuration_url is a .local name Homes' container cannot
+// resolve. That is said as not known, never as „antwortet nicht“; with
+// the entry's host unresolved too, the .local name is still tried.
+func TestDruckerCheckLocalNameUnresolved(t *testing.T) {
+	fastChecks(t)
+	for _, c := range []struct {
+		name      string
+		diagnoses bool
+		want      string
+	}{{"no diagnostics", false, "EPSON0A36A8.local."}, {"neither resolves", true, "192.168.178.87,EPSON0A36A8.local."}} {
+		fake, hc := house(t)
+		epsonAt(t, fake, "unavailable")
+		if !c.diagnoses {
+			fake.SetDiagnostics("entry-ipp", map[string]any{"entry": map[string]any{"data": map[string]any{}}})
+		}
+		cfg := druckerCfg(hc)
+		var asked []string
+		cfg.Probe = func(_ context.Context, host string) erreichbar.Antwort {
+			asked = append(asked, host)
+			return erreichbar.Unbekannt
+		}
+		_, body := pruefe(t, cfg, "POST", "sensor.epson_wf_3540_series")
+		mustContain(t, body, "Drucker nicht erreichbar", "Die Adresse des Druckers ist nicht bekannt.")
+		mustNotContain(t, body, "antwortet")
+		if strings.Join(asked, ",") != c.want {
+			t.Errorf("%s: asked %v, want %s", c.name, asked, c.want)
+		}
+	}
+	// the .local name that does resolve (an mDNS resolver) is asked and answers
+	fake, hc := house(t)
+	epsonAt(t, fake, "unavailable")
+	fake.SetDiagnostics("entry-ipp", map[string]any{"entry": map[string]any{"data": map[string]any{}}})
+	cfg := druckerCfg(hc)
+	cfg.Probe = func(context.Context, string) erreichbar.Antwort { return erreichbar.Port }
+	_, body := pruefe(t, cfg, "POST", "sensor.epson_wf_3540_series")
+	mustContain(t, body, "Der Drucker antwortet im Netz, aber Home Assistant erreicht ihn nicht.")
 }
 
 // Only a printer's state sensor is checked, only from Homes' own page.
@@ -333,4 +378,88 @@ func TestDruckerCheckOnlyAPrinter(t *testing.T) {
 	if rec.Code != 403 || len(fake.Calls()) != 0 {
 		t.Errorf("from elsewhere: %d, calls %d", rec.Code, len(fake.Calls()))
 	}
+}
+
+// pruefeForm is the row's button as a form sends it (with script, as Homes'
+// script sends a form; without, the browser's own POST).
+func pruefeForm(t *testing.T, cfg StartConfig, form url.Values) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest("POST", DruckerPruefenPath, strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Remote-User", "anna")
+	req.Header.Set("Sec-Fetch-Site", "same-origin")
+	rec := httptest.NewRecorder()
+	DruckerPruefen(cfg).ServeHTTP(rec, req)
+	return rec
+}
+
+// The owner (2026-11-14): „einen Button auf der Karte … ‚Prüfen und neu
+// verbinden‘“. Only an unreachable printer's row has it: a form to the
+// check that says „Prüfe …“ on the button at once; a reachable one stays
+// quiet.
+func TestDruckerRowButtonOnlyWhenUnreachable(t *testing.T) {
+	fake, hc := house(t)
+	epsonAt(t, fake, "unavailable")
+	_, body, _ := familyPage(t, Raeume, druckerCfg(hc), "GET", "/raeume", "")
+	mustContain(t, body, `<form method=post action=/drucker/pruefen><input type=hidden name=geraet value="sensor.epson_wf_3540_series">`,
+		`<input type=hidden name=zurueck value="/raeume#karte-buero"><button data-laeuft="Prüfe …">Prüfen und neu verbinden</button></form>`)
+	fake, hc = house(t)
+	epsonAt(t, fake, "idle")
+	_, body, _ = familyPage(t, Raeume, druckerCfg(hc), "GET", "/raeume", "")
+	mustNotContain(t, body, "Prüfen und neu verbinden", "action=/drucker/pruefen")
+}
+
+// The row's button checks as the printer's page does and lands back on the
+// card (303), whose row then says what the check found: the network's
+// sentence, the button again; or, reachable again, „wieder erreichbar“
+// with the black ink. A zurueck that is not Räume gets no redirect.
+func TestDruckerRowButtonAnswersInTheRow(t *testing.T) {
+	fastChecks(t)
+	fake, hc := house(t)
+	epsonAt(t, fake, "unavailable")
+	cfg := druckerCfg(hc)
+	cfg.Probe = func(context.Context, string) erreichbar.Antwort { return erreichbar.Nicht }
+	form := url.Values{"geraet": {"sensor.epson_wf_3540_series"}, "tun": {"pruefen"}, "zurueck": {"/raeume#karte-buero"}}
+	rec := pruefeForm(t, cfg, form)
+	if rec.Code != 303 || rec.Header().Get("Location") != "/raeume#karte-buero" {
+		t.Fatalf("%d %q", rec.Code, rec.Header().Get("Location"))
+	}
+	if calls := fake.Calls(); len(calls) != 1 || calls[0].Service != "reload_config_entry" {
+		t.Fatalf("calls %+v", calls)
+	}
+	_, body, _ := familyPage(t, Raeume, cfg, "GET", "/raeume", "")
+	mustContain(t, body, `Drucker · nicht erreichbar</a> <span class=k>Der Drucker antwortet nicht im Netz. Ist er an und im WLAN?</span>`,
+		"Prüfen und neu verbinden")
+
+	fake, hc = house(t)
+	epsonAt(t, fake, "unavailable")
+	cfg = druckerCfg(hc)
+	go func() { // HA reaches it again while Homes waits
+		time.Sleep(60 * time.Millisecond)
+		epson(t, fake, "idle", 12)
+		epsonAt(t, fake, "idle")
+	}()
+	if rec := pruefeForm(t, cfg, form); rec.Code != 303 {
+		t.Fatalf("%d", rec.Code)
+	}
+	_, body, _ = familyPage(t, Raeume, cfg, "GET", "/raeume", "")
+	mustContain(t, body, `Drucker · wieder erreichbar</a> <span class="k warn">Schwarz fast leer · 12`)
+	mustNotContain(t, body, "Prüfen und neu verbinden")
+
+	form.Set("zurueck", "https://example.org/")
+	if rec := pruefeForm(t, cfg, form); rec.Code != 200 || rec.Header().Get("Location") != "" {
+		t.Errorf("elsewhere: %d %q", rec.Code, rec.Header().Get("Location"))
+	}
+}
+
+// While a check runs, the row says so and offers no second one.
+func TestDruckerRowWhileChecking(t *testing.T) {
+	fake, hc := house(t)
+	epsonAt(t, fake, "unavailable")
+	release := make(chan struct{})
+	p := starten(hc, "sensor.epson_wf_3540_series", func(*pruefung) { <-release })
+	defer func() { close(release); <-p.done }()
+	_, body, _ := familyPage(t, Raeume, druckerCfg(hc), "GET", "/raeume", "")
+	mustContain(t, body, `Drucker · nicht erreichbar</a> <span class=k>Prüfe Verbindung …</span>`)
+	mustNotContain(t, body, "Prüfen und neu verbinden")
 }

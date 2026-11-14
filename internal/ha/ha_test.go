@@ -216,3 +216,18 @@ func TestSubscribe(t *testing.T) {
 		t.Fatal("Subscribe did not return on cancel")
 	}
 }
+
+// A config entry's host is read from its diagnostics (IPP's: entry.data.host);
+// an entry HA has no diagnostics for is an error and no host.
+func TestEntryHost(t *testing.T) {
+	fake := hafake.New("tok")
+	defer fake.Close()
+	fake.SetDiagnostics("entry-ipp", map[string]any{"entry": map[string]any{"data": map[string]any{"host": " 192.168.178.87 ", "port": 631}}})
+	c := &Client{URL: fake.URL, Token: "tok"}
+	if h, err := c.EntryHost(context.Background(), "entry-ipp"); err != nil || h != "192.168.178.87" {
+		t.Errorf("host %q %v", h, err)
+	}
+	if h, err := c.EntryHost(context.Background(), "entry-other"); err == nil || h != "" {
+		t.Errorf("unknown entry: %q %v", h, err)
+	}
+}

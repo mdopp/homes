@@ -29,8 +29,9 @@ func TestPingWithoutTimeIsNo(t *testing.T) {
 	}
 }
 
-// An address nothing answers on (TEST-NET-1, RFC 5737) and a name that
-// does not resolve are Nicht, within Wait.
+// An address nothing answers on (TEST-NET-1, RFC 5737) is Nicht, a name
+// that does not resolve (a printer's .local name without mDNS) Unbekannt,
+// each within Wait.
 func TestPruefeNothing(t *testing.T) {
 	defer func(w time.Duration) { Wait = w }(Wait)
 	Wait = 400 * time.Millisecond
@@ -38,8 +39,11 @@ func TestPruefeNothing(t *testing.T) {
 	if a := Pruefe(t.Context(), "192.0.2.1"); a != Nicht {
 		t.Errorf("TEST-NET answered %v", a)
 	}
-	if a := Pruefe(t.Context(), "drucker.invalid"); a != Nicht {
+	if a := Pruefe(t.Context(), "drucker.invalid"); a != Unbekannt {
 		t.Errorf("a name that does not resolve answered %v", a)
+	}
+	if a := Pruefe(t.Context(), "EPSON0A36A8.local."); a != Unbekannt && a != Nicht {
+		t.Errorf("a .local name answered %v", a) // Nicht only where an mDNS resolver answers it and the printer does not
 	}
 	if took := time.Since(began); took > 2*time.Second {
 		t.Errorf("took %v, bounded by Wait", took)

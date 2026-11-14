@@ -104,7 +104,7 @@ func writeRaeume(w http.ResponseWriter, r *http.Request, cfg StartConfig, saved 
 		}
 		standard := standardZeilen(states, reg, isAdmin(r), saved)
 		now, loc := cfg.clock()
-		for _, c := range roomCards(states, reg, pinned, playingIDs(playing), printerRows(states, reg, now, loc)) {
+		for _, c := range roomCards(states, reg, pinned, playingIDs(playing), printerRows(states, reg, now, loc, cfg.HA)) {
 			h := c.HTML()
 			if end := strings.LastIndex(h, "</ul>"); end >= 0 {
 				h = h[:end] + standard[c.Title] + h[end:] // the room's standard speaker, its last row

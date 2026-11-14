@@ -138,17 +138,22 @@ func (p printer) black() (ha.State, bool) {
 	return ha.State{}, false
 }
 
-// row is the printer's one quiet row on its room's card: reachable or
-// not (since when, not), and the black ink, a warning under inkLow.
-func (p printer) row(name string, now time.Time, loc *time.Location) cards.Row {
+// row is the printer's one quiet row on its room's card: reachable (again,
+// after a check) or not (since when, or what the last check found, with
+// „Prüfen und neu verbinden“, owner 2026-11-14), and the black ink, a
+// warning under inkLow. check is the printer's check running or answered;
+// back the card the button lands on.
+func (p printer) row(name string, now time.Time, loc *time.Location, check *pruefung, back string) cards.Row {
 	r := cards.Row{Text: name + " · nicht erreichbar", Href: cards.ThingPage(p.id())}
+	answered := check != nil && check.answered()
 	if !p.reachable() {
 		if p.status.State == "unavailable" {
 			r.Detail = changedWords(p.status, now, loc)
 		}
+		p.checkRow(&r, check, answered, back)
 		return r
 	}
-	r.Text = name + " · erreichbar"
+	r.Text = name + " · " + map[bool]string{true: "wieder erreichbar", false: "erreichbar"}[answered && check.wieder]
 	if s, ok := p.black(); ok {
 		if v, ok := level(s); ok {
 			r.Detail, r.Warn = "Schwarz "+percent0(float64(v)), v < inkLow
@@ -160,9 +165,27 @@ func (p printer) row(name string, now time.Time, loc *time.Location) cards.Row {
 	return r
 }
 
+// checkRow is an unreachable printer's row with its check: „Prüfe Verbindung
+// …“ while it runs, what it found once answered, and the button that
+// checks (again), a form to DruckerPruefenPath that lands back on the card.
+func (p printer) checkRow(r *cards.Row, check *pruefung, answered bool, back string) {
+	switch {
+	case check != nil && !answered:
+		r.Detail = saysPruefe
+		return
+	case answered && check.netz != "":
+		r.Detail = check.netz
+	}
+	if p.status.EntityID != "" {
+		r.Action = &cards.Action{Label: "Prüfen und neu verbinden", Entity: p.status.EntityID, Do: "pruefen", Back: back,
+			Path: DruckerPruefenPath, Laeuft: "Prüfe …"}
+	}
+}
+
 // printerRows are the rows for Räume's room cards: „Drucker“, or each
-// printer's name when the house has more than one.
-func printerRows(states []ha.State, reg ha.Registry, now time.Time, loc *time.Location) []roomExtra {
+// printer's name when the house has more than one. c is the Home
+// Assistant the checks were asked of.
+func printerRows(states []ha.State, reg ha.Registry, now time.Time, loc *time.Location, c *ha.Client) []roomExtra {
 	ps := findPrinters(states, reg)
 	out := make([]roomExtra, 0, len(ps))
 	for _, p := range ps {
@@ -170,7 +193,12 @@ func printerRows(states []ha.State, reg ha.Registry, now time.Time, loc *time.Lo
 		if len(ps) > 1 && p.status.EntityID != "" {
 			name = friendly(p.status)
 		}
-		out = append(out, roomExtra{room: p.room, name: name, row: p.row(name, now, loc)})
+		title := trimRunes(p.room, 60)
+		if title == "" {
+			title = noRoom
+		}
+		row := p.row(name, now, loc, laufend(c, p.status.EntityID), "/raeume#"+cards.Card{Title: title}.ID())
+		out = append(out, roomExtra{room: p.room, name: name, row: row})
 	}
 	return out
 }

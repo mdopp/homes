@@ -18,9 +18,10 @@ import (
 type Antwort int
 
 const (
-	Nicht Antwort = iota // no answer, or the name did not resolve
-	Ping                 // it answered a ping
-	Port                 // it accepted a TCP connection, a ping not tried or not answered
+	Nicht     Antwort = iota // no answer
+	Ping                     // it answered a ping
+	Port                     // it accepted a TCP connection, a ping not tried or not answered
+	Unbekannt                // the name did not resolve (a .local name without mDNS): nothing was asked
 )
 
 // Wait bounds the whole check; Ports are what a printer listens on (IPP, its web page).
@@ -35,7 +36,7 @@ func Pruefe(ctx context.Context, host string) Antwort {
 	defer cancel()
 	ips, err := net.DefaultResolver.LookupNetIP(ctx, "ip4", host)
 	if err != nil || len(ips) == 0 {
-		return Nicht
+		return Unbekannt
 	}
 	ip := ips[0].Unmap()
 	deadline, _ := ctx.Deadline()
