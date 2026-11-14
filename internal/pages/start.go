@@ -19,6 +19,7 @@ import (
 	"github.com/mdopp/homes/internal/caldav"
 	"github.com/mdopp/homes/internal/cards"
 	"github.com/mdopp/homes/internal/discogs"
+	"github.com/mdopp/homes/internal/drucker"
 	"github.com/mdopp/homes/internal/einkauf"
 	"github.com/mdopp/homes/internal/einrichten"
 	"github.com/mdopp/homes/internal/energie"
@@ -380,7 +381,7 @@ func deineGeraete(ids []string, err error, states []ha.State, haErr error, reg h
 			continue
 		}
 		if n++; n <= maxGeraete {
-			ks = append(ks, neueKachel(s, reg.TempUnit, "/start"))
+			ks = append(ks, geraetKachel(s, states, reg))
 		}
 	}
 	if n == 0 {
@@ -388,6 +389,16 @@ func deineGeraete(ids []string, err error, states []ha.State, haErr error, reg h
 		return c.HTML()
 	}
 	return kachelnHTML(c.ID(), ks, n-maxGeraete, stand)
+}
+
+// geraetKachel is a pinned thing's tile; a printer's says Geräte's words
+// („bereit · Schwarz 12 %“, as the app's tile, owner 2026-11-14), not HA's „idle“.
+func geraetKachel(s ha.State, states []ha.State, reg ha.Registry) kachel {
+	k := neueKachel(s, reg.TempUnit, "/start")
+	if p, ok := drucker.Of(states, reg, s.EntityID); ok && p.Status.EntityID == s.EntityID {
+		k.worte = p.Text()
+	}
+	return k
 }
 
 // capital is the word with its first letter upper case: "an" → "An".

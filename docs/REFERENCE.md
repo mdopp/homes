@@ -295,6 +295,9 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     erreichbar · Schwarz 12 %*, or the network's sentence; while a check
     runs, *Prüfe Verbindung …* and no button). A reachable printer's row
     has no button.
+    Its ☆ pins its state sensor like any row (owner 2026-11-14); pinned,
+    Start's tile and the app's say the row's words (*bereit · Schwarz
+    42 %*), not HA's state.
     It opens the state sensor's page, which says *bereit*, *druckt* or
     *angehalten*, all colours on one line, and checks the connection
     (`POST /drucker/pruefen` above). No IPP printer, no row.

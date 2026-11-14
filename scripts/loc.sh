@@ -114,7 +114,9 @@ budget() { # budget <name> <cap> <dir…>
 # roomCards' row split out, nachladen by POST, the host HA's diagnostics last gave kept in HOMES_DATA/drucker.json
 # 2026-11-14, the same request's follow-up („Wird auch der Status ‚druckt‘ dargestellt?“, „Bitte in der App und auf der Webseite
 # gleich“): pages 20,075 -> 19,950, ratcheted down by the printer's reading moved to internal/drucker (household)
-budget pages 19950 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-14, owner's request 2026-11-14 („In der Liste hat der Drucker keinen Stern für Favoriten“; pages 19,950 -> 19,970;
+# 19,965 used, to be OK'd in the PR): the printer row's ☆ (roomThing.ownRow split from cardRow), Start's tile in its words
+budget pages 19970 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted

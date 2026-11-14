@@ -145,7 +145,7 @@ func roomCards(states []ha.State, reg ha.Registry, pinned, playing map[string]bo
 		byRoom[room] = append(byRoom[room], roomThing{kind, s.EntityID, friendly(s), roomDetail(domain, s, reg.TempUnit), s, nil})
 	}
 	for _, e := range extra {
-		byRoom[e.room] = append(byRoom[e.room], roomThing{kind: len(roomKinds), name: e.name, row: &e.row})
+		byRoom[e.room] = append(byRoom[e.room], roomThing{kind: len(roomKinds), id: e.entity, name: e.name, row: &e.row})
 	}
 	names := make([]string, 0, len(byRoom))
 	for n := range byRoom {
@@ -192,15 +192,26 @@ type roomThing struct {
 	row              *cards.Row
 }
 
-// roomExtra is a row a room card shows that is not one entity's (a printer).
+// roomExtra is a row a room card shows that is not one entity's own (a
+// printer's); entity is what its ☆ pins (its state sensor), "" for none.
 type roomExtra struct {
-	room, name string
-	row        cards.Row
+	room, name, entity string
+	row                cards.Row
 }
 
-// cardRow is the thing's row: a lamp switched and dimmed on it, a cover's
-// buttons and position (haus#64), the ☆ when pinned is set.
+// cardRow is the thing's row with the ☆ when pinned is set (a printer's
+// too, owner 2026-11-14: „In der Liste hat der Drucker keinen Stern“).
 func (t roomThing) cardRow(pinned map[string]bool, back string) cards.Row {
+	row := t.ownRow(back)
+	if pinned != nil && t.id != "" {
+		row.Pin = &cards.Pin{Entity: t.id, Name: t.name, On: pinned[t.id], Back: back}
+	}
+	return row
+}
+
+// ownRow is the thing's row but its ☆: a lamp switched and dimmed on it, a
+// cover's buttons and position (haus#64); an extra's as it was made.
+func (t roomThing) ownRow(back string) cards.Row {
 	if t.row != nil {
 		return *t.row
 	}
@@ -214,9 +225,6 @@ func (t roomThing) cardRow(pinned map[string]bool, back string) cards.Row {
 			row.Also = bs
 		}
 		row.Slider = coverSlider(t.state, back)
-	}
-	if pinned != nil {
-		row.Pin = &cards.Pin{Entity: t.id, Name: t.name, On: pinned[t.id], Back: back}
 	}
 	return row
 }

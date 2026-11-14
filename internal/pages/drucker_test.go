@@ -531,3 +531,40 @@ func TestDruckerRowSaysTheState(t *testing.T) {
 	mustContain(t, body, `Drucker · angehalten</a> <span class="k warn">Papier leer · Schwarz 40 %</span>`)
 	mustNotContain(t, body, "Load paper")
 }
+
+// The owner (2026-11-14): „In der Liste hat der Drucker keinen Stern für
+// Favoriten.“ The printer's row has the ☆ every row has, pinning its state
+// sensor, beside the check's button while unreachable; pinned, Start's tile
+// says Geräte's words (the app's from napi's text), not HA's „idle“.
+func TestDruckerRowPins(t *testing.T) {
+	fake, hc := house(t)
+	epsonAt(t, fake, "idle")
+	cfg := druckerCfg(hc)
+	cfg.Favorites = favorites(t, `{"anna": []}`)
+	_, body, _ := familyPage(t, Raeume, cfg, "GET", "/raeume", "family")
+	buero := section(t, body, "karte-buero")
+	mustContain(t, buero, `<form method=post action="/raeume/sensor.epson_wf_3540_series"><input type=hidden name=stern value=an>`,
+		`name=zurueck value="/raeume#karte-buero"`, `aria-label="Drucker auf Start zeigen">☆</button>`)
+	if n := strings.Count(buero, "name=stern"); n != 1 { // the printer's, once
+		t.Errorf("%d stars in the Büro, want 1", n)
+	}
+	rec := post(t, Ding(cfg), "/raeume/sensor.epson_wf_3540_series", url.Values{"stern": {"an"}, "zurueck": {"/raeume#karte-buero"}}, "anna", nil)
+	if rec.Code != 303 || rec.Header().Get("Location") != "/raeume#karte-buero" {
+		t.Fatalf("pin → %d %q", rec.Code, rec.Header().Get("Location"))
+	}
+	if got, _ := cfg.Favorites.For("anna"); strings.Join(got, ",") != "sensor.epson_wf_3540_series" {
+		t.Fatalf("anna: %v", got)
+	}
+	_, body, _ = familyPage(t, Raeume, cfg, "GET", "/raeume", "family")
+	mustContain(t, section(t, body, "karte-buero"), `aria-label="Drucker von Start nehmen">★</button>`)
+	_, start := startPage(t, cfg, "")
+	mustContain(t, start, "bereit · Schwarz fast leer · 12 %")
+	mustNotContain(t, start, ">idle<")
+
+	fake, hc = house(t) // unreachable: the button and the ☆ side by side
+	epsonAt(t, fake, "unavailable")
+	cfg = druckerCfg(hc)
+	cfg.Favorites = favorites(t, `{"anna": []}`)
+	_, body, _ = familyPage(t, Raeume, cfg, "GET", "/raeume", "family")
+	mustContain(t, section(t, body, "karte-buero"), "Prüfen und neu verbinden</button></form>", `aria-label="Drucker auf Start zeigen">☆</button>`)
+}

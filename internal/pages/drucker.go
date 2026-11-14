@@ -79,7 +79,7 @@ func printerRows(states []ha.State, reg ha.Registry, now time.Time, loc *time.Lo
 			title = noRoom
 		}
 		row := p.row(name, now, loc, laufend(c, p.Status.EntityID), "/raeume#"+cards.Card{Title: title}.ID())
-		out = append(out, roomExtra{room: p.Room, name: name, row: row})
+		out = append(out, roomExtra{room: p.Room, name: name, entity: p.Status.EntityID, row: row})
 	}
 	return out
 }
