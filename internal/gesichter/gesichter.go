@@ -7,7 +7,7 @@
 // Handy-Kontakte. Homes makes one where Immich has none of that name, and
 // keeps the name and birthday of the ones it made; it never deletes,
 // hides or renames another, but for a name the owner gives on „Wer ist
-// das?“ (wer.go). A person renamed in Immich renames its
+// das?“ and a face the owner says is „Kein Mensch“, hidden (wer.go). A person renamed in Immich renames its
 // Haushalts-Kontakt (abgleich.go, folgen). The owner names a face in Immich, Immich
 // offers the person of that name, the owner merges: the faces come from
 // Immich itself.
@@ -36,6 +36,7 @@ import (
 	"image/jpeg"
 	_ "image/png" // a contact's own photo (kontaktantwort.Foto)
 	"log"
+	"maps"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -142,6 +143,9 @@ type stand struct {
 	// Unbekannt those the owner does not know, by id
 	Ohne      []immich.Person      `json:"ohne,omitempty"`
 	Unbekannt map[string]time.Time `json:"unbekannt,omitempty"`
+	// Versteckt are those the owner said are no person („Kein Mensch“),
+	// hidden in Immich by Homes, by id: kept for Rückgängig
+	Versteckt map[string]immich.Person `json:"versteckt,omitempty"`
 	// Bekannt are the named persons seen, by id (handy.go); nil before
 	// the first look, so the names given before it ask for nothing
 	Bekannt map[string]bool `json:"bekannt"`
@@ -194,7 +198,7 @@ func (g *Gesichter) laden() {
 	}
 	st := &g.stand
 	st.Zuordnung, st.Naehe, st.Andere, st.Fotos, st.Nein, st.Spaeter = leer(st.Zuordnung), leer(st.Naehe), leer(st.Andere), leer(st.Fotos), leer(st.Nein), leer(st.Spaeter)
-	st.Kontaktbilder, st.Kontaktfotos, st.Umfeld, st.Unbekannt = leer(st.Kontaktbilder), leer(st.Kontaktfotos), leer(st.Umfeld), leer(st.Unbekannt)
+	st.Kontaktbilder, st.Kontaktfotos, st.Umfeld, st.Unbekannt, st.Versteckt = leer(st.Kontaktbilder), leer(st.Kontaktfotos), leer(st.Umfeld), leer(st.Unbekannt), leer(st.Versteckt)
 }
 
 func leer[V any](m map[string]V) map[string]V {
@@ -372,7 +376,7 @@ func (g *Gesichter) Auffrischen(ctx context.Context) error {
 	}
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	for id := range g.stand.Andere { // the closest, faces kept for „Dieselbe Person?“
+	for _, id := range slices.Concat(slices.Collect(maps.Keys(g.stand.Andere)), slices.Collect(maps.Keys(g.stand.Versteckt))) { // the closest, faces kept for „Dieselbe Person?“; the hidden for Rückgängig
 		if b, da := alt[id]; da && neu[id].JPEG == nil {
 			neu[id] = b
 		}

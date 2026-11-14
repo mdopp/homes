@@ -17,7 +17,9 @@ import (
 // reads their places and company once a day (Umfelder); a page only reads
 // what is kept. A name goes to Immich (Benennen); one of a person's name
 // already is merged into it by the next run (Zusammenfuehren). „Kenne ich
-// nicht“ is kept, and that face is never offered again. The unnamed face
+// nicht“ is kept, and that face is never offered again; „Kein Mensch“ (a
+// toy's face, owner 2026-11-14) hides the person in Immich, as Immich's
+// own „ausblenden“, until Rückgängig (Ausblenden). The unnamed face
 // of a pair the owner said „Nein“ to is named the same way, right there
 // (Dann, owner 2026-11-11); the named side's own name for it is a „Ja“
 // after all.
@@ -44,6 +46,8 @@ func (g *Gesichter) Wer() []Seite {
 	var out []Seite
 	for _, p := range st.Ohne {
 		_, nie := st.Unbekannt[p.ID]
+		_, versteckt := st.Versteckt[p.ID]
+		nie = nie || versteckt
 		s := st.seite(p.ID, "", st.fotos(p.ID), st.Bilder[p.ID].JPEG)
 		if s.Vorschlag = vor[p.ID]; !nie && !g.weg[p.ID] && (s.Fotos >= werMinFotos || s.Vorschlag != "") && s.zeigbar() {
 			out = append(out, s)
@@ -69,7 +73,8 @@ func (g *Gesichter) Dann(id string) (Seite, bool) {
 	st := g.stand
 	p, da := st.Andere[id]
 	_, nie := st.Unbekannt[id]
-	if !da || nie || g.weg[id] || strings.TrimSpace(p.Name) != "" || len(st.neinMit(id)) == 0 || slices.ContainsFunc(st.Personen, func(q immich.Person) bool { return q.ID == id }) {
+	_, versteckt := st.Versteckt[id]
+	if !da || nie || versteckt || g.weg[id] || strings.TrimSpace(p.Name) != "" || len(st.neinMit(id)) == 0 || slices.ContainsFunc(st.Personen, func(q immich.Person) bool { return q.ID == id }) {
 		return Seite{}, false
 	}
 	s := st.seite(id, "", st.fotos(id), st.Bilder[id].JPEG)
@@ -105,21 +110,17 @@ func (st stand) neinMit(id string) []string {
 // said „Nein“ to beside id merges id into it instead (zusammen) and
 // answers doch. ErrKeineFrage: id is not offered (any more).
 func (g *Gesichter) Benennen(ctx context.Context, id, name string) (genannt string, doch bool, err error) {
-	_, dann := g.Dann(id)
-	gezeigt := dann || slices.ContainsFunc(g.Wer(), func(s Seite) bool { return s.ID == id })
+	p, gezeigt := g.gefragt(id)
 	name = strings.Join(strings.Fields(name), " ")
 	g.mu.Lock()
-	p, links := g.stand.Andere[id], immich.Person{}
-	if i := slices.IndexFunc(g.stand.Ohne, func(p immich.Person) bool { return p.ID == id }); i >= 0 {
-		p = g.stand.Ohne[i]
-	}
+	links := immich.Person{}
 	for _, q := range g.stand.Personen {
 		if name != "" && namen.Plain(q.Name) == namen.Plain(name) && slices.Contains(g.stand.neinMit(id), q.ID) {
 			links = q
 		}
 	}
 	g.mu.Unlock()
-	if !gezeigt || p.ID == "" {
+	if !gezeigt {
 		return "", false, ErrKeineFrage
 	}
 	if links.ID != "" {
@@ -139,4 +140,60 @@ func (g *Gesichter) Benennen(ctx context.Context, id, name string) (genannt stri
 		g.stand.Personen = append(g.stand.Personen, p)
 	}
 	return name, false, g.save()
+}
+
+// gefragt is the unnamed person id as kept, ok while Wer or Dann offers it.
+func (g *Gesichter) gefragt(id string) (immich.Person, bool) {
+	_, dann := g.Dann(id)
+	gezeigt := dann || slices.ContainsFunc(g.Wer(), func(s Seite) bool { return s.ID == id })
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	p := g.stand.Andere[id]
+	if i := slices.IndexFunc(g.stand.Ohne, func(p immich.Person) bool { return p.ID == id }); i >= 0 {
+		p = g.stand.Ohne[i]
+	}
+	return p, gezeigt && p.ID != ""
+}
+
+// Ausblenden takes the owner's „Kein Mensch“ about the unnamed person id
+// (of Wer or Dann; owner 2026-11-14: a toy's face is no person): hidden in
+// Immich (isHidden, person.update; its faces and photos stay), so Immich
+// leaves it out of its people and Homes never asks again; kept for
+// Einblenden. ErrKeineFrage: id is not offered (any more).
+func (g *Gesichter) Ausblenden(ctx context.Context, id string) error {
+	p, gezeigt := g.gefragt(id)
+	if !gezeigt {
+		return ErrKeineFrage
+	}
+	if err := g.Immich.Verstecken(ctx, id, true); err != nil {
+		return err
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.stand.Ohne = slices.DeleteFunc(g.stand.Ohne, func(q immich.Person) bool { return q.ID == id })
+	g.stand.Versteckt[id] = p
+	return g.save()
+}
+
+// Einblenden is Rückgängig for Ausblenden: id is shown in Immich again and
+// asked again. ErrKeineFrage: Homes did not hide id.
+func (g *Gesichter) Einblenden(ctx context.Context, id string) error {
+	if g == nil || g.Immich == nil {
+		return ErrKeineFrage
+	}
+	g.mu.Lock()
+	g.laden()
+	p, da := g.stand.Versteckt[id]
+	g.mu.Unlock()
+	if !da {
+		return ErrKeineFrage
+	}
+	if err := g.Immich.Verstecken(ctx, id, false); err != nil {
+		return err
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	delete(g.stand.Versteckt, id)
+	g.stand.Ohne = append(slices.DeleteFunc(g.stand.Ohne, func(q immich.Person) bool { return q.ID == id }), p)
+	return g.save()
 }

@@ -169,3 +169,61 @@ func TestDann(t *testing.T) {
 		t.Fatal("offered after Kenne ich nicht")
 	}
 }
+
+// „Kein Mensch“ (owner 2026-11-14: a toy's face, 14 photos, asked as a
+// person): the face is hidden in Immich, its photos and faces stay; it is
+// never asked again, also for a Homes started anew after Immich is read
+// again; Rückgängig shows it in Immich again and asks again. A face not
+// offered is refused, an undo of one Homes did not hide too, and a hide
+// without person.update keeps the question.
+func TestAusblenden(t *testing.T) {
+	g, fake := werBox(t)
+	vorher := fmt.Sprint(fake.Alle())
+	if err := g.Ausblenden(t.Context(), "x2"); err != nil {
+		t.Fatal(err)
+	}
+	if !fake.Versteckt("x2") || slices.Contains(wer(g), "x2") || fmt.Sprint(fake.Alle()) != vorher {
+		t.Fatalf("%v %v %v", fake.Versteckt("x2"), wer(g), fake.Alle())
+	}
+	neu := &Gesichter{Immich: g.Immich, Dir: g.Dir, Now: g.Now}
+	pflegen(t, neu)
+	if slices.Contains(wer(neu), "x2") {
+		t.Fatalf("asked again: %v", wer(neu))
+	}
+	if err := neu.Ausblenden(t.Context(), "x2"); !errors.Is(err, ErrKeineFrage) {
+		t.Fatalf("hidden twice: %v", err)
+	}
+	for _, id := range []string{"x3", "anna", "nie"} {
+		if err := neu.Einblenden(t.Context(), id); !errors.Is(err, ErrKeineFrage) || fake.Versteckt(id) {
+			t.Fatalf("%s: %v", id, err)
+		}
+	}
+	if err := neu.Einblenden(t.Context(), "x2"); err != nil {
+		t.Fatal(err)
+	}
+	if fake.Versteckt("x2") || !slices.Contains(wer(neu), "x2") {
+		t.Fatalf("not back: %v %v", fake.Versteckt("x2"), wer(neu))
+	}
+	pflegen(t, neu)
+	if !slices.Contains(wer(neu), "x2") {
+		t.Fatalf("not asked after the next run: %v", wer(neu))
+	}
+	fake.Ohne = []string{"person.update"}
+	var fehlt immich.FehltRecht
+	if err := neu.Ausblenden(t.Context(), "x1"); !errors.As(err, &fehlt) || fake.Versteckt("x1") || !slices.Contains(wer(neu), "x1") {
+		t.Fatalf("%v %v", err, wer(neu))
+	}
+}
+
+// After a pair's „Nein“ its unnamed face can be hidden right there too,
+// and is never a pair again.
+func TestDannAusblenden(t *testing.T) {
+	g, fake := naeheBox(t)
+	g.Antworten(t.Context(), "anna", "u1", "nein")
+	if err := g.Ausblenden(t.Context(), "u1"); err != nil || !fake.Versteckt("u1") {
+		t.Fatal(err)
+	}
+	if _, ok := g.Dann("u1"); ok || slices.ContainsFunc(g.Paare(), func(p Paar) bool { return p.B.ID == "u1" || p.A.ID == "u1" }) {
+		t.Fatal("a hidden face still asked")
+	}
+}

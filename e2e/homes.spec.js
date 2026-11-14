@@ -1031,6 +1031,24 @@ test('Dieselbe Person? on the contact takes a Nein', async ({ page }, info) => {
   await expect(page.locator('section.paar').first()).toBeVisible();
 });
 
+// owner 2026-11-14 (a toy's face asked as a person): „Kein Mensch“ hides the face at once, says so with
+// Rückgängig beside it and the next question follows; Rückgängig asks again
+test('Kein Mensch: a face hidden at once, Rückgängig brings it back', async ({ page }, info) => {
+  await page.setViewportSize({ width: 411, height: 900 });
+  await page.goto('/kontakte/dieselbe?alle=1');
+  const wer = page.locator('section.paar.wer');
+  const id = await wer.first().locator('input[name=wer]').first().getAttribute('value');
+  await wer.first().getByRole('button', { name: 'Kein Mensch' }).click();
+  const status = page.getByRole('status');
+  await expect(status).toContainText('Ausgeblendet.');
+  await expect(page.locator(`section.paar.wer input[name=wer][value="${id}"]`)).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
+  await page.screenshot({ path: info.outputPath('kein-mensch-411.png'), fullPage: true });
+  await status.getByRole('button', { name: 'Rückgängig' }).click();
+  await expect(page.getByRole('status')).toContainText('Wieder da');
+  await expect(page.locator(`section.paar.wer input[name=wer][value="${id}"]`).first()).toBeAttached();
+});
+
 // owner 2026-11-11 (Android Chrome, 411 px): a name field's datalist showed nothing while typing; the field
 // shows the matching names as rows under it instead, a tap fills it (as archiv#41), a group field the same
 test('Namensvorschläge: typing shows the matching names as rows, a tap fills the field', async ({ page }, info) => {

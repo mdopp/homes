@@ -14,7 +14,7 @@ import (
 
 // „Wer ist das?“ (owner 2026-11-09): on „Dieselbe Person?“, up to five faces Immich sees often and
 // knows no name for (gesichter.Wer), each with its photos, places and company, a name field (it suggests
-// the household's people and the owner's Handy-Kontakte, firms not) with Speichern (to Immich) and Kenne ich nicht (never asked again).
+// the household's people and the owner's Handy-Kontakte, firms not) with Speichern (to Immich), Kenne ich nicht (never asked again) and Kein Mensch (hidden in Immich, owner 2026-11-14).
 // The same card, „Wer ist das dann?“, for the unnamed face of a pair just answered Nein (owner 2026-11-11).
 // A face Immich holds for the one on a Haushalts-Kontakt's photo offers that name first, saved with one tap (homes#352).
 
@@ -76,7 +76,20 @@ func werKarte(cfg StartConfig, s gesichter.Seite, action string) string {
 	return `<section class="paar wer">` + dieselbeGesicht(cfg, s) + vorschlag + `<form method=post action="` + html.EscapeString(action) +
 		`"><input type=hidden name=wer value="` + html.EscapeString(s.ID) + `"><input name=name list=wernamen required maxlength=120 autocomplete=off aria-label="` + t(texte.WerName) + `" placeholder="` + t(texte.WerName) +
 		`"><button name=antwort value=ja data-laeuft="` + t(texte.WerSpeichernLaeuft) + `">` + t(texte.WerSpeichern) +
-		`</button><button name=antwort value=nein class=leise formnovalidate data-laeuft="` + t(texte.WerUnbekanntLauft) + `">` + t(texte.WerUnbekannt) + `</button></form></section>`
+		`</button><button name=antwort value=nein class=leise formnovalidate data-laeuft="` + t(texte.WerUnbekanntLauft) + `">` + t(texte.WerUnbekannt) +
+		`</button><button name=antwort value=kein class=leise formnovalidate data-laeuft="` + t(texte.WerKeinMenschLauft) + `">` + t(texte.WerKeinMensch) + `</button></form></section>`
+}
+
+// werGesagtZeile is the outcome line: after „Kein Mensch“ „Ausgeblendet.“
+// with its Rückgängig beside it, posted to action (every answer undoable
+// where it was given, owner 2026-11-14); else as gesagt.
+func werGesagtZeile(r *http.Request, said, problem, action string) string {
+	if said == "" || problem != "" || r.PostForm.Get("antwort") != "kein" {
+		return gesagt(said, problem)
+	}
+	t := func(id texte.ID) string { return html.EscapeString(texte.T(id)) }
+	return `<div class=gut role=status><span class=punkt></span><p>` + html.EscapeString(said) + `</p><form method=post class=rueck action="` + html.EscapeString(action) +
+		`"><input type=hidden name=wer value="` + html.EscapeString(r.PostForm.Get("wer")) + `"><button name=antwort value=zurueck class=leise data-laeuft="` + t(texte.WerRueckLauft) + `">` + t(texte.WerRueckgaengig) + `</button></form></div>`
 }
 
 // werDann is the unnamed face of the pair just answered Nein, or of a name
@@ -88,6 +101,8 @@ func werDann(r *http.Request, cfg StartConfig, problem string) []gesichter.Seite
 		id = f.Get("wer")
 	case f.Get("antwort") == "nein" && f.Get("a") != "" && f.Get("kontakt") == "" && problem == "":
 		id = f.Get("b")
+	case f.Get("antwort") == "zurueck": // a „Kein Mensch“ taken back: its question again
+		id = f.Get("wer")
 	}
 	if s, ok := cfg.Gesichter.Dann(id); ok {
 		return []gesichter.Seite{s}
@@ -96,12 +111,16 @@ func werDann(r *http.Request, cfg StartConfig, problem string) []gesichter.Seite
 }
 
 // werGesagt are the answers about a face as the page says them.
-var werGesagt = map[string]texte.ID{"ja": texte.WerGenannt, "nein": texte.WerGemerkt, "stumm": texte.WerStumm}
+var werGesagt = map[string]texte.ID{"ja": texte.WerGenannt, "nein": texte.WerGemerkt, "kein": texte.WerAusgeblendet, "zurueck": texte.WerWiederDa, "stumm": texte.WerStumm}
 
 // werAntwort passes the owner's answer about the face id on: "ja" with
-// the name typed, "nein" „Kenne ich nicht“.
+// the name typed, "nein" „Kenne ich nicht“, "kein" „Kein Mensch“ (hidden
+// in Immich) and "zurueck" its Rückgängig.
 func werAntwort(r *http.Request, cfg StartConfig, id string) (said, problem string) {
 	antwort, name := r.PostForm.Get("antwort"), trimRunes(oneLine(r.PostForm.Get("name")), 120)
+	if verstecken := map[string]func(context.Context, string) error{"kein": cfg.Gesichter.Ausblenden, "zurueck": cfg.Gesichter.Einblenden}[antwort]; verstecken != nil {
+		return dieselbeAntworten(r.Context(), antwort, func(ctx context.Context) (string, error) { return "", verstecken(ctx, id) }, werGesagt)
+	}
 	if antwort != "ja" {
 		antwort, name = "nein", ""
 	} else if name == "" {

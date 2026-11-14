@@ -3,7 +3,7 @@
 // hasNextPage, closestPersonId; as Immich, only people with a face, the
 // favourites first, then by closeness, then the named by photos), GET
 // /api/people/<id>/thumbnail, which it counts, …/statistics, POST
-// /api/people, PUT /api/people/<id>, POST /api/people/merge, GET
+// /api/people, PUT /api/people/<id> (name, birthDate, isHidden), POST /api/people/merge, GET
 // /api/search/person (faceless and hidden ones too), GET /api/users/me,
 // POST /api/search/metadata (personIds, page and nextPage, over Bibliothek),
 // and the photos Homes uploads: POST /api/assets (multipart, a duplicate
@@ -181,6 +181,14 @@ func (s *Server) ID(name string) string {
 	return ""
 }
 
+// Versteckt: the person id is hidden.
+func (s *Server) Versteckt(id string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	p := s.find(id)
+	return p != nil && p.Hidden
+}
+
 // Writes is how many POSTs and PUTs were taken.
 func (s *Server) Writes() int {
 	s.mu.Lock()
@@ -306,19 +314,20 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// write takes name and birthDate (null: none) as Immich's PersonCreate/UpdateDto.
+// write takes name, birthDate (null: none) and isHidden as Immich's
+// PersonCreate/UpdateDto: a field left out stays as it was.
 func (s *Server) write(w http.ResponseWriter, r *http.Request, p *person, code int) {
-	var body struct {
-		Name  *string `json:"name"`
-		Birth *string `json:"birthDate"`
-	}
+	var body map[string]json.RawMessage
 	json.NewDecoder(r.Body).Decode(&body)
-	if body.Name != nil {
-		p.Name = *body.Name
+	if v, da := body["name"]; da {
+		json.Unmarshal(v, &p.Name)
 	}
-	p.Birth = ""
-	if body.Birth != nil {
-		p.Birth = *body.Birth
+	if v, da := body["birthDate"]; da {
+		p.Birth = ""
+		json.Unmarshal(v, &p.Birth)
+	}
+	if v, da := body["isHidden"]; da {
+		json.Unmarshal(v, &p.Hidden)
 	}
 	s.writes++
 	w.WriteHeader(code)

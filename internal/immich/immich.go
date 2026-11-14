@@ -323,6 +323,15 @@ func (c *Client) Aendern(ctx context.Context, id, name, geburtstag string) error
 	return err
 }
 
+// Verstecken hides the person in Immich, or shows it again (PUT
+// /api/people/{id} with isHidden alone, person.update): Immich's own
+// „ausblenden“; its faces and photos stay.
+func (c *Client) Verstecken(ctx context.Context, id string, versteckt bool) error {
+	b, _ := json.Marshal(map[string]bool{"isHidden": versteckt})
+	_, err := c.send(ctx, http.MethodPut, "/api/people/"+url.PathEscape(id), b)
+	return err
+}
+
 func felder(name, geburtstag string) []byte {
 	f := map[string]any{"name": name, "birthDate": nil}
 	if geburtstag != "" {
