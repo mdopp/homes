@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mdopp/homes/internal/drucker"
 	"github.com/mdopp/homes/internal/erreichbar"
 	"github.com/mdopp/homes/internal/ha"
 	"github.com/mdopp/homes/internal/ha/hafake"
@@ -75,10 +76,10 @@ func TestDruckerFound(t *testing.T) {
 		t.Fatalf("printers %d, want 1: %+v", len(ps), ps)
 	}
 	p := ps[0]
-	if p.status.EntityID != "sensor.buero_drucker" || len(p.inks) != 1 || p.room != "Büro" {
+	if p.Status.EntityID != "sensor.buero_drucker" || len(p.Inks) != 1 || p.Room != "Büro" {
 		t.Errorf("printer %+v", p)
 	}
-	if b, ok := p.black(); !ok || b.EntityID != "sensor.buero_drucker_tinte_schwarz" {
+	if b, ok := p.Black(); !ok || b.EntityID != "sensor.buero_drucker_tinte_schwarz" {
 		t.Errorf("black %v %v (Schwarz in the name)", b, ok)
 	}
 }
@@ -94,37 +95,37 @@ func TestDruckerBlackAmongMarkers(t *testing.T) {
 	if len(ps) != 1 {
 		t.Fatalf("printers %d", len(ps))
 	}
-	b, ok := ps[0].black()
+	b, ok := ps[0].Black()
 	if !ok || b.EntityID != "sensor.epson_wf_3540_series_black_ink" {
 		t.Errorf("black %v %v", b.EntityID, ok)
 	}
 	var names []string
-	for _, s := range ps[0].inks {
-		names = append(names, inkName(s, ps[0].status))
+	for _, s := range ps[0].Inks {
+		names = append(names, drucker.InkName(s, ps[0].Status))
 	}
 	if got := strings.Join(names, ","); got != "Schwarz,Cyan,Magenta,Gelb" {
 		t.Errorf("inks %s", got)
 	}
-	colour := printer{status: ha.State{EntityID: "sensor.p", State: "idle"}, inks: []ha.State{{EntityID: "sensor.p_c", State: "40",
-		Attributes: map[string]any{"friendly_name": "P Cyan"}}}}
-	if _, ok := colour.black(); ok {
+	colour := printer{drucker.Drucker{Status: ha.State{EntityID: "sensor.p", State: "idle"}, Inks: []ha.State{{EntityID: "sensor.p_c", State: "40",
+		Attributes: map[string]any{"friendly_name": "P Cyan"}}}}}
+	if _, ok := colour.Black(); ok {
 		t.Error("a printer with only cyan has black")
 	}
-	if r := colour.row("Drucker", time.Now(), time.UTC, nil, "/raeume"); r.Text != "Drucker · erreichbar" || r.Detail != "" {
+	if r := colour.row("Drucker", time.Now(), time.UTC, nil, "/raeume"); r.Text != "Drucker · bereit" || r.Detail != "" {
 		t.Errorf("row without black %+v", r)
 	}
 }
 
-// Reachable: „Drucker · erreichbar“ with the black ink, in the printer's
+// Reachable: „Drucker · bereit“ (idle, the page's word) with the black ink, in the printer's
 // room; its tap opens the state sensor's own page; the other colours are
 // not on the row.
 func TestDruckerReachable(t *testing.T) {
 	fake, hc := house(t)
 	epson(t, fake, "idle", 42)
 	_, body, _ := familyPage(t, Raeume, druckerCfg(hc), "GET", "/raeume", "")
-	mustContain(t, body, `<a href="/raeume/sensor.epson_wf_3540_series">Drucker · erreichbar</a> <span class=k>Schwarz 42 %</span>`)
-	before(t, body, "karte-buero", "Drucker · erreichbar")
-	before(t, body, "Schreibtisch", "Drucker · erreichbar") // the printer last in its room
+	mustContain(t, body, `<a href="/raeume/sensor.epson_wf_3540_series">Drucker · bereit</a> <span class=k>Schwarz 42 %</span>`)
+	before(t, body, "karte-buero", "Drucker · bereit")
+	before(t, body, "Schreibtisch", "Drucker · bereit") // the printer last in its room
 	mustNotContain(t, body, "Cyan", "Gelb", "Uptime", "fast leer")
 }
 
@@ -135,12 +136,12 @@ func TestDruckerUnreachable(t *testing.T) {
 	epson(t, fake, "unavailable", 12)
 	_, body, _ := familyPage(t, Raeume, druckerCfg(hc), "GET", "/raeume", "")
 	mustContain(t, body, `<a href="/raeume/sensor.epson_wf_3540_series">Drucker · nicht erreichbar</a> <span class=k>seit heute 10:00</span>`)
-	mustNotContain(t, body, "Schwarz", "Drucker · erreichbar")
-	p := printer{status: ha.State{EntityID: "sensor.p", State: "unknown"}}
+	mustNotContain(t, body, "Schwarz", "Drucker · bereit")
+	p := printer{drucker.Drucker{Status: ha.State{EntityID: "sensor.p", State: "unknown"}}}
 	if r := p.row("Drucker", time.Now(), time.UTC, nil, "/raeume"); r.Text != "Drucker · nicht erreichbar" || r.Detail != "" {
 		t.Errorf("unknown %+v", r)
 	}
-	gone := printer{inks: []ha.State{{EntityID: "sensor.p_black", State: "unavailable", Attributes: map[string]any{"friendly_name": "P Black"}}}}
+	gone := printer{drucker.Drucker{Inks: []ha.State{{EntityID: "sensor.p_black", State: "unavailable", Attributes: map[string]any{"friendly_name": "P Black"}}}}}
 	if r := gone.row("Drucker", time.Now(), time.UTC, nil, "/raeume"); r.Text != "Drucker · nicht erreichbar" || r.Href != "/raeume/sensor.p_black" {
 		t.Errorf("missing state sensor %+v", r)
 	}
@@ -154,8 +155,8 @@ func TestDruckerInkWarning(t *testing.T) {
 		detail string
 		warn   bool
 	}{{12, "Schwarz fast leer · 12 %", true}, {14.6, "Schwarz 15 %", false}, {15, "Schwarz 15 %", false}, {0, "Schwarz fast leer · 0 %", true}} {
-		p := printer{status: ha.State{EntityID: "sensor.p", State: "printing"}, inks: []ha.State{{EntityID: "sensor.p_k",
-			State: decimalDot(c.level), Attributes: map[string]any{"friendly_name": "P Black ink"}}}}
+		p := printer{drucker.Drucker{Status: ha.State{EntityID: "sensor.p", State: "printing"}, Inks: []ha.State{{EntityID: "sensor.p_k",
+			State: decimalDot(c.level), Attributes: map[string]any{"friendly_name": "P Black ink"}}}}}
 		if r := p.row("Drucker", time.Now(), time.UTC, nil, "/raeume"); r.Detail != c.detail || r.Warn != c.warn {
 			t.Errorf("%v: %+v", c.level, r)
 		}
@@ -163,7 +164,7 @@ func TestDruckerInkWarning(t *testing.T) {
 	fake, hc := house(t)
 	epson(t, fake, "idle", 12)
 	_, body, _ := familyPage(t, Raeume, druckerCfg(hc), "GET", "/raeume", "")
-	mustContain(t, body, `Drucker · erreichbar</a> <span class="k warn">Schwarz fast leer · 12 %</span>`)
+	mustContain(t, body, `Drucker · bereit</a> <span class="k warn">Schwarz fast leer · 12 %</span>`)
 }
 
 // No IPP printer, no row and nothing about printers.
@@ -513,4 +514,20 @@ func TestDruckerRemembersTheAddress(t *testing.T) {
 	if strings.Join(asked, ",") != "EPSON0A36A8.local." {
 		t.Errorf("asked %v", asked)
 	}
+}
+
+// The owner (2026-11-14): „Wird auch der Status ‚druckt‘ dargestellt?“ The
+// row says the state in words, and what asks for a hand before the ink.
+func TestDruckerRowSaysTheState(t *testing.T) {
+	fake, hc := house(t)
+	epson(t, fake, "printing", 12)
+	_, body, _ := familyPage(t, Raeume, druckerCfg(hc), "GET", "/raeume", "")
+	mustContain(t, body, `Drucker · druckt</a> <span class="k warn">Schwarz fast leer · 12 %</span>`)
+	fake, hc = house(t)
+	epson(t, fake, "stopped", 40)
+	fake.Set("sensor.epson_wf_3540_series", "stopped", map[string]any{"friendly_name": "EPSON WF-3540 Series", "device_class": "enum",
+		"state_reason": "media-empty-error", "state_message": "Load paper in tray 1"})
+	_, body, _ = familyPage(t, Raeume, druckerCfg(hc), "GET", "/raeume", "")
+	mustContain(t, body, `Drucker · angehalten</a> <span class="k warn">Papier leer · Schwarz 40 %</span>`)
+	mustNotContain(t, body, "Load paper")
 }

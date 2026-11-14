@@ -7,12 +7,15 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"maps"
 	"net/http"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/mdopp/homes/internal/drucker"
 	"github.com/mdopp/homes/internal/ha"
 )
 
@@ -68,6 +71,7 @@ type live struct {
 	lastAt  map[string]int64     // entity → updated_at_ms of that card: nothing older goes out
 	ready   map[string]time.Time // sensor entity → earliest next send
 	pending map[string]map[string]any
+	states  map[string]ha.State // every entity's state as last seen, for a printer's words (withText)
 
 	// the active set: the actuators that are on or open, as /napi/portal/active
 	// lists them. A change goes out like a sensor: at most every l.every, the
@@ -86,7 +90,7 @@ func newLive(c *ha.Client, ping, sensorEvery time.Duration) *live {
 	if sensorEvery <= 0 {
 		sensorEvery = defaultSensorEvery
 	}
-	l := &live{ha: c, ping: ping, every: sensorEvery, watches: map[string]watchSet{}, subs: map[*listener]bool{}}
+	l := &live{ha: c, ping: ping, every: sensorEvery, watches: map[string]watchSet{}, subs: map[*listener]bool{}, states: map[string]ha.State{}}
 	l.reset()
 	return l
 }
@@ -285,11 +289,37 @@ func (l *live) changed(s ha.State) {
 	}
 }
 
+// card is s's card with a printer's words (withText) from the states seen
+// and the registry Homes has in hand, never waiting for one; a marker's
+// change sends its printer's card again, its words having changed (l.mu held).
+func (l *live) card(s ha.State) map[string]any {
+	l.states[s.EntityID] = s
+	c := card(s)
+	if c == nil || c["domain"] != "sensor" || l.ha == nil {
+		return c
+	}
+	now, cancel := context.WithCancel(context.Background())
+	cancel() // the registry in hand or none: no wait under l.mu
+	reg, ok := l.ha.CachedRegistry(now)
+	if !ok || reg.Platforms[s.EntityID] != "ipp" {
+		return c
+	}
+	p, found := drucker.Of(slices.Collect(maps.Values(l.states)), reg, s.EntityID)
+	switch {
+	case !found:
+	case p.Status.EntityID == s.EntityID:
+		c["text"] = p.Text()
+	case p.Status.EntityID != "":
+		defer l.cardOf(p.Status)
+	}
+	return c
+}
+
 // cardOf drops a state unless someone watches the entity and its card
 // shows something new; a sensor goes out at most every l.every, its latest
 // value always (l.mu held).
 func (l *live) cardOf(s ha.State) {
-	c := card(s)
+	c := l.card(s)
 	if c == nil {
 		return
 	}
