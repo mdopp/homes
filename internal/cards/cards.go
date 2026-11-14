@@ -34,6 +34,9 @@ type Row struct {
 	// Color is the row's calendar colour (#rrggbb, haus#66), a dot before
 	// the text; never the only sign, the detail names the calendar
 	Color string `json:"color,omitempty"`
+	// Warn draws the detail as a warning (a printer's ink nearly empty,
+	// owner 2026-11-14); the words say it too, never the colour alone
+	Warn bool `json:"warn,omitempty"`
 }
 
 // Slider is a row's level (haus#64): the "60 %" in the row's line is a
@@ -79,6 +82,10 @@ type Action struct {
 	On     bool   `json:"on,omitempty"`
 	Bild   string `json:"bild,omitempty"`
 	Frage  *Frage `json:"frage,omitempty"`
+	// Path is where it posts instead of SwitchPath, Laeuft what its button
+	// says meanwhile instead of „Schaltet …“ (a printer's „Prüfe …“)
+	Path   string `json:"path,omitempty"`
+	Laeuft string `json:"laeuft,omitempty"`
 }
 
 // Frage is what an Action asks before it is sent (a garage opening, as the
@@ -261,7 +268,7 @@ func what(b *strings.Builder, r Row) {
 		b.WriteString(text)
 	}
 	if detail != "" {
-		b.WriteString(" <span class=k>" + detail + "</span>")
+		b.WriteString(" <span class=" + map[bool]string{true: `"k warn"`, false: "k"}[r.Warn] + ">" + detail + "</span>")
 	}
 	if r.Slider != nil {
 		b.WriteString(r.Slider.Sheet())
@@ -273,6 +280,9 @@ func what(b *strings.Builder, r Row) {
 // too), whose Ja posts with bestaetigt.
 func (a *Action) Form() string {
 	laeuft := `data-laeuft="Schaltet …"`
+	if a.Laeuft != "" {
+		laeuft = `data-laeuft="` + html.EscapeString(a.Laeuft) + `"`
+	}
 	if a.Bild != "" {
 		laeuft = `data-laeuft=""` // a picture stays; the tile says „schaltet …“
 	}
@@ -294,7 +304,7 @@ func (a *Action) FrageID() string { return "frage-" + slug(a.Entity) + "-" + slu
 // post is the action's form around button.
 func (a *Action) post(button string) string {
 	var b strings.Builder
-	b.WriteString("<form method=post action=" + SwitchPath + ">")
+	b.WriteString("<form method=post action=" + map[bool]string{true: SwitchPath, false: html.EscapeString(a.Path)}[a.Path == ""] + ">")
 	if a.Entity != "" {
 		b.WriteString(`<input type=hidden name=geraet value="` + html.EscapeString(a.Entity) + `">`)
 	}
@@ -407,7 +417,7 @@ const Style = `<style>.farbe{display:inline-block;width:.65em;height:.65em;borde
 .karte ul{list-style:none;margin:0;padding:0;background:var(--card);border-radius:14px}
 .karte li{position:relative;padding:11px 14px;border-top:1px solid var(--line);overflow-wrap:anywhere;min-height:44px}.karte li:first-child{border-top:0}
 .karte li a{display:block;color:inherit;text-decoration:none}.karte li a::after{content:"";position:absolute;inset:0}
-.karte li .k{display:block;font-size:.82rem;margin-top:1px}
+.karte li .k{display:block;font-size:.82rem;margin-top:1px}.karte li .warn{color:var(--warn);font-weight:600}
 .karte li.tu{display:flex;align-items:center;justify-content:space-between;gap:12px}.karte form{position:relative;z-index:1;flex:none;display:flex}.karte form.eingabe,.karte form.notizform,.karte form.rezeptwahl{display:block;flex:auto}
 .knoepfe{position:relative;z-index:1;flex:none;display:flex;align-items:center;gap:2px}
 .karte li.viele{flex-wrap:wrap;gap:8px}.karte li.viele>div:first-child{flex:1 1 100%}.viele .knoepfe{gap:8px;flex-wrap:wrap}

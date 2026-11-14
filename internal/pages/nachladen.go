@@ -9,16 +9,18 @@ import "html"
 // with what it says when the part does not come. nachladenScript fetches
 // PATH and puts the answer in the place (an empty answer: the part is
 // gone); no answer within nachladenMS, or a refusal, and the
-// template's text takes the place, so nothing spins for ever. It lives
+// template's text takes the place, so nothing spins for ever. A place with
+// data-post is fetched by POST (a check that does something, a printer's),
+// one with data-ms waits that long instead. It lives
 // beside homesScript, not in it, and finds places again after the page
 // was swapped in place (a form's answer, a page fetched again).
 const nachladenMS = "5e3" // a part not here after five seconds is not coming
 
 const nachladenScript = `<script>(function(){if(window.homesNachladen)return;window.homesNachladen=1;
 function one(el){if(el.hasAttribute('data-laedt'))return;el.setAttribute('data-laedt','');var done=false;
-var ctl=window.AbortController?new AbortController():null,uhr=setTimeout(function(){if(ctl)ctl.abort();put(null)},` + nachladenMS + `);
+var ctl=window.AbortController?new AbortController():null,uhr=setTimeout(function(){if(ctl)ctl.abort();put(null)},el.hasAttribute('data-ms')?+el.getAttribute('data-ms'):` + nachladenMS + `);
 function put(h){if(done)return;if(!el.parentNode)return;done=true;clearTimeout(uhr);if(h===null){var t=el.querySelector('template');h=t?t.innerHTML:''}el.outerHTML=h}
-fetch(el.getAttribute('data-nachladen'),{credentials:'same-origin',headers:{'X-Homes-Skript':'1'},signal:ctl?ctl.signal:undefined})
+fetch(el.getAttribute('data-nachladen'),{method:el.hasAttribute('data-post')?'POST':'GET',credentials:'same-origin',headers:{'X-Homes-Skript':'1'},signal:ctl?ctl.signal:undefined})
 .then(function(r){if(!r.ok)throw 0;return r.text()}).then(put).catch(function(){put(null)})}
 function all(){if(!window.fetch)return;document.querySelectorAll('[data-nachladen]').forEach(one)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',all);else all();
@@ -27,5 +29,14 @@ if(window.MutationObserver)new MutationObserver(all).observe(document.documentEl
 // nachladen is a part's place: meanwhile is shown until path answers,
 // failed when it does not.
 func nachladen(path, meanwhile, failed string) string {
-	return `<div data-nachladen="` + html.EscapeString(path) + `" aria-busy=true>` + meanwhile + `<template>` + failed + `</template></div>`
+	return nachladenWie(path, false, "", meanwhile, failed)
+}
+
+// nachladenWie is a place fetched by POST when post, waiting ms ("": nachladenMS).
+func nachladenWie(path string, post bool, ms, meanwhile, failed string) string {
+	attrs := map[bool]string{true: " data-post"}[post]
+	if ms != "" {
+		attrs += " data-ms=" + ms
+	}
+	return `<div data-nachladen="` + html.EscapeString(path) + `"` + attrs + ` aria-busy=true>` + meanwhile + `<template>` + failed + `</template></div>`
 }

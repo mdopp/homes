@@ -25,7 +25,7 @@ cd "$(dirname "$0")/.."
 bad=0
 p() { for x in "$@"; do printf 'internal/%s ' "$x"; done; }
 connectors=$(p abs bote caldav discogs ha immich jellyfin judge laib musicbrainz paperless qmd reitti samba werkstatt)
-shared=$(p abruf app assistent cards code128 jsonfile markdown mcpserver modul namen texte)
+shared=$(p abruf app assistent cards code128 erreichbar jsonfile markdown mcpserver modul namen texte)
 household=$(p ansicht devices dokumente einkauf einrichten energie favoriten gesehen gesichter haushalt kontaktantwort library merken musik netz notes papierkorb podcasts schalter takeout uebernahme usage zugang)
 
 budget() { # budget <name> <cap> <dir…>
@@ -106,7 +106,13 @@ budget() { # budget <name> <cap> <dir…>
 # 2026-11-13, owner's request 2026-11-13 („sieht noch nicht harmonisch aus … braucht man die Wahl nur, wenn es mehrere Geräte
 # im Raum gibt“, which counts as the OK; pages 19,414 -> 19,425; 19,424 used, the minimum): the standard speaker as the room card's
 # quiet last row (its style and pictogram), shown only with two or more speakers; a failed self-sending select goes back (skript.go)
-budget pages 19425 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-14, owner's request 2026-11-14 („Können wir ihn [den Epson-Drucker] über Home Assistant überwachen und in der App
+# darstellen?“, with „neu verbinden“, „ob ein Ping funktioniert“ and „einen Button auf der Karte … ‚Prüfen und neu verbinden‘“;
+# the raise to be OK'd in the PR; pages 19,425 -> 20,075; 20,068 used): the printer's row on its room's card (drucker.go) with
+# its button while unreachable, its colours and the connection's check on its own page (drucker_pruefen.go: reload_config_entry,
+# the fresh state, the address from the config entry or the configuration_url, the network's answer, kept for the row),
+# roomCards' row split out, nachladen by POST, the host HA's diagnostics last gave kept in HOMES_DATA/drucker.json
+budget pages 20075 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -123,7 +129,9 @@ budget napi 5225 internal/napi        # the app's widgets' and share sheet's API
 # fakes for the browser tests and the pictures, never run on a box; it is not counted. The
 # cap stays as it was, now for cmd/homes alone
 # 2026-11-12, owner's request homes#362: the app's Deine Aufgaben wired to the page's list and the admins seen (1,448 -> 1,452; 1,451 used)
-budget cmd 1452 cmd/homes             # homes' wiring: 1,018 with the demo then
+# 2026-11-14, owner's request 2026-11-14 (the printer; 1,452 -> 1,455; 1,452 used): HOMES_DATA handed to the pages, where
+# drucker.json keeps each printer's last known address
+budget cmd 1455 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-04, the caps moved with the packages, none raised (sum 24,134 as before): abs and
 # musicbrainz (1,227 lines, 1,289 of cap) from household to connectors once merken's fetcher
 # was internal/abruf (235 lines of merken, 247 of cap, to shared) and jellyfin.Plain
@@ -177,7 +185,10 @@ budget cmd 1452 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-12, owner's wish 2026-11-12, the needed raise OK'd with it: Standard-Lautsprecher per room (connectors 15,610 -> 15,777;
 # 15,776 used, the minimum): ha.SetStandard (HA's label registry, the entity's labels and area), the labels and area ids in the
 # registry, and hafake's label registry and entity get/update
-budget connectors 15777 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
+# 2026-11-14, owner's request 2026-11-14 (the printer, its address; connectors 15,777 -> 15,830; 15,824 used): the device
+# registry's configuration_url (Registry.ConfigURLs), the entity's config entry (Registry.Entries) and its host from
+# HA's diagnostics (ha.EntryHost), hafake's diagnostics
+budget connectors 15830 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
 # 2026-11-04, internal/jsonfile (47 lines, 50 of cap) from household's cap to shared's: it
 # replaces nine copies of a save, 62 of their lines in household
 # 2026-11-05, owner 2026-11-05 yes: Immich for the contacts (9,583 -> 9,874):
@@ -241,7 +252,10 @@ budget household 14780 $household   # the household's own logic: 10,638, 9,176 w
 # text catalog (internal/texte/katalog.go: the family's words by id, and later each language's
 # table, de/en/es/fr) is words, not code, and multiplies with every language: not counted. The
 # package stays shared for the import rules; its logic (texte.go: T, In, Titel) is counted here
-budget shared 1795 $(echo "$shared" | sed 's#internal/texte ##') internal/texte/texte.go # the card, Markdown, the app's names: 1,019; abruf, namen: 1,287; jsonfile: 1,334
+# 2026-11-14, owner's request 2026-11-14 („wird angezeigt, ob ein Ping auf die Adresse funktioniert“; shared 1,795 -> 1,920;
+# 1,914 used): internal/erreichbar, a ping over an unprivileged ICMP socket, else a TCP connect to 631 or 80, within 2 s, a
+# name that does not resolve said apart; cards.Row.Warn, a detail drawn as a warning; cards.Action's Path and Laeuft
+budget shared 1920 $(echo "$shared" | sed 's#internal/texte ##') internal/texte/texte.go # the card, Markdown, the app's names: 1,019; abruf, namen: 1,287; jsonfile: 1,334
 
 # every package in one area
 for d in internal/*/; do

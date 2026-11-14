@@ -265,3 +265,21 @@ func (c *Client) Transcribe(ctx context.Context, provider, language string, rate
 	}
 	return strings.TrimSpace(*out.Text), nil
 }
+
+// EntryHost is a config entry's host as its integration's diagnostics say
+// it (GET /api/diagnostics/config_entry/<id>, an administrator's): an IPP
+// printer's address as it was set up (owner 2026-11-14), which HA's REST
+// and WebSocket config_entries answers leave out. "" when it says none.
+func (c *Client) EntryHost(ctx context.Context, entryID string) (string, error) {
+	var out struct {
+		Data struct {
+			Entry struct {
+				Data struct {
+					Host string `json:"host"`
+				} `json:"data"`
+			} `json:"entry"`
+		} `json:"data"`
+	}
+	err := c.do(ctx, "GET", "/api/diagnostics/config_entry/"+url.PathEscape(entryID), nil, nil, &out)
+	return strings.TrimSpace(out.Data.Entry.Data.Host), err
+}

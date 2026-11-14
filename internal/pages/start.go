@@ -22,6 +22,7 @@ import (
 	"github.com/mdopp/homes/internal/einkauf"
 	"github.com/mdopp/homes/internal/einrichten"
 	"github.com/mdopp/homes/internal/energie"
+	"github.com/mdopp/homes/internal/erreichbar"
 	"github.com/mdopp/homes/internal/favoriten"
 	"github.com/mdopp/homes/internal/gesehen"
 	"github.com/mdopp/homes/internal/gesichter"
@@ -78,10 +79,16 @@ type StartConfig struct {
 	SambaHost   string            // the box's address in the house, shown as \\<host>\data; empty: no how-to
 	Loc         *time.Location    // the house's time zone; default time.Local
 	Now         func() time.Time  // for the tests; default time.Now
-	Usage       *usage.Counter    // what the family uses, anonymously (haus#50); nil: nothing counted
-	PublicURL   string            // Homes' own address, https://homes.<domain>
-	Welcome     bool              // Start sends a person to Willkommen the first time a device opens it (haus#56)
-	STT         STT               // the Sprechen field's microphone, HA's speech-to-text (haus#63); no provider: no microphone
+	// Probe asks whether a printer's own address answers on the network
+	// (owner 2026-11-14); nil: erreichbar.Pruefe, the tests' a fake
+	Probe func(ctx context.Context, host string) erreichbar.Antwort
+	// Daten is HOMES_DATA, where drucker.json keeps each printer's address
+	// as HA last said it; "": none kept (the demo)
+	Daten     string
+	Usage     *usage.Counter // what the family uses, anonymously (haus#50); nil: nothing counted
+	PublicURL string         // Homes' own address, https://homes.<domain>
+	Welcome   bool           // Start sends a person to Willkommen the first time a device opens it (haus#56)
+	STT       STT            // the Sprechen field's microphone, HA's speech-to-text (haus#63); no provider: no microphone
 	// HAPublicURL is Home Assistant's public address (HOMES_HA_PUBLIC_URL,
 	// https://home.<domain>): Geräte's "In Home Assistant öffnen" (haus#64); empty: no link
 	HAPublicURL string

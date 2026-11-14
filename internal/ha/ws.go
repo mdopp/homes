@@ -296,6 +296,11 @@ type Registry struct {
 	// label named StandardLabel, "" while HA has none
 	Labels          map[string][]string
 	StandardLabelID string
+	// ConfigURLs is a device's id → its configuration_url (a printer's own
+	// web page, owner 2026-11-14: its address); "" without one
+	ConfigURLs map[string]string
+	// Entries is entity → its config entry's id (EntryHost reads its address)
+	Entries map[string]string
 }
 
 // Standard says whether entity carries the label StandardLabel.
@@ -340,6 +345,7 @@ func (c *Client) registries(ctx context.Context) (Registry, error) {
 		Platform       string   `json:"platform"`
 		TranslationKey string   `json:"translation_key"`
 		DisabledBy     string   `json:"disabled_by"`
+		ConfigEntryID  string   `json:"config_entry_id"`
 	}
 	for _, q := range []struct {
 		cmd string
@@ -363,13 +369,15 @@ func (c *Client) registries(ctx context.Context) (Registry, error) {
 			areaID[name[a.AreaID]] = a.AreaID
 		}
 	}
-	devArea := map[string]string{}
+	devArea, configURL := map[string]string{}, map[string]string{}
 	for _, d := range devices {
 		devArea[d.ID] = d.AreaID
+		configURL[d.ID] = d.ConfigurationURL
 	}
 	twin := twins(devices)
 	reg := Registry{Rooms: map[string]string{}, Hidden: map[string]bool{}, Devices: map[string]string{}, Platforms: map[string]string{}, Twins: map[string]string{}, WakeWords: map[string]bool{},
-		AreaIDs: areaID, Labels: map[string][]string{}, StandardLabelID: standardLabel(labels)}
+		AreaIDs: areaID, Labels: map[string][]string{}, StandardLabelID: standardLabel(labels), ConfigURLs: configURL,
+		Entries: map[string]string{}}
 	for _, e := range entities {
 		if e.EntityID == "" {
 			continue
@@ -385,6 +393,7 @@ func (c *Client) registries(ctx context.Context) (Registry, error) {
 			reg.Devices[e.EntityID] = e.DeviceID
 		}
 		reg.Labels[e.EntityID] = e.Labels
+		reg.Entries[e.EntityID] = e.ConfigEntryID
 		if t := twin[e.DeviceID]; t != "" {
 			reg.Twins[e.EntityID] = t
 		}
@@ -406,6 +415,8 @@ type device struct {
 	ID          string     `json:"id"`
 	AreaID      string     `json:"area_id"`
 	Identifiers [][]string `json:"identifiers"` // [integration, its id]
+	// ConfigurationURL is the device's own page (HA's „Besuchen“)
+	ConfigurationURL string `json:"configuration_url"`
 }
 
 // twins maps each device that shares an identifier with another device

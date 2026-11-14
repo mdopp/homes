@@ -86,7 +86,7 @@ func Ding(cfg StartConfig) http.HandlerFunc {
 		b.WriteString(liveRefresh("seite", 120))
 		b.WriteString("<h1>" + html.EscapeString(name) + "</h1>")
 		c := cards.Card{Title: "Jetzt"}
-		row := cards.Row{Text: roomDetail(domain, s, reg.TempUnit), Detail: changedWords(s, now, loc)}
+		row := cards.Row{Text: thingDetail(domain, s, reg), Detail: changedWords(s, now, loc)}
 		if a := umschalten(s, cards.ThingPage(id)); a != nil {
 			row.Action = a
 			row.Action.Switch, row.Action.Label = false, map[bool]string{true: "Ausschalten", false: "Einschalten"}[a.On]
@@ -111,7 +111,7 @@ func Ding(cfg StartConfig) http.HandlerFunc {
 			room = noRoom
 		}
 		c.Add(room, "Raum")
-		b.WriteString(c.HTML())
+		b.WriteString(c.HTML() + printerPage(r, cfg, id, reg))
 		if cfg.Favorites != nil && person != "" {
 			b.WriteString(star(id, favs, favErr))
 		}
