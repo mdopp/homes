@@ -13,6 +13,7 @@ import (
 
 	"github.com/mdopp/homes/internal/abruf"
 	"github.com/mdopp/homes/internal/papierkorb"
+	"github.com/mdopp/homes/internal/plugin"
 
 	"github.com/mdopp/homes/internal/ansicht"
 	"github.com/mdopp/homes/internal/bote"
@@ -121,7 +122,6 @@ type StartConfig struct {
 	// the house's network only) and the house's calling code for its search
 	Archive      map[string]bool
 	ArchivURL    string
-	ArchivIntern map[string]napi.ArchivIntern // the way into each one's archive, for the viewer's own counts on Deine Aufgaben
 	PhoneCountry string
 	// Gesichter is Immich for the contacts (owner 2026-11-05): their „Fotos“,
 	// a face for a card without a picture, the suggestions; nil: none of it
@@ -141,6 +141,9 @@ type StartConfig struct {
 	TeaserPerson string
 	Zugang       *zugang.Store
 	Zuordnen     Zuordnen // „Wem gehört dieser Scan?“ (laib DATA.md gap 6); nil, no page
+	// Plugins are the programs Laib registered with Homes (homes ADR 0003,
+	// HOMES_PLUGIN_*): their entry, Start card and tasks; nil, none
+	Plugins *plugin.Plugins
 }
 
 // backendWait is how long a page waits for any one backend: a slow one
@@ -255,6 +258,7 @@ func Start(cfg StartConfig) http.HandlerFunc {
 		if cfg.HA != nil {
 			b.WriteString(imHaus(cfg, states, haErr, reg))
 		}
+		b.WriteString(pluginKarten(cfg, person)) // a plugin's own card, as kept (homes ADR 0003)
 		writePage(w, http.StatusOK, b)
 	}
 }

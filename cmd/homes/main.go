@@ -7,7 +7,6 @@ package main
 import (
 	"context"
 	"errors"
-	"github.com/mdopp/homes/internal/papierkorb"
 	"log"
 	"maps"
 	"net"
@@ -22,6 +21,9 @@ import (
 	"syscall"
 	"time"
 	_ "time/tzdata" // the image is scratch: TZ needs the zone database inside the binary
+
+	"github.com/mdopp/homes/internal/papierkorb"
+	"github.com/mdopp/homes/internal/plugin"
 
 	"github.com/mdopp/homes/internal/abs"
 	"github.com/mdopp/homes/internal/ansicht"
@@ -105,7 +107,8 @@ type site struct {
 	// whom Laib tells of a request (HOMES_TEASER_PERSON, box.yml notify.person) and the requests, in HOMES_DATA
 	teaserHost, teaserPerson string
 	zugang                   *zugang.Store
-	zuordnen                 *zuordnen // „Wem gehört dieser Scan?“ (laib DATA.md gap 6); nil without the Haushalt bearer
+	zuordnen                 *zuordnen       // „Wem gehört dieser Scan?“ (laib DATA.md gap 6); nil without the Haushalt bearer
+	plugins                  *plugin.Plugins // the programs Laib registered (homes ADR 0003, HOMES_PLUGIN_*), what Homes keeps of them in HOMES_DATA
 }
 
 // routes is Homes' whole surface: /napi for the app, /mcp/haushalt for the
@@ -177,7 +180,7 @@ func familyOf(s site) pages.StartConfig {
 		DocumentsMail: s.docsMail, PaperlessPublicURL: s.paperlessPublic, PaperlessLANOnly: s.paperlessLAN, Sicherung: s.napi.Sicherung,
 		Reitti: s.napi.Reitti, Module: s.napi.Module, Einrichtung: s.napi.Einrichtung, PhoneCountry: s.hh.PhoneCountry, Gesichter: s.gesichter, Netz: s.netz}
 	family.Archive, family.ArchivURL = archivOf(s)
-	family.Antworten, family.DNS, family.KontaktURL, family.ArchivIntern = s.antworten, net.DefaultResolver, s.kontaktURL, s.archive
+	family.Antworten, family.DNS, family.KontaktURL, family.Plugins = s.antworten, net.DefaultResolver, s.kontaktURL, s.plugins
 	family.Zugang = s.zugang // the teaser's access requests, for the admins' Start and /zugang (owner 2026-11-08)
 	if s.zuordnen != nil {
 		family.Zuordnen = s.zuordnen
@@ -550,6 +553,7 @@ func main() {
 		antworten: &kontaktantwort.Store{Path: filepath.Join(dataDir, kontaktantwort.Datei)}, kontaktURL: os.Getenv("HOMES_KONTAKT_URL"),
 		teaserHost: os.Getenv("HOMES_TEASER_HOST"), teaserPerson: os.Getenv("HOMES_TEASER_PERSON"), zugang: &zugang.Store{Path: filepath.Join(dataDir, zugang.Datei)}}
 	st.zuordnen = openZuordnen(filepath.Join(dataDir, "zuordnen.json"), hh.Token)
+	st.plugins = plugin.Open(plugin.FromEnv(os.Environ()), filepath.Join(dataDir, "plugins.json"))
 	st.napi.Antworten = st.antworten   // the phone's accepted corrections of its own contacts
 	st.hh.Wessen = st.gesichter.Wessen // handy_firmen: the Immich key owner's own phone contacts, nobody else's
 	st.netz = netzVon(st.gesichter)    // the relations after each hourly run, the phone books read once a day (owner 2026-11-09)
@@ -571,6 +575,7 @@ func main() {
 	startLeaf(ctx, st)
 	go schliesseWuensche(ctx, ops, st.napi.Module, time.Minute) // a wish for what is on now is done (ADR 0001 §10)
 	go dienstePflegen(ctx, start, st.napi.Module, 30*time.Second, time.Hour)
+	go st.plugins.Pflegen(ctx, 5*time.Minute)                                   // a plugin's tasks reach Homes while it is open, looked at or not
 	go st.gesichter.Pflegen(ctx, time.Hour, st.hh.Contacts, st.antworten.Handy) // Immich hourly; its names to the owner's phone through the corrections its app writes
 	mux := routes(st)
 	addr := env("HOMES_LISTEN", "127.0.0.1:8650")

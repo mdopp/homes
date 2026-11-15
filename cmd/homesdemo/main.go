@@ -33,6 +33,7 @@ import (
 	"github.com/mdopp/homes/internal/discogs"
 	"github.com/mdopp/homes/internal/namen"
 	"github.com/mdopp/homes/internal/napi"
+	"github.com/mdopp/homes/internal/plugin"
 
 	"github.com/mdopp/homes/internal/abs"
 	"github.com/mdopp/homes/internal/abs/absfake"
@@ -268,10 +269,11 @@ func main() {
 	// the box waits for, the archive's questions, the household's task; ?nur=box the Box-Aufgaben
 	aufgaben := start
 	aufgaben.Archive, aufgaben.ArchivURL, aufgaben.PublicURL = seiten.Archive, seiten.ArchivURL, "https://homes.example"
-	// two questions wait in Anna's own archive (archiv#60: /intern/aufgaben with her secret, never in Laib's status)
-	aufgaben.ArchivIntern = map[string]napi.ArchivIntern{"anna": {URL: "http://" + *addr + "/demo/archiv", Secret: "demo"}}
-	mux.HandleFunc("/demo/archiv/intern/aufgaben", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"offen":true,"fragen":2,"aufraeumen":0,"schluessel_fehlt":false}`))
+	// Anna's archive is a plugin (homes ADR 0003): its two questions, the next one's text, handed over on the contract
+	aufgaben.Plugins = plugin.Open([]plugin.Instance{{Plugin: "archiv", Person: "anna", URL: "http://" + *addr + "/demo/archiv", Key: "demo"}}, "")
+	mux.HandleFunc("/demo/archiv"+plugin.Path, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"vertrag":1,"name":"Dein Archiv","icon":"archiv","link":"https://archiv.example/tresor","aufgaben":[` +
+			`{"id":"fragen","titel":"Im Archiv: 2 Fragen offen","warum":"Als Nächstes: Wie steht Ben zu Clara?","link":"https://archiv.example/tresor"}]}`))
 	})
 	mux.HandleFunc("/aufgaben", pages.DeineAufgaben(aufgaben))
 	mux.HandleFunc("/demo/wunsch", func(w http.ResponseWriter, r *http.Request) { // a wish moved on in Laib: wartet, abgelehnt, …

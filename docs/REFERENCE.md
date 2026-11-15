@@ -162,20 +162,16 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   key's owner the permissions the key lacks (*In Immich öffnen*, its API
   keys page); (3) questions — Immich's (*Dieselbe Person?*), for admins the
   scans nobody could be given (*Wem gehört dieser Scan?*), the contacts'
-  answers to review, and the viewer's own archive's open counts (*Im
-  Archiv: N Fragen offen* → `<archiv>/tresor`, *N Dinge zum Aufräumen im
-  Archiv* → `<archiv>/tresor/pflege`, and among the keys *Im Archiv fehlt
-  ein Schlüssel* → `<archiv>/tresor/quellen`), read from the viewer's own
-  archive only: `GET /intern/aufgaben` with `X-Archiv-Homes` (archiv#60,
-  the way of `HOMES_ARCHIV_INTERN`), never from Laib's status, which the
-  admins see; a count from a closed vault says *Stand: <day>*; an archive
-  that does not answer is no row; (4) setup —
+  answers to review, and the tasks the viewer's plugins hand over
+  (below, *Plugins*; the archive's questions and clean-up, its missing key
+  among the keys), each with its text and its link into the plugin, *Stand:
+  <day>* while the plugin cannot say anew (the vault locked); (4) setup —
   Homes' own (Netzlaufwerk-Passwort, the modules' apps, Discogs) and Laib's
   tasks: `alle`, `person:<login>`, and for admins `admins` (laib#878,
   formerly Box → Aufgaben only). Each row is its title (the one tap), one
   line why (Laib's `https://…` in it are links) and, where the tap leaves
-  Homes, a button (*Schlüssel eintragen*, *In Laib entscheiden*, *Im
-  Archiv öffnen*). A Laib task's `weg` leads: a Homes page, a conversation
+  Homes, a button (*Schlüssel eintragen*, *In Laib entscheiden*, *<Plugin>
+  öffnen*). A Laib task's `weg` leads: a Homes page, a conversation
   with the Bote (*Gemeinsam mit …*), or `{"schluessel","link"}` (its key's
   form; the key and its task are one row). A row is gone once done: Laib
   ticks its own (a done Laib task is not shown), a task deferred to a later
@@ -2073,3 +2069,32 @@ out) and fetches the page in place as soon as a thing on it changes —
 Räume, a thing (`seite`), Start any thing (`alle`); their N=120
 is only the fallback and for the day's calendar and Braucht dich. `data-ganz`
 leaves a form to the browser.
+
+## Plugins (homes ADR 0003 §3, homes#375)
+
+A plugin is a program of its own (layer 2: the archive first) that Laib
+registers with Homes; Homes names none of them. Laib's homes template
+wires each with `instances:` into the environment:
+`HOMES_PLUGIN_<NAME>="<person>=<url> …"` for a plugin installed per person
+(each instance seen by its person only) or one `<url>` for everyone, and
+its key `HOMES_PLUGINKEY_<NAME>_<PERSON>` (or `HOMES_PLUGINKEY_<NAME>`).
+Removing the plugin removes its entry, and Homes drops what it kept of it
+at the next start.
+
+**Contract 1** (`internal/plugin`, example `internal/plugin/testdata/vertrag-v1.json`):
+`GET <url>/homes/v1?person=<login>` with the key in `X-Homes-Plugin-Key`
+answers JSON: `vertrag` (1), `name`, `link` (https), and optionally
+`icon` (a Homes icon name), `zeile` (its line under Mehr), `start`
+(`{titel, zeile, link}`, a card on Start), `aufgaben` (at most 20 of
+`{id, titel, warum, link, art}`, `art` `frage`, `schluessel` or
+`einrichten`; `id` a word, never a name) and `widgets` (at most 8 of
+`{name, titel, wert, link}`, for the app; no page shows them yet).
+`aufgaben` absent means „cannot say now“: Homes keeps the ones handed over
+last, with their text, in `HOMES_DATA/plugins.json` (laib docs/DATA.md),
+and shows them with *Stand: <day>*; an empty list clears them. Homes asks
+on Deine Aufgaben, Braucht dich and the app's list, and every 5 minutes
+for each person's own plugins, so the tasks arrive while the plugin is
+open even when nobody looks. A plugin that never answered, or answers 404
+(no contract), leaves no trace; one that answered before and is silent
+now, or answers outside the contract, keeps its entry and tasks and
+shows one quiet line, *<name> antwortet gerade nicht.*

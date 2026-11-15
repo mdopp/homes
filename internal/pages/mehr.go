@@ -1,6 +1,7 @@
 package pages
 
 import (
+	"cmp"
 	"fmt"
 	"net/http"
 	"strings"
@@ -26,7 +27,6 @@ var mehrSays = map[string]string{
 	"Standortverlauf":              "Wo du unterwegs warst, in deiner eigenen Zeitleiste",
 	"Box":                          "Wie es der Box geht, für Admins",
 	texte.T("zusammen.titel"):      texte.T("zusammen.mehr"),
-	texte.T("archiv.titel"):        texte.T("archiv.mehr"),
 	texte.T(texte.MeineDatenTitel): texte.T(texte.MeineDatenMehr),
 }
 
@@ -117,7 +117,7 @@ func Mehr(cfg StartConfig) http.HandlerFunc {
 		// once, and the admins' Box, lower and quieter, each saying where it stands
 		pages, einmal := cards.Card{Title: "Seiten"}, cards.Card{Title: "Einrichten", Look: "leise"}
 		for _, t := range eintraege(r, cfg, modul.Mehr) {
-			says := mehrSays[t.Titel]
+			says := cmp.Or(pluginZeile(r, cfg, t.Pfad), mehrSays[t.Titel])
 			if stand := mehrStand(r, cfg, t.Pfad); stand != "" {
 				says = stand
 			}

@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/mdopp/homes/internal/einrichten"
 	"github.com/mdopp/homes/internal/laib"
-	"github.com/mdopp/homes/internal/napi"
+	"github.com/mdopp/homes/internal/plugin"
 )
 
 // laib362 is a Laib after laib#1195: the tasks with the keys the box waits
@@ -50,31 +51,35 @@ func laib362(t *testing.T, old bool) *laib.Client {
 	return &laib.Client{URL: srv.URL, Token: "t"}
 }
 
-// archiv362 is anna's archive after archiv#60: its counts at
-// /intern/aufgaben for her secret alone, answer its JSON; old: an archive
-// before it (404). It counts who asked.
-func archiv362(t *testing.T, old bool, answer string) (napi.ArchivIntern, *int) {
+// archiv362 is anna's archive as a plugin (homes ADR 0003): its contract
+// at /homes/v1 for her key and her name alone, answer its JSON; old: an
+// archive before the contract (404). It counts who asked.
+func archiv362(t *testing.T, old bool, answer *string) (plugin.Instance, *int) {
 	t.Helper()
 	asked := new(int)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		*asked++
-		if old || r.URL.Path != "/intern/aufgaben" || r.Header.Get("X-Archiv-Homes") != "anna-geheim" {
+		if old || r.URL.Path != plugin.Path || r.Header.Get(plugin.Header) != "anna-geheim" || r.URL.Query().Get("person") != "anna" {
 			http.NotFound(w, r)
 			return
 		}
-		w.Write([]byte(answer))
+		w.Write([]byte(*answer))
 	}))
 	t.Cleanup(srv.Close)
-	return napi.ArchivIntern{URL: srv.URL, Secret: "anna-geheim"}, asked
+	return plugin.Instance{Plugin: "archiv", Person: "anna", URL: srv.URL, Key: "anna-geheim"}, asked
 }
 
-// cfg362 is a box where anna's and clara's archives are there; clara's
-// does not answer.
+// fragen362 is the archive's answer with its vault open: three questions as one row.
+const fragen362 = `{"vertrag":1,"name":"Archiv","icon":"archiv","link":"https://archiv.box.test/tresor","aufgaben":[` +
+	`{"id":"fragen","titel":"Im Archiv: 3 Fragen offen","warum":"Wer zu wem gehört: dein Archiv fragt nach.","link":"https://archiv.box.test/tresor"}]}`
+
+// cfg362 is a box where anna's and clara's archives are registered;
+// clara's does not answer.
 func cfg362(t *testing.T, old bool) StartConfig {
-	anna, _ := archiv362(t, old, `{"offen":true,"fragen":3,"aufraeumen":0,"schluessel_fehlt":false}`)
+	answer := fragen362
+	anna, _ := archiv362(t, old, &answer)
 	return StartConfig{Laib: laib362(t, old), LaibURL: "https://laib.box.test", PublicURL: "https://www.box.test",
-		Archive: map[string]bool{"anna": true, "clara": true}, ArchivURL: "https://archiv.box.test",
-		ArchivIntern: map[string]napi.ArchivIntern{"anna": anna, "clara": {URL: "http://127.0.0.1:1", Secret: "clara-geheim"}}}
+		Plugins: plugin.Open([]plugin.Instance{anna, {Plugin: "archiv", Person: "clara", URL: "http://127.0.0.1:1", Key: "clara-geheim"}}, "")}
 }
 
 // homes#362: Deine Aufgaben is the one list, per viewer, in the owner's
@@ -91,7 +96,7 @@ func TestDeineAufgabenPerViewer(t *testing.T) {
 	mustContain(t, offen, `<a href="https://laib.box.test/inbox">2 Entscheidungen warten</a>`,
 		`<a href="https://laib.box.test/schluessel?name=WHO_MAIL`+back+`">Whoami: Post</a>`, "Damit whoami Post liest.", ">Schlüssel eintragen</a>",
 		`<a href="https://laib.box.test/schluessel?name=ARCHIV_IMAP`+back+`">Archiv: Postfach</a>`, "Ohne ihn wartet archiv-anna.",
-		`<a href="https://archiv.box.test/tresor">Im Archiv: 3 Fragen offen</a>`, ">Im Archiv öffnen</a>",
+		`<a href="https://archiv.box.test/tresor">Im Archiv: 3 Fragen offen</a>`, ">Archiv öffnen</a>",
 		`<li id=aufgabe-20><b>Zweite Platte einbauen</b><span class=text>Anleitung: <a href="https://laib.box.test/hilfe/platte">https://laib.box.test/hilfe/platte</a>.</span>`,
 		`<li id=aufgabe-23><b>Für alle</b>`)
 	mustNotContain(t, owner, "Post-Passwort eintragen", "Später erst", "Bens Sache", "Discogs-Schlüssel", "aufräumen")
@@ -131,13 +136,13 @@ func TestDeineAufgabenBoxFilter(t *testing.T) {
 	mustContain(t, ben, "Bens Sache")
 }
 
-// A Laib before laib#1195 (the box's v2.24.0) and an archive before
-// archiv#60: no key rows, no counts, no error on the page or on Start.
+// A Laib before laib#1195 (the box's v2.24.0) and an archive before the
+// plugin contract: no key rows, no tasks, no quiet line, no error.
 func TestDeineAufgabenWithAnOlderLaib(t *testing.T) {
 	cfg := cfg362(t, true)
 	_, body, _ := familyPageAs(t, DeineAufgaben, cfg, "GET", aufgabenPath, "anna", "family,admins")
 	mustContain(t, body, "2 Entscheidungen warten", "Zweite Platte einbauen")
-	mustNotContain(t, body, "Archiv: Postfach", "Im Archiv", saysAufgabenNicht, "Whoami")
+	mustNotContain(t, body, "Archiv: Postfach", "Im Archiv", "Archiv", saysAufgabenNicht, "Whoami", "antwortet gerade nicht")
 	_, start, _ := familyPageAs(t, Start, cfg, "GET", StartBoxPath, "anna", "family,admins")
 	mustNotContain(t, start, "Archiv: Postfach")
 }
@@ -160,7 +165,7 @@ func TestAppListeIsThePageList(t *testing.T) {
 	}
 	familyPageAs(t, Mehr, cfg, "GET", mehrPath, "anna", "family,admins") // a page seen with Authelia's admins
 	zs := liste(context.Background(), "anna")
-	if got := strings.Join(names(zs), " "); got != "entscheiden schluessel-WHO_MAIL schluessel-ARCHIV_IMAP archiv-fragen aufgabe-20 aufgabe-23" {
+	if got := strings.Join(names(zs), " "); got != "entscheiden schluessel-WHO_MAIL schluessel-ARCHIV_IMAP plugin-archiv-fragen aufgabe-20 aufgabe-23" {
 		t.Fatalf("the owner's rows: %s", got)
 	}
 	if z := zs[0]; z.Link != "https://laib.box.test/inbox" || !z.Vorn || z.Titel != "2 Entscheidungen warten" {
@@ -194,43 +199,64 @@ func TestDokumenteLeadsToScannenAndZuordnen(t *testing.T) {
 	mustNotContain(t, fam, "zuordnen")
 }
 
-// archiv#60, owner 2026-11-12: the archive's counts are its owner's only.
-// anna sees hers — a missing key among the keys, the questions and the
-// clean-up among the questions, with the day they were counted while her
-// vault is closed — on Deine Aufgaben, Start and in the app; ben (family)
-// and clara (an admin) never, and Homes does not even ask anna's archive
-// for them.
-func TestArchivZahlenOnlyForItsOwner(t *testing.T) {
-	cfg := cfg362(t, false)
+// archiv ADR 0001 §4, homes ADR 0003: the archive's tasks are its owner's
+// only. Handed over while her vault was open, they stay with their text
+// while it is locked („Stand: gestern“), on Deine Aufgaben, Start and in
+// the app; a key among the keys, the questions among the questions. ben
+// (family) and clara (an admin) never see them, and Homes does not even
+// ask anna's archive for them. The archive silent: the same rows and one
+// quiet line.
+func TestPluginAufgabenOnlyForItsPerson(t *testing.T) {
 	gestern := time.Date(2026, 11, 11, 20, 0, 0, 0, time.UTC)
+	jetzt := gestern
+	answer := `{"vertrag":1,"name":"Archiv","icon":"archiv","link":"https://archiv.box.test/tresor","aufgaben":[` +
+		`{"id":"schluessel","titel":"Im Archiv fehlt ein Schlüssel","warum":"Ohne ihn kommt nicht alles in dein Archiv.","link":"https://archiv.box.test/tresor/quellen","art":"schluessel"},` +
+		`{"id":"frage-1a2b","titel":"Wie steht Ben zu Clara?","warum":"Vorschlag, weil beide denselben Nachnamen haben."},` +
+		`{"id":"pflege","titel":"4 Dinge zum Aufräumen im Archiv","link":"https://archiv.box.test/tresor/pflege"}]}`
+	anna, asked := archiv362(t, false, &answer)
+	cfg := cfg362(t, false)
+	cfg.Plugins = plugin.Open([]plugin.Instance{anna}, filepath.Join(t.TempDir(), "plugins.json"))
+	cfg.Plugins.Now = func() time.Time { return jetzt }
 	cfg.Now, cfg.Loc = func() time.Time { return gestern.Add(14 * time.Hour) }, time.UTC
-	anna, asked := archiv362(t, false, `{"offen":false,"am":"`+gestern.Format(time.RFC3339)+`","fragen":1,"aufraeumen":4,"schluessel_fehlt":true}`)
-	cfg.ArchivIntern["anna"] = anna
+	cfg.Plugins.Lesen(context.Background(), "anna")                                                  // handed over yesterday, the vault open
+	answer = `{"vertrag":1,"name":"Archiv","icon":"archiv","link":"https://archiv.box.test/tresor"}` // locked now: no tasks to say
+	jetzt = gestern.Add(14 * time.Hour)
+
 	_, page, _ := familyPageAs(t, DeineAufgaben, cfg, "GET", aufgabenPath, "anna", "family")
 	offen := section(t, page, "karte-offen")
 	mustContain(t, offen, `<a href="https://archiv.box.test/tresor/quellen">Im Archiv fehlt ein Schlüssel</a>`,
-		`<a href="https://archiv.box.test/tresor">Im Archiv: 1 Frage offen</a>`, "Stand: gestern · Wer zu wem gehört",
+		`<a href="https://archiv.box.test/tresor">Wie steht Ben zu Clara?</a>`, "Stand: gestern · Vorschlag, weil",
 		`<a href="https://archiv.box.test/tresor/pflege">4 Dinge zum Aufräumen im Archiv</a>`)
-	before(t, offen, "fehlt ein Schlüssel", "1 Frage offen")
-	before(t, offen, "1 Frage offen", "Für alle")
+	mustNotContain(t, page, "antwortet gerade nicht")
+	before(t, offen, "fehlt ein Schlüssel", "Wie steht Ben")
+	before(t, offen, "Wie steht Ben", "Für alle")
 	_, start, _ := familyPageAs(t, Start, cfg, "GET", StartBoxPath, "anna", "family")
-	mustContain(t, section(t, start, "karte-braucht-dich"), "Im Archiv fehlt ein Schlüssel", "Im Archiv: 1 Frage offen")
-	if *asked != 2 {
-		t.Fatalf("anna's archive asked %d times for anna's two pages", *asked)
+	mustContain(t, section(t, start, "karte-braucht-dich"), "Im Archiv fehlt ein Schlüssel", "Wie steht Ben zu Clara?")
+	if *asked != 3 {
+		t.Fatalf("anna's archive asked %d times for one hand-over and anna's two pages", *asked)
 	}
+	_, mehr, _ := familyPageAs(t, Mehr, cfg, "GET", mehrPath, "anna", "family")
+	mustContain(t, mehr, `href="https://archiv.box.test/tresor"`, ">Archiv<")
 
 	for _, v := range [][2]string{{"ben", "family"}, {"clara", "family,admins"}} {
 		_, page, _ := familyPageAs(t, DeineAufgaben, cfg, "GET", aufgabenPath, v[0], v[1])
 		_, start, _ := familyPageAs(t, Start, cfg, "GET", StartBoxPath, v[0], v[1])
-		mustNotContain(t, page+start, "Im Archiv", "Aufräumen", "/tresor")
+		_, mehr, _ := familyPageAs(t, Mehr, cfg, "GET", mehrPath, v[0], v[1])
+		mustNotContain(t, page+start+mehr, "Im Archiv", "Aufräumen", "/tresor", "Wie steht", ">Archiv<")
 	}
 	cfg.Einrichtung = &einrichten.Quellen{Module: modulListe(t), Admins: einrichten.OpenAdmins(t.TempDir())}
 	for _, z := range AppListe(cfg)(context.Background(), "ben") {
-		if strings.HasPrefix(z.Name, "archiv-") {
+		if strings.HasPrefix(z.Name, "plugin-") {
 			t.Errorf("ben's app has anna's %+v", z)
 		}
 	}
-	if *asked != 2 {
+	if *asked != 3 {
 		t.Errorf("anna's archive asked for another viewer: %d", *asked)
 	}
+
+	answer = "kaputt" // the archive breaks: what it handed over stays, one quiet line, nothing breaks
+	_, page, _ = familyPageAs(t, DeineAufgaben, cfg, "GET", aufgabenPath, "anna", "family")
+	mustContain(t, page, "<p class=k>Archiv antwortet gerade nicht.</p>", "Wie steht Ben zu Clara?", "Stand: gestern")
+	_, mehr, _ = familyPageAs(t, Mehr, cfg, "GET", mehrPath, "anna", "family")
+	mustContain(t, mehr, "Archiv antwortet gerade nicht.")
 }

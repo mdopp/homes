@@ -38,7 +38,9 @@ auth none); unset, the listener is Kontakt prüfen lassen's alone, on any
 Host. `HOMES_TEASER_PERSON` is whom Laib tells of a *Zugang anfragen*
 request (box.yml `notify.person`); unset, nobody, the request still waits
 on the admins' Start. `HOMES_DATA` (default `/data`) holds `devices.json`, `favoriten.json`
-and `kontakt-antworten.json` (the links' hashes and the answers, 0600); `HOMES_PUBLIC_URL` is the
+and `kontakt-antworten.json` (the links' hashes and the answers, 0600), and `plugins.json` (each
+registered plugin's last answer per person, its handed-over tasks with their text, 0600; `HOMES_PLUGIN_<NAME>`
+and `HOMES_PLUGINKEY_<NAME>_<PERSON>` are the plugins Laib registers, docs/REFERENCE.md „Plugins“); `HOMES_PUBLIC_URL` is the
 origin the setup link carries (default `https://<Host>`). Homes' Laib token is the `homes` hand: status, inbox, journal, restart —
 nothing else (no exec, no write). There are no static device tokens. Image: `ghcr.io/mdopp/homes`. Laib template: `homes` (route `www.<domain>`, the domain itself redirects
 there, `bypass: [/napi/]`; the

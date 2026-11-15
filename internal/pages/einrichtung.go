@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"html"
-	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -15,7 +14,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/mdopp/homes/internal/assistent"
 	"github.com/mdopp/homes/internal/cards"
@@ -72,7 +70,7 @@ func (a aufgabe) sagt() string {
 }
 
 // aufgabenListe is the viewer's whole list, open and done, in the owner's order;
-// l is what Laib and the archive said (nil: not read).
+// l is what Laib and the plugins said (nil: not read).
 func aufgabenListe(r *http.Request, cfg StartConfig, l laibTeil) []aufgabe {
 	as := einrichtung(r, cfg)
 	if l.aufgaben != nil {
@@ -87,25 +85,7 @@ func aufgabenListe(r *http.Request, cfg StartConfig, l laibTeil) []aufgabe {
 			as = append(as, aufgabe{titel: row[0], warum: row[1], href: ZugangPath, art: artEntscheiden, name: "zugang", icon: "box"})
 		}
 	}
-	if z := l.archiv; cfg.ArchivURL != "" { // the viewer's own archive's counts (owner 2026-11-12, archiv#60)
-		now, loc := cfg.clock()
-		stand := ""
-		if !z.Offen && !z.Am.IsZero() { // the last count, kept while the vault is closed
-			stand = "Stand: " + dayWord(z.Am, now, loc)
-		}
-		if z.SchluesselFehlt {
-			as = append(as, aufgabe{titel: "Im Archiv fehlt ein Schlüssel", warum: "Ohne ihn kommt nicht alles in dein Archiv.",
-				href: cfg.ArchivURL + "/tresor/quellen", extern: "Im Archiv öffnen", art: artSchluessel, name: "archiv-schluessel", icon: "archiv"})
-		}
-		if z.Fragen > 0 {
-			as = append(as, aufgabe{titel: "Im Archiv: " + texte.Anzahl(z.Fragen, "Frage", "Fragen") + " offen", stand: stand, warum: "Wer zu wem gehört: dein Archiv fragt nach.",
-				href: cfg.ArchivURL + "/tresor", extern: "Im Archiv öffnen", art: artFrage, name: "archiv-fragen", icon: "archiv"})
-		}
-		if z.Aufraeumen > 0 {
-			as = append(as, aufgabe{titel: texte.Anzahl(z.Aufraeumen, "Ding", "Dinge") + " zum Aufräumen im Archiv", stand: stand, warum: "Dein Archiv hat etwas zum Aufräumen gefunden.",
-				href: cfg.ArchivURL + "/tresor/pflege", extern: "Im Archiv öffnen", art: artFrage, name: "archiv-aufraeumen", icon: "archiv"})
-		}
-	}
+	as = append(as, pluginAufgaben(cfg, l.plugins)...) // the plugins' handed-over tasks (homes ADR 0003)
 	slices.SortStableFunc(as, func(a, b aufgabe) int { return a.art - b.art })
 	return as
 }
@@ -154,27 +134,30 @@ func logLaibAufgaben(err error) {
 	}
 }
 
-// aufgabenLesen reads what Deine Aufgaben needs of Laib and the archive at
+// aufgabenLesen reads what Deine Aufgaben needs of Laib and the plugins at
 // once: the tasks and keys (kept is the list kept a minute, else anew),
-// an admin's decisions waiting, the viewer's own archive's counts.
+// an admin's decisions waiting, the tasks the viewer's plugins hand over.
 func aufgabenLesen(r *http.Request, cfg StartConfig, kept bool) (l laibTeil, err error) {
 	user := r.Header.Get("Remote-User")
-	if cfg.Laib == nil || user == "" {
+	if user == "" {
 		return l, nil
 	}
-	reads := []func(context.Context){func(ctx context.Context) {
-		var la laib.Aufgaben
-		ok := true
-		if kept {
-			la, ok, err = cfg.Laib.KeptAufgaben(ctx, user)
-		} else {
-			la, err = cfg.Laib.MeineAufgaben(ctx, user)
-		}
-		if ok && err == nil {
-			l.aufgaben = &la
-		}
-	}, func(ctx context.Context) { l.archiv = archivZahlen(ctx, cfg, user) }}
-	if isAdmin(r) {
+	reads := []func(context.Context){func(ctx context.Context) { l.plugins = cfg.Plugins.Lesen(ctx, user) }}
+	if cfg.Laib != nil {
+		reads = append(reads, func(ctx context.Context) {
+			var la laib.Aufgaben
+			ok := true
+			if kept {
+				la, ok, err = cfg.Laib.KeptAufgaben(ctx, user)
+			} else {
+				la, err = cfg.Laib.MeineAufgaben(ctx, user)
+			}
+			if ok && err == nil {
+				l.aufgaben = &la
+			}
+		})
+	}
+	if cfg.Laib != nil && isAdmin(r) {
 		reads = append(reads, func(ctx context.Context) { l.wartet, _ = cfg.Laib.Inbox(ctx) })
 	}
 	fetch(r, reads...)
@@ -193,37 +176,6 @@ func archivVon(ctx context.Context, cfg StartConfig, person string) (ar archivSt
 	}
 	_, own, err := cfg.Laib.ServiceStatus(ctx, "archiv-"+person)
 	return ar, err == nil && json.Unmarshal(own, &ar) == nil
-}
-
-// archivAufgaben is what the person's own archive counts for them
-// (archiv#60, GET /intern/aufgaben): counts only, and never through Laib's
-// status, which the admins see (owner 2026-11-12: the archive's owner's only).
-type archivAufgaben struct {
-	Offen           bool      `json:"offen"` // false: the counts of Am, the vault closed since
-	Am              time.Time `json:"am"`
-	Fragen          int       `json:"fragen"`
-	Aufraeumen      int       `json:"aufraeumen"`
-	SchluesselFehlt bool      `json:"schluessel_fehlt"`
-}
-
-// archivZahlen asks person's own archive, the way the media come
-// (X-Archiv-Homes, ArchivIntern); none without one or when it did not answer.
-func archivZahlen(ctx context.Context, cfg StartConfig, person string) (z archivAufgaben) {
-	a, ok := cfg.ArchivIntern[person]
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, a.URL+"/intern/aufgaben", nil)
-	if !ok || err != nil {
-		return z
-	}
-	req.Header.Set("X-Archiv-Homes", a.Secret)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return z
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK || json.NewDecoder(io.LimitReader(resp.Body, 4<<10)).Decode(&z) != nil {
-		return archivAufgaben{}
-	}
-	return z
 }
 
 // mitAssistent is a task's „Gemeinsam mit <name>“: the Sprechen field's
@@ -307,12 +259,12 @@ const (
 func einrichtungKarte(r *http.Request, cfg StartConfig) string {
 	user := r.Header.Get("Remote-User")
 	if cfg.Laib == nil || user == "" {
-		return einrichtungCard(offen(einrichtung(r, cfg)), "")
+		return einrichtungCard(offen(aufgabenListe(r, cfg, laibTeil{plugins: cfg.Plugins.Gemerkt(user)})), "")
 	}
 	if la, ok := cfg.Laib.PeekAufgaben(user); ok {
-		return einrichtungCard(offen(aufgabenListe(r, cfg, laibTeil{aufgaben: &la})), "")
+		return einrichtungCard(offen(aufgabenListe(r, cfg, laibTeil{aufgaben: &la, plugins: cfg.Plugins.Gemerkt(user)})), "")
 	}
-	own := offen(einrichtung(r, cfg))
+	own := offen(aufgabenListe(r, cfg, laibTeil{plugins: cfg.Plugins.Gemerkt(user)}))
 	return nachladen(MehrAufgabenPath, einrichtungCard(own, saysAufgabenLesen), einrichtungCard(own, saysAufgabenNicht))
 }
 
@@ -324,21 +276,22 @@ func mehrAufgaben(w http.ResponseWriter, r *http.Request, cfg StartConfig) {
 		return
 	}
 	user := r.Header.Get("Remote-User")
-	card := einrichtungCard(offen(einrichtung(r, cfg)), "")
+	own := offen(aufgabenListe(r, cfg, laibTeil{plugins: cfg.Plugins.Gemerkt(user)}))
+	card := einrichtungCard(own, "")
 	if cfg.Laib != nil && user != "" {
 		ctx, cancel := context.WithTimeout(r.Context(), backendWait)
 		la, ok, err := cfg.Laib.KeptAufgaben(ctx, user)
 		cancel()
 		switch {
 		case ok:
-			card = einrichtungCard(offen(aufgabenListe(r, cfg, laibTeil{aufgaben: &la})), "")
+			card = einrichtungCard(offen(aufgabenListe(r, cfg, laibTeil{aufgaben: &la, plugins: cfg.Plugins.Gemerkt(user)})), "")
 		case errors.Is(err, laib.ErrNoTool): // an older Laib: Homes' own only
 		default:
 			if err == nil {
 				err = context.DeadlineExceeded
 			}
 			logLaibAufgaben(err)
-			card = einrichtungCard(offen(einrichtung(r, cfg)), saysAufgabenNicht)
+			card = einrichtungCard(own, saysAufgabenNicht)
 		}
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -429,6 +382,7 @@ func DeineAufgaben(cfg StartConfig) http.HandlerFunc {
 		if err != nil && !errors.Is(err, laib.ErrNoTool) {
 			b.WriteString("<p class=k>" + saysAufgabenNicht + "</p>")
 		}
+		b.WriteString(pluginStill(l.plugins))
 		switch {
 		case len(open) > 0:
 			b.WriteString(`<section class=karte aria-labelledby=karte-offen><h2 id=karte-offen>Offen</h2><ul class=aufgaben>`)
