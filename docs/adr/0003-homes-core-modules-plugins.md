@@ -4,7 +4,7 @@ Applies when you add an area to Homes, when another program (the archive,
 the poll, a new app) wants to appear in Homes, or when Homes' code grows
 past what the household needs from it every day.
 
-- **Status:** Proposed, 2026-11-15 (for the owner's review)
+- **Status:** Accepted, 2026-11-15 (the owner: „finde deinen Vorschlag gut … setze es so um“)
 - **Deciders:** the owner (mdopp), 2026-11-15: „Homes soll anpassbar und
   erweiterbar sein. Nicht alles gehört auch dort in den Kern. Wenn möglich
   ist es eine Art Plugin. Etwas, das das sein kann, aber nicht muss.“ and
