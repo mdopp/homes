@@ -10,6 +10,7 @@ import (
 
 	"github.com/mdopp/homes/internal/cards"
 	"github.com/mdopp/homes/internal/laib"
+	"github.com/mdopp/homes/internal/plugin"
 	"github.com/mdopp/homes/internal/texte"
 )
 
@@ -126,7 +127,7 @@ type laibTeil struct {
 	aufgaben  *laib.Aufgaben  // the person's own Box-Aufgaben (laib#878)
 	befunde   laib.Befunde    // laib diag's, for an admin
 	wartet    []laib.Proposal // decisions waiting, for an admin
-	archiv    archivAufgaben  // the viewer's own archive's counts (homes#362, archiv#60)
+	plugins   []plugin.Stand  // the viewer's plugins, their handed-over tasks (homes ADR 0003)
 }
 
 // brauchtDichSpaeter is Braucht dich's place on Start: what Homes knows at
@@ -213,7 +214,7 @@ func startBox(w http.ResponseWriter, r *http.Request, cfg StartConfig, box *boxS
 		})
 	}
 	if user != "" {
-		reads = append(reads, func(ctx context.Context) { l.archiv = archivZahlen(ctx, cfg, user) })
+		reads = append(reads, func(ctx context.Context) { l.plugins = cfg.Plugins.Lesen(ctx, user) })
 	}
 	if isAdmin(r) {
 		reads = append(reads, func(ctx context.Context) { l.befunde, derr = cfg.Laib.Befunde(ctx) },

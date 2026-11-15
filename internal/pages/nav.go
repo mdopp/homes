@@ -80,9 +80,6 @@ func kern(cfg StartConfig) []modul.Eintrag {
 		{Titel: "Deine Aufgaben", Pfad: aufgabenPath, Icon: iconAufgaben, Ort: modul.Mehr, Rang: 110,
 			Fuer: func(r *http.Request) bool { return angemeldet(r) && (cfg.Laib != nil || len(einrichtung(r, cfg)) > 0) }},
 		{Titel: texte.T("zusammen.titel"), Pfad: ZusammenPath, Icon: iconZusammen, Ort: modul.Mehr, Rang: 70}, // owner 2026-11-05
-		// the person's own archive, theirs only (owner 2026-11-10: „aus der App gibt es einen Link?“)
-		{Titel: texte.T("archiv.titel"), Pfad: cfg.ArchivURL + "/", Icon: iconArchiv, Ort: modul.Mehr, Rang: 75,
-			Fuer: func(r *http.Request) bool { return cfg.ArchivURL != "" && cfg.Archive[r.Header.Get("Remote-User")] }},
 		// every source of the person's data with its last arrival (homes#342), theirs only
 		{Titel: texte.T(texte.MeineDatenTitel), Pfad: MeineDatenPath, Icon: iconDaten, Ort: modul.Mehr, Rang: 77, Fuer: angemeldet},
 		{Titel: "Box", Pfad: "/box", Icon: iconBox, Ort: modul.Mehr, Rang: 120, Fuer: isAdmin},
@@ -90,9 +87,10 @@ func kern(cfg StartConfig) []modul.Eintrag {
 }
 
 // eintraege are the entries at o this person sees on this box: the
-// core's, and those of the modules on; without a module list, the core's.
+// core's, the viewer's plugins' (homes ADR 0003) and those of the modules
+// on; without a module list, the core's and the plugins'.
 func eintraege(r *http.Request, cfg StartConfig, o modul.Ort) []modul.Eintrag {
-	return cfg.Module.Eintraege(r, o, kern(cfg)...)
+	return cfg.Module.Eintraege(r, o, append(kern(cfg), pluginEintraege(r, cfg)...)...)
 }
 
 // tabOf is the bar entry a page belongs to: Räume is Geräte,

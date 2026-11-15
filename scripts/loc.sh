@@ -24,7 +24,7 @@ set -e
 cd "$(dirname "$0")/.."
 bad=0
 p() { for x in "$@"; do printf 'internal/%s ' "$x"; done; }
-connectors=$(p abs bote caldav discogs ha immich jellyfin judge laib musicbrainz paperless qmd reitti samba werkstatt)
+connectors=$(p abs bote caldav discogs ha immich jellyfin judge laib musicbrainz paperless plugin qmd reitti samba werkstatt)
 shared=$(p abruf app assistent cards code128 erreichbar jsonfile markdown mcpserver modul namen texte)
 household=$(p ansicht devices dokumente drucker einkauf einrichten energie favoriten gesehen gesichter haushalt kontaktantwort library merken musik netz notes papierkorb podcasts schalter takeout uebernahme usage zugang)
 
@@ -118,7 +118,10 @@ budget() { # budget <name> <cap> <dir…>
 # 19,965 used, to be OK'd in the PR): the printer row's ☆ (roomThing.ownRow split from cardRow), Start's tile in its words
 # 2026-11-14, owner's request 2026-11-14 („Kein Mensch“ on „Wer ist das?“: a toy's face asked as a person; pages 19,970 -> 19,990;
 # 19,984 used, to be OK'd in the PR): the card's third choice and „Ausgeblendet.“ with its Rückgängig (kontakte_wer.go)
-budget pages 19990 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-15, owner's request homes#375 (ADR 0003 accepted 2026-11-15, „setze es so um“; pages 19,990 -> 20,035; 20,031 used, the
+# minimum, to be OK'd in the PR): the plugin contract on the pages (plugins.go): a plugin's entry, Start card, handed-over tasks with
+# „Stand: <Tag>“ and the quiet line; the archive's own counts went (archivZahlen, its rows, its nav entry, -70)
+budget pages 20035 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -142,7 +145,8 @@ budget napi 5340 internal/napi        # the app's widgets' and share sheet's API
 # 2026-11-12, owner's request homes#362: the app's Deine Aufgaben wired to the page's list and the admins seen (1,448 -> 1,452; 1,451 used)
 # 2026-11-14, owner's request 2026-11-14 (the printer; 1,452 -> 1,455; 1,452 used): HOMES_DATA handed to the pages, where
 # drucker.json keeps each printer's last known address
-budget cmd 1455 cmd/homes             # homes' wiring: 1,018 with the demo then
+# 2026-11-15, owner's request homes#375 (1,455 -> 1,460; 1,458 used): the plugins from HOMES_PLUGIN_*, kept in HOMES_DATA, asked every 5 minutes
+budget cmd 1460 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-04, the caps moved with the packages, none raised (sum 24,134 as before): abs and
 # musicbrainz (1,227 lines, 1,289 of cap) from household to connectors once merken's fetcher
 # was internal/abruf (235 lines of merken, 247 of cap, to shared) and jellyfin.Plain
@@ -201,7 +205,10 @@ budget cmd 1455 cmd/homes             # homes' wiring: 1,018 with the demo then
 # HA's diagnostics (ha.EntryHost), hafake's diagnostics
 # 2026-11-14, owner's request 2026-11-14 („Kein Mensch“ on „Wer ist das?“: a toy's face asked as a person; connectors 15,830 -> 15,850;
 # 15,847 used, to be OK'd in the PR): immich.Verstecken (PUT isHidden), immichfake taking isHidden and a field left out
-budget connectors 15850 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
+# 2026-11-15, owner's request homes#375 (ADR 0003 §3, connectors 15,850 -> 16,230; 16,224 used, the minimum, to be OK'd in the PR):
+# internal/plugin, the contract's client: HOMES_PLUGIN_* as Laib renders them, the answer checked against contract 1, what Homes keeps
+# of each plugin per person (plugins.json), the background ask
+budget connectors 16230 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
 # 2026-11-04, internal/jsonfile (47 lines, 50 of cap) from household's cap to shared's: it
 # replaces nine copies of a save, 62 of their lines in household
 # 2026-11-05, owner 2026-11-05 yes: Immich for the contacts (9,583 -> 9,874):

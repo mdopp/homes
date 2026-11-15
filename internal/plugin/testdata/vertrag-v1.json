@@ -1,0 +1,13 @@
+{
+  "vertrag": 1,
+  "name": "Archiv",
+  "icon": "archiv",
+  "link": "https://archiv.box.test/tresor",
+  "zeile": "Deine Nachrichten, im Tresor nur für dich",
+  "start": {"titel": "Archiv", "zeile": "2 Fragen offen", "link": "https://archiv.box.test/tresor"},
+  "aufgaben": [
+    {"id": "schluessel", "titel": "Im Archiv fehlt ein Schlüssel", "warum": "Ohne ihn kommt nicht alles in dein Archiv.", "link": "https://archiv.box.test/tresor/quellen", "art": "schluessel"},
+    {"id": "frage-0a1b2c3d", "titel": "Wie steht Ben zu Clara?", "warum": "Vorschlag, weil beide denselben Nachnamen haben."}
+  ],
+  "widgets": [{"name": "fragen", "titel": "Fragen", "wert": "2", "link": "https://archiv.box.test/tresor"}]
+}
