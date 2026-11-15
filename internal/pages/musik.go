@@ -424,8 +424,8 @@ func musikPlatten(ctx context.Context, r *http.Request, cfg StartConfig) string 
 // corners — for the how and the files; a file's state in a dot and a quiet line.
 const musikStyle = `<style>.musik-dazu .wie{padding:14px 16px;border-radius:20px;background:var(--card)}.musik-dazu .wie p{margin:0}.musik-dazu .wie p+p{margin-top:8px}.musik-dazu .wie a{color:var(--accent)}
 .karte ul.musik-liste{display:grid;gap:8px;margin:10px 0 0;background:none;border:0;border-radius:0}.karte .musik-liste li{display:flex;gap:10px;padding:12px 14px;border:0;border-radius:20px;background:var(--card)}
-.musik-liste li>div{min-width:0}.musik-liste .name{display:block;font-weight:600;overflow-wrap:anywhere}.punkt.rot{background:var(--danger)}.musik-liste .punkt:not(.gelb):not(.rot){background:var(--ok)}
-.musik-tun{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}.musik-tun form{margin:0}.musik-tun .weg{background:var(--danger-soft);color:var(--danger)}
+.musik-liste li>div{min-width:0}.musik-liste .name{display:block;font-weight:600;overflow-wrap:anywhere}.punkt.rot{background:var(--bad)}.musik-liste .punkt:not(.gelb):not(.rot){background:var(--ok)}
+.musik-tun{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}.musik-tun form{margin:0}.musik-tun .weg{background:var(--bad-soft);color:var(--bad)}
 .musik-platten .stand{margin:12px 2px 0}.musik-platten .stand a{color:var(--accent)}.musik-platten .ruhig{margin:12px 2px 0}.musik-platten .ruhig a{color:var(--accent)}</style>`
 
 // musikKorb is the inbox's hidden Papierkorb (haus#174): a dot folder, which

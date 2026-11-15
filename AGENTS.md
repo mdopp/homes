@@ -62,7 +62,7 @@ framework, no build step.
 
 ## Code gates
 
-The owner, 2026-11-03: „Code sollte immer möglichst sauber sein“. Both
+The owner, 2026-11-03: „Code sollte immer möglichst sauber sein“. The
 gates run in CI; run them before a PR.
 
 - `scripts/loc.sh` — production lines per area under its cap (pages,
@@ -89,6 +89,14 @@ gates run in CI; run them before a PR.
   --update` (it only lowers) and commit `scripts/ratchet/`. A renamed or
   moved function counts as new under its new name. The script is the
   same as laib's `scripts/ratchet.py`; change both.
+- `scripts/farben.py` — the look is mdopp/gestaltung, the household's
+  shared design (its ADR 0001), a Go module pinned at a tag and embedded
+  in every page (`frame`, the teaser, the contact form). Pages use its
+  `var(--…)` tokens, never a colour literal of their own: this fails on a
+  hex, `rgb()` or `hsl()` value outside it and outside the user content
+  named in `scripts/farben-erlaubt.txt` (calendar swatches, the energy
+  chart's series, print, the icon). A colour the pages need becomes a
+  gestaltung token first; a new tag moves here in an ordinary PR.
 
 
 ## Layout

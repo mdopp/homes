@@ -124,7 +124,7 @@ func Pruefen(cfg StartConfig) http.HandlerFunc {
 }
 
 const pruefenStyle = `<style>.knoepfe{display:flex;gap:10px;flex-wrap:wrap}.aenderung{margin:12px 0;padding:14px;border-radius:16px;background:var(--card)}.aenderung label{display:flex;gap:12px;align-items:flex-start}.aenderung input{width:22px;height:22px;flex:none;margin-top:2px}.aenderung .art{font-size:.85rem;color:var(--muted)}
-.aenderung .vorher{color:var(--muted);text-decoration:line-through;overflow-wrap:anywhere}.aenderung .nachher{font-weight:600;overflow-wrap:anywhere}.aenderung .hinweis{margin:8px 0 0 34px;color:var(--warn,#e0a030);font-size:.9rem}.aenderung .weg{font-size:.85rem;font-weight:600;color:var(--warn,#e0a030)}.aenderung img.foto{width:120px;height:auto;border-radius:12px;margin-top:4px}.aenderung blockquote{margin:0 0 10px;padding:10px 12px;border-left:3px solid var(--line);white-space:normal;overflow-wrap:anywhere}.aenderung .stand{margin:6px 0 0 34px;font-size:.85rem;color:var(--muted)}</style>`
+.aenderung .vorher{color:var(--muted);text-decoration:line-through;overflow-wrap:anywhere}.aenderung .nachher{font-weight:600;overflow-wrap:anywhere}.aenderung .hinweis{margin:8px 0 0 34px;color:var(--warn);font-size:.9rem}.aenderung .weg{font-size:.85rem;font-weight:600;color:var(--warn)}.aenderung img.foto{width:120px;height:auto;border-radius:12px;margin-top:4px}.aenderung blockquote{margin:0 0 10px;padding:10px 12px;border-left:3px solid var(--line);white-space:normal;overflow-wrap:anywhere}.aenderung .stand{margin:6px 0 0 34px;font-size:.85rem;color:var(--muted)}</style>`
 
 // pruefenScript is „Link teilen“: the link made, the share sheet opens,
 // else the message is copied („Link kopiert“); a share sheet refused as

@@ -275,7 +275,7 @@ func TestFamilyPagesWearTheHousePalette(t *testing.T) {
 		{Notizen, "/notizen", "Notizen · Homes"}, {Ding, "/raeume/light.flur", "Flurlicht · Homes"}} {
 		_, body, h := familyPage(t, p.page, all, "GET", p.path, "")
 		mustContain(t, body, "<title>"+p.title+"</title>", "lang=de", "<h1>",
-			"#070709", "#14141a", "#f97316", "#ffc107", "prefers-color-scheme:light", "color-scheme",
+			"#070709", "#14141a", "#f97316", "prefers-color-scheme: light", "color-scheme",
 			"@font-face", FontPath, "system-ui",
 			"rel=icon href=/symbol/favicon.svg", "rel=apple-touch-icon href=/symbol/apple-touch-icon.png",
 			"rel=manifest href=/symbol/homes.webmanifest crossorigin=use-credentials")

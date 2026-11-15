@@ -33,7 +33,7 @@ const (
 var wishWait = 20 * time.Second
 
 const spurenStyle = `<style>.spuren li{color:var(--muted)}.spuren .spur{font-weight:500}.spuren .k{color:var(--muted)}
-.spuren button{min-height:44px;padding:0 14px;background:var(--track);color:var(--ink);border-radius:12px;font:inherit;font-size:.9rem}</style>`
+.spuren button{min-height:44px;padding:0 14px;background:var(--edge);color:var(--ink);border-radius:12px;font:inherit;font-size:.9rem}</style>`
 
 // spurenKarte is Mehr's card of traces; "" on a box that lacks nothing.
 // Mehr never waits for Laib: with its stand kept (a minute) the card is

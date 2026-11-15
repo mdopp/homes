@@ -105,7 +105,7 @@ func Trennblatt(cfg StartConfig) http.HandlerFunc {
 const separatorStyle = `<style>body{margin:0;background:var(--bg);color:var(--ink);font-family:Geist,system-ui,sans-serif}
 .leiste{position:sticky;top:0;display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
 .leiste p{flex:1;margin:0}.leiste .k{color:var(--muted)}.leiste a{color:var(--accent);min-height:44px;display:flex;align-items:center}
-.leiste button{min-height:44px;padding:0 20px;border:0;border-radius:10px;background:var(--accent);color:#fff;font:inherit;font-weight:600}
+.leiste button{min-height:44px;padding:0 20px;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:600}
 .blaetter{padding:16px}
 .blatt{box-sizing:border-box;width:210mm;height:296mm;overflow:hidden;margin:0 auto;padding:60mm 0 0;background:#fff;color:#000;text-align:center;page-break-after:always;break-after:page}
 .blatt:last-child{page-break-after:auto;break-after:auto}

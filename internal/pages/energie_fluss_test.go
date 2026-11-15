@@ -189,8 +189,8 @@ func TestEnergieJetztFlowsFromTheLegs(t *testing.T) {
 	}
 	// a moving dash is only a hint, and stops for those who asked for less motion
 	mustContain(t, body, "@keyframes fliesst", "@media (prefers-reduced-motion:reduce){.fluss .lauf{animation:none}}")
-	// the widget's card: black, no border, in the dark; the light keeps the page's white
-	mustContain(t, body, "--e-karte:#000", "--e-karte:var(--card)", ".fluss-bild{background:var(--e-karte);border-radius:18px;")
+	// the widget's card: the shared look's near-black ground, no border, in the dark; the light keeps the page's white
+	mustContain(t, body, "--e-karte:var(--bg)", "--e-karte:var(--card)", ".fluss-bild{background:var(--e-karte);border-radius:18px;")
 }
 
 // The arrowhead sits at the destination for every way the picture can
@@ -381,8 +381,8 @@ func TestEnergieDeltasSayGoodOrBad(t *testing.T) {
 	cfg := senecSince2June(t, fake)
 	cfg.HA = hc
 	_, body, _ := familyPage(t, Energie, cfg, "GET", "/energie", "family")
-	// the tokens: a blue-ish green and an orange-red, dark and light, by the series colours
-	mustContain(t, body, "--e-gut:", "--e-schlecht:", ".delta.gut{", ".delta.schlecht{", "font-variant-numeric:tabular-nums")
+	// the shared look's state tokens, dark and light: --ok better, --bad worse
+	mustContain(t, body, ".delta.gut{color:var(--ok);background:var(--ok-soft)}", ".delta.schlecht{color:var(--bad);background:var(--bad-soft)}", "font-variant-numeric:tabular-nums")
 }
 
 // The forecast in the history's own chart (the owner, on #73: "warum

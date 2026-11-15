@@ -20,6 +20,8 @@ jobs:
       - run: CGO_ENABLED=0 go build -o /dev/null ./cmd/homes
       - name: each area under its cap, no import across the areas' rules
         run: scripts/loc.sh
+      - name: colours only from the shared look, mdopp/gestaltung (its ADR 0001)
+        run: python3 -m unittest scripts/test_farben.py && python3 scripts/farben.py
   ratchet:
     # dead code, staticcheck, duplicates and complexity only go down; the
     # tools pinned in the script, today's findings in scripts/ratchet/

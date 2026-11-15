@@ -665,8 +665,9 @@ func eigenesMuster(extra, value string) string {
 // papierkorbIcon is the trash can of a row the contact may take away.
 const papierkorbIcon = `<svg viewBox="0 0 24 24" aria-hidden=true><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg>`
 
-// frageSeite is the page: its own calm frame, no menu, no login, nothing
-// fetched from elsewhere (the pages' font and icons are behind the login).
+// frageSeite is the page: the household's shared look (mdopp/gestaltung,
+// embedded), no menu, no login, nothing fetched from elsewhere (the pages'
+// font and icons are behind the login).
 func frageSeite(w http.ResponseWriter, code int, nonce, title, body string) {
 	var b strings.Builder
 	b.WriteString(`<!doctype html><html lang=de><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=color-scheme content="light dark">` +
@@ -677,20 +678,19 @@ func frageSeite(w http.ResponseWriter, code int, nonce, title, body string) {
 	w.Write([]byte(b.String()))
 }
 
-const frageStyle = `<style>:root{color-scheme:light;--bg:#f6f7f9;--card:#fff;--ink:#111827;--muted:#5b6474;--line:#d9dee6;--accent:#c2560c;--warn:#a15c00;--bad:#b42318}
-@media (prefers-color-scheme:dark){:root{color-scheme:dark;--bg:#0c0c0e;--card:#16161c;--ink:#f2f2f5;--muted:#a0a6b4;--line:#2a2a33;--accent:#f97316;--warn:#f59e0b;--bad:#fda29b}}
+var frageStyle = `<style>` + gestaltungCSS + `
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 main{max-width:32rem;margin:0 auto;padding:28px 16px 48px}h1{font-size:1.5rem;line-height:1.25;margin:0 0 12px}p{margin:0 0 14px}.k{color:var(--muted);font-size:.92rem}
 fieldset{min-width:0;margin:0 0 14px;padding:14px;border:0;border-radius:16px;background:var(--card)}legend{float:left;width:100%;margin:0 0 8px;font-weight:600}fieldset>:not(legend){clear:both}.nummer>*,.tag>*,.zeile>*{min-width:0}
 label{display:block;margin:0 0 10px;font-size:.88rem;color:var(--muted)}label:last-child{margin-bottom:0}
-input,select,textarea{display:block;width:100%;margin-top:4px;padding:12px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px}
+input,select,textarea{display:block;width:100%;margin-top:4px;padding:12px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--edge);border-radius:12px}
 input:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px}.zeile{display:grid;grid-template-columns:7rem 1fr;gap:10px}.strasse{display:grid;grid-template-columns:1fr 6.5rem;gap:10px}.strasse>*{min-width:0}
 [hidden]{display:none!important}.fehler{display:block;margin-top:4px;color:var(--bad);font-size:.88rem}[aria-invalid=true]{border-color:var(--bad)}
 .wahlen{display:flex;flex-wrap:wrap;gap:6px 18px;margin:0 0 12px}label.wahl{display:flex;align-items:center;gap:8px;margin:0;color:var(--ink);font-size:.92rem}
 label.wahl input{display:inline;width:20px;height:20px;margin:0;padding:0}
-.wahlen{align-items:center}.papierkorb,.zurueck{margin-left:auto;min-height:44px;padding:0 12px;background:var(--card);color:var(--ink);border:1px solid var(--line)}.papierkorb{width:44px;padding:0}
+.wahlen{align-items:center}.papierkorb,.zurueck{margin-left:auto;min-height:44px;padding:0 12px;background:var(--card);color:var(--ink);border:1px solid var(--edge)}.papierkorb{width:44px;padding:0}
 .papierkorb svg{width:20px;height:20px;vertical-align:middle;fill:none;stroke:currentColor;stroke-width:2}.geloescht input:not([type=hidden]),.geloescht select,.geloescht label.wahl{opacity:.45;text-decoration:line-through;pointer-events:none}#foto-bild{display:block;width:120px;height:auto;margin-top:10px;border-radius:12px}
 .nummer{display:grid;grid-template-columns:1fr 9rem;gap:10px}.tag{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:10px}
 .knoepfe{display:flex;flex-direction:column;gap:10px;margin-top:20px}
-button{min-height:48px;padding:0 18px;font:inherit;font-weight:600;border:0;border-radius:14px;background:var(--accent);color:#fff}button.zweit{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+button{min-height:48px;padding:0 18px;font:inherit;font-weight:600;border:0;border-radius:14px;background:var(--accent);color:var(--accent-ink)}button.zweit{background:var(--card);color:var(--ink);border:1px solid var(--edge)}
 button[disabled]{opacity:.6}.achtung{padding:12px 14px;border-radius:12px;border:1px solid var(--warn);color:var(--warn);margin:0 0 14px}.achtung p{margin:0}</style>`

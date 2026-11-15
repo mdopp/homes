@@ -218,7 +218,7 @@ func inviteProblem(err error) string {
 }
 
 const inviteStyle = `<style>.einladen label{display:block;margin:.6rem 0 .15rem}.einladen input,.einladen select{width:100%;max-width:26rem}
-.einladen .k{display:block;font-size:.85rem}.einladen button{margin-top:.8rem}.erfolg,.problem{padding:10px 14px;margin:.6rem 0;border-radius:12px;background:var(--ok-soft)}.problem{background:var(--danger-soft)}
+.einladen .k{display:block;font-size:.85rem}.einladen button{margin-top:.8rem}.erfolg,.problem{padding:10px 14px;margin:.6rem 0;border-radius:12px;background:var(--ok-soft)}.problem{background:var(--bad-soft)}
 .link{display:flex;gap:.4rem;flex-wrap:wrap;max-width:40rem}.link input{flex:1;min-width:12rem;font:13px ui-monospace,Menlo,Consolas,monospace}.zeilen form{flex:none}</style>`
 
 // inviteCard is the Box card: what Laib just did, the form, and who is

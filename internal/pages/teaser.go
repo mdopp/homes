@@ -171,6 +171,7 @@ func teaserPart(from, to string) string {
 // the file's head and main, wrapped, the login link filled, the templates after main left out.
 func teaserSeite(w http.ResponseWriter, code int, cfg StartConfig, teil string) {
 	head, body, _ := strings.Cut(teaserHTML, "<main>")
+	head = strings.Replace(head, "{{GESTALTUNG}}", gestaltungCSS, 1) // the shared look, ADR 0001 of mdopp/gestaltung
 	body, _, _ = strings.Cut(strings.Replace("<main>"+body, teaserPart(`<section class="zugang"`, "</section>"), teil, 1), "</main>")
 	body = strings.ReplaceAll(body, "{{ANMELDEN}}", html.EscapeString(strings.TrimRight(cfg.PublicURL, "/")+"/"))
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
