@@ -37,8 +37,11 @@ way.
    - a name, an icon and the link to the program;
    - optionally a Start card, tasks for „Deine Aufgaben“, and app widgets,
      each served by the plugin over HTTP in a fixed small format;
-   - Homes renders what is registered, links into the plugin for
-     everything else, and holds none of the plugin's data.
+   - Homes renders what is registered and links into the plugin for
+     everything else. It holds none of the plugin's data except the tasks
+     a plugin hands over: those Homes keeps with their text, so they show
+     while the plugin is closed (for the archive: while the vault is
+     locked).
    A plugin registers through Laib (a value or a door verb), not by Homes
    knowing it; removing the plugin removes its entry.
 4. **The archive is the first plugin** (its counts and tasks already work
