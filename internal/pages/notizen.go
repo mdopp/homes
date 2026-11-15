@@ -286,7 +286,7 @@ var noteSaid = map[string]string{"angelegt": "Notiz angelegt.", "gespeichert": "
 	"teilweise": "Gemerkt sind nur Link und Titel: Die Seite ließ sich nicht lesen. Den Text kannst du unter „Bearbeiten“ ergänzen."}
 
 // noteStyle is the note forms' look: a roomy field, phone first.
-const noteStyle = `<style>.notiz-weg{margin:18px 0 0}.notiz-weg .weg{background:var(--danger-soft);color:var(--danger)}.notiz-korb{list-style:none;padding:0;margin:8px 0}.notiz-korb li{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:6px 0}
+const noteStyle = `<style>.notiz-weg{margin:18px 0 0}.notiz-weg .weg{background:var(--bad-soft);color:var(--bad)}.notiz-korb{list-style:none;padding:0;margin:8px 0}.notiz-korb li{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:6px 0}
 .notizform label{display:block;font-size:.85rem;color:var(--muted);margin:12px 0 6px}
 .notizform input:not([type=radio],[type=checkbox],[type=hidden],[type=file]),.notizform textarea{width:100%;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--edge);border-radius:12px;padding:10px 14px}
 .notizform input:not([type=radio],[type=checkbox],[type=hidden],[type=file]),.notizform select{min-height:44px}.notizform select{width:100%;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--edge);border-radius:12px;padding:0 10px}

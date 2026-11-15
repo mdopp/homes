@@ -30,10 +30,10 @@ fetch('` + BoxPartPath + `?was=auslastung',{credentials:'same-origin'}).then(fun
 // auslastungStyle: bars and rings in the house palette, calm below 85 %.
 var auslastungStyle = `<style>.uhren{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
 .uhr{background:var(--card);border-radius:14px;padding:14px 10px;text-align:center}.uhr span{display:block;font-size:.85rem}
-.ring{--c:var(--ok);width:92px;height:92px;margin:0 auto 8px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--c) calc(var(--p)*1%),var(--track) 0)}
+.ring{--c:var(--ok);width:92px;height:92px;margin:0 auto 8px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--c) calc(var(--p)*1%),var(--edge) 0)}
 .ring b{width:72px;height:72px;border-radius:50%;background:var(--card);display:grid;place-items:center;font-size:1.1rem;font-variant-numeric:tabular-nums}
-.balken{display:block;height:10px;border-radius:5px;background:var(--track);margin:6px 0;overflow:hidden}.balken i{display:block;height:100%;background:var(--ok)}
-.balken.gelb i{background:var(--warn)}.balken.rot i{background:var(--danger)}.ring.gelb{--c:var(--warn)}.ring.rot{--c:var(--danger)}
+.balken{display:block;height:10px;border-radius:5px;background:var(--edge);margin:6px 0;overflow:hidden}.balken i{display:block;height:100%;background:var(--ok)}
+.balken.gelb i{background:var(--warn)}.balken.rot i{background:var(--bad)}.ring.gelb{--c:var(--warn)}.ring.rot{--c:var(--bad)}
 [data-alt] .gemessen::after{content:" · ` + texte.T("auslastung.alt") + `"}</style>`
 
 // auslastungCard is the page's part.

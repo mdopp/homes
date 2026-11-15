@@ -37,12 +37,12 @@ const adminStyle = `<style>.unter{display:flex;gap:6px;margin:18px 0 0}.unter a{
 h2{font-size:.95rem;font-weight:700;color:var(--muted);margin:26px 2px 8px}
 table{width:100%;border-collapse:separate;border-spacing:0;background:var(--card);border-radius:14px;overflow:hidden}
 td,th{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;overflow-wrap:break-word}tr:last-child td{border-bottom:0}
-.gruen{color:var(--ok)}.gelb{color:var(--warn)}.rot{color:var(--danger)}.k{font-variant-numeric:tabular-nums}
+.gruen{color:var(--ok)}.gelb{color:var(--warn)}.rot{color:var(--bad)}.k{font-variant-numeric:tabular-nums}
 form{display:inline}input:not([type]),input[type=text],input[type=email]{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--edge);border-radius:999px;padding:0 16px;min-height:44px;max-width:100%}
 .zeilen{list-style:none;margin:0;padding:0;background:var(--card);border-radius:14px;overflow:hidden}
 .zeilen li{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-bottom:1px solid var(--line)}.zeilen li:last-child{border-bottom:0}
 .zeilen .was{flex:1;min-width:0;overflow-wrap:break-word}.zeilen b{font-weight:600}.zeilen .wann{display:block;font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
-.zeilen .text{display:block;font-size:.9rem;color:var(--muted)}.punkt.gelb{background:var(--warn)}.punkt.rot{background:var(--danger)}.punkt.k{background:var(--faint)}
+.zeilen .text{display:block;font-size:.9rem;color:var(--muted)}.punkt.gelb{background:var(--warn)}.punkt.rot{background:var(--bad)}.punkt.k{background:var(--faint)}
 code{overflow-wrap:anywhere;font:.8rem ui-monospace,SFMono-Regular,Menlo,monospace}</style>`
 
 // boxPage is one of Box's pages (owner 2026-10-26: "zu viele vor allem

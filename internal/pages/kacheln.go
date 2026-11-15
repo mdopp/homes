@@ -75,12 +75,12 @@ func art(domain string, s ha.State) string {
 	return domain
 }
 
-// farben are the states' colours, as the app's widgets' (DeviceLook.tint):
-// amber on, green shut and locked, orange a garage or a lock open, blue
-// moving, red jammed; else grey, a dimmer grey for nothing known.
-var farben = map[string]string{"lock.locked": "--ok", "lock.unlocked": "--warn", "lock.open": "--accent", "lock.jammed": "--danger", "rollo.open": "--state",
-	"tor.open": "--warn", "tor.closed": "--ok", "on": "--state", "playing": "--state", "unavailable": "--faint", "unknown": "--faint", "": "--faint",
-	"opening": "--unterwegs", "closing": "--unterwegs", "locking": "--unterwegs", "unlocking": "--unterwegs"}
+// farben are the states' colours, as the app's widgets' (DeviceLook.tint): amber on, green shut
+// and locked, orange a garage or a lock open, red jammed; else grey, a dimmer grey for nothing
+// known. Moving is grey too, and only that maps to --muted here: the shared look has no blue.
+var farben = map[string]string{"lock.locked": "--ok", "lock.unlocked": "--warn", "lock.open": "--accent", "lock.jammed": "--bad", "rollo.open": "--warn",
+	"tor.open": "--warn", "tor.closed": "--ok", "on": "--warn", "playing": "--warn", "unavailable": "--faint", "unknown": "--faint", "": "--faint",
+	"opening": "--muted", "closing": "--muted", "locking": "--muted", "unlocking": "--muted"}
 
 // farbeVon is the state's colour, a palette variable.
 func farbeVon(domain string, s ha.State) string {
@@ -89,7 +89,7 @@ func farbeVon(domain string, s ha.State) string {
 			return c
 		}
 	}
-	return map[bool]string{true: "--state", false: "--muted"}[domain == "climate" && s.State != "off"]
+	return map[bool]string{true: "--warn", false: "--muted"}[domain == "climate" && s.State != "off"]
 }
 
 // worteVon is what a tile still says in words: a thing that does not
@@ -98,7 +98,7 @@ func farbeVon(domain string, s ha.State) string {
 // lock say nothing else: their picture does.
 func worteVon(domain string, s ha.State, houseUnit string) string {
 	switch c := farben[s.State]; {
-	case c == "--unterwegs":
+	case c == "--muted": // on its way
 		return roomDetail(domain, s, houseUnit) + " …"
 	case c != "--faint" && s.State != "jammed" && map[string]bool{"light": true, "switch": true, "cover": true, "lock": true}[domain]:
 		return ""
@@ -254,19 +254,19 @@ const zelle = 320
 
 // kachelStyle: the house palette, no outlines, a wash of the state's colour while on, open
 // or moving; grey under „Stand …“ without the box (html.weg, homesScript).
-var kachelStyle = `<style>.geraete{--pille:#1e1e25;--unterwegs:#7e9cff}@media (prefers-color-scheme:light){.geraete{--pille:#e6e8ee;--unterwegs:#4f6bd8}}.geraete .kopfzeile{display:flex;justify-content:space-between;align-items:center;gap:12px}.geraete .kopfzeile h2{margin:0}
+var kachelStyle = `<style>.geraete .kopfzeile{display:flex;justify-content:space-between;align-items:center;gap:12px}.geraete .kopfzeile h2{margin:0}
 .geraete .alle{display:inline-flex;align-items:center;min-height:44px;font-weight:700;text-decoration:none}.karte.geraete .hinweis{margin:0 2px 10px}.geraete .stand{display:none;margin:0 0 14px;padding:12px 14px;background:var(--card);border-radius:14px}.weg .geraete .stand{display:block}
 .karte.geraete{container:kacheln/inline-size}.karte ul.kacheln{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;background:none;border:0;border-radius:0}
 .karte .kachel{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"bild stufe" "name name" "worte worte";align-items:center;column-gap:8px;padding:12px;--frei:0px;
 border:0;border-radius:20px;background:var(--card);overflow-wrap:normal;container-type:inline-size;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
-.karte .kachel.aktiv{background:color-mix(in srgb,var(--farbe) 14%,var(--card))}.weg .geraete .kachel{background:var(--card);opacity:.55}.weg .geraete .kachel .bild{color:var(--faint);background:var(--track)}
+.karte .kachel.aktiv{background:color-mix(in srgb,var(--farbe) 14%,var(--card))}.weg .geraete .kachel{background:var(--card);opacity:.55}.weg .geraete .kachel .bild{color:var(--faint);background:var(--edge)}
 .kachel .bild{grid-area:bild;display:grid;place-items:center;width:38px;height:38px;border-radius:50%;color:var(--farbe);background:color-mix(in srgb,var(--farbe) 18%,transparent)}.kachel .bild>svg{width:22px;height:22px;fill:currentColor}
 .karte .kachel .name{grid-area:name;margin-top:10px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:clamp(11px,(100cqi - var(--frei))/(var(--n)*.66),15px)}
 .kachel .zeile{display:contents}.karte .kachel .stufe{grid-area:stufe;justify-self:end;font-weight:700;font-variant-numeric:tabular-nums}.kachel .worte,.kachel .schaltet{grid-area:worte;min-width:0;font-size:.82rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kachel .schaltet,.kachel:has([aria-busy=true]) :is(.worte,.stufe){display:none}.kachel:has([aria-busy=true]) .schaltet{display:block}
 .karte .kachel:is(.breit,.allein){grid-column:1/-1}` + wide(".karte .kachel:is(.breit,.allein)") + `.karte .kachel.breit{--frei:172px}
 @container kacheln (min-width:` + strconv.Itoa(2*zelle+8) + `px){.karte ul.kacheln{grid-template-columns:repeat(auto-fill,minmax(` + strconv.Itoa(zelle) + `px,1fr))}.karte .kachel:is(.breit,.allein){grid-column:auto}` + wide(".karte .kachel") + `}
-.kachel .knoepfe{grid-area:knoepfe;position:relative;z-index:2;display:flex;gap:0;border-radius:24px;background:var(--pille)}.kachel .knoepfe>form>button,.kachel .knoepfe>button{width:40px;min-height:44px;padding:0;display:grid;place-items:center;border-radius:22px;background:none;color:var(--ink)}
+.kachel .knoepfe{grid-area:knoepfe;position:relative;z-index:2;display:flex;gap:0;border-radius:24px;background:var(--line)}.kachel .knoepfe>form>button,.kachel .knoepfe>button{width:40px;min-height:44px;padding:0;display:grid;place-items:center;border-radius:22px;background:none;color:var(--ink)}
 .kachel :is(.hoch,.stopp,.runter)::before{content:"";width:15px;height:13px;background:currentColor}.kachel .stopp::before{width:11px;height:11px}.kachel .hoch::before{clip-path:polygon(50% 0,100% 100%,0 100%)}.kachel .runter::before{clip-path:polygon(0 0,100% 0,50% 100%)}
 .kachel .flaeche,.kachel .flaeche form,.kachel .flaeche button{position:absolute;inset:0;z-index:1;width:100%;height:100%;min-height:0;margin:0;padding:0;border-radius:20px;background:none}
 .kachel .flaeche button::before,.kachel .flaeche button::after{display:none}.kachel .flaeche button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}.karte .kachel button.stufe{z-index:2}.karte .kacheln .mehr{grid-column:1/-1;border:0;color:var(--muted)}</style>`

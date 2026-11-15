@@ -6,11 +6,13 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/mdopp/gestaltung"
 	"github.com/mdopp/homes/internal/cards"
 )
 
@@ -48,16 +50,15 @@ const (
 	saysFavsUnseen  = "Deine Favoriten sind gerade nicht zu sehen."
 )
 
-// frame is the family pages' look (haus#35): the house palette — the
-// values of the chat's tokens and homes-android's colors.xml — dark
-// first, light when the phone is; Geist from Homes itself, else the
-// phone's own font; orange for what you can do, amber for what is on,
-// green and red only for a state, never alone.
-const frame = `<style>@font-face{font-family:Geist;src:url(` + FontPath + `) format("woff2");font-weight:100 900;font-display:swap}
-:root{color-scheme:dark;--bg:#070709;--panel:#0c0c0e;--card:#14141a;--edge:rgba(255,255,255,.12);--line:rgba(255,255,255,.07);--ink:#f2f2f5;--muted:#9aa0ae;--faint:#6b7280;
---accent:#f97316;--accent-soft:rgba(249,115,22,.14);--state:#ffc107;--ok:#10b981;--warn:#f59e0b;--warn-soft:rgba(245,158,11,.12);--danger:#ef5350;--danger-soft:rgba(239,83,80,.12);--ok-soft:rgba(16,185,129,.12);--track:rgba(255,255,255,.15);--tile:linear-gradient(180deg,#17171d,#0d0d11)}
-@media (prefers-color-scheme:light){:root{color-scheme:light;--bg:#f1f5f9;--panel:#ffffff;--card:#ffffff;--edge:rgba(15,23,42,.12);--line:rgba(15,23,42,.08);--ink:#0f172a;--muted:#64748b;--faint:#94a3b8;
---accent:#ea580c;--accent-soft:rgba(234,88,12,.10);--state:#b45309;--ok:#059669;--warn:#b45309;--warn-soft:rgba(180,83,9,.10);--danger:#dc2626;--danger-soft:rgba(220,38,38,.08);--ok-soft:rgba(5,150,105,.10);--track:rgba(15,23,42,.12);--tile:linear-gradient(180deg,#ffffff,#f6f7f9)}}
+// gestaltungCSS is the shared look without its comments, which are for whoever edits gestaltung.
+var gestaltungCSS = regexp.MustCompile(`/\*[^*]*\*+(?:[^/*][^*]*\*+)*/\n?`).ReplaceAllString(gestaltung.CSS, "")
+
+// frame is the family pages' look (haus#35): mdopp/gestaltung's shared look (its ADR 0001), dark
+// first, light when the phone is; Geist from Homes itself, else the phone's own font; orange for
+// what you can do, amber (--warn) for what is on, green and red only for a state, never alone.
+// Homes' own rules use its tokens only: scripts/farben.py fails CI on a colour literal.
+var frame = `<style>@font-face{font-family:Geist;src:url(` + FontPath + `) format("woff2");font-weight:100 900;font-display:swap}
+` + gestaltungCSS + `
 *{box-sizing:border-box}html{background:var(--bg)}
 body{margin:0 auto;max-width:40rem;padding:0 16px calc(88px + env(safe-area-inset-bottom));background:var(--bg);color:var(--ink);font:16px/1.5 Geist,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
 h1{font-size:1.6rem;font-weight:700;letter-spacing:-.01em;line-height:1.2;margin:22px 0 2px;overflow-wrap:anywhere}.datum{margin:0;color:var(--muted);font-size:.9rem}.marke{display:flex;align-items:center;gap:14px;margin:22px 0 10px}.marke svg{width:52px;height:52px;flex:none}.marke h1{margin:0}.marke .claim{margin:2px 0 0;color:var(--muted);font-size:.95rem}.karte.im-haus li a{display:inline;color:var(--accent)}.karte.im-haus li a::after{display:none}
@@ -78,8 +79,8 @@ form[role=search]{display:flex;gap:8px;margin:16px 0 0}
 .notiz-md code{font:.85em ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:0 4px}
 .notiz-md pre{margin:10px 0;padding:10px 12px;overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px}.notiz-md pre code{border:0;padding:0;background:none}
 .notiz-md blockquote{margin:10px 0;padding:2px 12px;border-left:3px solid var(--edge);color:var(--muted)}.notiz-md hr{border:0;border-top:1px solid var(--line);margin:16px 0}
-.achtung{margin:16px 0 0;padding:12px 14px;background:var(--danger-soft);border-radius:14px}.achtung p{margin:0}.achtung p+p{margin-top:4px;color:var(--muted)}
-.achtung p:first-child::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--danger);margin-right:8px;vertical-align:1px}
+.achtung{margin:16px 0 0;padding:12px 14px;background:var(--bad-soft);border-radius:14px}.achtung p{margin:0}.achtung p+p{margin-top:4px;color:var(--muted)}
+.achtung p:first-child::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--bad);margin-right:8px;vertical-align:1px}
 div.gut{display:flex;gap:8px;align-items:flex-start;margin:16px 0 0;padding:12px 14px;background:var(--ok-soft);border-radius:14px}div.gut p{margin:0}.achtung.selbst{background:var(--warn-soft)}.achtung.selbst p:first-child::before{background:var(--warn)}
 .zustand{display:flex;gap:8px;margin:14px 2px 0;color:var(--muted)}.ruhig{display:flex;gap:8px;align-items:flex-start;margin:26px 2px 0;color:var(--muted);font-size:.8rem}.punkt{width:8px;height:8px;margin-top:.45em;border-radius:50%;background:var(--ok);flex:none}.punkt.grau{background:var(--faint)}.punkt.gelb{background:var(--warn)}
 .weiter-in{margin:18px 2px 0;font-size:.9rem}.weiter-in a{font-weight:600;text-decoration:none}.weiter-in a::after{content:" ↗"}.weiter-in .k{display:block;font-size:.8rem;margin-top:2px}
@@ -91,7 +92,7 @@ summary{padding:10px 0;cursor:pointer}.stern{margin:20px 0 0}.stern p{margin:6px
 .anzahl{display:inline-block;min-width:1.5em;padding:0 .4em;border-radius:999px;background:var(--accent);color:var(--bg);font-size:.72rem;font-weight:700;line-height:1.5em;text-align:center;vertical-align:.2em}.tabs a{position:relative}.tabs .anzahl{position:absolute;top:5px;left:calc(50% + 5px)}
 .konto{display:flex;justify-content:flex-end;margin:10px 0 -14px;font-size:.78rem;color:var(--muted)}.konto .wer{font-weight:600}
 button[disabled]{opacity:.55;cursor:default}button.leise{background:none;color:var(--muted);font-weight:400;text-decoration:underline;padding:0 8px}.sprechen .hinweis{margin:8px 4px 0;font-size:.82rem;color:var(--muted)}.sprechen .hinweis:empty{display:none}
-.mikro{width:44px;min-height:44px;padding:0;display:inline-flex;align-items:center;justify-content:center;flex:none}.mikro[hidden]{display:none}.mikro svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}.mikro.an{background:var(--danger-soft);color:var(--danger)}
+.mikro{width:44px;min-height:44px;padding:0;display:inline-flex;align-items:center;justify-content:center;flex:none}.mikro[hidden]{display:none}.mikro svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}.mikro.an{background:var(--bad-soft);color:var(--bad)}
 .gespraech .denkt{display:flex;align-items:center;gap:8px;margin:12px 0 0;padding:12px 0 0;border-top:1px solid var(--line);color:var(--muted)}.antwort+.denkt{border-top:0;padding-top:0}.denkt .sek{font-size:.8rem;font-variant-numeric:tabular-nums}
 .laeuft{flex:none;width:14px;height:14px;border-radius:50%;border:2px solid var(--accent-soft);border-top-color:var(--accent);animation:dreht 1s linear infinite}@keyframes dreht{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.laeuft{animation:none;background:var(--accent)}}
@@ -114,7 +115,7 @@ func familyHead(r *http.Request, cfg StartConfig, title, current string) *string
 		title += " · Homes"
 	}
 	b.WriteString("<!doctype html><html lang=de><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1,viewport-fit=cover'>" +
-		"<meta name=color-scheme content='dark light'><meta name=theme-color content='#0c0c0e'><title>" + html.EscapeString(title) + "</title>" + symbolHead)
+		"<meta name=color-scheme content='dark light'><meta name=theme-color content='" + themeColor + "'><title>" + html.EscapeString(title) + "</title>" + symbolHead)
 	b.WriteString(frame)
 	b.WriteString(cards.Style + homesStyle + homesScript + nachladenScript) // in the head: a page swapped in keeps it
 	b.WriteString(familyNav(r, cfg, current))

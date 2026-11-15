@@ -32,7 +32,7 @@ func TestTheAdminPagesWearTheFamilyFrame(t *testing.T) {
 		rec := httptest.NewRecorder()
 		p.h.ServeHTTP(rec, req)
 		body := rec.Body.String()
-		mustContain(t, body, "<title>"+p.title+"</title>", "#070709", "#14141a", "#f97316", "prefers-color-scheme:light", "@font-face", FontPath,
+		mustContain(t, body, "<title>"+p.title+"</title>", "#070709", "#14141a", "#f97316", "prefers-color-scheme: light", "@font-face", FontPath,
 			"<nav class=tabs", "href=/box aria-current=page", "href=/raeume")
 		mustNotContain(t, body, "Ada", "<header>")
 	}

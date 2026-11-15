@@ -717,19 +717,15 @@ func shortKWh(v float64) string {
 	return stundeKWh(v) + " kWh"
 }
 
-// verlaufStyle is the Energie page's look, the house palette's tokens
-// and its own: the series colours (checked for colour blindness and
-// contrast on both grounds, dark first, light when the phone is) — Solar
-// yellow, Netz blue, Ins Netz green, Akku purple, Haus the accent's
-// orange — and the report's two (haus#65): --e-gut a blue-ish green,
-// --e-schlecht an orange-red, never alone: the arrow, the sign and the
-// word say it as well. The cards are the Android widget's (owner,
+// verlaufStyle is the Energie page's look: the shared look's tokens and the chart's series
+// colours, its only literals (data, scripts/farben-erlaubt.txt; checked for colour blindness and
+// contrast on both grounds) — Solar yellow, Netz blue, Ins Netz green, Akku purple, Haus the
+// accent's orange; the report's (haus#65) --ok better, --bad worse, never alone: the arrow, the
+// sign and the word say it as well. The cards are the Android widget's (owner,
 // 2026-11-03): black without a border in the dark, heavy type; in the
 // light the page's white, also without a border.
-const verlaufStyle = `<style>:root{--e-bezug:#4f8ff7;--e-einsp:#1fa592;--e-solar:#e3b341;--e-akku:#a78bfa;--e-karte:#000;--e-wort:#c9cdd6;
---e-gut:#40c8c0;--e-schlecht:#ff7a5c;--e-gut-soft:rgba(64,200,192,.10);--e-schlecht-soft:rgba(255,122,92,.10)}
-@media (prefers-color-scheme:light){:root{--e-bezug:#2f6fd6;--e-einsp:#0f8a78;--e-solar:#b07d00;--e-akku:#7c4ddb;--e-karte:var(--card);--e-wort:#334155;
---e-gut:#00788a;--e-schlecht:#c4352b;--e-gut-soft:rgba(0,120,138,.08);--e-schlecht-soft:rgba(196,53,43,.08)}}
+const verlaufStyle = `<style>:root{--e-bezug:#4f8ff7;--e-einsp:#1fa592;--e-solar:#e3b341;--e-akku:#a78bfa;--e-karte:var(--bg)}
+@media (prefers-color-scheme:light){:root{--e-bezug:#2f6fd6;--e-einsp:#0f8a78;--e-solar:#b07d00;--e-akku:#7c4ddb;--e-karte:var(--card)}}
 .abschnitt{font-size:1.15rem;margin:34px 0 0}.zeitraum{display:flex;gap:6px;margin:12px 0 0;flex-wrap:wrap}
 .zeitraum a{min-height:44px;display:inline-flex;align-items:center;padding:0 16px;border-radius:999px;background:var(--card);color:var(--ink);text-decoration:none;font-size:.88rem}
 .zeitraum a[aria-current]{background:var(--accent-soft);color:var(--accent);font-weight:600}
@@ -755,16 +751,16 @@ const verlaufStyle = `<style>:root{--e-bezug:#4f8ff7;--e-einsp:#1fa592;--e-solar
 .knoten .fuell-spur,.knoten .fuell{fill:none;stroke:var(--c);stroke-width:3.5}.knoten .fuell-spur{opacity:.25}.knoten .fuell{stroke-linecap:round}
 .knoten .fuell-schild{fill:var(--e-karte);stroke:var(--c);stroke-width:1.5}.knoten .fuell-zahl{fill:var(--c);font-size:11px;font-weight:800;font-variant-numeric:tabular-nums}
 .knoten .zahl{fill:var(--ink);font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}.knoten .zahl.lang{font-size:17px}
-.knoten .wort{fill:var(--e-wort);font-size:12px;font-weight:700}.knoten .nm{fill:var(--c);font-weight:800}.knoten.aus .nm{fill:var(--faint)}
-.knoten .grund{fill:var(--faint);font-size:11px;font-weight:600}.knoten .zweit{fill:var(--e-wort);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
-.fluss .autarkie{margin:4px 0 2px;text-align:center;font-size:1.05rem;font-weight:600;color:var(--e-wort)}.fluss .autarkie b{color:var(--ink);font-weight:800;font-variant-numeric:tabular-nums}
+.knoten .wort{fill:var(--ink);font-size:12px;font-weight:700}.knoten .nm{fill:var(--c);font-weight:800}.knoten.aus .nm{fill:var(--faint)}
+.knoten .grund{fill:var(--faint);font-size:11px;font-weight:600}.knoten .zweit{fill:var(--ink);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.fluss .autarkie{margin:4px 0 2px;text-align:center;font-size:1.05rem;font-weight:600;color:var(--ink)}.fluss .autarkie b{color:var(--ink);font-weight:800;font-variant-numeric:tabular-nums}
 .karte ul.zahlen{background:none;border:0;border-radius:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:8px}
 .karte .zahlen li,.karte .zahlen li:first-child{background:var(--e-karte);border:0;border-radius:18px;padding:11px 13px 12px;display:flex;flex-direction:column;align-items:flex-start;gap:3px}
-.karte ul.legende{background:none;border:0;border-radius:0}.karte .legende li{padding:0;border:0;min-height:0}.zahlen .name{font-size:.85rem;font-weight:700;color:var(--e-wort)}
+.karte ul.legende{background:none;border:0;border-radius:0}.karte .legende li{padding:0;border:0;min-height:0}.zahlen .name{font-size:.85rem;font-weight:700;color:var(--ink)}
 .zahlen .zahl{font-size:1.45rem;font-weight:800;line-height:1.2;font-variant-numeric:tabular-nums;color:var(--ink)}.karte .zahlen .k{font-size:.78rem;margin:0}
 .karte>ul{background:var(--e-karte);border:0}
 .delta{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;font-size:.78rem;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
-.delta.gut{color:var(--e-gut);background:var(--e-gut-soft)}.delta.schlecht{color:var(--e-schlecht);background:var(--e-schlecht-soft)}.delta.neutral,.delta.gleich{color:var(--muted);background:var(--line)}
+.delta.gut{color:var(--ok);background:var(--ok-soft)}.delta.schlecht{color:var(--bad);background:var(--bad-soft)}.delta.neutral,.delta.gleich{color:var(--muted);background:var(--line)}
 .verlauf .schaetzung.solar{fill:url(#schraffur-solar);stroke:var(--e-solar)}.verlauf .schaetzung.bezug{fill:url(#schraffur-bezug);stroke:var(--e-bezug)}.verlauf .schaetzung.einsp{fill:url(#schraffur-einsp);stroke:var(--e-einsp)}.verlauf .schaetzung{stroke-width:1}
 .verlauf .vorjahr{fill:none;stroke:var(--ink);stroke-width:1.6;stroke-dasharray:5 3;stroke-linejoin:round}.verlauf .vorjahr.einsp{stroke:var(--muted)}.verlauf .heute{stroke:var(--accent);stroke-width:1.2;stroke-dasharray:3 3}
 .verlauf .heute-text{fill:var(--accent);font-size:11px;font-weight:700}

@@ -4,6 +4,9 @@ import (
 	"embed"
 	"net/http"
 	"path"
+	"regexp"
+
+	"github.com/mdopp/gestaltung"
 )
 
 // Homes' own icon (owner, 2026-11-02): the terminal prompt inside a green
@@ -16,10 +19,14 @@ var symbole embed.FS
 // SymbolPath is where the pages find the icons and the web app manifest.
 const SymbolPath = "/symbol/"
 
+// themeColor is the browser's bar: the shared look's dark --panel, read from its tokens,
+// since a meta tag and the manifest cannot read a CSS variable (gestaltung ADR 0001).
+var themeColor = regexp.MustCompile(`--panel:(#[0-9a-fA-F]+);`).FindStringSubmatch(gestaltung.Tokens)[1]
+
 // manifest makes Homes a web app on a phone's home screen: its name, Start,
-// and the icons. The ground is the icon's.
-const manifest = `{"name":"Homes","short_name":"Homes","lang":"de","start_url":"/start","scope":"/","display":"standalone",` +
-	`"background_color":"#0c120e","theme_color":"#0c0c0e","icons":[` +
+// and the icons. The ground is the icon's, the bar the pages' (themeColor).
+var manifest = `{"name":"Homes","short_name":"Homes","lang":"de","start_url":"/start","scope":"/","display":"standalone",` +
+	`"background_color":"#0c120e","theme_color":"` + themeColor + `","icons":[` +
 	`{"src":"/symbol/favicon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"},` +
 	`{"src":"/symbol/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},` +
 	`{"src":"/symbol/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"},` +

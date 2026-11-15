@@ -256,7 +256,7 @@ func TestBoxCardWhatIsUsed(t *testing.T) {
 	fake, c := metrics(t)
 	aMonth(fake)
 	page := getAt(boxWithUsage(t, c, nil), "/box/nutzung?ganz=1", "admins")
-	for _, want := range []string{"Was wird genutzt", "letzten 30 Tage", "nie, wer",
+	for _, want := range []string{"<section class=genutzt data-theme=light ", "Was wird genutzt", "letzten 30 Tage", "nie, wer",
 		"Am meisten genutzt", "Start geöffnet", "120", "Räume geöffnet", "Licht ausgeschaltet", "17", "Vom Widget „Gerät“ aus geöffnet",
 		"Kaum oder nie genutzt", "Kalender geöffnet", "Energie geöffnet",
 		"Was nicht antwortete", saysNoHouse, "auf Start", "4×",

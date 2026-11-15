@@ -321,7 +321,7 @@ func usageCard(ctx context.Context, family StartConfig, voice *usage.Voice) stri
 		func(ctx context.Context) { miss, missErr = c.Misses(ctx, usageDays) })
 	logErrs("box", map[string]error{"usage summary": sumErr, "usage misses": missErr})
 	var b strings.Builder
-	b.WriteString(usageStyle + "<section class=genutzt aria-labelledby=genutzt><h2 id=genutzt>Was wird genutzt</h2>")
+	b.WriteString(usageStyle + "<section class=genutzt data-theme=light aria-labelledby=genutzt><h2 id=genutzt>Was wird genutzt</h2>")
 	if sumErr != nil {
 		b.WriteString("<p class=leise>Die Nutzungszahlen lassen sich gerade nicht lesen.</p></section>")
 		return b.String()
@@ -511,14 +511,12 @@ func fetchCtx(ctx context.Context, reads ...func(context.Context)) {
 	fetch((&http.Request{}).WithContext(ctx), reads...)
 }
 
-// usageStyle is the card's look: the house palette's light tokens (the
-// family frame, haus#35) on the Box page — amber for what did not answer.
-// A white section sets every token its content paints with, the
-// surfaces too (--card, --panel, --bg): Box's .zeilen inside it is white
-// with dark ink in either theme, not the page's dark card (haus#194).
-const usageStyle = `<style>.genutzt{--ink:#0f172a;--muted:#64748b;--faint:#94a3b8;--edge:rgba(15,23,42,.12);--line:rgba(15,23,42,.08);--accent:#ea580c;--accent-soft:rgba(234,88,12,.12);--warn:#b45309;--warn-soft:rgba(180,83,9,.10);
---danger:#dc2626;--card:#fff;--panel:#fff;--bg:#f1f5f9;color-scheme:light;
-margin:1.4rem 0;padding:16px;background:var(--card);color:var(--ink);border:1px solid var(--edge);border-radius:14px;font-family:Geist,system-ui,sans-serif}
+// usageStyle is the card's look: the shared look's light theme, forced
+// with data-theme=light on the section (gestaltung ADR 0001), on the Box
+// page — amber for what did not answer. The light theme sets every token
+// its content paints with, the surfaces too: Box's .zeilen inside it is
+// white with dark ink in either theme, not the page's dark card (haus#194).
+const usageStyle = `<style>.genutzt{margin:1.4rem 0;padding:16px;background:var(--card);color:var(--ink);border:1px solid var(--edge);border-radius:14px;font-family:Geist,system-ui,sans-serif}
 .genutzt h2{margin:0 0 4px;color:var(--ink);text-transform:none;letter-spacing:0;font-size:1.1rem}
 .genutzt h3{margin:18px 0 6px;font-size:.95rem;font-weight:700;color:var(--muted)}
 .genutzt p{margin:6px 0}.genutzt .leise{color:var(--muted);font-size:.85rem}

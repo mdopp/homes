@@ -51,7 +51,7 @@ func TestDeineGeraeteAreTheAppsTiles(t *testing.T) {
 
 	// a blind: across the row, ▲ ■ ▼ as pictures, its level, the tile opens the sheet with Stopp
 	r := tileOf(t, g, "cover.rollo")
-	mustContain(t, r, `<li class="kachel aktiv breit" style="--farbe:var(--state)"`,
+	mustContain(t, r, `<li class="kachel aktiv breit" style="--farbe:var(--warn)"`,
 		`<span class=flaeche><button type=button popovertarget=regler-cover-rollo aria-haspopup=dialog aria-label="Rollo"></button></span>`,
 		`aria-label="Rollo Position 40 %, einstellen">40 %</button>`,
 		`<span class=knoepfe><form method=post action=/schalten><input type=hidden name=geraet value="cover.rollo"><input type=hidden name=tun value="cover.open_cover"><input type=hidden name=zurueck value="/start"><button data-laeuft="" class=hoch aria-label="Rollo: Hoch"></button></form>`,
@@ -71,7 +71,7 @@ func TestDeineGeraeteAreTheAppsTiles(t *testing.T) {
 	}
 
 	// a lamp on and a lock: a pair; the lock leads only to its page
-	mustContain(t, tileOf(t, g, "light.bambi"), `<li class="kachel aktiv" style="--farbe:var(--state)"`, ">60 %</button>", bilder["licht-an"])
+	mustContain(t, tileOf(t, g, "light.bambi"), `<li class="kachel aktiv" style="--farbe:var(--warn)"`, ">60 %</button>", bilder["licht-an"])
 	l := tileOf(t, g, "lock.haustuer")
 	mustContain(t, l, `<li class="kachel" style="--farbe:var(--ok)"`, `<a class=name href="/raeume/lock.haustuer" style="--n:7">Haustür</a>`, bilder["schloss-zu"])
 	mustNotContain(t, l, "flaeche", "<form", "class=worte")
@@ -93,9 +93,9 @@ func TestATileSaysWhatItsPictureCannot(t *testing.T) {
 	for _, c := range []struct {
 		id, state, words, farbe string
 	}{
-		{"cover.rollo", "opening", "öffnet …", "--unterwegs"},
+		{"cover.rollo", "opening", "öffnet …", "--muted"},
 		{"light.flur", "unavailable", "nicht erreichbar", "--faint"},
-		{"lock.tuer", "jammed", "klemmt", "--danger"},
+		{"lock.tuer", "jammed", "klemmt", "--bad"},
 		{"lock.tuer", "unlocked", "", "--warn"},
 		{"light.flur", "off", "", "--muted"},
 	} {

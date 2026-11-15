@@ -46,7 +46,7 @@ var momente = []struct {
 const zusammenStyle = `<style>.netz{display:block;width:100%;height:auto;margin:8px 0 4px;font-family:inherit}.netz .bahn{fill:none;stroke:var(--edge);stroke-dasharray:3 5}
 .netz line{stroke:var(--accent);stroke-opacity:.45;stroke-width:1.5}.netz rect{fill:var(--card);stroke:var(--edge)}.netz .aussen rect{fill:var(--bg);stroke-dasharray:3 3}
 .netz text{fill:var(--ink);font-size:11.5px;font-weight:600;text-anchor:middle}.netz .unter{fill:var(--muted);font-size:9.5px;font-weight:400}
-.netz .mitte{fill:var(--accent)}.netz .mitte+text,.netz .mitte+text+text{fill:#fff}.netz .puls{fill:none;stroke:var(--accent);transform-box:fill-box;transform-origin:center;animation:puls 3.2s ease-out 3}
+.netz .mitte{fill:var(--accent)}.netz .mitte+text,.netz .mitte+text+text{fill:var(--accent-ink)}.netz .puls{fill:none;stroke:var(--accent);transform-box:fill-box;transform-origin:center;animation:puls 3.2s ease-out 3}
 @keyframes puls{from{transform:scale(1);opacity:.7}to{transform:scale(1.5);opacity:0}}@media (prefers-reduced-motion:reduce){.netz .puls{animation:none;opacity:0}}</style>`
 
 // Zusammen is ZusammenPath, for everyone.

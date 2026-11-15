@@ -89,8 +89,8 @@ func TestTeaserDispatchesByHost(t *testing.T) {
 	}
 	body := rec.Body.String()
 	mustContain(t, body, `<!doctype html><html lang="de"><head><meta charset="utf-8">`, "<title>Die Box</title>", "<h1>Die Box</h1>", `<form method="post" action="/zugang">`,
-		`name="name"`, `name="kontakt"`, `name="nachricht"`, `name="website"`, `href="https://www.example.org/"`, "Zugang anfragen", "</body></html>")
-	mustNotContain(t, body, `<template id="zugang-danke">`, `<template id="zugang-draussen">`, "{{ANMELDEN}}", "claude:", "dopp.cloud", "https://fonts.", "<script")
+		`name="name"`, `name="kontakt"`, `name="nachricht"`, `name="website"`, `href="https://www.example.org/"`, "Zugang anfragen", "</body></html>", "--accent:#f97316")
+	mustNotContain(t, body, `<template id="zugang-danke">`, `<template id="zugang-draussen">`, "{{ANMELDEN}}", "{{GESTALTUNG}}", "claude:", "dopp.cloud", "https://fonts.", "<script")
 	h := rec.Header()
 	if h.Get("X-Robots-Tag") != "" || !strings.Contains(h.Get("Content-Security-Policy"), "default-src 'none'; style-src 'unsafe-inline'; img-src") || h.Get("Cache-Control") != "private, no-cache" ||
 		!strings.Contains(h.Get("Content-Security-Policy"), "form-action 'self'; frame-ancestors 'none'") || h.Get("X-Frame-Options") != "DENY" {

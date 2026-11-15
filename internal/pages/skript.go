@@ -95,7 +95,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 // homesStyle is what the script shows: the sentence at the bottom, a
 // pressed button.
 const homesStyle = `<style>#homes-hinweis{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom));transform:translate(-50%,20px);max-width:min(32rem,calc(100% - 32px));
-padding:12px 16px;border-radius:14px;background:var(--danger-soft);border:1px solid var(--danger);color:var(--ink);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:20;backdrop-filter:blur(8px)}
+padding:12px 16px;border-radius:14px;background:var(--bad-soft);border:1px solid var(--bad);color:var(--ink);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:20;backdrop-filter:blur(8px)}
 #homes-hinweis.zeigt{opacity:1;transform:translate(-50%,0);pointer-events:auto}#homes-hinweis{display:flex;gap:10px;align-items:flex-start}#homes-hinweis span{flex:1}
 #homes-hinweis .zu{min-height:32px;min-width:32px;padding:0;background:none;color:var(--ink);font-size:1.2rem;line-height:1}button[aria-busy=true]{opacity:.6;cursor:progress}
 .vorschlaege{flex-basis:100%;list-style:none;margin:4px 0 0;padding:4px;background:var(--card);border:1px solid var(--edge);border-radius:12px}.vorschlaege[hidden]{display:none}.vorschlaege button{display:block;width:100%;min-height:44px;text-align:left;color:var(--ink);background:none;border:0;font:inherit;font-size:1rem;border-radius:8px;padding:0 10px}.vorschlaege button:hover,.vorschlaege button:focus{background:var(--accent-soft)}
