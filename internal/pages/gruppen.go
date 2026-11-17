@@ -66,12 +66,13 @@ func Gruppen(cfg StartConfig) map[string][]modul.Route {
 	gs.add("dokumente", cards.DocumentPages, Dokument(cfg))
 	gs.add("dokumente", ZuordnenPath, ZuordnenSeite(cfg)) // the admins: whose a scan is (laib DATA.md gap 6)
 	musikGruppe(gs, cfg)
-	gs.add("podcasts", PodcastsPath, Podcasts(cfg))            // haus#123; off, its trace (modulAus)
-	gs.add("gesehen", GesehenPath, Gesehen(cfg))               // haus#152
-	gs.add("sicherung", DatenPath, Nachrichten(cfg))           // what goes into the person's archive and how to switch it on (haus#207)
-	gs.add("sicherung", NachrichtenPath, Nachrichten(cfg))     // the page's old address, a redirect
-	gs.add("standort", StandortPath, Standort(cfg))            // the person's Reitti token for the app's Standortverlauf (owner 2026-11-02)
-	gs.add("netzlaufwerk", "/netzlaufwerk", Netzlaufwerk(cfg)) // each person's network-drive password (haus#52)
+	gs.add("podcasts", PodcastsPath, Podcasts(cfg))             // haus#123; off, its trace (modulAus)
+	gs.add("gesehen", GesehenPath, Gesehen(cfg))                // haus#152
+	gs.add("sicherung", DatenPath, Nachrichten(cfg))            // what goes into the person's archive and how to switch it on (haus#207)
+	gs.add("sicherung", NachrichtenPath, Nachrichten(cfg))      // the page's old address, a redirect
+	gs.add("standort", StandortPath, Standort(cfg))             // the person's Reitti token for the app's Standortverlauf (owner 2026-11-02)
+	gs.add("netzlaufwerk", "/netzlaufwerk", Netzlaufwerk(cfg))  // each person's network-drive password (haus#52)
+	gs.add("sprachmodell", SprachmodellPath, Sprachmodell(cfg)) // the box's language model, switched for a while (owner 2026-11-17)
 	return gs
 }
 

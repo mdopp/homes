@@ -51,6 +51,7 @@ import (
 	"github.com/mdopp/homes/internal/reitti"
 	"github.com/mdopp/homes/internal/samba"
 	"github.com/mdopp/homes/internal/schalter"
+	"github.com/mdopp/homes/internal/sprachmodell"
 	"github.com/mdopp/homes/internal/uebernahme"
 	"github.com/mdopp/homes/internal/usage"
 	"github.com/mdopp/homes/internal/werkstatt"
@@ -184,7 +185,8 @@ func familyOf(s site) pages.StartConfig {
 		Reitti: s.napi.Reitti, Module: s.napi.Module, Einrichtung: s.napi.Einrichtung, PhoneCountry: s.hh.PhoneCountry, Gesichter: s.gesichter, Netz: s.netz}
 	family.Archive, family.ArchivURL = archivOf(s)
 	family.Antworten, family.DNS, family.KontaktURL, family.Plugins = s.antworten, net.DefaultResolver, s.kontaktURL, s.plugins
-	family.Zugang = s.zugang // the teaser's access requests, for the admins' Start and /zugang (owner 2026-11-08)
+	family.Sprachmodell = s.napi.Sprachmodell // the box's language model, switched by a person (owner 2026-11-17)
+	family.Zugang = s.zugang                  // the teaser's access requests, for the admins' Start and /zugang (owner 2026-11-08)
 	if s.zuordnen != nil {
 		family.Zuordnen = s.zuordnen
 	}
@@ -519,6 +521,7 @@ func main() {
 	// the app's Standortverlauf (owner 2026-11-02): Reitti inside the box,
 	// HOMES_REITTI_URL (http://host.containers.internal:<port>); unset, /napi/standort is 503
 	cfg.Reitti = reitti.FromEnv(dataDir)
+	cfg.Sprachmodell = sprachmodell.FromEnv()                                                                 // the language model's card: the lease beside HOMES_LLM_URL, with HOMES_LLM_KEY
 	haPublic := pages.AppURL(pages.OnDomain(os.Getenv("HOMES_HA_PUBLIC_URL"), os.Getenv("HOMES_PUBLIC_URL"))) // haus#64
 	if haPublic == "" && os.Getenv("HOMES_HA_PUBLIC_URL") != "" {
 		log.Printf("homes: HOMES_HA_PUBLIC_URL %q is not an http(s) address: no link to Home Assistant", os.Getenv("HOMES_HA_PUBLIC_URL"))

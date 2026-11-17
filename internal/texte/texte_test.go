@@ -38,6 +38,9 @@ func TestEachTranslationIsWhole(t *testing.T) {
 	if In("en", NavAbmelden) != "Sign out" || In("fr", NavAbmelden) != "Se déconnecter" || In("it", NavAbmelden) != "Abmelden" {
 		t.Errorf("In: %q %q %q", In("en", NavAbmelden), In("fr", NavAbmelden), In("it", NavAbmelden))
 	}
+	if In("en", SprachmodellZurueck) != "Back to the household" || In("it", SprachmodellZurueck) != "Zurück zum Haushalt" {
+		t.Errorf("In: %q %q", In("en", SprachmodellZurueck), In("it", SprachmodellZurueck))
+	}
 }
 
 // TestWaehle (owner 2026-11-18): the client's Accept-Language picks the

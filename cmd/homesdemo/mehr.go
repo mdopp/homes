@@ -6,6 +6,9 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
+	"github.com/mdopp/homes/internal/modellease"
+	"github.com/mdopp/homes/internal/modellease/leasefake"
+	"github.com/mdopp/homes/internal/sprachmodell"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -123,6 +126,23 @@ func mehrSeiten(mux *http.ServeMux, cfg pages.StartConfig, dav *davfake.Server, 
 	mux.HandleFunc(pages.DieselbePath, pages.Dieselbe(cfg))
 	mux.HandleFunc(cards.ContactPages, pages.Kontakt(cfg))
 	mux.HandleFunc("/netzlaufwerk", pages.Netzlaufwerk(cfg))
+	// the language model's card (owner 2026-11-17) on a fake lease; /demo/sprachmodell?zustand=haushalt|ben|bote|weg
+	lease := leasefake.New("demo-key")
+	cfg.Sprachmodell = &sprachmodell.Schalter{Lease: &modellease.Client{Base: lease.Base(), Key: "demo-key"}}
+	mux.HandleFunc(pages.SprachmodellPath, pages.Sprachmodell(cfg))
+	mux.HandleFunc("/demo/sprachmodell", func(w http.ResponseWriter, r *http.Request) {
+		bis := time.Now().Add(90 * time.Minute).Truncate(15 * time.Minute)
+		switch z := r.URL.Query().Get("zustand"); z {
+		case "ben", "bote":
+			lease.Down = false
+			lease.Hold(map[string]string{"ben": "homes-ben", "bote": "bote"}[z], map[string]string{"ben": "gemma-4-12b", "bote": "qwen3.8-27b"}[z], bis)
+		case "weg":
+			lease.Down = true
+		default:
+			lease.Down = false
+			lease.Hold("", "", time.Time{}) // the household: no window
+		}
+	})
 	boxCfg := pages.BoxConfig{Laib: cfg.Laib, LaibURL: cfg.LaibURL, Family: cfg, Devices: phones}
 	mux.HandleFunc("/box", pages.BoxPage(boxCfg))
 	mux.HandleFunc("/box/", pages.BoxPage(boxCfg))

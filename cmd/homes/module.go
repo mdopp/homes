@@ -121,6 +121,8 @@ func katalog(s site) []modul.Modul {
 		bau(modul.Modul{Name: "netzlaufwerk", Backend: "file-share",
 			Env: []string{"HOMES_SAMBA_DIR", "HOMES_SAMBA_HOST"}},
 			s.samba != nil, "Auf dieser Box gibt es kein Netzlaufwerk."),
+		bau(modul.Modul{Name: "sprachmodell", Backend: "llama", Env: []string{"HOMES_LLM_URL", "HOMES_LLM_KEY"}},
+			n.Sprachmodell != nil, "Auf dieser Box gibt es kein Sprachmodell mit Schlüssel."),
 		bau(modul.Modul{Name: "werkstatt", Env: []string{"HOMES_WERKSTATT_REPOS", "HOMES_GITHUB_API"}},
 			s.tickets != nil, "Für diese Box ist keine Werkstatt eingetragen."),
 		bau(modul.Modul{Name: "nutzung", Backend: "usage-metrics",
@@ -248,6 +250,7 @@ func schliesseWuensche(ctx context.Context, l *laib.Client, liste *modul.Liste, 
 var schaltbar = map[string]func(*site){
 	"werkstatt":    func(s *site) { s.tickets = nil },
 	"netzlaufwerk": func(s *site) { s.samba = nil },
+	"sprachmodell": func(s *site) { s.napi.Sprachmodell = nil },
 	"podcasts":     func(s *site) { s.podcasts, s.hh.Podcasts, s.napi.Haushalt.Podcasts = nil, nil, nil },
 	"gesehen":      func(s *site) { s.gesehen = nil },
 	"standort":     func(s *site) { s.napi.Reitti = nil },
@@ -323,7 +326,7 @@ func ausschalten(s *site, ms []modul.Modul, liste string) []modul.Modul {
 
 // startLeaf starts the modules' background work, only for those on: the
 // podcasts' new episodes (haus#123), the backups' old parts (haus#207),
-// the music wishes that arrived (laib#695).
+// the music wishes that arrived (laib#695), the language model's window.
 func startLeaf(ctx context.Context, s site) {
 	if s.hh.Wuensche != nil {
 		go tickWishes(ctx, s.hh.Wuensche, s.ops)
@@ -333,6 +336,9 @@ func startLeaf(ctx context.Context, s site) {
 	}
 	if s.napi.Sicherung != nil {
 		go s.napi.Sicherung.Pflegen(nil) // parts untouched for a week go, now and daily
+	}
+	if s.napi.Sprachmodell != nil { // a window a person took: renewed until its end, then given back
+		go s.napi.Sprachmodell.Laufen(ctx, 30*time.Second)
 	}
 }
 

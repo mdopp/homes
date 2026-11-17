@@ -34,6 +34,7 @@ import (
 	"github.com/mdopp/homes/internal/papierkorb"
 	"github.com/mdopp/homes/internal/reitti"
 	"github.com/mdopp/homes/internal/schalter"
+	"github.com/mdopp/homes/internal/sprachmodell"
 	"github.com/mdopp/homes/internal/usage"
 )
 
@@ -93,6 +94,8 @@ type Config struct {
 	// Einrichtung: each person's setup tasks (einrichtung.go); nil = 404
 	Einrichtung *einrichten.Quellen
 	Eigen       func(uid string, k *modul.Kann) // what /napi/kann adds for the device's person: Dein Archiv, the Dokumente-Adresse
+	// Sprachmodell: the box's language model as a switch (sprachmodell.go); nil = 404
+	Sprachmodell *sprachmodell.Schalter
 }
 
 // refreshed is the event a /napi request counts as: its pattern's path,
@@ -330,6 +333,11 @@ func Gruppen(c Config) map[string][]modul.Route {
 	(&gemeinsam{dav: c.Konto, korb: c.Papierkorb, whoami: c.Whoami, hh: c.Haushalt, now: c.Now}).routes(gs)
 	// the phone's positions, passed on to the person's Reitti (owner 2026-11-02)
 	(&standort{r: c.Reitti, whoami: c.Whoami}).routes(gs)
+	if c.Sprachmodell != nil { // the language model's card, switched as the device's person (owner 2026-11-17)
+		m := &modell{s: c.Sprachmodell, whoami: c.Whoami, loc: c.Haushalt.Loc, now: c.Now}
+		gs.add("sprachmodell", "GET /napi/sprachmodell", m.get)
+		gs.add("sprachmodell", "POST /napi/sprachmodell", m.post)
+	}
 	return gs
 }
 

@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/mdopp/homes/internal/modellease"
+	"github.com/mdopp/homes/internal/modellease/leasefake"
+	"github.com/mdopp/homes/internal/sprachmodell"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -55,6 +58,10 @@ func leafSite(t *testing.T) site {
 	// H6: the Bote with the house's Signal number, the counts
 	s.bote, s.boteSignal = &bote.Client{URL: "http://127.0.0.1:1/v1", Key: "k"}, "+49 170 1234567"
 	s.usage = usage.New("http://127.0.0.1:1", "u")
+	// the language model's card on a fake lease (owner 2026-11-17)
+	lease := leasefake.New("modell-key")
+	t.Cleanup(lease.Close)
+	s.napi.Sprachmodell = &sprachmodell.Schalter{Lease: &modellease.Client{Base: lease.Base(), Key: "modell-key"}}
 	return s
 }
 
@@ -74,7 +81,7 @@ func switched(t *testing.T, s site, aus string) (site, *modul.Liste) {
 // or the surface's 404, never its handler; its entries are gone; /napi/kann
 // has it an:false, warum aus; every other leaf module is as before.
 func TestEachLeafModuleOff(t *testing.T) {
-	leaves := []string{"werkstatt", "netzlaufwerk", "podcasts", "gesehen", "standort", "sicherung",
+	leaves := []string{"werkstatt", "netzlaufwerk", "sprachmodell", "podcasts", "gesehen", "standort", "sicherung",
 		"dokumente", "notizen", "musik", "einkauf", "kalender", "kontakte", "konto", "geraete", "energie", "sprechen", "nutzung"}
 	// what each serves while on, and what it answers off: a path and a word on it
 	type probe struct{ path, on, off string }
@@ -82,10 +89,12 @@ func TestEachLeafModuleOff(t *testing.T) {
 	probes := map[string][]probe{
 		"werkstatt":    {{"/box", `box-werkstatt`, "!box-werkstatt"}},
 		"netzlaufwerk": {{"/mehr", `href="/netzlaufwerk"`, `!href="/netzlaufwerk"`}, {"/netzlaufwerk", "Passwort", "Gibt es hier noch nicht"}},
-		"podcasts":     {{"/mehr", `href="/podcasts"`, `!href="/podcasts"`}, {"/podcasts", "Podcast abonnieren", "Gibt es hier noch nicht"}},
-		"gesehen":      {{"/mehr", `href="/gesehen"`, `!href="/gesehen"`}, {"/gesehen", "eintragen musst du nichts", "Gibt es hier noch nicht"}},
-		"standort":     {{"/mehr", `href="/standort"`, `!href="/standort"`}, {"/standort", "Reitti", "Gibt es hier noch nicht"}, {"napi:/napi/standort", "#200", "#503"}},
-		"sicherung":    {{"/meine-daten", "Handy wechseln", "!Handy wechseln"}, {"napi:/napi/sicherung/stand", "#200", "#503"}},
+		"sprachmodell": {{"/mehr", `href="/sprachmodell"`, `!href="/sprachmodell"`}, {"/sprachmodell", "Gemma 4 12B", "Gibt es hier noch nicht"},
+			{"napi:/napi/sprachmodell", "#200", "#404"}},
+		"podcasts":  {{"/mehr", `href="/podcasts"`, `!href="/podcasts"`}, {"/podcasts", "Podcast abonnieren", "Gibt es hier noch nicht"}},
+		"gesehen":   {{"/mehr", `href="/gesehen"`, `!href="/gesehen"`}, {"/gesehen", "eintragen musst du nichts", "Gibt es hier noch nicht"}},
+		"standort":  {{"/mehr", `href="/standort"`, `!href="/standort"`}, {"/standort", "Reitti", "Gibt es hier noch nicht"}, {"napi:/napi/standort", "#200", "#503"}},
+		"sicherung": {{"/meine-daten", "Handy wechseln", "!Handy wechseln"}, {"napi:/napi/sicherung/stand", "#200", "#503"}},
 		// H4: the tool widgets' catalog, the app's paths and the Bote's tools follow
 		"dokumente": {{"/mehr", `href="/dokumente"`, `!href="/dokumente"`}, {"/dokumente", "scan@example.org", "Gibt es hier noch nicht"},
 			{"napi:/napi/defs/tool", `"tool-id":"doc"`, `!"tool-id":"doc"`}, {"napi:/napi/portal/documents", "#200", "#404"},

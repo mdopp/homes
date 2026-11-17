@@ -1922,6 +1922,53 @@ Kalender.
   (`pi:ready`) and what waits for Claude (`needs-claude`), read-only and
   linked. Public GitHub API, no token, cached for 5 minutes. Unset: no card.
 
+## Sprachmodell (owner 2026-11-17)
+
+The box's language model as a switch: module `sprachmodell` (backend
+Laib's `llama`), on while `HOMES_LLM_URL` and `HOMES_LLM_KEY` are set.
+Homes speaks Laib's GPU lease (laib ADR 0011, `templates/llama` „The
+lease“) beside the proxy: `GET <proxy>/api/model-lease`, the presets from
+`GET <proxy>/v1/models`, and with the model key as the bearer `POST`
+(`{model, ttl_s, holder}`) and `DELETE` (`{holder}`, never the bodyless
+admin call). Packages: `internal/modellease` (the client; the key goes
+only into the `Authorization` header, no error or log line carries it),
+`internal/sprachmodell` (the switch and its words), its fake
+`internal/modellease/leasefake` (laib's rules: key, holder alphabet, ttl
+clamp, a renewal keeps the end, two missed renewals end the window).
+
+- **The page** `/sprachmodell`, under Mehr for who is signed in: *Jetzt*
+  (the model now; for another model whose window it is and, as a warning,
+  *Sprachsteuerung pausiert bis HH:MM*; for a window of Homes *Zurück zum
+  Haushalt*), then *Umschalten auf*: every preset but the household's, each
+  with *1 Std.* and *4 Std.*, each asking first („Auf Gemma 4 12B
+  umschalten? Die Sprachsteuerung pausiert bis 21:30.“). The lease not
+  answering is one line; a window of a service (not a person of Homes) shows
+  who and until when, and offers nothing.
+- **Who may switch**: who may switch a lamp (`/schalten`, `/napi/ha/call`):
+  any signed-in person, on the page only from Homes' own page (`fromHomes`),
+  in the app any paired phone. Not only admins: the switch costs the
+  voice control for a while and comes back by itself.
+- **The holder is the person**: `homes-<person>` (laib's holder alphabet
+  `[a-z0-9-]` has no colon). A person switches over another person's
+  window of Homes (given back first, as one lamp over another's), never over
+  a service's.
+- **Back to the household by itself**: the take asks `ttl_s` = the chosen
+  duration (laib keeps that end through renewals); Homes looks every 30 s
+  and renews every `renew_after` until the end, then `DELETE`s. A Homes that
+  stops renews nothing, and Laib gives the window back after two missed
+  renewals (10 min); a `homes-…` window a restarted Homes did not take is
+  given back at its first look (ADR 0011's consumer rule).
+- **The app**: `GET /napi/sprachmodell` → `{ok, karte}`, `POST
+  /napi/sprachmodell` `{preset, stunden}` or `{zurueck: true}` → `{ok,
+  karte}` or `{ok: false, error}` (400 not offered, 401 no phone, 409
+  someone else's window, 502 the lease away). `karte` is
+  `sprachmodell.Ansicht`: `zustand` (haushalt, anderes, laedt, belegt, weg),
+  `titel`, `hinweis`, `zeile`, `detail`, `kosten`, `zurueck` (the button's
+  words, "" for none) and `wahl` (`preset`, `name`, `dauern`: `stunden`,
+  `label`, `bis`, `frage`, `ja`, `nein`) — the page's words.
+- The words are in `internal/texte` with their en/es/fr (`uebersetzt`); the
+  page and `/napi` say them in German today, as every page does.
+
 ## Einkauf (haus#118)
 
 `GET /einkauf`, a pill under Haushalt, with Radicale. The household's one

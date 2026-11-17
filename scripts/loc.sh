@@ -24,9 +24,9 @@ set -e
 cd "$(dirname "$0")/.."
 bad=0
 p() { for x in "$@"; do printf 'internal/%s ' "$x"; done; }
-connectors=$(p abs bote caldav discogs ha immich jellyfin judge laib musicbrainz paperless plugin qmd reitti samba werkstatt)
+connectors=$(p abs bote caldav discogs ha immich jellyfin judge laib modellease musicbrainz paperless plugin qmd reitti samba werkstatt)
 shared=$(p abruf app assistent cards code128 erreichbar jsonfile markdown mcpserver modul namen texte)
-household=$(p ansicht devices dokumente drucker einkauf einrichten energie favoriten gesehen gesichter haushalt kontaktantwort library merken musik netz notes papierkorb podcasts schalter takeout uebernahme usage zugang)
+household=$(p ansicht devices dokumente drucker einkauf einrichten energie favoriten gesehen gesichter haushalt kontaktantwort library merken musik netz notes papierkorb podcasts schalter sprachmodell takeout uebernahme usage zugang)
 
 budget() { # budget <name> <cap> <dir…>
   name=$1 cap=$2; shift 2
@@ -124,7 +124,9 @@ budget() { # budget <name> <cap> <dir…>
 # 2026-11-18, owner's decision 2026-11-18 (Homes in the client's language: „ja, baue es so“; pages 20,035 -> 20,057; 20,056 used, the minimum,
 # to be OK'd in the PR): <html lang> and the selection in the reader's language (navWortIn), Start's words and date in it, texte.Von(r) at
 # every catalog word a page has its request for
-budget pages 20057 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-17, owner's request 2026-11-17 (the Sprachmodell switch: the box's language model for a while, back to the household by itself; pages 20,057 -> 20,167;
+# 20,166 used, the minimum, to be OK'd in the PR): /sprachmodell (sprachmodell.go), its two cards, the POST as a lamp's switch, the Mehr entry
+budget pages 20167 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -135,7 +137,9 @@ budget pages 20057 internal/pages     # the family's pages, one per file: 14,684
 # archiv#64; napi 5,280 -> 5,340; 5,337 used): only age-encrypted uploads (ageLeser), a medium sent before still counts in
 # /fehlend, every .age file of letzte/ back through the open archive (ausArchiv, ageKlar)
 # 2026-11-18, owner's decision 2026-11-18 (Homes in the client's language: „ja, baue es so“; napi 5,340 -> 5,342; 5,341 used): /napi/kann's titles in the phone's language
-budget napi 5342 internal/napi        # the app's widgets' and share sheet's API: 4,793
+# 2026-11-17, owner's request 2026-11-17 (the Sprachmodell switch: the box's language model for a while, back to the household by itself; napi 5,342 -> 5,428;
+# 5,427 used, the minimum, to be OK'd in the PR): GET and POST /napi/sprachmodell for the app's card, switched as the phone's person
+budget napi 5428 internal/napi        # the app's widgets' and share sheet's API: 4,793
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): the module catalog,
 # cmd/homes/module.go, 1,150 with it; plus 5 %. H3–H6 move the routes out of main.go into it
 # 2026-11-04, step H8 (§10, owner: „Keine Funktion soll versteckt werden“): the routes of the traces
@@ -151,7 +155,9 @@ budget napi 5342 internal/napi        # the app's widgets' and share sheet's API
 # drucker.json keeps each printer's last known address
 # 2026-11-15, owner's request homes#375 (1,455 -> 1,460; 1,458 used): the plugins from HOMES_PLUGIN_*, kept in HOMES_DATA, asked every 5 minutes
 # 2026-11-18, owner's decision 2026-11-18 (Homes in the client's language: „ja, baue es so“; 1,460 -> 1,462; 1,461 used): Vary: Accept-Language on every answer
-budget cmd 1462 cmd/homes             # homes' wiring: 1,018 with the demo then
+# 2026-11-17, owner's request 2026-11-17 (the Sprachmodell switch: the box's language model for a while, back to the household by itself; 1,462 -> 1,471; 1,470 used):
+# the module in the catalog, its switch-off, the renewing look every 30 s, the switch handed to the pages
+budget cmd 1471 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-04, the caps moved with the packages, none raised (sum 24,134 as before): abs and
 # musicbrainz (1,227 lines, 1,289 of cap) from household to connectors once merken's fetcher
 # was internal/abruf (235 lines of merken, 247 of cap, to shared) and jellyfin.Plain
@@ -213,7 +219,10 @@ budget cmd 1462 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-15, owner's request homes#375 (ADR 0003 §3, connectors 15,850 -> 16,230; 16,224 used, the minimum, to be OK'd in the PR):
 # internal/plugin, the contract's client: HOMES_PLUGIN_* as Laib renders them, the answer checked against contract 1, what Homes keeps
 # of each plugin per person (plugins.json), the background ask
-budget connectors 16230 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
+# 2026-11-17, owner's request 2026-11-17 (the Sprachmodell switch: the box's language model for a while, back to the household by itself; connectors 16,230 -> 16,606;
+# 16,605 used, the minimum, to be OK'd in the PR): internal/modellease, the client of Laib's GPU lease (160), and its fake leasefake
+# with laib's rules (221)
+budget connectors 16606 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
 # 2026-11-04, internal/jsonfile (47 lines, 50 of cap) from household's cap to shared's: it
 # replaces nine copies of a save, 62 of their lines in household
 # 2026-11-05, owner 2026-11-05 yes: Immich for the contacts (9,583 -> 9,874):
@@ -273,7 +282,10 @@ budget connectors 16230 $connectors   # one client per service, with its fake: 1
 # their state in words, IPP's state reasons in short German, one line for the app
 # 2026-11-14, owner's request 2026-11-14 („Kein Mensch“ on „Wer ist das?“: a toy's face asked as a person; household 15,035 -> 15,095;
 # 15,092 used, to be OK'd in the PR): gesichter.Ausblenden and Einblenden (Rückgängig), the hidden kept with their faces
-budget household 15095 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-17, owner's request 2026-11-17 (the Sprachmodell switch: the box's language model for a while, back to the household by itself; household 15,095 -> 15,429;
+# 15,428 used, the minimum, to be OK'd in the PR): internal/sprachmodell, the switch (take as homes-<person>, renew until the end,
+# give back), the card in words for page and app
+budget household 15429 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one

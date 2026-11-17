@@ -37,6 +37,7 @@ const (
 	iconZusammen     = `<circle cx="12" cy="12" r="3"/><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="20" r="2"/><path d="M6.5 7.5l3.3 2.8M17.5 7.5l-3.3 2.8M12 15v3"/>`
 	iconArchiv       = `<rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/>`
 	iconBox          = `<rect x="3" y="7" width="18" height="12" rx="2"/><path d="M3 11h18M8 15h2"/>`
+	iconSprachmodell = `<rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/>`
 	abmeldenIcon     = `<path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l-4-4 4-4M6 12h10"/>`
 )
 
@@ -72,6 +73,7 @@ var navVon = map[string][]modul.Eintrag{
 	"sicherung":    {{Titel: texte.T(texte.MeineDatenTitel), Pfad: MeineDatenPath, Ort: modul.Nirgends}}, // Meine Daten is the core's entry (homes#362)
 	"standort":     {{Titel: "Standortverlauf", Pfad: StandortPath, Icon: iconStandort, Ort: modul.Mehr, Rang: 90, Fuer: angemeldet}},
 	"netzlaufwerk": {{Titel: "Netzlaufwerk", Pfad: "/netzlaufwerk", Icon: iconNetzlaufwerk, Ort: modul.Mehr, Rang: 100, Fuer: angemeldet}},
+	"sprachmodell": {{Titel: texte.T(texte.SprachmodellTitel), Pfad: SprachmodellPath, Icon: iconSprachmodell, Ort: modul.Mehr, Rang: 110, Fuer: angemeldet}},
 	// Platte erfassen and Discogs live on Musik (owner 2026-10-26); on their
 	// own only on a box without a music inbox: the catalog chooses
 	"musik": {{Titel: "Platte erfassen", Pfad: PlattePath, Icon: iconPlatte, Ort: modul.Mehr, Rang: 20},
