@@ -88,7 +88,7 @@ func kontaktSeite(w http.ResponseWriter, r *http.Request, cfg StartConfig, ct ca
 	name := kontaktName(ct)
 	weg := []string{name}
 	if buch == kontaktantwort.Privat {
-		weg = []string{texte.T(texte.KontakteMeine), MeineKontaktePath, name}
+		weg = []string{texte.Von(r).T(texte.KontakteMeine), MeineKontaktePath, name}
 	}
 	b := kontakteHead(r, cfg, name, seg, weg...)
 	b.WriteString(kontakteStyle + "<h1>" + html.EscapeString(name) + "</h1><div class=oben>" + spruenge + pruefenKnopf(r, cfg, buch, ct.UID, name, false) + "</div>")

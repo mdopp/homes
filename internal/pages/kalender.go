@@ -52,7 +52,7 @@ func Kalender(cfg StartConfig) http.HandlerFunc {
 		logErrs("kalender", map[string]error{"calendar": evErr, "reminders": todoErr, "view": viewErr})
 
 		b := familyHead(r, cfg, "Kalender", "Kalender")
-		b.WriteString("<h1>Kalender</h1><p class=k>" + texte.T(texte.KalenderBearbeiten) + "</p>")
+		b.WriteString("<h1>Kalender</h1><p class=k>" + texte.Von(r).T(texte.KalenderBearbeiten) + "</p>")
 		if evErr != nil {
 			b.WriteString("<p class=k>" + saysNoCalendar + "</p>")
 		} else {

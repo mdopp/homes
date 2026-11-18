@@ -15,6 +15,7 @@ import (
 	"github.com/mdopp/homes/internal/caldav"
 	"github.com/mdopp/homes/internal/modul"
 	"github.com/mdopp/homes/internal/notes"
+	"github.com/mdopp/homes/internal/texte"
 )
 
 // modulListe is a box's module list with these modules on and their
@@ -392,7 +393,7 @@ func TestFamilyPagesDoNotWaitForAHangingBackend(t *testing.T) {
 			t.Fatalf("%s: %d after %v", p.path, code, took)
 		}
 		mustContain(t, body, p.want)
-		mustNotContain(t, body, "keine Termine", "Keine Termine", "Erinnerungen", saysNichtsHeute)
+		mustNotContain(t, body, "keine Termine", "Keine Termine", "Erinnerungen", texte.T(texte.StartNichtsHeute))
 		// haus#12, haus#33: each page says it, once, in a plain line
 		if n := strings.Count(body, "Der Kalender antwortet gerade nicht."); n != 1 {
 			t.Fatalf("%s: the calendar said %d times:\n%s", p.path, n, body)

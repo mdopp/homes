@@ -32,7 +32,7 @@ func (c Config) kann(w http.ResponseWriter, r *http.Request) {
 		noSuchPath(w, r)
 		return
 	}
-	k := c.kannMit(c.wuensche(r.Context()))
+	k := c.kannMit(c.wuensche(r.Context()), texte.Von(r))
 	if uid, ok := c.uid(r); ok && c.Eigen != nil { // the person's own (Dein Archiv, the Dokumente-Adresse): the ETag is theirs too
 		c.Eigen(uid, &k)
 	}
@@ -53,12 +53,16 @@ func (c Config) kann(w http.ResponseWriter, r *http.Request) {
 	w.Write(append(body, '\n'))
 }
 
-// kannMit is the list with the wishes, each trace in German beside its key.
-func (c Config) kannMit(ws modul.Wuensche) modul.Kann {
+// kannMit is the list with the wishes in sp (the phone's language, owner
+// 2026-11-18): each title, and each trace beside its key.
+func (c Config) kannMit(ws modul.Wuensche, sp texte.Sprache) modul.Kann {
 	k := c.Module.Kann(ws)
 	for i, e := range k.Module {
+		if t := sp.Titel(e.Name); t != "modul."+e.Name {
+			k.Module[i].Titel = t
+		}
 		if e.SpurID != "" {
-			k.Module[i].Spur = texte.T(texte.ID("spur." + e.SpurID))
+			k.Module[i].Spur = sp.T(texte.ID("spur." + e.SpurID))
 		}
 	}
 	return k
@@ -97,13 +101,13 @@ func (c Config) anfordern(w http.ResponseWriter, r *http.Request) {
 		m, ok = c.Module.Eins(in.Modul)
 	}
 	if !ok || m.An() || m.Abgeschaltet() { // on, or switched off on purpose: nothing to wish for
-		answer(w, http.StatusNotFound, map[string]any{"ok": false, "reason": "not_found", "error": texte.T(texte.AnfordernGibtsNicht)})
+		answer(w, http.StatusNotFound, map[string]any{"ok": false, "reason": "not_found", "error": texte.Von(r).T(texte.AnfordernGibtsNicht)})
 		return
 	}
 	ws := c.wuensche(r.Context())
 	switch {
 	case !ws.Geht:
-		answer(w, http.StatusServiceUnavailable, map[string]any{"ok": false, "error": texte.T(texte.AnfordernKeinLaib)})
+		answer(w, http.StatusServiceUnavailable, map[string]any{"ok": false, "error": texte.Von(r).T(texte.AnfordernKeinLaib)})
 		return
 	case m.Anfordern(ws):
 		uid, _ := c.uid(r)
@@ -116,13 +120,13 @@ func (c Config) anfordern(w http.ResponseWriter, r *http.Request) {
 			if errors.Is(err, context.DeadlineExceeded) {
 				say, code = texte.AnfordernStumm, http.StatusGatewayTimeout
 			}
-			answer(w, code, map[string]any{"ok": false, "error": texte.T(say)})
+			answer(w, code, map[string]any{"ok": false, "error": texte.Von(r).T(say)})
 			return
 		}
 		log.Printf("homes: anfordern %s for %s", m.Name, uid)
 		ws = c.wuensche(r.Context())
 	}
-	for _, e := range c.kannMit(ws).Module {
+	for _, e := range c.kannMit(ws, texte.Von(r)).Module {
 		if e.Name == m.Name {
 			answer(w, http.StatusOK, e)
 		}

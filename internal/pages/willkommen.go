@@ -35,20 +35,20 @@ func Willkommen(cfg StartConfig) http.HandlerFunc {
 		if first := strings.Fields(r.Header.Get("Remote-Name")); len(first) > 0 {
 			name = first[0]
 		}
-		b.WriteString("<h1>" + html.EscapeString(strings.TrimSpace(fmt.Sprintf(texte.T(texte.Hallo), name))) + "</h1>")
+		b.WriteString("<h1>" + html.EscapeString(strings.TrimSpace(fmt.Sprintf(texte.Von(r).T(texte.Hallo), name))) + "</h1>")
 		if user != "" {
-			b.WriteString("<p>" + html.EscapeString(texte.T(texte.Benutzername)) + ` <span style="font-family:ui-monospace,Menlo,Consolas,monospace">` + html.EscapeString(user) + "</span></p>")
+			b.WriteString("<p>" + html.EscapeString(texte.Von(r).T(texte.Benutzername)) + ` <span style="font-family:ui-monospace,Menlo,Consolas,monospace">` + html.EscapeString(user) + "</span></p>")
 		}
-		next := cards.Card{Title: texte.T(texte.Schritte)}
+		next := cards.Card{Title: texte.Von(r).T(texte.Schritte)}
 		for _, a := range offen(einrichtung(r, cfg)) {
 			next.AddLink(a.titel, a.warum, a.href)
 		}
 		if len(next.Rows) == 0 {
-			b.WriteString("<p class=k>" + html.EscapeString(texte.T(texte.AllesFertig)) + "</p>")
+			b.WriteString("<p class=k>" + html.EscapeString(texte.Von(r).T(texte.AllesFertig)) + "</p>")
 		} else {
 			b.WriteString(next.HTML())
 		}
-		b.WriteString("<p><a href=/start>" + html.EscapeString(texte.T(texte.ZurStartseite)) + "</a></p>")
+		b.WriteString("<p><a href=/start>" + html.EscapeString(texte.Von(r).T(texte.ZurStartseite)) + "</a></p>")
 		writePage(w, http.StatusOK, b)
 	}
 }

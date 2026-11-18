@@ -41,9 +41,9 @@ func pruefenKnopf(r *http.Request, cfg StartConfig, buch, uid, name string, klei
 	if !cfg.pruefenAn() || uid == "" || buch == kontaktantwort.Haushalt && !isAdmin(r) {
 		return ""
 	}
-	innen, label, wozu := wort(texte.PruefenTeilen), "", `<small class=wozu>`+html.EscapeString(fmt.Sprintf(texte.T(texte.PruefenWozu), name))+`</small>`
+	innen, label, wozu := wort(texte.PruefenTeilen), "", `<small class=wozu>`+html.EscapeString(fmt.Sprintf(texte.Von(r).T(texte.PruefenWozu), name))+`</small>`
 	if klein {
-		fuer := html.EscapeString(fmt.Sprintf(texte.T(texte.PruefenTeilenFuer), name))
+		fuer := html.EscapeString(fmt.Sprintf(texte.Von(r).T(texte.PruefenTeilenFuer), name))
 		innen, label, wozu = teilenSymbol, ` aria-label="`+fuer+`" title="`+fuer+`"`, ""
 	}
 	return `<form method=post action=` + PruefenPath + ` class=teilen data-teilen><input type=hidden name=buch value=` + buch + `><input type=hidden name=uid value="` + html.EscapeString(uid) +
@@ -93,7 +93,7 @@ func Pruefen(cfg StartConfig) http.HandlerFunc {
 			http.Error(w, "Nur von Homes' eigener Seite.", http.StatusForbidden)
 			return
 		case buch == kontaktantwort.Haushalt && !isAdmin(r):
-			http.Error(w, texte.T(texte.PruefenNurAdmins), http.StatusForbidden)
+			http.Error(w, texte.Von(r).T(texte.PruefenNurAdmins), http.StatusForbidden)
 			return
 		}
 		var all []caldav.Contact
@@ -106,7 +106,7 @@ func Pruefen(cfg StartConfig) http.HandlerFunc {
 		}
 		i := slices.IndexFunc(all, func(ct caldav.Contact) bool { return uid != "" && ct.UID == uid })
 		if i < 0 {
-			http.Error(w, texte.T(texte.PruefenWeg), http.StatusNotFound)
+			http.Error(w, texte.Von(r).T(texte.PruefenWeg), http.StatusNotFound)
 			return
 		}
 		f := kontaktantwort.FelderVon(all[i])
@@ -114,12 +114,12 @@ func Pruefen(cfg StartConfig) http.HandlerFunc {
 		token, frage, err := cfg.Antworten.Neu(r.Header.Get("Remote-User"), von, buch, uid, f)
 		if err != nil {
 			log.Printf("homes: kontakt prüfen: the link not made: %v", err)
-			http.Error(w, texte.T(texte.PruefenNicht), http.StatusServiceUnavailable)
+			http.Error(w, texte.Von(r).T(texte.PruefenNicht), http.StatusServiceUnavailable)
 			return
 		}
 		log.Printf("homes: kontakt prüfen: link %s made (%s)", frage.ID, buch)
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		fmt.Fprintf(w, texte.T(texte.PruefenText), cmp.Or(f.Vorname, f.Name()), strings.TrimRight(cfg.KontaktURL, "/")+"/"+token)
+		fmt.Fprintf(w, texte.Von(r).T(texte.PruefenText), cmp.Or(f.Vorname, f.Name()), strings.TrimRight(cfg.KontaktURL, "/")+"/"+token)
 	}
 }
 
@@ -174,14 +174,14 @@ func antwortEntscheiden(r *http.Request, cfg StartConfig, f kontaktantwort.Frage
 	problem := ""
 	switch {
 	case errors.Is(err, kontaktantwort.ErrWeg):
-		problem = texte.T(texte.AntwortKontaktWeg)
+		problem = texte.Von(r).T(texte.AntwortKontaktWeg)
 	case err != nil:
 		log.Printf("homes: kontakt-antwort %s: not written: %v", f.ID, err)
-		return f, "", texte.T(texte.AntwortNicht)
+		return f, "", texte.Von(r).T(texte.AntwortNicht)
 	}
 	done, err := cfg.Antworten.Entscheiden(f.ID, f.Wer, stand)
 	if err != nil {
-		return f, "", texte.T(texte.AntwortNicht)
+		return f, "", texte.Von(r).T(texte.AntwortNicht)
 	}
 	n := map[string]int{}
 	for _, s := range stand {
@@ -190,19 +190,19 @@ func antwortEntscheiden(r *http.Request, cfg StartConfig, f kontaktantwort.Frage
 	log.Printf("homes: kontakt-antwort %s decided: %v", f.ID, n)
 	var said []string
 	if aktion == "verwerfen" || n[kontaktantwort.Abgelehnt] == len(stand) && len(stand) > 0 {
-		said = append(said, texte.T(texte.AntwortVerworfen))
+		said = append(said, texte.Von(r).T(texte.AntwortVerworfen))
 	}
 	if k := n[kontaktantwort.Uebernommen]; k > 0 {
-		said = append(said, fmt.Sprintf(texte.T(texte.AntwortGeschrieben), texte.Anzahl(k, "Änderung", "Änderungen")))
+		said = append(said, fmt.Sprintf(texte.Von(r).T(texte.AntwortGeschrieben), texte.Anzahl(k, "Änderung", "Änderungen")))
 	}
 	if k := n[kontaktantwort.Angenommen]; k > 0 {
-		said = append(said, fmt.Sprintf(texte.T(texte.AntwortZumHandy), texte.Anzahl(k, "Änderung", "Änderungen")))
+		said = append(said, fmt.Sprintf(texte.Von(r).T(texte.AntwortZumHandy), texte.Anzahl(k, "Änderung", "Änderungen")))
 	}
 	if k := n[kontaktantwort.Uebersprungen]; k > 0 && problem == "" {
-		problem = fmt.Sprintf(texte.T(texte.AntwortUebersprungen), texte.Anzahl(k, "Änderung", "Änderungen"))
+		problem = fmt.Sprintf(texte.Von(r).T(texte.AntwortUebersprungen), texte.Anzahl(k, "Änderung", "Änderungen"))
 	}
 	if len(stand) == 0 {
-		said = append(said, texte.T(texte.AntwortErledigtGesagt))
+		said = append(said, texte.Von(r).T(texte.AntwortErledigtGesagt))
 	}
 	return done, strings.Join(said, " "), problem
 }

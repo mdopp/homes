@@ -87,7 +87,7 @@ func werGesagtZeile(r *http.Request, said, problem, action string) string {
 	if said == "" || problem != "" || r.PostForm.Get("antwort") != "kein" {
 		return gesagt(said, problem)
 	}
-	t := func(id texte.ID) string { return html.EscapeString(texte.T(id)) }
+	t := func(id texte.ID) string { return html.EscapeString(texte.Von(r).T(id)) }
 	return `<div class=gut role=status><span class=punkt></span><p>` + html.EscapeString(said) + `</p><form method=post class=rueck action="` + html.EscapeString(action) +
 		`"><input type=hidden name=wer value="` + html.EscapeString(r.PostForm.Get("wer")) + `"><button name=antwort value=zurueck class=leise data-laeuft="` + t(texte.WerRueckLauft) + `">` + t(texte.WerRueckgaengig) + `</button></form></div>`
 }
@@ -124,7 +124,7 @@ func werAntwort(r *http.Request, cfg StartConfig, id string) (said, problem stri
 	if antwort != "ja" {
 		antwort, name = "nein", ""
 	} else if name == "" {
-		return "", texte.T(texte.WerOhneName)
+		return "", texte.Von(r).T(texte.WerOhneName)
 	}
 	doch, genannt := false, ""
 	said, problem = dieselbeAntworten(r.Context(), antwort, func(ctx context.Context) (string, error) {
@@ -133,7 +133,7 @@ func werAntwort(r *http.Request, cfg StartConfig, id string) (said, problem stri
 		return genannt, err
 	}, werGesagt)
 	if doch && problem == "" { // the named side's own name after a Nein: the same person after all, said so
-		said = fmt.Sprintf(texte.T(texte.WerDoch), genannt)
+		said = fmt.Sprintf(texte.Von(r).T(texte.WerDoch), genannt)
 	}
 	return said, problem
 }

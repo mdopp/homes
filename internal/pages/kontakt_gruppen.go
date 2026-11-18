@@ -63,9 +63,9 @@ func gruppeAendern(r *http.Request, cfg StartConfig) (said, problem string) {
 	weg := oneLine(r.PostForm.Get("gruppe-weg"))
 	k, nein := haushalt.GruppeKorrektur(oneLine(r.PostForm.Get("gruppe-dazu")), weg)
 	if !isAdmin(r) || cfg.Contacts == nil {
-		return "", texte.T(texte.GruppeNurAdmins)
+		return "", texte.Von(r).T(texte.GruppeNurAdmins)
 	} else if nein != "" {
-		return "", texte.T(nein)
+		return "", texte.Von(r).T(nein)
 	}
 	var done []bool
 	var err error
@@ -74,12 +74,12 @@ func gruppeAendern(r *http.Request, cfg StartConfig) (said, problem string) {
 	})
 	switch {
 	case errors.Is(err, caldav.ErrNoCard):
-		return "", texte.T(texte.PruefenWeg)
+		return "", texte.Von(r).T(texte.PruefenWeg)
 	case err != nil || !slices.Contains(done, true):
 		log.Printf("homes: kontakt: a group not written: %v", err)
-		return "", texte.T(texte.GruppeFehler)
+		return "", texte.Von(r).T(texte.GruppeFehler)
 	case weg != "":
-		return fmt.Sprintf(texte.T(texte.GruppeWegGesagt), weg), ""
+		return fmt.Sprintf(texte.Von(r).T(texte.GruppeWegGesagt), weg), ""
 	}
-	return fmt.Sprintf(texte.T(texte.GruppeDazuGesagt), k.Neu), ""
+	return fmt.Sprintf(texte.Von(r).T(texte.GruppeDazuGesagt), k.Neu), ""
 }

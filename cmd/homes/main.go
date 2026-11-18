@@ -139,7 +139,10 @@ func routes(s site) http.Handler {
 	}
 	// counted behind the proxy secret: only what Caddy let through is a page view (haus#50)
 	mux.Handle("/", pages.RequireProxy(s.proxySecret, pages.Counted(s.usage, familyMux(s))))
-	return mux
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { // each answer is in the client's language (owner 2026-11-18)
+		w.Header().Add("Vary", "Accept-Language")
+		mux.ServeHTTP(w, r)
+	})
 }
 
 // kontaktServer serves the one page without a login on its own listener

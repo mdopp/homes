@@ -67,7 +67,7 @@ func Teaser(cfg StartConfig) http.HandlerFunc {
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 		default:
 			h.Set("X-Robots-Tag", "noindex, nofollow")
-			teaserSeite(w, http.StatusNotFound, cfg, `<p class="hinweis">`+html.EscapeString(texte.T(texte.ZugangNichtDa))+` <a href="/">Zur Seite</a></p>`)
+			teaserSeite(w, http.StatusNotFound, cfg, `<p class="hinweis">`+html.EscapeString(texte.Von(r).T(texte.ZugangNichtDa))+` <a href="/">Zur Seite</a></p>`)
 		}
 	}
 }
@@ -77,19 +77,19 @@ func Teaser(cfg StartConfig) http.HandlerFunc {
 // Signal), and thanked. A filled honeypot is thanked too and dropped.
 func zugangAnfragen(w http.ResponseWriter, r *http.Request, cfg StartConfig) {
 	if fremd(r) {
-		teaserSeite(w, http.StatusForbidden, cfg, teaserForm(zugang.Anfrage{}, texte.T(texte.ZugangFremd)))
+		teaserSeite(w, http.StatusForbidden, cfg, teaserForm(zugang.Anfrage{}, texte.Von(r).T(texte.ZugangFremd)))
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, frageBytes)
 	if r.ParseForm() != nil || cfg.Zugang == nil {
-		teaserSeite(w, http.StatusBadRequest, cfg, teaserForm(zugang.Anfrage{}, texte.T(texte.ZugangSpaeter)))
+		teaserSeite(w, http.StatusBadRequest, cfg, teaserForm(zugang.Anfrage{}, texte.Von(r).T(texte.ZugangSpaeter)))
 		return
 	}
 	f := r.PostForm
 	a, fehler := zugang.Pruefen(f.Get("name"), f.Get("kontakt"), f.Get("nachricht"))
 	if fehler != "" {
 		says := map[zugang.Fehler]texte.ID{zugang.OhneName: texte.ZugangOhneName, zugang.OhneKontakt: texte.ZugangOhneKontakt, zugang.ZuLang: texte.ZugangZuLang}[fehler]
-		teaserSeite(w, http.StatusUnprocessableEntity, cfg, teaserForm(a, texte.T(says)))
+		teaserSeite(w, http.StatusUnprocessableEntity, cfg, teaserForm(a, texte.Von(r).T(says)))
 		return
 	}
 	if f.Get("website") != "" { // the field no person sees: a bot filled it
@@ -106,7 +106,7 @@ func zugangAnfragen(w http.ResponseWriter, r *http.Request, cfg StartConfig) {
 		} else {
 			w.Header().Set("Retry-After", "3600")
 		}
-		teaserSeite(w, code, cfg, teaserForm(a, texte.T(texte.ZugangSpaeter)))
+		teaserSeite(w, code, cfg, teaserForm(a, texte.Von(r).T(texte.ZugangSpaeter)))
 		return
 	}
 	log.Printf("homes: zugang: request %s kept", a.ID)
@@ -198,21 +198,21 @@ func Zugang(cfg StartConfig) http.HandlerFunc {
 			r.Body = http.MaxBytesReader(w, r.Body, 4<<10)
 			r.ParseForm()
 			if err := cfg.Zugang.Erledigen(r.PostForm.Get("id")); err != nil {
-				http.Error(w, familySentence("zugang", err, texte.T(texte.FrageNicht)), http.StatusInternalServerError)
+				http.Error(w, familySentence("zugang", err, texte.Von(r).T(texte.FrageNicht)), http.StatusInternalServerError)
 				return
 			}
 			http.Redirect(w, r, ZugangPath, http.StatusSeeOther)
 			return
 		}
 		offen, err := cfg.Zugang.Offen()
-		b := adminHead(r, cfg, texte.T(texte.ZugangAnfragen))
-		b.WriteString("<h1>" + texte.T(texte.ZugangAnfragen) + "</h1><p class=k>" + html.EscapeString(texte.T(texte.ZugangHinweis)) + "</p>")
+		b := adminHead(r, cfg, texte.Von(r).T(texte.ZugangAnfragen))
+		b.WriteString("<h1>" + texte.Von(r).T(texte.ZugangAnfragen) + "</h1><p class=k>" + html.EscapeString(texte.Von(r).T(texte.ZugangHinweis)) + "</p>")
 		switch {
 		case err != nil:
 			log.Printf("homes: zugang: %v", err)
-			b.WriteString("<p>" + html.EscapeString(texte.T(texte.FrageNicht)) + "</p>")
+			b.WriteString("<p>" + html.EscapeString(texte.Von(r).T(texte.FrageNicht)) + "</p>")
 		case len(offen) == 0:
-			b.WriteString("<p>" + html.EscapeString(texte.T(texte.ZugangKeine)) + "</p>")
+			b.WriteString("<p>" + html.EscapeString(texte.Von(r).T(texte.ZugangKeine)) + "</p>")
 		}
 		_, loc := cfg.clock()
 		if len(offen) > 0 {
@@ -223,7 +223,7 @@ func Zugang(cfg StartConfig) http.HandlerFunc {
 			if a.Nachricht != "" {
 				b.WriteString("<br>" + strings.ReplaceAll(html.EscapeString(a.Nachricht), "\n", "<br>"))
 			}
-			b.WriteString(`</div><form method=post action="` + ZugangPath + `" data-ganz><input type=hidden name=id value="` + html.EscapeString(a.ID) + `"><button data-laeuft="Erledigt …">` + texte.T(texte.ZugangErledigt) + "</button></form></li>")
+			b.WriteString(`</div><form method=post action="` + ZugangPath + `" data-ganz><input type=hidden name=id value="` + html.EscapeString(a.ID) + `"><button data-laeuft="Erledigt …">` + texte.Von(r).T(texte.ZugangErledigt) + "</button></form></li>")
 		}
 		if len(offen) > 0 {
 			b.WriteString("</ul>")

@@ -78,7 +78,7 @@ func kontaktPost(w http.ResponseWriter, r *http.Request, cfg StartConfig, nurZei
 		return e, true
 	}
 	if id := r.PostForm.Get("id"); id != "" && cfg.pruefenAn() {
-		e.problem = texte.T(texte.AntwortWeg)
+		e.problem = texte.Von(r).T(texte.AntwortWeg)
 		if f, err := cfg.Antworten.Eine(id, r.Header.Get("Remote-User")); err == nil {
 			f, e.said, e.problem = antwortEntscheiden(r, cfg, f)
 			e.antwort = &f

@@ -2,6 +2,7 @@ package pages
 
 import (
 	"context"
+	"fmt"
 	"html"
 	"net/http"
 	"sort"
@@ -156,16 +157,12 @@ const (
 	horizon    = 14 // days ahead on Kalender
 )
 
-// What Start says when a part cannot do its job, or is empty (haus#35).
-const (
-	saysNoSwitching = "Schalten geht im Moment nicht."
-	saysPinHow      = "Tippe unter Geräte bei einem Gerät auf ☆, dann erscheint es hier."
-	saysNichtsHeute = "Heute und morgen steht nichts im Kalender."
-)
+// What Start says when a part cannot do its job (haus#35); when one is empty, texte's start.* say it.
+const saysNoSwitching = "Schalten geht im Moment nicht."
 
 // marke is Start's head, the app's start screen in words and mark: the
-// icon, the name and the claim, so the page and the app are recognised as
-// one (owner 2026-11-03).
+// icon, the name and the claim (claim), so the page and the app are
+// recognised as one (owner 2026-11-03).
 var marke = func() string {
 	svg, err := symbole.ReadFile("symbol/favicon.svg") // inline: no request, no login in the way
 	if err != nil {
@@ -174,8 +171,11 @@ var marke = func() string {
 	s := strings.Replace(string(svg), `width="72" height="72"`, `width="52" height="52" aria-hidden="true"`, 1)
 	s = strings.ReplaceAll(s, `"clip"`, `"marke-clip"`)
 	s = strings.ReplaceAll(s, "url(#clip)", "url(#marke-clip)")
-	return "<header class=marke>" + s + "<div><h1>Homes</h1><p class=claim>Dein Zuhause, klar im Blick.</p></div></header>"
+	return "<header class=marke>" + s + "<div><h1>Homes</h1><p class=claim>"
 }()
+
+// claim closes marke with the claim in sp.
+func claim(sp texte.Sprache) string { return sp.T(texte.StartClaim) + "</p></div></header>" }
 
 // Start is the family's page (haus#12, haus#35; owner 2026-11-07: „Rigoros
 // einfach“, docs/DOMAIN.md Gestaltungsregeln): Homes' mark and the day, then
@@ -242,21 +242,21 @@ func Start(cfg StartConfig) http.HandlerFunc {
 		states = cfg.allAsSeen(states) // a cover wired the wrong way round, turned over (haus#64)
 		logErrs("start", map[string]error{"home assistant": haErr, "calendar": evErr, "reminders": todoErr, "favorites": favErr})
 
-		b := familyHead(r, cfg, "Homes", "Start")
+		b, sp := familyHead(r, cfg, "Homes", "Start"), texte.Von(r)
 		b.WriteString(liveRefresh("alle", 120)) // lamps and players by push; the day and Braucht dich every two minutes
-		b.WriteString(marke + "<p class=datum>" + dateWords(now, loc) + "</p>")
+		b.WriteString(marke + claim(sp) + "<p class=datum>" + dateWords(sp, now, loc) + "</p>")
 		b.WriteString(brauchtDichSpaeter(r, cfg, kept))
 		if cfg.Bote != nil { // the chat stays (owner 2026-11-07): one line and the microphone, after what needs you
 			b.WriteString(sprechenField(cfg, false))
 		}
 		if pins {
-			b.WriteString(deineGeraete(favs, favErr, states, haErr, reg, now.In(loc).Format("15:04")))
+			b.WriteString(deineGeraete(sp, favs, favErr, states, haErr, reg, now.In(loc).Format("15:04")))
 		}
 		if cfg.Calendar != nil {
-			b.WriteString(heute(events, evErr, todos, todoErr, now, loc))
+			b.WriteString(heute(sp, events, evErr, todos, todoErr, now, loc))
 		}
 		if cfg.HA != nil {
-			b.WriteString(imHaus(cfg, states, haErr, reg))
+			b.WriteString(imHaus(sp, cfg, states, haErr, reg))
 		}
 		b.WriteString(pluginKarten(cfg, person)) // a plugin's own card, as kept (homes ADR 0003)
 		writePage(w, http.StatusOK, b)
@@ -267,8 +267,8 @@ func Start(cfg StartConfig) http.HandlerFunc {
 // 2026-11-07): the people at home, the lamps on, what plays, and the
 // energy now leading to Energie — with one action: the lamps off, else a
 // player's Pause. What HA hides is left out; a group is not a lamp.
-func imHaus(cfg StartConfig, states []ha.State, haErr error, reg ha.Registry) string {
-	const open = "<section class=\"karte im-haus\" aria-labelledby=karte-im-haus><h2 id=karte-im-haus>Im Haus</h2><ul>"
+func imHaus(sp texte.Sprache, cfg StartConfig, states []ha.State, haErr error, reg ha.Registry) string {
+	open := "<section class=\"karte im-haus\" aria-labelledby=karte-im-haus><h2 id=karte-im-haus>" + sp.T(texte.ImHaus) + "</h2><ul>"
 	if haErr != nil {
 		return open + "<li>" + saysNoHouse + " " + saysNoSwitching + "</li></ul></section>"
 	}
@@ -290,29 +290,29 @@ func imHaus(cfg StartConfig, states []ha.State, haErr error, reg ha.Registry) st
 		case domain == "media_player" && s.State == "playing":
 			plays = append(plays, friendly(s))
 			if f, _ := number(s.Attributes["supported_features"]); int64(f)&pauseFeature != 0 && pause == nil {
-				pause = &cards.Action{Label: "Pause", Entity: s.EntityID, Do: "media_player.media_pause", Back: "/start"}
+				pause = &cards.Action{Label: sp.T(texte.ImHausPause), Entity: s.EntityID, Do: "media_player.media_pause", Back: "/start"}
 			}
 		}
 	}
 	var parts []string
 	if persons > 0 {
 		sort.Strings(home)
-		parts = append(parts, map[bool]string{true: "Niemand zu Hause", false: andList(home) + " da"}[len(home) == 0])
+		parts = append(parts, map[bool]string{true: sp.T(texte.ImHausNiemand), false: fmt.Sprintf(sp.T(texte.ImHausDa), andIn(sp, home))}[len(home) == 0])
 	}
 	var action *cards.Action
 	switch lamps := litLamps(states, reg.Hidden); len(lamps) {
 	case 0:
-		parts = append(parts, "Alle Lichter aus")
+		parts = append(parts, sp.T(texte.ImHausDunkel))
 	case 1:
-		parts = append(parts, friendly(lamps[0])+" an")
-		action = &cards.Action{Label: "Aus", Entity: lamps[0].EntityID, Do: "light.turn_off", Back: "/start"}
+		parts = append(parts, fmt.Sprintf(sp.T(texte.ImHausEineAn), friendly(lamps[0])))
+		action = &cards.Action{Label: sp.T(texte.ImHausAus), Entity: lamps[0].EntityID, Do: "light.turn_off", Back: "/start"}
 	default:
-		parts = append(parts, strconv.Itoa(len(lamps))+" Lichter an")
-		action = &cards.Action{Label: "Alle aus", Do: allLightsOff, Back: "/start"}
+		parts = append(parts, fmt.Sprintf(sp.T(texte.ImHausAn), len(lamps)))
+		action = &cards.Action{Label: sp.T(texte.ImHausAlleAus), Do: allLightsOff, Back: "/start"}
 	}
 	if len(plays) > 0 {
 		sort.Strings(plays)
-		parts = append(parts, andList(plays)+map[bool]string{true: " spielt", false: " spielen"}[len(plays) == 1])
+		parts = append(parts, fmt.Sprintf(sp.T(map[bool]texte.ID{true: texte.ImHausSpielt, false: texte.ImHausSpielen}[len(plays) == 1]), andIn(sp, plays)))
 	}
 	if action == nil {
 		action = pause
@@ -350,18 +350,21 @@ func litLamps(states []ha.State, hidden map[string]bool) []ha.State {
 }
 
 // andList is "Anna", "Anna und Ben", "Anna, Ben und Carla".
-func andList(xs []string) string {
+func andList(xs []string) string { return andIn("de", xs) }
+
+// andIn is andList in sp: "Anna and Ben".
+func andIn(sp texte.Sprache, xs []string) string {
 	if len(xs) < 2 {
 		return strings.Join(xs, "")
 	}
-	return strings.Join(xs[:len(xs)-1], ", ") + " und " + xs[len(xs)-1]
+	return strings.Join(xs[:len(xs)-1], ", ") + " " + sp.T(texte.Und) + " " + xs[len(xs)-1]
 }
 
 // deineGeraete answers "where are my things?": the person's own, in their
 // order, as the app's tiles (kacheln); only a thing of a card domain HA
 // knows and does not hide. None says how to get one.
-func deineGeraete(ids []string, err error, states []ha.State, haErr error, reg ha.Registry, stand string) string {
-	c := cards.Card{Title: texte.T(texte.Geraete)}
+func deineGeraete(sp texte.Sprache, ids []string, err error, states []ha.State, haErr error, reg ha.Registry, stand string) string {
+	c := cards.Card{Title: sp.T(texte.Geraete)}
 	switch {
 	case err != nil:
 		c.Add(saysNoFavorites, "")
@@ -389,10 +392,10 @@ func deineGeraete(ids []string, err error, states []ha.State, haErr error, reg h
 		}
 	}
 	if n == 0 {
-		c.AddLink(saysPinHow, "", "/raeume")
+		c.AddLink(sp.T(texte.StartPinWie), "", "/raeume")
 		return c.HTML()
 	}
-	return kachelnHTML(c.ID(), ks, n-maxGeraete, stand)
+	return kachelnHTML(sp, ks, n-maxGeraete, stand)
 }
 
 // geraetKachel is a pinned thing's tile; a printer's says Geräte's words
@@ -418,7 +421,7 @@ func capital(s string) string {
 // lines of today and tomorrow — the appointments and the reminders due, an
 // overdue one first — each leading to its page, then Kalender. Nothing
 // coming is one quiet line.
-func heute(events []caldav.Event, evErr error, todos []caldav.Todo, todoErr error, now time.Time, loc *time.Location) string {
+func heute(sp texte.Sprache, events []caldav.Event, evErr error, todos []caldav.Todo, todoErr error, now time.Time, loc *time.Location) string {
 	type item struct {
 		at  time.Time
 		row cards.Row
@@ -451,13 +454,14 @@ func heute(events []caldav.Event, evErr error, todos []caldav.Todo, todoErr erro
 	}
 	failed := evErr != nil || todoErr != nil
 	if len(items) == 0 && !failed {
-		return "<p class=ruhig><span class=\"punkt grau\"></span><a href=/kalender>" + saysNichtsHeute + "</a></p>"
+		return "<p class=ruhig><span class=\"punkt grau\"></span><a href=/kalender>" + sp.T(texte.StartNichtsHeute) + "</a></p>"
 	}
 	sort.SliceStable(items, func(i, j int) bool { return items[i].at.Before(items[j].at) })
-	c := cards.Card{Title: "Heute", Look: cards.Times, Link: &cards.Link{Href: "/kalender", Text: "Kalender →"}}
+	kalender := sp.Titel("kalender")
+	c := cards.Card{Title: sp.T(texte.StartHeute), Look: cards.Times, Link: &cards.Link{Href: "/kalender", Text: kalender + " →"}}
 	for i, it := range items {
 		if i == maxHeute {
-			c.Link.Text = "Kalender · " + strconv.Itoa(len(items)-maxHeute) + " weitere →"
+			c.Link.Text = fmt.Sprintf(sp.T(texte.StartWeitere), kalender, len(items)-maxHeute) + " →"
 			break
 		}
 		c.Rows = append(c.Rows, it.row)
@@ -563,8 +567,9 @@ func dayWord(t, now time.Time, loc *time.Location) string {
 	return weekdays[t.Weekday()][:2] + " " + t.Format("02.01.")
 }
 
-// dateWords is the day at the top of Start: "Mittwoch, 14. Oktober".
-func dateWords(now time.Time, loc *time.Location) string {
+// dateWords is the day at the top of Start in sp: "Mittwoch, 14. Oktober", "Wednesday, 14 October".
+func dateWords(sp texte.Sprache, now time.Time, loc *time.Location) string {
 	now = now.In(loc)
-	return weekdays[now.Weekday()] + ", " + strconv.Itoa(now.Day()) + ". " + months[now.Month()-1]
+	tag, monat := sp.T(texte.ID("tag."+strconv.Itoa(int(now.Weekday())))), sp.T(texte.ID("monat."+strconv.Itoa(int(now.Month()))))
+	return fmt.Sprintf(sp.T(texte.StartDatum), tag, now.Day(), monat)
 }

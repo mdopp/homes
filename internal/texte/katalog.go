@@ -372,9 +372,79 @@ const (
 	ZugangKeine       ID = "zugang.keine"
 	ZugangErledigt    ID = "zugang.erledigt"
 	ZugangHinweis     ID = "zugang.hinweis"
+	// the frame and Start in the reader's language (owner 2026-11-18): the selection, the head, the blocks
+	NavStart         ID = "nav.start"
+	NavHaushalt      ID = "nav.haushalt"
+	NavMehr          ID = "nav.mehr"
+	NavAufgaben      ID = "nav.aufgaben"
+	NavAbmelden      ID = "nav.abmelden"
+	NavAngemeldet    ID = "nav.angemeldet" // before the login: „Angemeldet als anna“
+	NavPlatte        ID = "nav.platte"
+	StartClaim       ID = "start.claim"   // under the name in Start's head
+	StartDatum       ID = "start.datum"   // the day at the top: weekday, day, month
+	StartHeute       ID = "start.heute"   // the card of today and tomorrow
+	StartWeitere     ID = "start.weitere" // its link when more come: „Kalender · 2 weitere →“
+	StartNichtsHeute ID = "start.nichts-heute"
+	StartPinWie      ID = "start.pin-wie" // Deine Geräte without one: how to get one
+	ImHaus           ID = "im-haus.titel"
+	ImHausNiemand    ID = "im-haus.niemand"
+	ImHausDa         ID = "im-haus.da"       // „Anna und Ben da“
+	ImHausDunkel     ID = "im-haus.dunkel"   // no lamp on
+	ImHausEineAn     ID = "im-haus.eine-an"  // „Küche an“
+	ImHausAn         ID = "im-haus.an"       // „3 Lichter an“
+	ImHausSpielt     ID = "im-haus.spielt"   // one player playing
+	ImHausSpielen    ID = "im-haus.spielen"  // more than one
+	ImHausAus        ID = "im-haus.aus"      // the button for one lamp
+	ImHausAlleAus    ID = "im-haus.alle-aus" // the button for all of them
+	ImHausPause      ID = "im-haus.pause"
+	Und              ID = "und" // the last „und“ of a list of names
 )
 
 var de = map[ID]string{
+	NavStart:                     "Start",
+	NavHaushalt:                  "Haushalt",
+	NavMehr:                      "Mehr",
+	NavAufgaben:                  "Deine Aufgaben",
+	NavAbmelden:                  "Abmelden",
+	NavAngemeldet:                "Angemeldet als",
+	NavPlatte:                    "Platte erfassen",
+	StartClaim:                   "Dein Zuhause, klar im Blick.",
+	StartDatum:                   "%[1]s, %[2]d. %[3]s",
+	StartHeute:                   "Heute",
+	StartWeitere:                 "%s · %d weitere",
+	StartNichtsHeute:             "Heute und morgen steht nichts im Kalender.",
+	StartPinWie:                  "Tippe unter Geräte bei einem Gerät auf ☆, dann erscheint es hier.",
+	ImHaus:                       "Im Haus",
+	ImHausNiemand:                "Niemand zu Hause",
+	ImHausDa:                     "%s da",
+	ImHausDunkel:                 "Alle Lichter aus",
+	ImHausEineAn:                 "%s an",
+	ImHausAn:                     "%d Lichter an",
+	ImHausSpielt:                 "%s spielt",
+	ImHausSpielen:                "%s spielen",
+	ImHausAus:                    "Aus",
+	ImHausAlleAus:                "Alle aus",
+	ImHausPause:                  "Pause",
+	Und:                          "und",
+	"tag.0":                      "Sonntag",
+	"tag.1":                      "Montag",
+	"tag.2":                      "Dienstag",
+	"tag.3":                      "Mittwoch",
+	"tag.4":                      "Donnerstag",
+	"tag.5":                      "Freitag",
+	"tag.6":                      "Samstag",
+	"monat.1":                    "Januar",
+	"monat.2":                    "Februar",
+	"monat.3":                    "März",
+	"monat.4":                    "April",
+	"monat.5":                    "Mai",
+	"monat.6":                    "Juni",
+	"monat.7":                    "Juli",
+	"monat.8":                    "August",
+	"monat.9":                    "September",
+	"monat.10":                   "Oktober",
+	"monat.11":                   "November",
+	"monat.12":                   "Dezember",
 	"meine-daten.titel":          "Meine Daten",
 	"meine-daten.mehr":           "Was von dir auf die Box kommt, und wann zuletzt",
 	"meine-daten.da":             "Was ankommt",
@@ -927,4 +997,90 @@ var de = map[ID]string{
 	"frage.monat":                "Monat",
 	"frage.jahr":                 "Jahr (wenn du magst)",
 	"frage.beruf":                "Firma und Position",
+}
+
+// The other languages (owner 2026-11-04: the family's words in de/en/es/fr),
+// by id and language; a word missing here is German (In). The client's
+// language picks them (owner 2026-11-18). First the frame and Start, the
+// module titles and the traces the app shows.
+var uebersetzt = map[ID]map[string]string{
+	NavStart:             {"en": "Home", "es": "Inicio", "fr": "Accueil"},
+	NavHaushalt:          {"en": "Household", "es": "Hogar", "fr": "Foyer"},
+	NavMehr:              {"en": "More", "es": "Más", "fr": "Plus"},
+	NavAufgaben:          {"en": "Your tasks", "es": "Tus tareas", "fr": "Tes tâches"},
+	NavAbmelden:          {"en": "Sign out", "es": "Cerrar sesión", "fr": "Se déconnecter"},
+	NavAngemeldet:        {"en": "Signed in as", "es": "Sesión iniciada como", "fr": "Connecté en tant que"},
+	NavPlatte:            {"en": "Add a record", "es": "Añadir un disco", "fr": "Ajouter un disque"},
+	StartClaim:           {"en": "Your home, at a glance.", "es": "Tu hogar, de un vistazo.", "fr": "Ta maison, d'un coup d'œil."},
+	StartDatum:           {"en": "%[1]s, %[2]d %[3]s", "es": "%[1]s, %[2]d de %[3]s", "fr": "%[1]s %[2]d %[3]s"},
+	StartHeute:           {"en": "Today", "es": "Hoy", "fr": "Aujourd'hui"},
+	StartWeitere:         {"en": "%s · %d more", "es": "%s · %d más", "fr": "%s · %d de plus"},
+	StartNichtsHeute:     {"en": "Nothing in the calendar today or tomorrow.", "es": "Hoy y mañana no hay nada en el calendario.", "fr": "Rien au calendrier aujourd'hui ni demain."},
+	StartPinWie:          {"en": "Under Devices, tap ☆ on a device and it shows up here.", "es": "En Dispositivos, toca ☆ en un dispositivo y aparecerá aquí.", "fr": "Dans Appareils, touche ☆ sur un appareil et il apparaîtra ici."},
+	GeraeteAlle:          {"en": "All →", "es": "Todos →", "fr": "Tous →"},
+	GeraeteHinweis:       {"en": "Tap to switch, press and hold to open the device.", "es": "Toca para encender o apagar, mantén pulsado para abrir el dispositivo.", "fr": "Touche pour allumer ou éteindre, appui long pour ouvrir l'appareil."},
+	BoxWeg:               {"en": "Box not reachable – trying again …", "es": "Caja no disponible – reintentando …", "fr": "Box injoignable – nouvel essai …"},
+	Stand:                {"en": "As of %s", "es": "Estado %s", "fr": "État à %s"},
+	Geraete:              {"en": "Your devices", "es": "Tus dispositivos", "fr": "Tes appareils"},
+	ImHaus:               {"en": "At home", "es": "En casa", "fr": "À la maison"},
+	ImHausNiemand:        {"en": "Nobody home", "es": "No hay nadie en casa", "fr": "Personne à la maison"},
+	ImHausDa:             {"en": "%s home", "es": "%s en casa", "fr": "%s à la maison"},
+	ImHausDunkel:         {"en": "All lights off", "es": "Todas las luces apagadas", "fr": "Toutes les lumières éteintes"},
+	ImHausEineAn:         {"en": "%s on", "es": "%s encendida", "fr": "%s allumée"},
+	ImHausAn:             {"en": "%d lights on", "es": "%d luces encendidas", "fr": "%d lumières allumées"},
+	ImHausSpielt:         {"en": "%s is playing", "es": "%s está sonando", "fr": "%s joue"},
+	ImHausSpielen:        {"en": "%s are playing", "es": "%s están sonando", "fr": "%s jouent"},
+	ImHausAus:            {"en": "Off", "es": "Apagar", "fr": "Éteindre"},
+	ImHausAlleAus:        {"en": "All off", "es": "Apagar todo", "fr": "Tout éteindre"},
+	ImHausPause:          {"en": "Pause", "es": "Pausa", "fr": "Pause"},
+	Und:                  {"en": "and", "es": "y", "fr": "et"},
+	"tag.0":              {"en": "Sunday", "es": "domingo", "fr": "dimanche"},
+	"tag.1":              {"en": "Monday", "es": "lunes", "fr": "lundi"},
+	"tag.2":              {"en": "Tuesday", "es": "martes", "fr": "mardi"},
+	"tag.3":              {"en": "Wednesday", "es": "miércoles", "fr": "mercredi"},
+	"tag.4":              {"en": "Thursday", "es": "jueves", "fr": "jeudi"},
+	"tag.5":              {"en": "Friday", "es": "viernes", "fr": "vendredi"},
+	"tag.6":              {"en": "Saturday", "es": "sábado", "fr": "samedi"},
+	"monat.1":            {"en": "January", "es": "enero", "fr": "janvier"},
+	"monat.2":            {"en": "February", "es": "febrero", "fr": "février"},
+	"monat.3":            {"en": "March", "es": "marzo", "fr": "mars"},
+	"monat.4":            {"en": "April", "es": "abril", "fr": "avril"},
+	"monat.5":            {"en": "May", "es": "mayo", "fr": "mai"},
+	"monat.6":            {"en": "June", "es": "junio", "fr": "juin"},
+	"monat.7":            {"en": "July", "es": "julio", "fr": "juillet"},
+	"monat.8":            {"en": "August", "es": "agosto", "fr": "août"},
+	"monat.9":            {"en": "September", "es": "septiembre", "fr": "septembre"},
+	"monat.10":           {"en": "October", "es": "octubre", "fr": "octobre"},
+	"monat.11":           {"en": "November", "es": "noviembre", "fr": "novembre"},
+	"monat.12":           {"en": "December", "es": "diciembre", "fr": "décembre"},
+	"modul.geraete":      {"en": "Devices", "es": "Dispositivos", "fr": "Appareils"},
+	"modul.energie":      {"en": "Energy", "es": "Energía", "fr": "Énergie"},
+	"modul.sprechen":     {"en": "Talk", "es": "Hablar", "fr": "Parler"},
+	"modul.kalender":     {"en": "Calendar", "es": "Calendario", "fr": "Calendrier"},
+	"modul.kontakte":     {"en": "Contacts", "es": "Contactos", "fr": "Contacts"},
+	"modul.konto":        {"en": "Homes account", "es": "Cuenta de Homes", "fr": "Compte Homes"},
+	"modul.einkauf":      {"en": "Shopping", "es": "Compras", "fr": "Courses"},
+	"modul.notizen":      {"en": "Notes", "es": "Notas", "fr": "Notes"},
+	"modul.dokumente":    {"en": "Documents", "es": "Documentos", "fr": "Documents"},
+	"modul.musik":        {"en": "Music", "es": "Música", "fr": "Musique"},
+	"modul.podcasts":     {"en": "Podcasts", "es": "Pódcasts", "fr": "Podcasts"},
+	"modul.hoerbuecher":  {"en": "Audiobooks and podcasts", "es": "Audiolibros y pódcasts", "fr": "Livres audio et podcasts"},
+	"modul.gesehen":      {"en": "Watched & heard", "es": "Visto y oído", "fr": "Vu et entendu"},
+	"modul.sicherung":    {"en": "Back up data", "es": "Copia de datos", "fr": "Sauvegarder les données"},
+	"modul.standort":     {"en": "Location history", "es": "Historial de ubicaciones", "fr": "Historique des positions"},
+	"modul.netzlaufwerk": {"en": "Network drive", "es": "Unidad de red", "fr": "Lecteur réseau"},
+	"modul.werkstatt":    {"en": "Workshop", "es": "Taller", "fr": "Atelier"},
+	"modul.nutzung":      {"en": "What gets used", "es": "Qué se usa", "fr": "Ce qui sert"},
+	"modul.fotos":        {"en": "Photos", "es": "Fotos", "fr": "Photos"},
+	"modul.passwoerter":  {"en": "Passwords", "es": "Contraseñas", "fr": "Mots de passe"},
+	"modul.filme":        {"en": "Films and music", "es": "Películas y música", "fr": "Films et musique"},
+	MeineDatenTitel:      {"en": "My data", "es": "Mis datos", "fr": "Mes données"},
+	SpurFehlt:            {"en": "not set up on this box", "es": "no está configurado en esta caja", "fr": "pas installé sur cette box"},
+	SpurAus:              {"en": "switched off", "es": "desactivado", "fr": "désactivé"},
+	SpurAngefordert:      {"en": "requested", "es": "solicitado", "fr": "demandé"},
+	SpurWartet:           {"en": "waiting for approval", "es": "esperando aprobación", "fr": "en attente d'approbation"},
+	SpurAbgelehnt:        {"en": "declined", "es": "rechazado", "fr": "refusé"},
+	SpurEingerichtet:     {"en": "being set up", "es": "se está configurando", "fr": "en cours d'installation"},
+	Anfordern:            {"en": "Request it here", "es": "Solicitarlo aquí", "fr": "Le demander ici"},
+	Anfordernd:           {"en": "Requesting …", "es": "Solicitando …", "fr": "Demande en cours …"},
 }

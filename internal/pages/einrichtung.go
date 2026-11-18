@@ -78,7 +78,7 @@ func aufgabenListe(r *http.Request, cfg StartConfig, l laibTeil) []aufgabe {
 	}
 	if isAdmin(r) {
 		if n := len(l.wartet); n > 0 && cfg.LaibURL != "" { // deciding is Laib's page's (ADR 0012, haus#157)
-			as = append(as, aufgabe{titel: texte.Anzahl(n, texte.T("box.wartet"), texte.T("box.wartet.n")), warum: "Laib fragt, bevor es die Box ändert.",
+			as = append(as, aufgabe{titel: texte.Anzahl(n, texte.Von(r).T("box.wartet"), texte.Von(r).T("box.wartet.n")), warum: "Laib fragt, bevor es die Box ändert.",
 				href: strings.TrimRight(cfg.LaibURL, "/") + "/inbox", extern: "In Laib entscheiden", art: artEntscheiden, name: "entscheiden", icon: "box"})
 		}
 		for _, row := range zugangRows(cfg) { // a visitor asking for access (owner 2026-11-08)
@@ -212,7 +212,7 @@ func einrichtung(r *http.Request, cfg StartConfig) []aufgabe {
 	}
 	if cfg.Antworten != nil { // Kontakt prüfen lassen: the answers waiting for the review (owner 2026-11-07)
 		if n := len(cfg.Antworten.ZuPruefen(user)); n > 0 {
-			out = append(out, aufgabe{titel: antwortenAufgabe(n), warum: texte.T(texte.AntwortenAufgabeWarum), href: AntwortenPath, art: artFrage, name: "antworten", icon: "kontakte"})
+			out = append(out, aufgabe{titel: antwortenAufgabe(n), warum: texte.Von(r).T(texte.AntwortenAufgabeWarum), href: AntwortenPath, art: artFrage, name: "antworten", icon: "kontakte"})
 		}
 	}
 	if cfg.Zuordnen != nil && isAdmin(r) { // laib DATA.md gap 6: what Dokumente could not give anyone, seen by no one until then

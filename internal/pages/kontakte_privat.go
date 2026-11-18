@@ -64,7 +64,7 @@ func MeineKontakte(cfg StartConfig) http.HandlerFunc {
 				fotos := ""
 				if privatEigen(r, cfg) {
 					if l := cfg.Gesichter.Link("privat/"+uid, oneLine(ct.Name)); l != "" && !ct.IsFirm() {
-						fotos = "<p class=weiter-in>" + immichLink(l, texte.T(texte.KontaktFotos), wort(texte.KontaktFotosKurz)) + "</p>"
+						fotos = "<p class=weiter-in>" + immichLink(l, texte.Von(r).T(texte.KontaktFotos), wort(texte.KontaktFotosKurz)) + "</p>"
 					}
 				}
 				kontaktSeite(w, r, cfg, ct, kontaktantwort.Privat, MeineKontaktePath, fotos, "", e)
@@ -72,13 +72,13 @@ func MeineKontakte(cfg StartConfig) http.HandlerFunc {
 			}
 		}
 		if r.URL.Path != MeineKontaktePath {
-			kontaktWeg(w, r, cfg, e, kontaktantwort.Privat, uid, texte.T(texte.MeineKontakteWeg))
+			kontaktWeg(w, r, cfg, e, kontaktantwort.Privat, uid, texte.Von(r).T(texte.MeineKontakteWeg))
 			return
 		}
-		b := kontakteHead(r, cfg, texte.T(texte.MeineKontakte), MeineKontaktePath, texte.T(texte.KontakteMeine))
+		b := kontakteHead(r, cfg, texte.Von(r).T(texte.MeineKontakte), MeineKontaktePath, texte.Von(r).T(texte.KontakteMeine))
 		b.WriteString(kontakteStyle + "<h1>" + wort(texte.MeineKontakte) + "</h1>")
 		if privatEigen(r, cfg) && cfg.Gesichter.Fehlt() != "" {
-			b.WriteString(gesagt("", fmt.Sprintf(texte.T(texte.MeineKontakteRecht), cfg.Gesichter.Fehlt())))
+			b.WriteString(gesagt("", fmt.Sprintf(texte.Von(r).T(texte.MeineKontakteRecht), cfg.Gesichter.Fehlt())))
 		}
 		if err != nil {
 			log.Printf("homes: meine kontakte: %v", err)
