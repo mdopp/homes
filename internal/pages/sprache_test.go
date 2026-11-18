@@ -13,7 +13,7 @@ func TestStartSpeaksTheClientsLanguage(t *testing.T) {
 		[]string{"Your home", "Wednesday", "Ta maison"}}
 	english := want{[]string{"<html lang=en>", "Your home, at a glance.", "Wednesday, 14 October", "<h2 id=karte-deine-geraete>Your devices</h2>",
 		">Today</h2>", "<h2 id=karte-im-haus>At home</h2>", "</svg>Home</a>", "</svg>More<", "</svg>Sign out</a>", "Signed in as",
-		"Calendar →"},
+		"Calendar →", ">All →</a>", "Tap to switch"},
 		[]string{"lang=de", "Dein Zuhause", "Mittwoch", "Im Haus</h2>", "Abmelden"}}
 	french := want{[]string{"<html lang=fr>", "Ta maison, d'un coup d'œil.", "mercredi 14 octobre", ">Aujourd&#39;hui</h2>",
 		"<h2 id=karte-im-haus>À la maison</h2>", "</svg>Accueil</a>", "</svg>Se déconnecter</a>"},
