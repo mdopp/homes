@@ -14,6 +14,7 @@ import (
 
 	"github.com/mdopp/gestaltung"
 	"github.com/mdopp/homes/internal/cards"
+	"github.com/mdopp/homes/internal/texte"
 )
 
 // The family's pages (haus#12): Start, Räume, Kalender, Notizen and what
@@ -110,11 +111,11 @@ body>*{grid-column:1/-1}body>.karte{grid-column:auto}body>.karte.geraete{grid-co
 func familyHead(r *http.Request, cfg StartConfig, title, current string) *strings.Builder {
 	cfg.Gesichter.Merke(r.Header.Get("Remote-User"), r.Header.Get("Remote-Email")) // whose Handy-Kontakte go to Immich
 	cfg.Einrichtung.SahAdmin(r.Header.Get("Remote-User"), isAdmin(r))              // the app's Deine Aufgaben: an admin's rows too (homes#362)
-	b := &strings.Builder{}
+	b, sp := &strings.Builder{}, texte.Von(r)                                      // the reader's language (owner 2026-11-18)
 	if title != "Homes" {
-		title += " · Homes"
+		title = navWortIn(sp, title) + " · Homes"
 	}
-	b.WriteString("<!doctype html><html lang=de><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1,viewport-fit=cover'>" +
+	b.WriteString("<!doctype html><html lang=" + string(sp) + "><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1,viewport-fit=cover'>" +
 		"<meta name=color-scheme content='dark light'><meta name=theme-color content='" + themeColor + "'><title>" + html.EscapeString(title) + "</title>" + symbolHead)
 	b.WriteString(frame)
 	b.WriteString(cards.Style + homesStyle + homesScript + nachladenScript) // in the head: a page swapped in keeps it

@@ -52,31 +52,31 @@ func achtung(ctx context.Context, r *http.Request, cfg BoxConfig) string {
 			json.Unmarshal(p, &line)
 			add("rot", aboutIt(line))
 		}
-		add("k", texte.T("box.diag-fehlt"))
+		add("k", texte.Von(r).T("box.diag-fehlt"))
 	case derr != nil:
-		add("gelb", texte.T("box.diag-stumm"))
+		add("gelb", texte.Von(r).T("box.diag-stumm"))
 	case found.At == nil: // never „Alles in Ordnung“ over what was not measured
-		add("k", texte.T("box.diag-nie"))
+		add("k", texte.Von(r).T("box.diag-nie"))
 	}
 	if ready.Lock != "" {
 		add("gelb", "gesperrt: "+html.EscapeString(ready.Lock))
 	}
 	if ready.Drift > 0 { // the running box differs from what Laib rendered
-		add("gelb", fmt.Sprintf(texte.T("box.drift"), ready.Drift))
+		add("gelb", fmt.Sprintf(texte.Von(r).T("box.drift"), ready.Drift))
 	}
 	if ready.AufgabenFaellig > 0 { // the Box-Aufgaben's badge (haus#115)
-		add("gelb", "<a href=\""+boxAufgabenPfad+"\">"+texte.Anzahl(ready.AufgabenFaellig, texte.T("box.faellig"), texte.T("box.faellig.n"))+"</a>")
+		add("gelb", "<a href=\""+boxAufgabenPfad+"\">"+texte.Anzahl(ready.AufgabenFaellig, texte.Von(r).T("box.faellig"), texte.Von(r).T("box.faellig.n"))+"</a>")
 	}
 	if ierr != nil {
-		add("gelb", texte.T("box.inbox-stumm"))
+		add("gelb", texte.Von(r).T("box.inbox-stumm"))
 	} else if n := len(waiting); n > 0 { // deciding is Laib's page's (ADR 0012, haus#157)
-		add("k", laibLink(cfg, "/inbox", texte.Anzahl(n, texte.T("box.wartet"), texte.T("box.wartet.n"))))
+		add("k", laibLink(cfg, "/inbox", texte.Anzahl(n, texte.Von(r).T("box.wartet"), texte.Von(r).T("box.wartet.n"))))
 	}
 	foot := kept(ready, isAdmin(r), cfg)
 	if found.At != nil {
-		foot += " · " + fmt.Sprintf(texte.T("box.gemessen"), seit(*found.At, time.Now()))
+		foot += " · " + fmt.Sprintf(texte.Von(r).T("box.gemessen"), seit(*found.At, time.Now()))
 	}
-	top := "<p><b class=gruen>" + texte.T("box.ruhig") + "</b> · " + foot + "</p>"
+	top := "<p><b class=gruen>" + texte.Von(r).T("box.ruhig") + "</b> · " + foot + "</p>"
 	if all := append(append(lines["rot"], lines["gelb"]...), lines["k"]...); len(all) > 0 {
 		top = "<ul class=zeilen>" + strings.Join(all, "") + "</ul><p class=k>" + foot + "</p>"
 	}

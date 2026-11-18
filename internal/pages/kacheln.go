@@ -200,7 +200,8 @@ func (k kachel) html() string {
 // tiles in the person's order: on a phone a lamp or a lock half the row, a
 // cover and a tile left alone across it (allein); wider, cells (zelle).
 // more did not fit; stand is the time of the values, said without the box.
-func kachelnHTML(id string, ks []kachel, more int, stand string) string {
+func kachelnHTML(sp texte.Sprache, ks []kachel, more int, stand string) string {
+	const id = "karte-deine-geraete" // one in every language: the page's script and e2e find it
 	for i := 0; i < len(ks); i++ {
 		switch {
 		case len(ks[i].knoepfe) > 0:
@@ -211,9 +212,9 @@ func kachelnHTML(id string, ks []kachel, more int, stand string) string {
 		}
 	}
 	var b strings.Builder
-	b.WriteString(kachelStyle + `<section class="karte geraete" aria-labelledby=` + id + `><p class=stand>` + html.EscapeString(texte.T(texte.BoxWeg)) + `<br>` +
-		html.EscapeString(fmt.Sprintf(texte.T(texte.Stand), stand)) + `</p><div class=kopfzeile><h2 id=` + id + `>` + html.EscapeString(texte.T(texte.Geraete)) +
-		`</h2><a class=alle href=/raeume>` + html.EscapeString(texte.T(texte.GeraeteAlle)) + `</a></div><p class=hinweis>` + html.EscapeString(texte.T(texte.GeraeteHinweis)) + `</p><ul class=kacheln>`)
+	b.WriteString(kachelStyle + `<section class="karte geraete" aria-labelledby=` + id + `><p class=stand>` + html.EscapeString(sp.T(texte.BoxWeg)) + `<br>` +
+		html.EscapeString(fmt.Sprintf(sp.T(texte.Stand), stand)) + `</p><div class=kopfzeile><h2 id=` + id + `>` + html.EscapeString(sp.T(texte.Geraete)) +
+		`</h2><a class=alle href=/raeume>` + html.EscapeString(sp.T(texte.GeraeteAlle)) + `</a></div><p class=hinweis>` + html.EscapeString(sp.T(texte.GeraeteHinweis)) + `</p><ul class=kacheln>`)
 	for _, k := range ks {
 		b.WriteString(k.html())
 	}

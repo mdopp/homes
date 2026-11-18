@@ -195,7 +195,10 @@ npx playwright install chromium && npx playwright test`; `go run
 - **No secret in the repo**, not even in a test: tokens reach Homes as
   `HOMES_*` from Laib's secrets.
 - **The pages are German, for the family; the code, commits and docs are
-  English.** A plain German sentence is the error a person sees, never
+  English.** A word in `internal/texte` answers in the client's language
+  (Accept-Language, the browser's or the phone's; owner 2026-11-18): look it
+  up with `texte.Von(r).T(id)` where the request is at hand, and every word
+  that lacks a translation stays German. No picker, no setting per person. A plain German sentence is the error a person sees, never
   the raw error.
 - **A green CI is not a verified feature.** On the box, look at the page
   (or have the owner look) before you say it works.

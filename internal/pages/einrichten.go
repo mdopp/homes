@@ -42,7 +42,7 @@ func einrichtenHier(r *http.Request, cfg StartConfig, name string) (oben, unten 
 	case a.Erledigt == nil:
 		return einrichtenBlock(r, a), ""
 	}
-	return "", `<p class=leise-weg id=einrichten-` + name + `><a href=` + einrichten.Seite(name) + `>` + html.EscapeString(texte.T(texte.Weiteres)) + `</a></p>` +
+	return "", `<p class=leise-weg id=einrichten-` + name + `><a href=` + einrichten.Seite(name) + `>` + html.EscapeString(texte.Von(r).T(texte.Weiteres)) + `</a></p>` +
 		`<style>.leise-weg{margin:40px 0 0;text-align:center;font-size:.9rem}.leise-weg a{color:var(--muted)}</style>`
 }
 
@@ -53,19 +53,19 @@ func einrichtenBlock(r *http.Request, a einrichten.Aufgabe) string {
 	e := a.Einrichtung
 	var b strings.Builder
 	b.WriteString(`<section class="karte einrichten" id=einrichten-` + name + `><h2>` + html.EscapeString(a.Titel) + `</h2><ol>`)
-	b.WriteString(`<li>` + html.EscapeString(fmt.Sprintf(texte.T(texte.AppLaden), e.App)) + ` <a class=knopf href="` + html.EscapeString(e.Store) + `">` + html.EscapeString(texte.T(texte.Laden)) + `</a></li>`)
+	b.WriteString(`<li>` + html.EscapeString(fmt.Sprintf(texte.Von(r).T(texte.AppLaden), e.App)) + ` <a class=knopf href="` + html.EscapeString(e.Store) + `">` + html.EscapeString(texte.Von(r).T(texte.Laden)) + `</a></li>`)
 	addr := `<span class=adresse>` + html.EscapeString(e.Web) + `</span>`
 	for _, s := range e.Schritte {
-		b.WriteString(`<li>` + strings.NewReplacer("{adresse}", addr, "{name}", html.EscapeString(assistent.Name())).Replace(html.EscapeString(texte.T(texte.ID(s)))) + `</li>`)
+		b.WriteString(`<li>` + strings.NewReplacer("{adresse}", addr, "{name}", html.EscapeString(assistent.Name())).Replace(html.EscapeString(texte.Von(r).T(texte.ID(s)))) + `</li>`)
 	}
 	b.WriteString(`</ol><p class=wege>`)
 	if e.Web != "" && name != einrichten.Homes {
-		b.WriteString(`<a class=knopf href="` + html.EscapeString(e.Web) + `">` + html.EscapeString(texte.T(texte.Oeffnen)) + `</a> `)
+		b.WriteString(`<a class=knopf href="` + html.EscapeString(e.Web) + `">` + html.EscapeString(texte.Von(r).T(texte.Oeffnen)) + `</a> `)
 	}
-	b.WriteString(`<a href="` + html.EscapeString(e.Anleitung) + `">` + html.EscapeString(texte.T(texte.Anleitung)) + `</a></p>`)
+	b.WriteString(`<a href="` + html.EscapeString(e.Anleitung) + `">` + html.EscapeString(texte.Von(r).T(texte.Anleitung)) + `</a></p>`)
 	if a.Erledigt == nil {
 		b.WriteString(`<form method=post action=` + einrichten.Seite(name) + `><input type=hidden name=zurueck value="` + html.EscapeString(r.URL.Path) + `">` +
-			`<button data-laeuft="` + html.EscapeString(texte.T(texte.Hakt)) + `">` + html.EscapeString(texte.T(texte.Eingerichtet)) + `</button></form>`)
+			`<button data-laeuft="` + html.EscapeString(texte.Von(r).T(texte.Hakt)) + `">` + html.EscapeString(texte.Von(r).T(texte.Eingerichtet)) + `</button></form>`)
 	}
 	return b.String() + `</section>` + einrichtenStyle
 }
@@ -94,7 +94,7 @@ func Einrichten(cfg StartConfig) http.HandlerFunc {
 			now, _ := cfg.clock()
 			if err := cfg.Einrichtung.Haken.Setzen(user, name, einrichten.Hand, now); err != nil {
 				log.Printf("homes: einrichten: %s ticks %s: %v", user, name, err)
-				http.Error(w, texte.T(texte.HakenNicht), http.StatusInternalServerError)
+				http.Error(w, texte.Von(r).T(texte.HakenNicht), http.StatusInternalServerError)
 				return
 			}
 			back := r.PostFormValue("zurueck")

@@ -42,7 +42,7 @@ func mehrStand(r *http.Request, cfg StartConfig, pfad string) string {
 	switch pfad {
 	case aufgabenPath:
 		if n := offeneZahl(r, cfg); n > 0 { // the counter, in words (owner 2026-11-04)
-			return fmt.Sprintf(texte.T(texte.Offen), n) + " · " + mehrSays["Deine Aufgaben"]
+			return fmt.Sprintf(texte.Von(r).T(texte.Offen), n) + " · " + mehrSays["Deine Aufgaben"]
 		}
 	case netzlaufwerkPath:
 		if acc, err := cfg.Samba.Accounts(); err == nil && !acc[user].IsZero() {
@@ -53,7 +53,7 @@ func mehrStand(r *http.Request, cfg StartConfig, pfad string) string {
 		if cfg.MusicInbox == "" {
 			return ""
 		} else if n := len(zurueck(cfg.MusicInbox, cfg.Loc)); n > 0 {
-			return texte.Anzahl(n, "Datei", "Dateien") + " " + texte.T(texte.MusikNicht)
+			return texte.Anzahl(n, "Datei", "Dateien") + " " + texte.Von(r).T(texte.MusikNicht)
 		} else if n := len(musikWartet(cfg.MusicInbox)); n > 0 {
 			return texte.Anzahl(n, "Datei", "Dateien") + map[bool]string{true: " wird", false: " werden"}[n == 1] + " einsortiert"
 		}

@@ -121,7 +121,10 @@ budget() { # budget <name> <cap> <dir…>
 # 2026-11-15, owner's request homes#375 (ADR 0003 accepted 2026-11-15, „setze es so um“; pages 19,990 -> 20,035; 20,031 used, the
 # minimum, to be OK'd in the PR): the plugin contract on the pages (plugins.go): a plugin's entry, Start card, handed-over tasks with
 # „Stand: <Tag>“ and the quiet line; the archive's own counts went (archivZahlen, its rows, its nav entry, -70)
-budget pages 20035 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-18, owner's decision 2026-11-18 (Homes in the client's language: „ja, baue es so“; pages 20,035 -> 20,057; 20,056 used, the minimum,
+# to be OK'd in the PR): <html lang> and the selection in the reader's language (navWortIn), Start's words and date in it, texte.Von(r) at
+# every catalog word a page has its request for
+budget pages 20057 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -131,7 +134,8 @@ budget pages 20035 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-14, owner's request 2026-11-14 („Build the sealed-archive path for the phone's WhatsApp and Signal backups“,
 # archiv#64; napi 5,280 -> 5,340; 5,337 used): only age-encrypted uploads (ageLeser), a medium sent before still counts in
 # /fehlend, every .age file of letzte/ back through the open archive (ausArchiv, ageKlar)
-budget napi 5340 internal/napi        # the app's widgets' and share sheet's API: 4,793
+# 2026-11-18, owner's decision 2026-11-18 (Homes in the client's language: „ja, baue es so“; napi 5,340 -> 5,342; 5,341 used): /napi/kann's titles in the phone's language
+budget napi 5342 internal/napi        # the app's widgets' and share sheet's API: 4,793
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): the module catalog,
 # cmd/homes/module.go, 1,150 with it; plus 5 %. H3–H6 move the routes out of main.go into it
 # 2026-11-04, step H8 (§10, owner: „Keine Funktion soll versteckt werden“): the routes of the traces
@@ -146,7 +150,8 @@ budget napi 5340 internal/napi        # the app's widgets' and share sheet's API
 # 2026-11-14, owner's request 2026-11-14 (the printer; 1,452 -> 1,455; 1,452 used): HOMES_DATA handed to the pages, where
 # drucker.json keeps each printer's last known address
 # 2026-11-15, owner's request homes#375 (1,455 -> 1,460; 1,458 used): the plugins from HOMES_PLUGIN_*, kept in HOMES_DATA, asked every 5 minutes
-budget cmd 1460 cmd/homes             # homes' wiring: 1,018 with the demo then
+# 2026-11-18, owner's decision 2026-11-18 (Homes in the client's language: „ja, baue es so“; 1,460 -> 1,462; 1,461 used): Vary: Accept-Language on every answer
+budget cmd 1462 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-04, the caps moved with the packages, none raised (sum 24,134 as before): abs and
 # musicbrainz (1,227 lines, 1,289 of cap) from household to connectors once merken's fetcher
 # was internal/abruf (235 lines of merken, 247 of cap, to shared) and jellyfin.Plain
@@ -280,7 +285,9 @@ budget household 15095 $household   # the household's own logic: 10,638, 9,176 w
 # 2026-11-14, owner's request 2026-11-14 („wird angezeigt, ob ein Ping auf die Adresse funktioniert“; shared 1,795 -> 1,920;
 # 1,914 used): internal/erreichbar, a ping over an unprivileged ICMP socket, else a TCP connect to 631 or 80, within 2 s, a
 # name that does not resolve said apart; cards.Row.Warn, a detail drawn as a warning; cards.Action's Path and Laeuft
-budget shared 1920 $(echo "$shared" | sed 's#internal/texte ##') internal/texte/texte.go # the card, Markdown, the app's names: 1,019; abruf, namen: 1,287; jsonfile: 1,334
+# 2026-11-18, owner's decision 2026-11-18 (Homes in the client's language: „ja, baue es so“; shared 1,920 -> 1,960; 1,959 used): texte.Sprache, Von and Waehle,
+# Accept-Language read by its weights (RFC 9110), and In finding the translations
+budget shared 1960 $(echo "$shared" | sed 's#internal/texte ##') internal/texte/texte.go # the card, Markdown, the app's names: 1,019; abruf, namen: 1,287; jsonfile: 1,334
 
 # every package in one area
 for d in internal/*/; do

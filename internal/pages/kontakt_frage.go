@@ -242,7 +242,7 @@ func KontaktFrage(cfg StartConfig) http.HandlerFunc {
 			return
 		case err != nil:
 			log.Printf("homes: kontakt-frage %s: not kept: %v", f.ID, err)
-			frageSeite(w, http.StatusOK, nonce, wort(texte.FrageTitel), form(st, texte.T(texte.FrageNicht)))
+			frageSeite(w, http.StatusOK, nonce, wort(texte.FrageTitel), form(st, texte.Von(r).T(texte.FrageNicht)))
 			return
 		}
 		log.Printf("homes: kontakt-frage %s answered: %d changes", f.ID, len(as))
@@ -307,9 +307,9 @@ func frageGeprueft(w http.ResponseWriter, r *http.Request, vorher kontaktantwort
 	if zuviel != "" {
 		st := frageStand{f: kontaktantwort.Sauber(vorher)}
 		if zuviel == texte.FrageFotoGross {
-			st.fehler = map[string]string{"foto": texte.T(zuviel)}
+			st.fehler = map[string]string{"foto": texte.Von(r).T(zuviel)}
 		}
-		return st, kontaktantwort.Felder{}, http.StatusRequestEntityTooLarge, texte.T(zuviel)
+		return st, kontaktantwort.Felder{}, http.StatusRequestEntityTooLarge, texte.Von(r).T(zuviel)
 	}
 	if k := r.PostForm.Get("loeschen"); k != "" { // a trash can without the script: the form again, the row marked
 		r.PostForm["weg"] = append(r.PostForm["weg"], k)
@@ -324,7 +324,7 @@ func frageGeprueft(w http.ResponseWriter, r *http.Request, vorher kontaktantwort
 	var err error
 	if foto != nil {
 		if nachher.Foto, err = kontaktantwort.Foto(foto); err != nil {
-			st.fehler["foto"] = texte.T(texte.FrageFotoKeins)
+			st.fehler["foto"] = texte.Von(r).T(texte.FrageFotoKeins)
 		}
 	}
 	maps.Copy(st.fehler, kontaktantwort.Formfehler(vorher, nachher, land))
@@ -332,9 +332,9 @@ func frageGeprueft(w http.ResponseWriter, r *http.Request, vorher kontaktantwort
 		return st, nachher, 0, ""
 	}
 	if nachher.Foto != nil {
-		st.fehler["foto"] = texte.T(texte.FrageFotoNochmal) // a file field never comes back filled
+		st.fehler["foto"] = texte.Von(r).T(texte.FrageFotoNochmal) // a file field never comes back filled
 	}
-	return st, nachher, http.StatusOK, texte.T(texte.FrageFehler)
+	return st, nachher, http.StatusOK, texte.Von(r).T(texte.FrageFehler)
 }
 
 // frageStand is the form as it is shown: the fields, the card's entries
@@ -374,7 +374,7 @@ func frageNachher(r *http.Request, vorher kontaktantwort.Felder, now time.Time) 
 	geb, ok := tag(pf.Get("geb-tag"), pf.Get("geb-monat"), pf.Get("geb-jahr"))
 	st.f.Geburtstag, f.Geburtstag = geb, geb
 	if !ok {
-		st.fehler["geb"] = texte.T(texte.FrageDatum)
+		st.fehler["geb"] = texte.Von(r).T(texte.FrageDatum)
 	} else if h := kontaktantwort.Geburtstag(geb, now); geb != "" && geb != vorher.Geburtstag && h != "" {
 		st.fehler["geb"] = h
 	}

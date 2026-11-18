@@ -13,6 +13,7 @@ module.exports = defineConfig({
     ...devices['Pixel 7'],
     baseURL: 'http://127.0.0.1:8651',
     colorScheme: 'dark',
+    locale: 'de-DE', // Accept-Language: Homes speaks the browser's language (owner 2026-11-18); the family's is German
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },

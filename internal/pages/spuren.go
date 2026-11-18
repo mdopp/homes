@@ -50,7 +50,7 @@ func spurenKarte(r *http.Request, cfg StartConfig) string {
 	if je, ok := cfg.Laib.PeekWuensche(cfg.Module.Frage()); ok {
 		return spurenCard(r, off, laib.ModulWuensche(je, true), "")
 	}
-	return nachladen(SpurenPath, spurenCard(r, off, modul.Wuensche{}, ""), spurenCard(r, off, modul.Wuensche{}, texte.T(texte.SpurenStandNicht)))
+	return nachladen(SpurenPath, spurenCard(r, off, modul.Wuensche{}, ""), spurenCard(r, off, modul.Wuensche{}, texte.Von(r).T(texte.SpurenStandNicht)))
 }
 
 // spurModule are the modules whose trace is on Mehr: off, and not the
@@ -90,20 +90,20 @@ func wuensche(ctx context.Context, cfg StartConfig) (modul.Wuensche, bool) {
 // spurenCard draws the traces; note, when set, is a last quiet line.
 func spurenCard(r *http.Request, off []modul.Modul, ws modul.Wuensche, note string) string {
 	var b strings.Builder
-	b.WriteString(spurenStyle + `<section class="karte spuren" aria-labelledby=spuren><h2 id=spuren>` + html.EscapeString(texte.T(texte.SpurenTitel)) +
-		`</h2><p class=hinweis>` + html.EscapeString(texte.T(texte.SpurenHinweis)) + `</p><ul>`)
+	b.WriteString(spurenStyle + `<section class="karte spuren" aria-labelledby=spuren><h2 id=spuren>` + html.EscapeString(texte.Von(r).T(texte.SpurenTitel)) +
+		`</h2><p class=hinweis>` + html.EscapeString(texte.Von(r).T(texte.SpurenHinweis)) + `</p><ul>`)
 	signedIn, back := r.Header.Get("Remote-User") != "", ""
 	if r.URL.Path != mehrPath && r.URL.Path != SpurenPath { // a module's own page: the wish ends there (modulAus)
 		back = `<input type=hidden name=zurueck value="` + html.EscapeString(r.URL.Path) + `">`
 	}
 	for _, m := range off {
-		spur := texte.T(texte.ID("spur." + m.Spur(wunschVon(ws, m.Name))))
+		spur := texte.Von(r).T(texte.ID("spur." + m.Spur(wunschVon(ws, m.Name))))
 		b.WriteString(`<li class=tu id="spur-` + html.EscapeString(m.Name) + `"><div><span class=spur>` + html.EscapeString(m.Titel) +
 			`</span> <span class=k>` + html.EscapeString(spur) + `</span></div>`)
 		if signedIn && m.Anfordern(ws) {
 			b.WriteString(`<form method=post action=` + AnfordernPath + `><input type=hidden name=modul value="` + html.EscapeString(m.Name) +
-				`">` + back + `<button data-laeuft="` + html.EscapeString(texte.T(texte.Anfordernd)) + `" aria-label="` + html.EscapeString(m.Titel+": "+texte.T(texte.Anfordern)) +
-				`">` + html.EscapeString(texte.T(texte.Anfordern)) + `</button></form>`)
+				`">` + back + `<button data-laeuft="` + html.EscapeString(texte.Von(r).T(texte.Anfordernd)) + `" aria-label="` + html.EscapeString(m.Titel+": "+texte.Von(r).T(texte.Anfordern)) +
+				`">` + html.EscapeString(texte.Von(r).T(texte.Anfordern)) + `</button></form>`)
 		}
 		b.WriteString(`</li>`)
 	}
@@ -132,7 +132,7 @@ func spuren(w http.ResponseWriter, r *http.Request, cfg StartConfig) {
 		ws, ok := wuensche(r.Context(), cfg)
 		note := ""
 		if !ok {
-			note = texte.T(texte.SpurenStandNicht)
+			note = texte.Von(r).T(texte.SpurenStandNicht)
 		}
 		card = spurenCard(r, off, ws, note)
 	}
@@ -148,10 +148,10 @@ func Anfordern(cfg StartConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			w.Header().Set("Allow", "POST")
-			http.Error(w, texte.T(texte.AnfordernGibtsNicht), http.StatusMethodNotAllowed)
+			http.Error(w, texte.Von(r).T(texte.AnfordernGibtsNicht), http.StatusMethodNotAllowed)
 			return
 		}
-		say := func(code int, id texte.ID) { http.Error(w, texte.T(id), code) }
+		say := func(code int, id texte.ID) { http.Error(w, texte.Von(r).T(id), code) }
 		user := r.Header.Get("Remote-User")
 		var m modul.Modul
 		ok := cfg.Module != nil && fromHomes(r)
@@ -202,7 +202,7 @@ func modulAus(w http.ResponseWriter, r *http.Request, cfg StartConfig, name, pat
 		Elsewhere(cfg)(w, r)
 		return
 	}
-	m, ok := modul.Modul{Name: name, Titel: texte.Titel(name), Warum: modul.Fehlt}, false
+	m, ok := modul.Modul{Name: name, Titel: texte.Von(r).Titel(name), Warum: modul.Fehlt}, false
 	if x, found := cfg.Module.Eins(name); found && !x.An() { // on, its backend unset: nothing to wish for
 		m, ok = x, true
 	}
@@ -217,7 +217,7 @@ func modulAus(w http.ResponseWriter, r *http.Request, cfg StartConfig, name, pat
 	b := familyHead(r, cfg, m.Titel, m.Titel)
 	b.WriteString("<h1>" + html.EscapeString(m.Titel) + "</h1>" + spurenCard(r, []modul.Modul{m}, ws, ""))
 	if ok && isAdmin(r) {
-		b.WriteString(`<p class=ruhig><a href="` + ModulPages + name + `">` + html.EscapeString(texte.T(texte.ModulSeiteTitel)) + `</a></p>`)
+		b.WriteString(`<p class=ruhig><a href="` + ModulPages + name + `">` + html.EscapeString(texte.Von(r).T(texte.ModulSeiteTitel)) + `</a></p>`)
 	}
 	writePage(w, http.StatusOK, b)
 }
@@ -244,24 +244,24 @@ func ModulSeite(cfg StartConfig) http.HandlerFunc {
 		if !showOnly(w, r, m.Titel) {
 			return
 		}
-		b := familyHead(r, cfg, texte.T(texte.ModulSeiteTitel)+": "+m.Titel, "Mehr")
+		b := familyHead(r, cfg, texte.Von(r).T(texte.ModulSeiteTitel)+": "+m.Titel, "Mehr")
 		b.WriteString("<h1>" + html.EscapeString(m.Titel) + "</h1>")
 		if nr := r.URL.Query().Get("vorgeschlagen"); nr != "" {
-			b.WriteString(`<p class=hinweis role=status>` + html.EscapeString(texte.T(texte.Vorgeschlagen)) + ` <a href="` +
-				html.EscapeString(strings.TrimRight(cfg.LaibURL, "/")+"/inbox") + `">` + html.EscapeString(texte.T(texte.ZurInbox)) + `</a></p>`)
+			b.WriteString(`<p class=hinweis role=status>` + html.EscapeString(texte.Von(r).T(texte.Vorgeschlagen)) + ` <a href="` +
+				html.EscapeString(strings.TrimRight(cfg.LaibURL, "/")+"/inbox") + `">` + html.EscapeString(texte.Von(r).T(texte.ZurInbox)) + `</a></p>`)
 		}
-		c := cards.Card{Title: texte.T(texte.ModulSeiteTitel)}
+		c := cards.Card{Title: texte.Von(r).T(texte.ModulSeiteTitel)}
 		if m.Backend != "" {
-			c.Add(texte.T(texte.ModulDienst), m.Backend)
+			c.Add(texte.Von(r).T(texte.ModulDienst), m.Backend)
 		}
 		if m.An() {
-			c.Add(texte.T(texte.ModulStand), texte.T(texte.ModulAn))
+			c.Add(texte.Von(r).T(texte.ModulStand), texte.Von(r).T(texte.ModulAn))
 		} else {
-			c.Add(texte.T(texte.ModulStand), texte.T(texte.ID("spur."+m.Warum))+" · "+m.Grund)
+			c.Add(texte.Von(r).T(texte.ModulStand), texte.Von(r).T(texte.ID("spur."+m.Warum))+" · "+m.Grund)
 		}
 		ws, _ := wuensche(r.Context(), cfg)
 		if x := wunschVon(ws, m.Name); x != nil {
-			c.Add(texte.T(texte.ModulWunsch), texte.T(texte.ID("spur."+m.Spur(x)))+" · "+x.Seit)
+			c.Add(texte.Von(r).T(texte.ModulWunsch), texte.Von(r).T(texte.ID("spur."+m.Spur(x)))+" · "+x.Seit)
 		}
 		c.AddLink("Box-Aufgaben", "", boxAufgabenPfad)
 		b.WriteString(c.HTML())
@@ -294,7 +294,7 @@ func schalterForm(m modul.Modul) string {
 // the module's page, which says the proposal waits; a refusal is one
 // sentence, said on the page.
 func modulSchalten(w http.ResponseWriter, r *http.Request, cfg StartConfig, m modul.Modul) {
-	say := func(code int, id texte.ID) { http.Error(w, texte.T(id), code) }
+	say := func(code int, id texte.ID) { http.Error(w, texte.Von(r).T(id), code) }
 	an := r.FormValue("tun") == "an"
 	switch {
 	case !fromHomes(r):
@@ -313,9 +313,9 @@ func modulSchalten(w http.ResponseWriter, r *http.Request, cfg StartConfig, m mo
 			aus = append(aus, x.Name)
 		}
 	}
-	grund := fmt.Sprintf(texte.T(texte.GrundVorschlagAn), m.Titel)
+	grund := fmt.Sprintf(texte.Von(r).T(texte.GrundVorschlagAn), m.Titel)
 	if !an {
-		aus, grund = append(aus, m.Name), fmt.Sprintf(texte.T(texte.GrundVorschlagAus), m.Titel)
+		aus, grund = append(aus, m.Name), fmt.Sprintf(texte.Von(r).T(texte.GrundVorschlagAus), m.Titel)
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), wishWait)
 	defer cancel()

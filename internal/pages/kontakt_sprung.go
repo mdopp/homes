@@ -104,23 +104,23 @@ func kontaktSprung(w http.ResponseWriter, r *http.Request, cfg StartConfig, ct c
 	}
 	switch {
 	case was == sprungFotos && !cfg.fotosAn():
-		say(texte.T(texte.KontaktKeinImmich))
+		say(texte.Von(r).T(texte.KontaktKeinImmich))
 	case was == sprungFotos && (ct.IsFirm() || cfg.Gesichter.Link("haushalt/"+ct.UID, cmp.Or(oneLine(ct.Name), oneLine(ct.Org))) == ""):
-		say(texte.T(texte.KontaktKeineFotos)) // a firm, or nobody Immich knows: no search for the name
+		say(texte.Von(r).T(texte.KontaktKeineFotos)) // a firm, or nobody Immich knows: no search for the name
 	case was == sprungFotos:
 		http.Redirect(w, r, cfg.Gesichter.Link("haushalt/"+ct.UID, cmp.Or(oneLine(ct.Name), oneLine(ct.Org))), http.StatusFound)
 	case was == sprungDokumente && !cfg.paperless().Set():
-		say(texte.T(texte.KontaktKeinPaperless))
+		say(texte.Von(r).T(texte.KontaktKeinPaperless))
 	case was == sprungDokumente && !cfg.paperlessOpens(r):
 		say(saysPaperlessLAN)
 	case was == sprungDokumente:
 		http.Redirect(w, r, cfg.paperless().href(dokumenteVon(r, cfg, ct)), http.StatusFound)
 	case cfg.ArchivURL == "" || !cfg.Archive[r.Header.Get("Remote-User")]:
-		say(texte.T(texte.KontaktKeinArchiv))
+		say(texte.Von(r).T(texte.KontaktKeinArchiv))
 	case !atHome(r): // the archive is the house's network's only (laib's archiv template)
-		say(texte.T(texte.KontaktArchivDaheim))
+		say(texte.Von(r).T(texte.KontaktArchivDaheim))
 	case archivSuche(cfg, ct) == "":
-		say(texte.T(texte.KontaktKeineNachrichten))
+		say(texte.Von(r).T(texte.KontaktKeineNachrichten))
 	default:
 		http.Redirect(w, r, cfg.ArchivURL+"/?"+archivSuche(cfg, ct), http.StatusFound)
 	}

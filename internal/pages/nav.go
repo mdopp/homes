@@ -40,6 +40,21 @@ const (
 	abmeldenIcon     = `<path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l-4-4 4-4M6 12h10"/>`
 )
 
+// navWort is an entry's word by its German title, which stays the entry's
+// key: the page it marks, its tab (owner 2026-11-18: the reader's language).
+var navWort = map[string]texte.ID{"Start": texte.NavStart, "Haushalt": texte.NavHaushalt, "Mehr": texte.NavMehr, "Deine Aufgaben": texte.NavAufgaben,
+	"Geräte": "modul.geraete", "Energie": "modul.energie", "Kalender": "modul.kalender", "Kontakte": "modul.kontakte", "Einkauf": "modul.einkauf",
+	"Notizen": "modul.notizen", "Dokumente": "modul.dokumente", "Podcasts": "modul.podcasts", "Gesehen & Gehört": "modul.gesehen", "Musik": "modul.musik",
+	"Standortverlauf": "modul.standort", "Netzlaufwerk": "modul.netzlaufwerk", "Platte erfassen": texte.NavPlatte, "Meine Daten": texte.MeineDatenTitel}
+
+// navWortIn is a title in sp; a title without a word (a plugin's) as it is.
+func navWortIn(sp texte.Sprache, titel string) string {
+	if id, ok := navWort[titel]; ok {
+		return sp.T(id)
+	}
+	return titel
+}
+
 // angemeldet: someone is signed in (Authelia names them).
 func angemeldet(r *http.Request) bool { return r.Header.Get("Remote-User") != "" }
 
@@ -117,7 +132,7 @@ func tabOf(page string) string {
 	return page
 }
 
-func navLink(b *strings.Builder, e modul.Eintrag, class string, current bool) {
+func navLink(b *strings.Builder, sp texte.Sprache, e modul.Eintrag, class string, current bool) {
 	b.WriteString("<a")
 	if class != "" {
 		b.WriteString(" class=" + class)
@@ -126,7 +141,7 @@ func navLink(b *strings.Builder, e modul.Eintrag, class string, current bool) {
 	if current {
 		b.WriteString(" aria-current=page")
 	}
-	b.WriteString("><svg viewBox=\"0 0 24 24\" aria-hidden=true>" + e.Icon + "</svg>" + e.Titel + "</a>")
+	b.WriteString("><svg viewBox=\"0 0 24 24\" aria-hidden=true>" + e.Icon + "</svg>" + navWortIn(sp, e.Titel) + "</a>")
 }
 
 // familyNav is the family's selection (haus#35, haus#67): on the phone the
@@ -136,13 +151,13 @@ func navLink(b *strings.Builder, e modul.Eintrag, class string, current bool) {
 // by name) is marked, and its bar entry. Haushalt leads to its first pill
 // and is there while it has one.
 func familyNav(r *http.Request, cfg StartConfig, current string) string {
-	in, pills := tabOf(current), eintraege(r, cfg, modul.Haushalt)
+	in, pills, sp := tabOf(current), eintraege(r, cfg, modul.Haushalt), texte.Von(r)
 	n := -1 // the open tasks beside Mehr and Aufgaben (owner 2026-11-04), counted once
 	mitZahl := func(e modul.Eintrag) modul.Eintrag {
 		if n < 0 {
 			n = offeneZahl(r, cfg)
 		}
-		e.Titel += zahl(n)
+		e.Titel = navWortIn(sp, e.Titel) + zahl(n)
 		return e
 	}
 	var b strings.Builder
@@ -152,7 +167,7 @@ func familyNav(r *http.Request, cfg StartConfig, current string) string {
 		switch t.Titel {
 		case "Mehr":
 			class = "zu-mehr"
-			navLink(&b, mitZahl(t), class, t.Titel == in)
+			navLink(&b, sp, mitZahl(t), class, t.Titel == in)
 			continue
 		case "Haushalt":
 			if len(pills) == 0 {
@@ -160,20 +175,20 @@ func familyNav(r *http.Request, cfg StartConfig, current string) string {
 			}
 			t.Pfad = pills[0].Pfad
 		}
-		navLink(&b, t, class, t.Titel == in)
+		navLink(&b, sp, t, class, t.Titel == in)
 	}
-	b.WriteString("<div class=mehr><p class=mehr-titel>Mehr</p>")
+	b.WriteString("<div class=mehr><p class=mehr-titel>" + sp.T(texte.NavMehr) + "</p>")
 	for _, t := range eintraege(r, cfg, modul.Mehr) {
 		cur := t.Titel == current
 		if t.Pfad == aufgabenPath {
 			t = mitZahl(t)
 		}
-		navLink(&b, t, "", cur)
+		navLink(&b, sp, t, "", cur)
 	}
 	if u := r.Header.Get("Remote-User"); u != "" {
-		b.WriteString("<p class=mehr-wer>Angemeldet als <span class=wer>" + html.EscapeString(u) + "</span></p>")
+		b.WriteString("<p class=mehr-wer>" + sp.T(texte.NavAngemeldet) + " <span class=wer>" + html.EscapeString(u) + "</span></p>")
 	}
-	navLink(&b, modul.Eintrag{Titel: "Abmelden", Pfad: "/abmelden", Icon: abmeldenIcon}, "", false)
+	navLink(&b, sp, modul.Eintrag{Titel: sp.T(texte.NavAbmelden), Pfad: "/abmelden", Icon: abmeldenIcon}, "", false)
 	b.WriteString("</div></nav>")
 	return b.String()
 }
@@ -191,7 +206,7 @@ func haushaltNav(r *http.Request, cfg StartConfig, current string) string {
 		if t.Titel == current {
 			mark = " aria-current=page"
 		}
-		b.WriteString("<a href=" + t.Pfad + mark + ">" + t.Titel + "</a>")
+		b.WriteString("<a href=" + t.Pfad + mark + ">" + navWortIn(texte.Von(r), t.Titel) + "</a>")
 	}
 	return `<nav class=unterseiten aria-label=Haushalt>` + b.String() + `</nav>`
 }

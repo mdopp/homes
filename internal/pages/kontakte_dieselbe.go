@@ -49,7 +49,7 @@ func Dieselbe(cfg StartConfig) http.HandlerFunc {
 			if said, problem, ok = immichAntwort(w, r, cfg); !ok {
 				return
 			}
-		} else if !showOnly(w, r, texte.T(texte.Dieselbe)) {
+		} else if !showOnly(w, r, texte.Von(r).T(texte.Dieselbe)) {
 			return
 		}
 		if !privatEigen(r, cfg) {
@@ -69,8 +69,8 @@ func Dieselbe(cfg StartConfig) http.HandlerFunc {
 // come before „Wer ist das?“, which asks for typing. The face of a pair
 // just answered Nein comes first, whatever was asked.
 func dieselbeRest(r *http.Request, cfg StartConfig, said, problem string) *strings.Builder {
-	t := func(id texte.ID) string { return html.EscapeString(texte.T(id)) }
-	b := kontakteHead(r, cfg, texte.T(texte.Dieselbe), "", texte.T(texte.Dieselbe))
+	t := func(id texte.ID) string { return html.EscapeString(texte.Von(r).T(id)) }
+	b := kontakteHead(r, cfg, texte.Von(r).T(texte.Dieselbe), "", texte.Von(r).T(texte.Dieselbe))
 	b.WriteString(dieselbeStyle)
 	dann, fragen, paare := werDann(r, cfg, problem), cfg.Gesichter.Fragen(), cfg.Gesichter.Paare()
 	wer := slices.DeleteFunc(slices.Clone(cfg.Gesichter.Wer()), func(s gesichter.Seite) bool {
@@ -85,7 +85,7 @@ func dieselbeRest(r *http.Request, cfg StartConfig, said, problem string) *strin
 			ab = 0
 		}
 		action = DieselbePath + "?ab=" + strconv.Itoa(ab)
-		fuss = fmt.Sprintf(`<p class=k>%s · <a href="%s?ab=%d">%s</a> · <a href="%s?alle=1">%s</a></p>`, html.EscapeString(fmt.Sprintf(texte.T(texte.DieselbeVon), ab+1, n)),
+		fuss = fmt.Sprintf(`<p class=k>%s · <a href="%s?ab=%d">%s</a> · <a href="%s?alle=1">%s</a></p>`, html.EscapeString(fmt.Sprintf(texte.Von(r).T(texte.DieselbeVon), ab+1, n)),
 			DieselbePath, (ab+1)%n, t(texte.DieselbeNaechste), DieselbePath, t(texte.DieselbeAlle))
 		dann, paare, fragen, wer = eine(dann, &ab), eine(paare, &ab), eine(fragen, &ab), eine(wer, &ab)
 	}

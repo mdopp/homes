@@ -108,8 +108,8 @@ func DokumenteSuche(cfg StartConfig) http.HandlerFunc {
 			return
 		}
 		b := familyHead(r, cfg, s.titel(), "Dokumente")
-		b.WriteString(dokFindenStyle + `<p class=k><a href=` + DokumentePath + `>‹ ` + texte.T("dok.zurueck") + `</a></p><h1>` + html.EscapeString(s.titel()) + "</h1>" +
-			dokSuchForm(s) + `<div id=dsuche-treffer data-fehler="` + html.EscapeString("<p class=k>"+texte.T("dok.fehler")+"</p>") + `">` + dokTreffer(r, cfg, s) + "</div>" + dokSucheScript)
+		b.WriteString(dokFindenStyle + `<p class=k><a href=` + DokumentePath + `>‹ ` + texte.Von(r).T("dok.zurueck") + `</a></p><h1>` + html.EscapeString(s.titel()) + "</h1>" +
+			dokSuchForm(s) + `<div id=dsuche-treffer data-fehler="` + html.EscapeString("<p class=k>"+texte.Von(r).T("dok.fehler")+"</p>") + `">` + dokTreffer(r, cfg, s) + "</div>" + dokSucheScript)
 		writePage(w, http.StatusOK, b)
 	}
 }
@@ -147,11 +147,11 @@ func dokFinden(r *http.Request, cfg StartConfig) (string, cards.Card) {
 	})
 	zuletzt := zuletztAbgelegt(r, cfg, docs)
 	b := strings.Builder{}
-	b.WriteString(`<section class=finden aria-labelledby=finden><h2 id=finden>` + texte.T("dok.finden") + "</h2>" + dokSuchForm(dokSuche{}) +
-		`<div id=dsuche-treffer data-fehler="` + html.EscapeString("<p class=k>"+texte.T("dok.fehler")+"</p>") + `"></div>`)
+	b.WriteString(`<section class=finden aria-labelledby=finden><h2 id=finden>` + texte.Von(r).T("dok.finden") + "</h2>" + dokSuchForm(dokSuche{}) +
+		`<div id=dsuche-treffer data-fehler="` + html.EscapeString("<p class=k>"+texte.Von(r).T("dok.fehler")+"</p>") + `"></div>`)
 	if err != nil {
 		log.Printf("homes: dokumente: order: %v", err)
-		b.WriteString("<p class=k>" + texte.T("dok.fehler") + "</p></section>")
+		b.WriteString("<p class=k>" + texte.Von(r).T("dok.fehler") + "</p></section>")
 		return b.String(), zuletzt
 	}
 	chip := func(href, text string, n int) string {
@@ -161,7 +161,7 @@ func dokFinden(r *http.Request, cfg StartConfig) (string, cards.Card) {
 		return `<li><a href="` + html.EscapeString(href) + `">` + text + "</a></li>"
 	}
 	none := dokSuche{}
-	b.WriteString("<ul class=chips>" + chip(none.link("nur", "versicherungen"), texte.T("dok.versicherungen"), 0) + chip(none.link("nur", "garantie"), texte.T("dok.garantie"), 0) + "</ul>")
+	b.WriteString("<ul class=chips>" + chip(none.link("nur", "versicherungen"), texte.Von(r).T("dok.versicherungen"), 0) + chip(none.link("nur", "garantie"), texte.Von(r).T("dok.garantie"), 0) + "</ul>")
 	if len(o.Bereiche) > 0 {
 		b.WriteString("<ul class=bereiche>")
 		for _, g := range o.Bereiche {
@@ -175,7 +175,7 @@ func dokFinden(r *http.Request, cfg StartConfig) (string, cards.Card) {
 		b.WriteString(chip(none.link("typ", g.Name), html.EscapeString(g.Name), g.Anzahl))
 	}
 	for _, p := range o.Personen {
-		b.WriteString(chip(none.link("person", p), html.EscapeString(fmt.Sprintf(texte.T("dok.fuer"), p)), 0))
+		b.WriteString(chip(none.link("person", p), html.EscapeString(fmt.Sprintf(texte.Von(r).T("dok.fuer"), p)), 0))
 	}
 	b.WriteString("</ul></section>" + dokSucheScript)
 	return b.String(), zuletzt
@@ -191,14 +191,14 @@ func dokTreffer(r *http.Request, cfg StartConfig, s dokSuche) string {
 	fetch(r, func(ctx context.Context) { es, err = cfg.Docs.Finde(ctx, s.filter(now)) })
 	if err != nil {
 		log.Printf("homes: dokumente: search: %v", err)
-		return "<p class=k>" + texte.T("dok.fehler") + "</p>"
+		return "<p class=k>" + texte.Von(r).T("dok.fehler") + "</p>"
 	}
 	if len(es) == 0 {
 		leer := map[string]string{"versicherungen": "dok.versicherungen.leer", "garantie": "dok.garantie.leer"}[s.nur]
 		if s.q != "" {
-			return "<p class=k>" + html.EscapeString(fmt.Sprintf(texte.T("dok.keine"), s.q)) + "</p>"
+			return "<p class=k>" + html.EscapeString(fmt.Sprintf(texte.Von(r).T("dok.keine"), s.q)) + "</p>"
 		}
-		return "<p class=k>" + texte.T(texte.ID(cmp.Or(leer, "dok.leer"))) + "</p>"
+		return "<p class=k>" + texte.Von(r).T(texte.ID(cmp.Or(leer, "dok.leer"))) + "</p>"
 	}
 	out := ""
 	opens := cfg.paperlessOpens(r)
@@ -211,7 +211,7 @@ func dokTreffer(r *http.Request, cfg StartConfig, s dokSuche) string {
 		c.AddLink(title, detail, map[bool]string{true: cards.DocumentPage(e.ID)}[opens])
 	}
 	if len(es) == dokMax {
-		c.Note = fmt.Sprintf(texte.T("dok.mehr"), dokMax)
+		c.Note = fmt.Sprintf(texte.Von(r).T("dok.mehr"), dokMax)
 	}
 	return out + c.HTML()
 }

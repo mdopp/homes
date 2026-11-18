@@ -67,7 +67,7 @@ func MeineDaten(cfg StartConfig) http.HandlerFunc {
 			return
 		}
 		w.Header().Set("Cache-Control", "no-store")
-		da, wege := cardsList(texte.T(texte.MeineDatenDa)), cardsList(texte.T(texte.MeineDatenWege))
+		da, wege := cardsList(texte.Von(r).T(texte.MeineDatenDa)), cardsList(texte.Von(r).T(texte.MeineDatenWege))
 		zs, frei := meineZeilen(r, cfg, person)
 		for _, z := range zs {
 			if z.weg {
@@ -123,7 +123,7 @@ func meineZeilen(r *http.Request, cfg StartConfig, person string) (zs []datenZei
 	if kn >= 0 {
 		z := datenZeile{q: "kontakte", name: "Kontakte", says: texte.Anzahl(kn, "Kontakt", "Kontakte") + " im Adressbuch „Handy-Kontakte“"}
 		if kn == 0 {
-			z.weg, z.says = true, texte.T(texte.DatenInDerApp)
+			z.weg, z.says = true, texte.Von(r).T(texte.DatenInDerApp)
 		}
 		zs = append(zs, z)
 	}

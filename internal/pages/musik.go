@@ -49,8 +49,8 @@ func writeMusik(w http.ResponseWriter, r *http.Request, cfg StartConfig, said, u
 	ctx, cancel := context.WithTimeout(r.Context(), backendWait)
 	defer cancel()
 	musikKorbLeeren(cfg)
-	b := familyHead(r, cfg, texte.Titel("musik"), "Musik")
-	b.WriteString(musikStyle + keyHintStyle + "<h1>" + html.EscapeString(texte.Titel("musik")) + "</h1>")
+	b := familyHead(r, cfg, texte.Von(r).Titel("musik"), "Musik")
+	b.WriteString(musikStyle + keyHintStyle + "<h1>" + html.EscapeString(texte.Von(r).Titel("musik")) + "</h1>")
 	if said != "" {
 		b.WriteString("<div class=gut role=status><span class=punkt></span><p>" + html.EscapeString(said) + "</p>")
 		if undo != "" {
@@ -125,10 +125,10 @@ func musikWartet(inbox string) (out []os.FileInfo) {
 // reason and „Noch einmal einsortieren“ and „Löschen“ on its row, and the last week's done.
 func musikDazu(r *http.Request, cfg StartConfig, st beetsStand) string {
 	var b strings.Builder
-	b.WriteString(`<section class="karte musik-dazu" aria-labelledby=m-h><h2 id=m-h>` + html.EscapeString(texte.T(texte.MusikDazu)) +
-		`</h2><div class=wie><p>` + html.EscapeString(texte.T(texte.MusikHandy)) + `</p>`)
+	b.WriteString(`<section class="karte musik-dazu" aria-labelledby=m-h><h2 id=m-h>` + html.EscapeString(texte.Von(r).T(texte.MusikDazu)) +
+		`</h2><div class=wie><p>` + html.EscapeString(texte.Von(r).T(texte.MusikHandy)) + `</p>`)
 	if cfg.Samba != nil {
-		b.WriteString(`<p>` + strings.Replace(html.EscapeString(texte.T(texte.MusikComputer)), "Netzlaufwerk", `<a href=`+netzlaufwerkPath+`>Netzlaufwerk</a>`, 1) + `</p>`)
+		b.WriteString(`<p>` + strings.Replace(html.EscapeString(texte.Von(r).T(texte.MusikComputer)), "Netzlaufwerk", `<a href=`+netzlaufwerkPath+`>Netzlaufwerk</a>`, 1) + `</p>`)
 	}
 	b.WriteString(`</div><ul class=musik-liste>`)
 	row := func(punkt, name, state, tun string) {
@@ -136,15 +136,15 @@ func musikDazu(r *http.Request, cfg StartConfig, st beetsStand) string {
 	}
 	now, loc := cfg.clock()
 	for _, fi := range st.wartet {
-		state := texte.T(texte.MusikWirdEinsortiert)
+		state := texte.Von(r).T(texte.MusikWirdEinsortiert)
 		if now.Sub(fi.ModTime()) > 10*time.Minute {
-			state += " " + texte.T(texte.MusikDauert)
+			state += " " + texte.Von(r).T(texte.MusikDauert)
 		}
 		row("gelb", fi.Name(), state, "")
 	}
 	for _, k := range st.kept { // owner 2026-11-05: when, from whom, why, and the way out on its row
 		hidden := `<input type=hidden name=lauf value="` + html.EscapeString(k.run) + `"><input type=hidden name=name value="` + html.EscapeString(k.name) + `">`
-		state := texte.T(texte.MusikNicht)
+		state := texte.Von(r).T(texte.MusikNicht)
 		if !k.zeit.IsZero() {
 			state += " · " + whenWords(k.zeit, now, loc)
 		}
@@ -166,7 +166,7 @@ func musikDazu(r *http.Request, cfg StartConfig, st beetsStand) string {
 			if u.Alben > 0 {
 				what = count(u.Alben, "Album", "Alben") + ", " + what
 			}
-			row("", u.Eingang, fmt.Sprintf(texte.T(texte.MusikFertig), what)+" · "+whenWords(u.At, now, loc), "")
+			row("", u.Eingang, fmt.Sprintf(texte.Von(r).T(texte.MusikFertig), what)+" · "+whenWords(u.At, now, loc), "")
 		}
 	}
 	b.WriteString(`</ul>`)
@@ -390,10 +390,10 @@ func musikPlatten(ctx context.Context, r *http.Request, cfg StartConfig) string 
 		k, connected = cfg.Discogs.Konto(r.Header.Get("Remote-User"))
 	}
 	if connected {
-		b.WriteString(`<p class=wege><a class=knopf href=` + PlattePath + `>` + html.EscapeString(texte.T(texte.MusikPlatteErfassen)) + `</a></p>`)
+		b.WriteString(`<p class=wege><a class=knopf href=` + PlattePath + `>` + html.EscapeString(texte.Von(r).T(texte.MusikPlatteErfassen)) + `</a></p>`)
 	}
 	if cfg.Wuensche != nil {
-		wish := texte.T(texte.MusikWunschliste)
+		wish := texte.Von(r).T(texte.MusikWunschliste)
 		if items, err := cfg.Wuensche.Listen.Andere(einkauf.MusikListe).Lesen(ctx); err == nil {
 			open := 0
 			for _, it := range items {
@@ -407,15 +407,15 @@ func musikPlatten(ctx context.Context, r *http.Request, cfg StartConfig) string 
 	case cfg.Discogs == nil && isAdmin(r):
 		b.WriteString(keyHint(r, cfg, "Discogs", saysDiscogsEnables, publicBase(r, cfg)+MusikPath, discogsKeys))
 	case cfg.Discogs != nil && !connected:
-		b.WriteString(`<p class=ruhig><span class="punkt grau"></span><span><a href=` + DiscogsPath + `>` + html.EscapeString(texte.T(texte.MusikDiscogsVerbinden)) +
-			`</a> – ` + html.EscapeString(texte.T(texte.MusikDiscogsBringt)) + `</span></p>`)
+		b.WriteString(`<p class=ruhig><span class="punkt grau"></span><span><a href=` + DiscogsPath + `>` + html.EscapeString(texte.Von(r).T(texte.MusikDiscogsVerbinden)) +
+			`</a> – ` + html.EscapeString(texte.Von(r).T(texte.MusikDiscogsBringt)) + `</span></p>`)
 	}
 	if b.Len() == 0 {
 		return ""
 	}
-	out := `<section class="karte musik-platten" aria-labelledby=m-p><h2 id=m-p>` + html.EscapeString(texte.T(texte.MusikPlatten)) + `</h2>` + b.String() + `</section>`
+	out := `<section class="karte musik-platten" aria-labelledby=m-p><h2 id=m-p>` + html.EscapeString(texte.Von(r).T(texte.MusikPlatten)) + `</h2>` + b.String() + `</section>`
 	if connected {
-		out += `<p class=ruhig><span class=punkt></span><a href=` + DiscogsPath + `>` + html.EscapeString(fmt.Sprintf(texte.T(texte.MusikDiscogsVerbunden), k.Name)) + `</a></p>`
+		out += `<p class=ruhig><span class=punkt></span><a href=` + DiscogsPath + `>` + html.EscapeString(fmt.Sprintf(texte.Von(r).T(texte.MusikDiscogsVerbunden), k.Name)) + `</a></p>`
 	}
 	return out
 }

@@ -127,13 +127,13 @@ func writeStandort(w http.ResponseWriter, r *http.Request, cfg StartConfig, code
 	if verbunden { // connected: the timeline first, the step only while no point came, Trennen last and quiet
 		b.WriteString(gesagt(said, problem))
 		if reittiURL != "" {
-			b.WriteString(vorne(reittiURL, texte.T(texte.StandortOeffnen)))
+			b.WriteString(vorne(reittiURL, texte.Von(r).T(texte.StandortOeffnen)))
 		}
 		now, loc := cfg.clock()
 		if k.Zuletzt.IsZero() {
-			b.WriteString(zustand("gelb", "Verbunden seit "+dayWords(k.Seit, loc)) + "<p class=schritt>" + html.EscapeString(texte.T(texte.StandortEinschalten)) + "</p>")
+			b.WriteString(zustand("gelb", "Verbunden seit "+dayWords(k.Seit, loc)) + "<p class=schritt>" + html.EscapeString(texte.Von(r).T(texte.StandortEinschalten)) + "</p>")
 		} else {
-			b.WriteString(zustand("", fmt.Sprintf(texte.T(texte.StandortZuletzt), dayWord(k.Zuletzt, now, loc)+" "+k.Zuletzt.In(loc).Format("15:04"))))
+			b.WriteString(zustand("", fmt.Sprintf(texte.Von(r).T(texte.StandortZuletzt), dayWord(k.Zuletzt, now, loc)+" "+k.Zuletzt.In(loc).Format("15:04"))))
 		}
 		b.WriteString(leiseTrennen(StandortPath, "Homes soll nichts mehr an Reitti schicken?"))
 		writePage(w, code, b)

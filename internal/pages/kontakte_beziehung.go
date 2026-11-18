@@ -69,7 +69,7 @@ func netzBeziehungen(r *http.Request, cfg StartConfig, buch, uid, action string)
 			quelle = " <small class=k>" + wort(texte.NetzTelefonbuch) + "</small>"
 		}
 		b.WriteString(`<form class=bzeile method=post action="` + esc(action) + `"><input type=hidden name=x value="` + esc(z.Mit.ID) + `"><input type=hidden name=y value="` + esc(id) +
-			`"><input type=hidden name=antwort value=aendern><label><span>` + esc(z.Mit.Name) + quelle + `</span><select name=art aria-label="` + esc(fmt.Sprintf(texte.T(texte.NetzIst), z.Mit.Name)) + `" onchange="this.form.requestSubmit()">` + netzArten(z.Art, extra...) +
+			`"><input type=hidden name=antwort value=aendern><label><span>` + esc(z.Mit.Name) + quelle + `</span><select name=art aria-label="` + esc(fmt.Sprintf(texte.Von(r).T(texte.NetzIst), z.Mit.Name)) + `" onchange="this.form.requestSubmit()">` + netzArten(z.Art, extra...) +
 			`</select></label><noscript><button>` + wort(texte.NetzSpeichern) + `</button></noscript></form>`)
 	}
 	return b.String() + "</div>"
@@ -82,7 +82,7 @@ func netzBeziehungen(r *http.Request, cfg StartConfig, buch, uid, action string)
 func netzAntwort(r *http.Request, cfg StartConfig) (said, problem string) {
 	art := r.PostFormValue("art")
 	if r.PostFormValue("antwort") != "aendern" || art == "" {
-		return "", texte.T(texte.NetzOhneWahl)
+		return "", texte.Von(r).T(texte.NetzOhneWahl)
 	}
 	if art == "vergessen" {
 		art = ""
@@ -90,24 +90,24 @@ func netzAntwort(r *http.Request, cfg StartConfig) (said, problem string) {
 	x, y, err := cfg.Netz.Aendern(r.PostFormValue("x"), r.PostFormValue("y"), art)
 	switch {
 	case errors.Is(err, kontaktnetz.ErrKeineFrage):
-		return "", texte.T(texte.DieselbeWeg)
+		return "", texte.Von(r).T(texte.DieselbeWeg)
 	case err != nil:
 		log.Printf("homes: netz: an answer not kept: %v", err)
-		return "", texte.T(texte.NetzFehler)
+		return "", texte.Von(r).T(texte.NetzFehler)
 	case art == "":
-		return texte.T(texte.NetzGesagtVergess), ""
+		return texte.Von(r).T(texte.NetzGesagtVergess), ""
 	case art == kontaktnetz.Keine:
-		said = fmt.Sprintf(texte.T(texte.NetzGesagtWeg), x.Name, y.Name)
+		said = fmt.Sprintf(texte.Von(r).T(texte.NetzGesagtWeg), x.Name, y.Name)
 	case art == kontaktnetz.Fremd:
-		said = texte.T(texte.NetzGesagtFremd)
+		said = texte.Von(r).T(texte.NetzGesagtFremd)
 	default:
-		said = fmt.Sprintf(texte.T(texte.NetzGesagtArt), x.Name, kontaktnetz.Wort(art), y.Name)
+		said = fmt.Sprintf(texte.Von(r).T(texte.NetzGesagtArt), x.Name, kontaktnetz.Wort(art), y.Name)
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), dieselbeWait)
 	defer cancel()
 	if err := cfg.Netz.Eintragen(ctx, x, y, art); err != nil {
 		log.Printf("homes: netz: a relation not written to the address book: %v", err)
-		said += " " + texte.T(texte.NetzNichtImBuch)
+		said += " " + texte.Von(r).T(texte.NetzNichtImBuch)
 	}
 	return said, ""
 }

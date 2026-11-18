@@ -32,7 +32,7 @@ func kontakteHead(r *http.Request, cfg StartConfig, title, seg string, weg ...st
 		b.WriteString("</nav>")
 	}
 	if len(weg) > 0 {
-		b.WriteString(`<nav class=pfad aria-label="` + wort(texte.KontaktePfad) + `"><a href=` + KontaktePath + `>` + html.EscapeString(texte.Titel("kontakte")) + `</a>`)
+		b.WriteString(`<nav class=pfad aria-label="` + wort(texte.KontaktePfad) + `"><a href=` + KontaktePath + `>` + html.EscapeString(texte.Von(r).Titel("kontakte")) + `</a>`)
 		for i := 0; i+1 < len(weg); i += 2 {
 			b.WriteString(` › <a href="` + html.EscapeString(weg[i+1]) + `">` + html.EscapeString(weg[i]) + `</a>`)
 		}

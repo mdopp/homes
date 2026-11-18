@@ -48,20 +48,20 @@ func sichernTeil(r *http.Request, cfg StartConfig, person string) string {
 	if a, ok := cfg.Einrichtung.Eine(person, einrichten.Homes); ok && a.Erledigt == nil { // no app yet: the way to it
 		out = `<p><a href="` + einrichtenHref(einrichten.Homes) + `">` + html.EscapeString(a.Titel) + `</a></p>`
 	}
-	return out + datenSchluessel(r, cfg, person) + "<details class=wechsel><summary>" + texte.T(texte.DatenNieTitel) + "</summary><p>" +
-		html.EscapeString(texte.T(texte.DatenNie)) + "</p></details>" + nachrichtenZurueck(cfg, person)
+	return out + datenSchluessel(r, cfg, person) + "<details class=wechsel><summary>" + texte.Von(r).T(texte.DatenNieTitel) + "</summary><p>" +
+		html.EscapeString(texte.Von(r).T(texte.DatenNie)) + "</p></details>" + nachrichtenZurueck(cfg, person)
 }
 
 // datenSchluessel is the way to the keys: the archive's /tresor at home, why
 // not otherwise; and that they belong in Bitwarden too.
 func datenSchluessel(r *http.Request, cfg StartConfig, person string) string {
-	weg := `<a class=knopf href="` + html.EscapeString(cfg.ArchivURL) + `/tresor">` + texte.T(texte.DatenSchluessel) + `</a><span class=k>` + texte.T(texte.DatenWelche) + `</span>`
+	weg := `<a class=knopf href="` + html.EscapeString(cfg.ArchivURL) + `/tresor">` + texte.Von(r).T(texte.DatenSchluessel) + `</a><span class=k>` + texte.Von(r).T(texte.DatenWelche) + `</span>`
 	if cfg.ArchivURL == "" || !cfg.Archive[person] {
-		weg = html.EscapeString(texte.T(texte.KontaktKeinArchiv))
+		weg = html.EscapeString(texte.Von(r).T(texte.KontaktKeinArchiv))
 	} else if !atHome(r) {
-		weg = html.EscapeString(texte.T(texte.KontaktArchivDaheim))
+		weg = html.EscapeString(texte.Von(r).T(texte.KontaktArchivDaheim))
 	}
-	return "<p class=schluessel>" + weg + "</p><p class=k>" + html.EscapeString(texte.T(texte.DatenBitwarden)) + "</p>"
+	return "<p class=schluessel>" + weg + "</p><p class=k>" + html.EscapeString(texte.Von(r).T(texte.DatenBitwarden)) + "</p>"
 }
 
 // am is when a source's last file came; zero before the first.

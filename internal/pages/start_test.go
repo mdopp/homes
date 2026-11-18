@@ -23,6 +23,7 @@ import (
 	"github.com/mdopp/homes/internal/ha/hafake"
 	"github.com/mdopp/homes/internal/laib"
 	"github.com/mdopp/homes/internal/notes"
+	"github.com/mdopp/homes/internal/texte"
 )
 
 func berlin(t *testing.T) *time.Location {
@@ -62,6 +63,12 @@ func startPage(t *testing.T, cfg StartConfig, groups string) (int, string) {
 // startPageAs is Start for one person (Remote-User; "" for nobody).
 func startPageAs(t *testing.T, cfg StartConfig, user, groups string) (int, string) {
 	t.Helper()
+	return startPageIn(t, cfg, user, groups, "")
+}
+
+// startPageIn is Start for one person, with the browser's Accept-Language ("" for none).
+func startPageIn(t *testing.T, cfg StartConfig, user, groups, accept string) (int, string) {
+	t.Helper()
 	if cfg.Loc == nil {
 		cfg.Loc = berlin(t)
 	}
@@ -78,6 +85,9 @@ func startPageAs(t *testing.T, cfg StartConfig, user, groups string) (int, strin
 	}
 	if groups != "" {
 		req.Header.Set("Remote-Groups", groups)
+	}
+	if accept != "" {
+		req.Header.Set("Accept-Language", accept)
 	}
 	rec := httptest.NewRecorder()
 	Start(cfg).ServeHTTP(rec, req)
@@ -447,7 +457,7 @@ func TestStartHeuteEmpty(t *testing.T) {
 	dav, cal := calendar(t)
 	dav.Put("/homes/familie/s.ics", event("s", "20261020T150000Z", "20261020T160000Z", "Später"))
 	_, body := startPage(t, StartConfig{Calendar: cal}, "")
-	mustContain(t, body, `<p class=ruhig><span class="punkt grau"></span><a href=/kalender>`+saysNichtsHeute+`</a></p>`)
+	mustContain(t, body, `<p class=ruhig><span class="punkt grau"></span><a href=/kalender>`+texte.T(texte.StartNichtsHeute)+`</a></p>`)
 	mustNotContain(t, body, "karte-heute", "Später")
 }
 
@@ -590,7 +600,7 @@ func TestStartSaysFailingRemindersWithTheAppointments(t *testing.T) {
 	_, body := startPage(t, StartConfig{Calendar: cal}, "")
 	a := section(t, body, "karte-heute")
 	mustContain(t, a, "Zahnarzt", "morgen 15:00", "Der Kalender antwortet gerade nicht.")
-	mustNotContain(t, body, "REPORT", "500", saysNichtsHeute)
+	mustNotContain(t, body, "REPORT", "500", texte.T(texte.StartNichtsHeute))
 }
 
 // What is not configured is not mentioned: no HA, no calendar — no
