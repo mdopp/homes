@@ -94,10 +94,10 @@ func TestTheCatalogBuilds(t *testing.T) {
 	for _, m := range katalog(site{dienste: map[string]bool{}}) {
 		names[m.Name] = true
 	}
-	if len(names) != 21 {
-		t.Errorf("the catalog has %d modules, ADR 0001 §7 lists 21", len(names))
+	if len(names) != 22 {
+		t.Errorf("the catalog has %d modules, ADR 0001 §7 lists 22", len(names))
 	}
-	if n := len(katalog(site{})); n != 17 { // Laib silent: the four link modules wait (dienstePflegen)
+	if n := len(katalog(site{})); n != 18 { // Laib silent: the four link modules wait (dienstePflegen)
 		t.Errorf("Laib silent, %d modules", n)
 	}
 }

@@ -396,6 +396,7 @@ module: `LAIB_URL`, `LAIB_TOKEN`, `LAIB_PUBLIC_URL`, `LAIB_DOMAIN`,
 | `sicherung` | Daten sichern | archiv (each person's inbox) | `HOMES_ARCHIV_DIR`; opt. `HOMES_ARCHIV_INTERN`, `HOMES_ARCHIV_SECRET_<PERSON>` | `/daten-sichern`, `/nachrichten-sichern` · Mehr | – | `sicherung/*` (503 while off) | sicherung `whatsapp`, `signal`, `sms`; teilen `archiv`; mehr `daten-sichern` |
 | `standort` | Standortverlauf | reitti | `HOMES_REITTI_URL`; opt. `HOMES_REITTI_PUBLIC_URL` | `/standort` · Mehr | – | `standort`, `standort/import/*` (503 while off) | teilen `standort-import`; mehr `standortverlauf` |
 | `netzlaufwerk` | Netzlaufwerk | file-share (Samba) | `HOMES_SAMBA_DIR`, `HOMES_SAMBA_HOST` | `/netzlaufwerk` · Mehr | – | – | – |
+| `sprachmodell` | Sprachmodell | llama (the GPU lease beside the model proxy) | `HOMES_LLM_URL`, `HOMES_LLM_KEY` | `/sprachmodell` · Mehr | – | `sprachmodell` (GET, POST) | the start screen's Sprachmodell card |
 | `werkstatt` | Werkstatt | GitHub (admins) | `HOMES_WERKSTATT_REPOS`; opt. `HOMES_GITHUB_API` | the card on Box | – | – | – |
 | `nutzung` | Was wird genutzt | usage-metrics (admins) | `HOMES_USAGE_URL`, `HOMES_USAGE_TOKEN` | Box's „Was wird genutzt“ | – | counts `/napi` | – |
 | `fotos` | Fotos | immich (a link only, on while Laib runs it) | – | `/einrichten/fotos` | – | – | the Immich app's setup |

@@ -43,6 +43,7 @@ import (
 	"github.com/mdopp/homes/internal/reitti"
 	"github.com/mdopp/homes/internal/samba"
 	"github.com/mdopp/homes/internal/schalter"
+	"github.com/mdopp/homes/internal/sprachmodell"
 	"github.com/mdopp/homes/internal/texte"
 	"github.com/mdopp/homes/internal/usage"
 	"github.com/mdopp/homes/internal/zugang"
@@ -145,6 +146,8 @@ type StartConfig struct {
 	// Plugins are the programs Laib registered with Homes (homes ADR 0003,
 	// HOMES_PLUGIN_*): their entry, Start card and tasks; nil, none
 	Plugins *plugin.Plugins
+	// Sprachmodell is the box's language model as a switch (owner 2026-11-17); nil, no page
+	Sprachmodell *sprachmodell.Schalter
 }
 
 // backendWait is how long a page waits for any one backend: a slow one
