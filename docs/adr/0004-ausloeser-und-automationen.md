@@ -196,6 +196,100 @@ key, and „for whom“ would go round in a circle).
   (`internal/tagaktion`, `HOMES_DATA/tag-aktionen.json`, tag id → action);
   the name stays in HA. Removing a tag removes its action.
 
+## Amendment 2026-11-26 (evening): Home Assistant's standards, end to end
+
+The owner asked whether this follows standard patterns („Nutzen wir
+Standard pattern?“), wanted scanning through Home Assistant („Ich hatte
+eher gedacht, dass das Scannen auch über Home Assistant“), an address of
+the box's own on the tag rather than home-assistant.io, and a tag that
+offers existing automations and new ones. Decided the same evening:
+„Finde ich gut“, „1b, aber Bestätigung über Signal-Abfrage an die
+Admins, 2 natürlich“. §5–§8 replace the parts of §1 and §4 they name.
+
+### 5. The tag carries the box's own address (an Android App Link)
+
+A new tag holds one NDEF URI record `<HOMES_PUBLIC_URL>/tag/<id>`
+(e.g. `https://www.dopp.cloud/tag/homes-3f9a1c7e02b4`), not
+`home-assistant.io` and not the app's scheme.
+
+- **With the Homes app** Android opens the app directly: Homes serves
+  `/.well-known/assetlinks.json` (the app's package and its signing
+  certificate's SHA-256, from `HOMES_APP_SHA256`), the app declares the
+  link with `autoVerify`. Nothing goes to anyone but the box.
+- **Without the app** (a guest, a laptop, an iPhone) the browser opens
+  Homes' page `/tag/<id>` behind the login: it shows the tag's name and
+  what it does, and one button („Auslösen“, or the scanner's choice, §8)
+  that acts as the signed-in person. A GET never acts (no side effect on
+  a link preview); the button posts.
+- Tags already written (`cloud.dopp.homes://tag/<id>`, HA's
+  `https://www.home-assistant.io/tag/<id>`) keep working.
+- `POST /napi/ausloeser/tag` answers the new `uri`; the field's name and
+  everything else stay.
+
+### 6. The scanner is a device in Home Assistant (MQTT discovery)
+
+The scan service announces itself to Home Assistant through MQTT
+discovery on the box's Mosquitto: a device „Scanner“ with one button
+„Scannen – Haushalt“ (`unique_id` `laib-scan-haushalt`), one button per
+person whose stacks are theirs alone, „Scannen – <Anzeigename>“
+(`unique_id` `laib-scan-person-<login>`), and a sensor for its state
+(`unique_id` `laib-scan-zustand`: bereit, scannt, wartet, fertig,
+fehler). Pressing a button is `laib scan start` (with `fuer: person` for a
+person's button). So scanning is an ordinary Home Assistant action, for
+automations, voice and dashboards. This is a Laib change (the scan
+template); Homes finds the buttons by their `unique_id` in HA's entity
+registry.
+
+### 7. Each paired phone is a device in Home Assistant (mobile_app)
+
+Homes registers each paired phone with Home Assistant's `mobile_app`
+integration, the open API HA's own app uses
+(`POST /api/mobile_app/registrations`, then the registration's webhook),
+under Homes' HA user, the device named after the person and the phone
+(„Michaels Pixel 9“). Then:
+
+- a touched tag is HA's own scan (`scan_tag` through the webhook): HA
+  records „zuletzt gescannt“ and which device, and `trigger: tag` with
+  `device_id` works;
+- the charger is two sensors of that device, `binary_sensor.<gerät>_laedt`
+  and `sensor.<gerät>_ladeart` (kabellos, kabel, usb, keine), with HA's
+  history and ordinary state triggers;
+- `homes_laden` and the raw `tag_scanned` go once nothing uses them
+  (Homes fires both meanwhile, so no automation breaks during the move).
+
+The webhook ids are secrets Homes keeps in `HOMES_DATA`; a phone
+unpaired is a registration removed. The app's requests do not change.
+
+### 8. A tag offers what it can do: the scanner's choice, existing automations, a new one
+
+After naming, „Was soll ‚<Name>‘ tun?“:
+
+- **At the scanner**: *Fragen* (the default: the tag opens Homes' Scannen
+  section, „Für mich“ / „Für den Haushalt“ and the stack's progress, in
+  the app or the browser), *Direkt für mich* (HA's button of the person
+  who touched it, §6), *Direkt für den Haushalt*.
+- **Any other tag**:
+  - *Mit einer Automation verbinden*: HA's automations by name,
+    searchable; Homes adds the tag as one more trigger
+    (`trigger: tag`, `tag_id`) to that automation through HA's config
+    API (Homes' HA user is an administrator), shows the outcome as a
+    sentence first, and keeps the automation's previous config so
+    „Lösen“ brings exactly that back. Under each tag: the automations
+    that trigger on it (read from HA), each with „Lösen“.
+  - *Neue Automation*: one sentence („Was soll passieren, wenn jemand
+    ‚Bürotür‘ berührt?“), passed with the tag to the Bote; the Automat
+    drafts and writes it with its code (laib `templates/bote` §5).
+- **Who**: everyone in the household may (the owner, 1b). A change by an
+  admin is confirmed in place. A change by anyone else waits: Homes tells
+  every admin on their chat channel (`laib tell`, Signal first) „Anna
+  möchte ‚Bürotür‘ mit ‚Gute Nacht‘ verbinden“ with the link to the
+  decision on Homes (a task in „Deine Aufgaben“, Freigeben / Ablehnen);
+  the first admin's answer counts, the person sees „wartet auf
+  Freigabe“, then what came of it. A new automation by a non-admin goes
+  to the admins the same way as a wish: the admin continues with the Bote
+  (who drafts it with its code for the admin). Nothing waits longer than
+  7 days; then it is dropped and the person is told.
+
 ## Consequences
 
 - Step 1 needs no new key between services: Homes' HA user is already an
@@ -220,6 +314,11 @@ Both answered by the owner on 2026-11-26 („Go. Passt alles“):
    the box changes only when the owner approves it in the Inbox.
 
 ## Steps
+
+(§5–§8, 2026-11-26 evening: 5. the tag's own address and App Link; 6. the
+scanner as an HA device, in Laib; 7. phones as HA devices; 8. what a tag
+does, with the admins' approval on Signal.)
+
 
 1. Triggers: `/napi/ausloeser` (+ `/tag`, `/tags`), the app's NFC activity,
    the Auslöser screen, the charger report. *(this PR, and homes-android)*
