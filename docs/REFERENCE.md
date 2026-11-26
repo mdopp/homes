@@ -1314,27 +1314,83 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   {"name","tag"?}` without `tag` creates `homes-<12 hex>` in HA's tag
   registry, with it names that id (`tag/create`) or renames it in place
   (`tag/update`), the tag not written again; it answers `{"ok":true,"tag",
-  "uri":"cloud.dopp.homes://tag/<id>"}`, what the app writes onto a new
-  tag. A name is unique among the tags, case aside: 409 „Es gibt schon
+  "uri"}`, what the app writes onto a new tag: `<HOMES_PUBLIC_URL>/tag/<id>`
+  (ADR 0004 §5, an App Link; `cloud.dopp.homes://tag/<id>` only without
+  `HOMES_PUBLIC_URL`). A name is unique among the tags, case aside: 409 „Es gibt schon
   einen Tag „…“ – nimm einen anderen Namen.“ `DELETE
   /napi/ausloeser/tag/{tag}` removes it (`tag/delete`; 404 when HA has no
   such tag). `GET /napi/ausloeser/tags` is `{"ok":true,"tags":[{"tag",
-  "name"}],"vorschlaege":[…]}`, the suggestions for the name field: the
+  "name","aktion","automationen":[{"id","name"}]}],"vorschlaege":[…],
+  "aktionen":[{"id","titel"}]}` (`automationen`: HA's automations that
+  trigger on that tag, read from their configs: a tag trigger with its
+  id, or an event trigger on `tag_scanned` with it; `[]` when HA's config
+  API does not answer), the suggestions for the name field: the
   house's rooms from HA, sorted, then Tür, Bett, Schreibtisch,
   Ladestation. A refusal is `{"ok":false,"error":"<a German sentence>"}`:
   400 for a body Homes cannot read, an id that is not 1–64 of
   `A-Za-z0-9_-`, a name empty or over 60 characters; 502 when HA does not
   answer or refuses (HA's detail stays in the log). Without HA, 404 as
-  every house path. A tag's own action (ADR 0004 §4): `"aktion"` in
-  `POST /napi/ausloeser/tag` (`""` HA, `scannen-ich`, `scannen-haushalt`;
-  absent: unchanged; one this box cannot do, 400) is kept in
-  `HOMES_DATA/tag-aktionen.json`; `GET …/tags` gives each tag its
-  `aktion` and the box's `aktionen` `[{"id","titel"}]`. Touching a scan
-  tag sends nothing to HA: Homes orders `laib scan start` as the
-  device's person, `fuer` that person for `scannen-ich` (403 for a phone
-  whose uid is no login), and answers `{"ok":true,"name","aktion",
-  "text":"Der Scanner startet – nur für dich."}`; no scanner 503, Laib
-  silent 502, each in words.
+  every house path. A tag's own action (ADR 0004 §4, §8): `"aktion"` in
+  `POST /napi/ausloeser/tag` (`""` HA, `scanner-fragen`, `scanner-ich`,
+  `scanner-haushalt`; §4's `scannen-ich`/`scannen-haushalt` are taken and
+  stored files read under the new names; absent: unchanged; one this box
+  cannot do, 400) is kept in `HOMES_DATA/tag-aktionen.json`; `GET …/tags`
+  gives each tag its `aktion` and the box's `aktionen` `[{"id","titel"}]`
+  (the app renders these, ids and titles: „Home Assistant melden“,
+  „Scanner – fragen, für wen“, „Scanner – direkt für mich“, „Scanner –
+  direkt für den Haushalt“; the scanner's only with Laib). Touching a
+  scanner tag sends nothing to HA. `scanner-fragen` starts nothing and
+  answers `{"ok":true,"name","aktion":"scanner-fragen","text":"Wähle auf
+  Homes, für wen gescannt wird.","oeffnen":"<HOMES_PUBLIC_URL>/dokumente#scannen"}`:
+  the app opens that address (Dokumente's Scannen, für mich / für den
+  Haushalt). `scanner-ich` and `scanner-haushalt` press the scanner's
+  button in HA (§6), found by `unique_id` in HA's entity registry
+  (`laib-scan-person-<login>` of the device's person, `laib-scan-haushalt`;
+  `button.press`); while HA has no such enabled button they order `laib
+  scan start` as the device's person, `fuer` that person for
+  `scanner-ich` (the log says which way). 403 for `scanner-ich` from a
+  phone whose uid is no login; it answers `{"ok":true,"name","aktion",
+  "text":"Der Scanner startet – nur für dich."}` (or „– für den
+  Haushalt.“); no scanner 503, Laib or HA silent 502, each in words.
+- A tag's automations (ADR 0004 §8, module `geraete`): `GET
+  /napi/automationen?q=` lists HA's automations that have a config id,
+  by name, `q` a case-blind part of the name: `{"ok":true,
+  "automationen":[{"id","name","an"}]}`. `POST
+  /napi/ausloeser/tag/{tag}/verbinden {"automation":id,"bestaetigt"?}`,
+  `…/loesen {"automation":id,"bestaetigt"?}` and `…/neu
+  {"satz","bestaetigt"?}` change them. Without `"bestaetigt":true` nothing
+  is written: `{"ok":true,"satz":"Wenn jemand ‚Bürotür‘ berührt, startet
+  ‚Gute Nacht‘. …","bestaetigen":true,"freigabe_noetig"?:true}` is the
+  sentence to show before saving (`freigabe_noetig` for a person who is no
+  admin). Confirmed by an admin (Authelia's admins as Homes last saw the
+  person on a page) it is written: `verbinden` adds one `{trigger: tag,
+  tag_id}` (`{platform: tag, …}` in a config of the old style) to the
+  automation's triggers through HA's config API
+  (`/api/config/automation/config/<id>`; HA reloads it) and keeps the
+  config before in `HOMES_DATA/tag-verbindungen.json`; `loesen` brings
+  exactly that back, or, when the automation was changed in between (or
+  was linked in HA itself), takes only the tag's triggers out and says
+  so; `neu` passes the sentence with the tag's name and id to the Bote
+  as the admin and answers its reply in `"bote"` (its draft, the code it
+  asks for; the admin goes on in the Sprechen field). Answer
+  `{"ok":true,"satz":"Verbunden: ‚Bürotür‘ startet jetzt ‚Gute Nacht‘."}`.
+  Confirmed by anyone else it waits: `{"ok":true,"satz":"Wartet auf
+  Freigabe: …","wartet":true,"freigabe":"<id>"}`; every admin is told on
+  their chat channel (`laib tell`) „Anna möchte ‚Bürotür‘ mit ‚Gute
+  Nacht‘ verbinden. Freigeben: <HOMES_PUBLIC_URL>/tag/freigabe/<id>“ and
+  has it on Deine Aufgaben; the first admin's answer counts.
+  `GET /napi/ausloeser/freigabe/{id}` (the person who asked, or an admin;
+  anyone else 404) is `{"ok":true,"stand":"wartet"|"freigegeben"|
+  "abgelehnt"|"verfallen","satz","wunsch"}`, for the app to poll;
+  `satz` says what came of it („Verbunden: …“, „Michael hat es nicht
+  freigegeben.“, „Nach 7 Tagen ohne Antwort verfallen.“); the person is
+  told on their chat channel too. Refusals `{"ok":false,"error"}`: 400 a
+  body or tag id Homes cannot read, an empty sentence; 404 an automation
+  HA does not have; 409 already linked, not linked, one from YAML HA's
+  editor cannot change; 502 HA or the Bote silent, 504 the Bote too late;
+  503 no Bote for `neu`. This is the household approving a change to its
+  own HA automation, not a verdict on the box: Homes decides nothing in
+  Laib's inbox (haus#1).
 - Share → Homes (haus#120): `POST /napi/merken` with JSON `{"text"}`,
   what the phone shared (a browser's link, often with the page's title
   around it). The first http(s) address is the link, the words around it
@@ -1934,6 +1990,28 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   word gets *„Hey Mycroft“ wird noch ausgewählt*, with the word it hears
   until then; no device in HA, or HA not answering, says „Hey Mycroft“ as
   what is set. Sprechen says the word in one line with a link there.
+
+- A tag's page (ADR 0004 §5, §8): `GET /tag/<id>`, only with Home
+  Assistant, behind the login as every family page — the address a new
+  tag carries; a phone with the Homes app opens the app instead (an App
+  Link through `/.well-known/assetlinks.json`, `HOMES_APP_SHA256`; 404
+  without it). It shows the tag's name (*Unbekannter Tag* with the way to
+  name it in the app), what it does, and one button that does it as the
+  signed-in person (`POST tun=ausloesen`, the same path as the app's
+  `nfc`: HA's `tag_scanned`, or the scanner): *Auslösen*, *Scannen – für
+  mich*, *Scannen – für den Haushalt*; the outcome in place. A GET never
+  acts; a `scanner-fragen` tag's GET leads to `/dokumente#scannen`. For a
+  tag that reports to HA, the card *Automationen*: those that start on it,
+  each with *Lösen*; *Mit einer Automation verbinden* (HA's others) and
+  *Neue Automation* (a sentence, with the Bote). Each first shows *So
+  wird es* with the sentence of what it would do and *Ja, …* /
+  *Abbrechen*; confirmed, an admin's is written, anyone else's waits
+  (`?freigabe=<id>`: *Wartet auf Freigabe: …*, fetched again every 10 s,
+  then what came of it). `GET /tag/freigabe/<id>` is the wish for the
+  person who asked (its state) and for an admin (*Freigeben* /
+  *Ablehnen*, the first answer counts; Freigeben writes it as that admin,
+  a new automation shows the Bote's reply); anyone else 404. An open wish
+  is a row on each admin's Deine Aufgaben, first among the decisions.
 
 - The Netzlaufwerk page (haus#52, laib#296): `/netzlaufwerk`, linked from
   Mehr, and from Start's *Braucht dich* while a member has no password. Each person sets their own password for the

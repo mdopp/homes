@@ -290,6 +290,44 @@ After naming, „Was soll ‚<Name>‘ tun?“:
   (who drafts it with its code for the admin). Nothing waits longer than
   7 days; then it is dropped and the person is told.
 
+**As built in Homes (§5, §8; 2026-11-26).** `internal/tagaktion` is one
+`Dienst` the app (`/napi`) and the page `/tag/<id>` both act through.
+
+- *The address.* `POST /napi/ausloeser/tag` answers `uri`
+  `<HOMES_PUBLIC_URL>/tag/<id>` (the app's scheme only without
+  `HOMES_PUBLIC_URL`). `/.well-known/assetlinks.json` names
+  `cloud.dopp.homes` and the fingerprints in `HOMES_APP_SHA256`
+  (comma-separated; none: 404). Android fetches it without a login, so
+  Laib's `homes` route lets that path through (`bypass`, as `/napi/`); the
+  tag's page stays behind the login.
+- *The scanner's modes* are `scanner-fragen`, `scanner-ich`,
+  `scanner-haushalt` (§4's `scannen-ich`, `scannen-haushalt` are read
+  under these names). `scanner-fragen` starts nothing: the app gets
+  `"oeffnen":"<HOMES_PUBLIC_URL>/dokumente#scannen"` and a line, the page
+  leads there. The direct ones press HA's button by `unique_id`
+  (`laib-scan-person-<login>`, `laib-scan-haushalt`, `button.press`) and,
+  while HA has no such enabled button (§6 not on the box yet), order
+  `laib scan start` as §4 did; the log says which way.
+- *Automations.* `GET /napi/ausloeser/tags` gives each tag its
+  `automationen` `[{id,name}]` (a tag trigger with its id, or an event
+  trigger on `tag_scanned` with it); `GET /napi/automationen?q=` is the
+  list to link from. `POST /napi/ausloeser/tag/{tag}/verbinden|loesen
+  {automation}` and `…/neu {satz}` answer the sentence first
+  (`bestaetigen`, `freigabe_noetig`), and with `"bestaetigt":true` write
+  it for an admin or file the wish (`wartet`, `freigabe`); `GET
+  /napi/ausloeser/freigabe/{id}` is its `stand` (`wartet`, `freigegeben`,
+  `abgelehnt`, `verfallen`) and `satz` (docs/REFERENCE.md has every field).
+  The config before a link is kept in `HOMES_DATA/tag-verbindungen.json`.
+- *Who is an admin.* Authelia's `admins` group as Homes last saw the
+  person on a page (`HOMES_DATA/admins.json`, as the app's Deine Aufgaben
+  already uses); the admins told are those Homes has seen. An admin who
+  never opened Homes is not told, but every admin sees the task on Deine
+  Aufgaben. Wishes are `HOMES_DATA/tag-freigaben.json`.
+- *Not a verdict.* Homes approving a change to the household's own HA
+  automation is the household's decision, made by its admins; Homes'
+  rule that it decides nothing (haus#1) is about Laib's inbox, which
+  stays Laib's page alone (`/napi/…/approve|deny` still answer 403).
+
 ## Consequences
 
 - Step 1 needs no new key between services: Homes' HA user is already an
@@ -315,9 +353,11 @@ Both answered by the owner on 2026-11-26 („Go. Passt alles“):
 
 ## Steps
 
-(§5–§8, 2026-11-26 evening: 5. the tag's own address and App Link; 6. the
-scanner as an HA device, in Laib; 7. phones as HA devices; 8. what a tag
-does, with the admins' approval on Signal.)
+(§5–§8, 2026-11-26 evening: 5. the tag's own address and App Link
+*(homes: built; the app's `autoVerify` intent filter and the Auslöser
+screen's choices are homes-android's)*; 6. the scanner as an HA device, in
+Laib; 7. phones as HA devices *(later)*; 8. what a tag does, with the
+admins' approval on Signal *(homes: built)*.)
 
 
 1. Triggers: `/napi/ausloeser` (+ `/tag`, `/tags`), the app's NFC activity,

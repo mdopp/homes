@@ -377,11 +377,13 @@ means `HOMES_RADICALE_URL`, `_USER`, `_PASSWORD` (+ `_CALENDAR`,
 `_ADDRESSBOOK`, `_PUBLIC_URL` where named). Core variables, not in a
 module: `LAIB_URL`, `LAIB_TOKEN`, `LAIB_PUBLIC_URL`, `LAIB_DOMAIN`,
 `HOMES_PROXY_SECRET`, `HOMES_DATA`, `HOMES_LISTEN`, `HOMES_PUBLIC_URL`,
-`HOMES_ASSISTANT`, `HOMES_HAUSHALT_TOKEN`, `HOMES_PHONE_COUNTRY`, `TZ`.
+`HOMES_ASSISTANT`, `HOMES_HAUSHALT_TOKEN`, `HOMES_PHONE_COUNTRY`, `TZ`, and
+`HOMES_APP_SHA256` (the app's signing certificates for its App Link,
+`/.well-known/assetlinks.json`, homes ADR 0004 §5: the app's, no module's).
 
 | module | Titel | backend (Laib template) | env | pages · nav | Start | /napi | app |
 |---|---|---|---|---|---|---|---|
-| `geraete` | Geräte | home-assistant | `HOMES_HA_URL`, `HOMES_HA_TOKEN`; opt. `HOMES_HA_PUBLIC_URL`, `HOMES_COVER_INVERTED` | `/raeume`, `/raeume/…`, `/medien`, `/schalten`, `/aktivierungswort`, `/live` · Leiste | im-haus, meine-geraete | `ha/call`, `portal/{state,active,entity-history,camera/…,start/addable,favorites,watch,events}` | widgets `geraet`; favourites |
+| `geraete` | Geräte | home-assistant | `HOMES_HA_URL`, `HOMES_HA_TOKEN`; opt. `HOMES_HA_PUBLIC_URL`, `HOMES_COVER_INVERTED` | `/raeume`, `/raeume/…`, `/medien`, `/schalten`, `/aktivierungswort`, `/live`, `/tag/<id>`, `/tag/freigabe/<id>` · Leiste | im-haus, meine-geraete | `ha/call`, `portal/{state,active,entity-history,camera/…,start/addable,favorites,watch,events}`, `ausloeser`, `ausloeser/{tag,tags,tag/…/{verbinden,loesen,neu},freigabe/…}`, `automationen` | widgets `geraet`; favourites |
 | `energie` | Energie | home-assistant (needs `geraete`) | opt. `HOMES_ENERGY_FLOW`, `_TOTALS`, `_STATS` | `/energie` · Leiste | – | `portal/energy` | widgets `energie` |
 | `sprechen` | Sprechen | bote | `HOMES_BOTE_URL`, `HOMES_BOTE_KEY`; opt. `HOMES_STT_PROVIDER`, `HOMES_STT_LANGUAGE` (HA), `HOMES_BOTE_SIGNAL` | `/sprechen`, `/sprechen/hoeren` · none | the field | – | – |
 | `kalender` | Kalender | radicale (CalDAV) | Radicale, `_CALENDAR`, `_PUBLIC_URL` | `/kalender`, `/kalender/{verwalten,hinzufuegen,aendern,erinnerung/…}` · Haushalt | heute | `portal/tasks`, def `task` | widgets `tool:task`; Bote `termine`, `erinnerungen`, … |
