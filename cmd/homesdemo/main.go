@@ -275,6 +275,7 @@ func main() {
 		w.Write([]byte(`{"vertrag":1,"name":"Dein Archiv","icon":"archiv","link":"https://archiv.example/tresor","aufgaben":[` +
 			`{"id":"fragen","titel":"Im Archiv: 2 Fragen offen","warum":"Als Nächstes: Wie steht Ben zu Clara?","link":"https://archiv.example/tresor"}]}`))
 	})
+	aufgaben.Tags = tagSeiten(mux, aufgaben, fake, dir) // a tag's page, a wish for its automation a task here (ADR 0004 §8)
 	mux.HandleFunc("/aufgaben", pages.DeineAufgaben(aufgaben))
 	mux.HandleFunc("/demo/wunsch", func(w http.ResponseWriter, r *http.Request) { // a wish moved on in Laib: wartet, abgelehnt, …
 		demoLaib.wishes.Setze(r.URL.Query().Get("modul"), r.URL.Query().Get("stand"), "")

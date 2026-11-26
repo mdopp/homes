@@ -26,6 +26,10 @@ func Gruppen(cfg StartConfig) map[string][]modul.Route {
 	if cfg.HA != nil { // the word each speaker listens for, as it reports it (owner 2026-10-30)
 		gs.add("geraete", AktivierungswortPath, Aktivierungswort(cfg))
 	}
+	if cfg.Tags != nil { // a tag's own page and the admins' answer to a wish (ADR 0004 §5, §8)
+		gs.add("geraete", TagPath, Tag(cfg))
+		gs.add("geraete", TagFreigabePath, TagFreigabe(cfg))
+	}
 	gs.add("geraete", "/raeume", Raeume(cfg))
 	gs.add("geraete", cards.ThingPages, Ding(cfg))             // each thing's own page, which the widgets name (haus#28)
 	gs.add("geraete", cards.SwitchPath, Schalten(cfg))         // a page's switch, the widgets' rule (haus#35)

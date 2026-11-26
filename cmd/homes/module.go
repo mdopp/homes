@@ -23,10 +23,11 @@ import (
 // kern are the variables of what is always on and no module (ADR 0001 §1,
 // §7): Laib, the proxy secret, the data folder, the address, the name, and
 // the teaser on the domain itself (owner 2026-11-08): the box's public face, no module;
-// the plugins Laib registers (homes ADR 0003): the core's contract, each plugin no module.
+// the plugins Laib registers (homes ADR 0003): the core's contract, each plugin no module;
+// the app's signing certificates for its App Link (ADR 0004 §5): the app's, no module.
 var kern = []string{"HOMES_PLUGIN_", "HOMES_PLUGINKEY_", "LAIB_URL", "LAIB_TOKEN", "LAIB_PUBLIC_URL", "LAIB_DOMAIN", "HOMES_PROXY_SECRET", "HOMES_DATA",
 	"HOMES_LISTEN", "HOMES_PUBLIC_URL", "HOMES_ASSISTANT", "HOMES_HAUSHALT_TOKEN", "HOMES_PHONE_COUNTRY", "HOMES_MODULE_AUS",
-	"HOMES_TEASER_HOST", "HOMES_TEASER_PERSON"}
+	"HOMES_TEASER_HOST", "HOMES_TEASER_PERSON", "HOMES_APP_SHA256"}
 
 // radicale is what the Radicale modules read (one account, ADR 0001 §7).
 var radicale = []string{"HOMES_RADICALE_URL", "HOMES_RADICALE_USER", "HOMES_RADICALE_PASSWORD"}

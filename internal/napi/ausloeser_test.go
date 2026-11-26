@@ -185,7 +185,7 @@ func TestRenameKeepsTheId(t *testing.T) {
 		t.Fatalf("%d %s", code, body)
 	}
 	_, body = raw(t, h, "GET", "/napi/ausloeser/tags", "dev1", "")
-	if !strings.Contains(body, `{"aktion":"","name":"Büro Tür","tag":"homes-aaaaaaaaaaaa"}`) || strings.Count(body, `"tag":"`) != 1 {
+	if !strings.Contains(body, `{"aktion":"","automationen":[],"name":"Büro Tür","tag":"homes-aaaaaaaaaaaa"}`) || strings.Count(body, `"tag":"`) != 1 {
 		t.Fatalf("after rename: %s", body)
 	}
 	// its own name again, in another case, is no clash with itself

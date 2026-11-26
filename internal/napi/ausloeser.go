@@ -13,9 +13,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/mdopp/homes/internal/app"
 	"github.com/mdopp/homes/internal/ha"
-	"github.com/mdopp/homes/internal/laib"
 	"github.com/mdopp/homes/internal/tagaktion"
 )
 
@@ -24,14 +22,16 @@ import (
 // that as an event on Home Assistant's bus and decides nothing. An NFC tag
 // is HA's own tag_scanned (HA's tag trigger), the charger homes_laden. The
 // tags' names live in HA's tag registry. A tag can instead carry an action
-// of Homes' own (§4, package tagaktion): at the scanner, a stack for whoever
-// touched it or for the household; that tag reports nothing to HA.
+// of Homes' own (§4, §8, package tagaktion): at the scanner, ask for whom
+// (Homes' Scannen opens), or a stack for whoever touched it or for the
+// household; that tag reports nothing to HA. A tag's automations (§8) are
+// in ausloeser_automationen.go.
 //
-//	POST /napi/ausloeser      {"art":"nfc","tag":id} → {"ok":true,"name":"Bürotür"|"","aktion"?,"text"?}
+//	POST /napi/ausloeser      {"art":"nfc","tag":id} → {"ok":true,"name":"Bürotür"|"","aktion"?,"text"?,"oeffnen"?}
 //	                          {"art":"laden","zustand":"an"|"aus","ladeart":…} → {"ok":true}
-//	POST /napi/ausloeser/tag  {"name":"Bürotür","tag"?,"aktion"?} → {"ok":true,"tag":id,"uri":"cloud.dopp.homes://tag/<id>","aktion"}
+//	POST /napi/ausloeser/tag  {"name":"Bürotür","tag"?,"aktion"?} → {"ok":true,"tag":id,"uri":"<HOMES_PUBLIC_URL>/tag/<id>","aktion"}
 //	DELETE /napi/ausloeser/tag/{tag} → {"ok":true}
-//	GET  /napi/ausloeser/tags → {"ok":true,"tags":[{"tag","name","aktion"}],"vorschlaege":[…],"aktionen":[{"id","titel"}]}
+//	GET  /napi/ausloeser/tags → {"ok":true,"tags":[{"tag","name","aktion","automationen":[{"id","name"}]}],"vorschlaege":[…],"aktionen":[{"id","titel"}]}
 //
 // A refusal is {"ok":false,"error": a German sentence}.
 
@@ -46,86 +46,28 @@ var (
 )
 
 type ausloeser struct {
-	ha     *ha.Client
-	uid    func(*http.Request) (string, bool)
-	laib   *laib.Client     // the scan orders (§4); nil: no action but HA's
-	aktion *tagaktion.Store // which tag does what of Homes' own; nil: none
-}
-
-// scanLogin is a person the scan service takes (box.yml people, lower case),
-// as the Scannen buttons send it.
-var scanLogin = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,31}$`)
-
-// aktionen are the actions this box offers a tag: HA's always, the scan's
-// with Laib and the store.
-func (a *ausloeser) aktionen() []map[string]string {
-	out := []map[string]string{}
-	for _, t := range tagaktion.Titel {
-		if t.ID == "" || a.laib != nil && a.aktion != nil {
-			out = append(out, map[string]string{"id": t.ID, "titel": t.Titel})
-		}
-	}
-	return out
-}
-
-func (a *ausloeser) von(tag string) string {
-	if a.aktion == nil || a.laib == nil {
-		return ""
-	}
-	return a.aktion.Von(tag)
-}
-
-func (a *ausloeser) name(r *http.Request, tag string) string {
-	tags, err := a.ha.Tags(r.Context())
-	if err != nil { // the name is a courtesy: what the tag does has been done
-		return ""
-	}
-	for _, t := range tags {
-		if t.ID == tag {
-			return t.Name
-		}
-	}
-	return ""
+	ha    *ha.Client
+	uid   func(*http.Request) (string, bool)
+	tag   *tagaktion.Dienst        // what a tag does: HA's, the scanner's, its automations (ADR 0004 §4, §8)
+	admin func(person string) bool // an admin when last seen on a page (einrichten.Admins)
 }
 
 // nfc is a touched tag: its action of Homes' own, else HA's tag_scanned.
 func (a *ausloeser) nfc(w http.ResponseWriter, r *http.Request, tag, person string) {
-	if akt := a.von(tag); akt != "" {
-		a.scannen(w, r, tag, akt, person)
+	e, err := a.tag.Ausloesen(r.Context(), tag, person)
+	if err != nil {
+		nein := tagaktion.Als(err)
+		sagNein(w, nein.Status, nein.Satz)
 		return
 	}
-	if err := a.ha.Fire(r.Context(), "tag_scanned", map[string]any{"tag_id": tag, "person": person}); err != nil {
-		haSagt(w, "nfc", err)
-		return
+	out := map[string]any{"ok": true, "name": e.Name}
+	if e.Aktion != "" {
+		out["aktion"], out["text"] = e.Aktion, e.Text
 	}
-	answer(w, http.StatusOK, map[string]any{"ok": true, "name": a.name(r, tag)})
-}
-
-// scannen starts a stack as the Scannen buttons do: for the person who
-// touched the tag, theirs alone, or for the household. „Für mich“ is
-// always the toucher's, never the tag's maker's.
-func (a *ausloeser) scannen(w http.ResponseWriter, r *http.Request, tag, akt, person string) {
-	if !scanLogin.MatchString(person) {
-		person = ""
+	if e.Oeffnen != "" {
+		out["oeffnen"] = e.Oeffnen
 	}
-	fuer, text := "", "Der Scanner startet – für den Haushalt."
-	if akt == tagaktion.ScannenIch {
-		if person == "" {
-			sagNein(w, http.StatusForbidden, "Für dich allein scannt nur ein Telefon, das mit deinem Login gekoppelt ist.")
-			return
-		}
-		fuer, text = person, "Der Scanner startet – nur für dich."
-	}
-	if _, err := a.laib.ScanOrder(r.Context(), "start", person, fuer); err != nil {
-		log.Printf("homes: ausloeser scannen: %v", err)
-		if errors.Is(err, laib.ErrNoScan) {
-			sagNein(w, http.StatusServiceUnavailable, "Auf dieser Box ist kein Scanner eingerichtet.")
-			return
-		}
-		sagNein(w, http.StatusBadGateway, "Der Scanner antwortet gerade nicht. Versuch es gleich noch einmal.")
-		return
-	}
-	answer(w, http.StatusOK, map[string]any{"ok": true, "name": a.name(r, tag), "aktion": akt, "text": text})
+	answer(w, http.StatusOK, out)
 }
 
 func (a *ausloeser) routes(gs gruppen) {
@@ -133,6 +75,7 @@ func (a *ausloeser) routes(gs gruppen) {
 	gs.add("geraete", "POST /napi/ausloeser/tag", a.neuerTag)
 	gs.add("geraete", "DELETE /napi/ausloeser/tag/{tag}", a.tagWeg)
 	gs.add("geraete", "GET /napi/ausloeser/tags", a.tags)
+	a.automationRoutes(gs)
 }
 
 func sagNein(w http.ResponseWriter, code int, satz string) {
@@ -141,13 +84,8 @@ func sagNein(w http.ResponseWriter, code int, satz string) {
 
 // haSagt is a failed HA call in the person's words; HA's detail goes to the log.
 func haSagt(w http.ResponseWriter, was string, err error) {
-	log.Printf("homes: ausloeser %s: %v", was, err)
-	var he *ha.Error
-	if errors.Is(err, ha.ErrNotAdmin) || errors.As(err, &he) && he.Status == http.StatusUnauthorized {
-		sagNein(w, http.StatusBadGateway, "Home Assistant lässt Homes das nicht tun. Bitte sag dem Admin Bescheid.")
-		return
-	}
-	sagNein(w, http.StatusBadGateway, "Home Assistant antwortet gerade nicht. Versuch es gleich noch einmal.")
+	n := tagaktion.HANein(was, err)
+	sagNein(w, n.Status, n.Satz)
 }
 
 func (a *ausloeser) melden(w http.ResponseWriter, r *http.Request) {
@@ -197,7 +135,7 @@ func (a *ausloeser) neuerTag(w http.ResponseWriter, r *http.Request) {
 		sagNein(w, http.StatusBadRequest, "Das kam nicht lesbar an.")
 		return
 	}
-	if in.Aktion != nil && *in.Aktion != "" && (!tagaktion.Gibt(*in.Aktion) || a.laib == nil || a.aktion == nil) {
+	if in.Aktion != nil && *in.Aktion != "" && (!tagaktion.Gibt(*in.Aktion) || !a.tag.Scanner()) {
 		sagNein(w, http.StatusBadRequest, "Das kann ein Tag auf dieser Box nicht tun.")
 		return
 	}
@@ -235,14 +173,14 @@ func (a *ausloeser) neuerTag(w http.ResponseWriter, r *http.Request) {
 		haSagt(w, "tag", err)
 		return
 	}
-	if in.Aktion != nil && a.aktion != nil {
-		if err := a.aktion.Setze(id, *in.Aktion); err != nil {
+	if in.Aktion != nil && a.tag.Store != nil {
+		if err := a.tag.Store.Setze(id, *in.Aktion); err != nil {
 			log.Printf("homes: ausloeser aktion: %v", err)
 			sagNein(w, http.StatusInternalServerError, "Der Name ist gespeichert, was der Tag tun soll, aber nicht. Versuch es noch einmal.")
 			return
 		}
 	}
-	answer(w, http.StatusOK, map[string]any{"ok": true, "tag": id, "uri": app.Scheme + "://tag/" + id, "aktion": a.von(id)})
+	answer(w, http.StatusOK, map[string]any{"ok": true, "tag": id, "uri": a.tag.URI(id), "aktion": a.tag.Von(id)})
 }
 
 func (a *ausloeser) tagWeg(w http.ResponseWriter, r *http.Request) {
@@ -253,8 +191,8 @@ func (a *ausloeser) tagWeg(w http.ResponseWriter, r *http.Request) {
 	case err != nil:
 		haSagt(w, "tag weg", err)
 	default:
-		if a.aktion != nil {
-			if err := a.aktion.Setze(r.PathValue("tag"), ""); err != nil {
+		if a.tag.Store != nil {
+			if err := a.tag.Store.Setze(r.PathValue("tag"), ""); err != nil {
 				log.Printf("homes: ausloeser aktion weg: %v", err) // the tag is gone from HA; a stale action is never reached
 			}
 		}
@@ -271,11 +209,16 @@ func (a *ausloeser) tags(w http.ResponseWriter, r *http.Request) {
 		haSagt(w, "tags", err)
 		return
 	}
-	out := []map[string]string{}
+	mit, err := a.tag.Verbunden(r.Context()) // the automations are a courtesy too: without them, none shown
+	if err != nil {
+		log.Printf("homes: ausloeser tags: the automations: %v", err)
+	}
+	out := []map[string]any{}
 	for _, t := range tags {
-		out = append(out, map[string]string{"tag": t.ID, "name": t.Name, "aktion": a.von(t.ID)})
+		autos := []tagaktion.Verbindung{}
+		out = append(out, map[string]any{"tag": t.ID, "name": t.Name, "aktion": a.tag.Von(t.ID), "automationen": append(autos, mit[t.ID]...)})
 	}
 	reg, _ := a.ha.CachedRegistry(r.Context()) // the rooms are a suggestion: without them, the places
 	vor := slices.Sorted(maps.Keys(reg.AreaIDs))
-	answer(w, http.StatusOK, map[string]any{"ok": true, "tags": out, "vorschlaege": append(vor, tagOrte...), "aktionen": a.aktionen()})
+	answer(w, http.StatusOK, map[string]any{"ok": true, "tags": out, "vorschlaege": append(vor, tagOrte...), "aktionen": a.tag.Aktionen()})
 }
