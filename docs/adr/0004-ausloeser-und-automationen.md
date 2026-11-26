@@ -1,4 +1,4 @@
-# ADR 0004 — The phone is a trigger, Home Assistant runs the automation, a chat sets it up
+# ADR 0004 — The phone is a trigger, Home Assistant runs the automation, the Werkstatt sets it up by language
 
 Applies when the Homes app reports something the phone noticed (an NFC tag
 touched, the phone laid on its charger), when someone sets up, changes
@@ -8,7 +8,7 @@ for "a rule" in the house that is not a single switch.
 - **Status:** Proposed, 2026-11-26. Step 1 (the triggers) is built in the
   PR that adds this ADR. Amended the same day by the owner: no editor of
   building blocks on Homes; automations are set up and changed by
-  language, in a chat (§2).
+  language, in the Werkstatt (§3); and how tags are named (§2).
 - **Deciders:** the owner (mdopp), 2026-11-26: „Ich habe einen Pixel Stand
   und die Homes App auf meinem Telefon. Und ich könnte weitere NFC Tags im
   Haus verteilen. … wenn ich mein Telefon auf den Stand stelle und es nach
@@ -93,37 +93,81 @@ request even with the screen off. That is a second exception to the app's
 needs the owner's yes in homes-android's AGENTS.md. The person turns it on
 in the app (Mehr → Auslöser → „Ladestation melden“); it is off by default.
 
-### 2. Automations are set up and changed by language, in a chat
+### 2. Naming tags: one name, in HA, given where the tag is in your hand
 
-There is no editor on Homes (the owner, 2026-11-26). A person says what
-they want, in a chat, and the conversation goes on until the automation is
-right:
+The owner, 2026-11-26: „wir brauchen ein Konzept wie ich NFC Tags benennen
+kann“. A tag's name is what the person says in the Werkstatt („der Tag an
+der Bürotür“) and what the phone says when it is touched („Bürotür –
+gemeldet“), so it must be easy to give, to change and to find.
 
-> „Wenn ich mein Telefon nach 23 Uhr auf den Stand lege, mach das
-> Bürolicht aus.“ — „So würde ich es anlegen: Wenn Michaels Telefon
+- **One place.** The name lives in HA's tag registry (`name` of the tag's
+  id), nowhere else: HA's automations show it, the Werkstatt reads it, the
+  app shows it. Homes stores nothing (laib ADR 0017).
+- **Named before or while it is written.** On the app's Auslöser screen:
+  „Neuen Tag beschreiben“ → the name first (a field, with the house's
+  rooms from HA as suggestions: „Büro“, „Bad“, and a few places: „Tür“,
+  „Bett“, „Schreibtisch“, „Ladestation“) → „Halte den Tag ans Telefon …“ →
+  written and named, one line: „‚Bürotür‘ ist fertig. Kleb ihn hin und
+  sag in der Werkstatt, was er tun soll.“ The id is never shown.
+- **A tag that has an id but no name** (written by HA's companion app, or
+  named nowhere): touching it answers „Unbekannter Tag“ with a button
+  „Benennen“, which opens the same name field and names *that* id; the tag
+  is not written again, so an automation that already uses it keeps
+  working.
+- **A blank tag** (nothing on it) does nothing while the app is closed —
+  Android does not open an app for it. With the Auslöser screen open it is
+  offered for „Neuen Tag beschreiben“.
+- **Rename** on the Auslöser screen: tap a tag, change the name, „Sichern“.
+  The id stays, so every automation keeps working; only HA's name changes.
+- **Remove**: „Entfernen“ deletes the name and the id from HA after one
+  question („Automationen, die ‚Bürotür‘ nutzen, laufen dann nicht mehr“);
+  the tag itself can be written again as a new one.
+- **Rules for a name:** 1–60 characters, trimmed; unique among the tags,
+  case aside („Es gibt schon einen Tag ‚Bürotür‘ – nimm einen anderen
+  Namen“), because a name that is said must find one tag.
+- **On the tag itself**: the app suggests writing the name on the sticker;
+  the name is not stored on the tag (it would go stale on a rename).
+
+Server, additively: `POST /napi/ausloeser/tag` takes an optional `"tag"`:
+without it a new id is made (as now), with it that id is named or renamed
+(`tag/create` when HA lacks it, else `tag/update`); `DELETE
+/napi/ausloeser/tag/{tag}` removes it (`tag/delete`). Duplicate names are
+refused with 409 and the sentence above.
+
+### 3. Automations are set up and changed by language, in the Werkstatt
+
+There is no editor on Homes (the owner, 2026-11-26: „ich würde hier eher
+auf Sprache setzen und wir tauschen uns dann dazu über Chats aus. Das
+sollte die Werkbank können“ — the Werkstatt, the box's workshop where
+the owner talks with Claude Code or pi). The owner says what they want,
+and the conversation goes on until the automation is right:
+
+> „Wenn ich mein Telefon nach 23 Uhr auf den Stand lege, soll das
+> Bürolicht ausgehen.“ — „So würde ich es anlegen: Wenn Michaels Telefon
 > kabellos zu laden beginnt und es zwischen 23:00 und 05:00 ist, dann
 > Büro Licht aus. Bestätige mit 4711.“ — „Lieber schon ab 22:30.“ — …
 
-- **Who writes it** is the Bote's Automat (laib `templates/bote` §5): it
-  reads HA's automations, drafts, shows the sentence and writes only with
-  the four-digit code; a deleted one is kept for restore. Homes does not
-  duplicate it. The chat is wherever the person talks to the assistant:
-  Signal, or the Sprechen field on Homes.
-- **Changing one** is the same conversation: „Welche Automationen
-  gibt es fürs Büro?“, „Schalt die Nachtlicht-Automation bis Montag ab“,
-  „Mach daraus 22:30“.
-- **The Automat must know the phone's triggers.** Today it knows HA's
-  entities, not the tags or `homes_laden`. Laib's Automat gains this
-  (a laib change, its own PR): HA's tag registry by name (`tag/list`),
-  and the `homes_laden` event with its fields, so „wenn ich den Tag an der
-  Bürotür berühre“ becomes a tag trigger on that tag's id and „wenn mein
-  Telefon auf den Stand kommt“ an event trigger on `homes_laden` with
-  the person's uid.
-- **Homes shows the way in, not an editor.** After a tag is written, and
-  on the app's Auslöser screen, a line says what to tell the assistant:
-  „Sag Homes: Wenn ich den Tag ‚Bürotür‘ berühre, …“ (the assistant's
-  name from `internal/assistent`), and on Homes it opens the Sprechen
-  field with that start filled in.
+- **The Werkstatt has no way into HA today** (no token, no tool; checked
+  2026-11-26). It gets one through Laib, not a token of its own: Laib's
+  MCP offers the claude and pi hands the Automat's tools (laib
+  `templates/bote` §5: `entitaeten`, `automationen`, `automation_lesen`,
+  `automation_schreiben`, `automation_loeschen`, `automation_schalten`),
+  plus the tag registry by name and the `homes_laden` event's fields. The
+  Automat keeps its HA token; the Werkstatt holds none (Werkstatt rule 5).
+- **Every write is confirmed with the Automat's code**, said by the owner
+  in the Werkstatt's conversation, as on Signal. Reading needs no code.
+  Since this changes the house's behaviour from the Werkstatt, the new
+  tool is a Laib change the owner approves (Werkstatt rule 1).
+- **The phone's triggers in words.** „Wenn ich den Tag ‚Bürotür‘ berühre“
+  becomes HA's tag trigger on that tag's id; „wenn mein Telefon auf den
+  Stand kommt“ an event trigger on `homes_laden` with `person` and
+  `zustand: an` (and `ladeart: kabellos` for the stand); every condition
+  is HA's own (time, weekday, who is home).
+- **Changing one** is the same conversation: „Welche Automationen gibt es
+  fürs Büro?“, „Schalt die Nachtlicht-Automation bis Montag ab“, „Mach
+  daraus 22:30“.
+- The Bote's sentence on Signal keeps working for the rest of the family
+  (the same Automat).
 
 ## Consequences
 
@@ -132,9 +176,9 @@ right:
   are what it uses. laib `docs/DATA.md` gains one flow: a person's phone
   says to HA when it was charged and which tags it touched, under the
   person's uid, visible in HA's logbook to HA's administrators.
-- Who may change the house's automations is the Automat's rule, as today:
-  every write is confirmed with its code in the chat, and the Bote talks
-  only to the people in box.yml `people`.
+- Who may change the house's automations: the owner in the Werkstatt, and
+  the people the Bote talks to (box.yml `people`); every write is
+  confirmed with the Automat's code.
 - The app grows one screen (Auslöser: write a tag, name it, the charger
   switch) and one activity that a tag opens, answers in one line and
   closes.
@@ -142,11 +186,15 @@ right:
 ## Open questions for the owner
 
 1. **The charger report with the screen off** (§1): yes or no.
+2. **The Automat's tools for the Werkstatt** (§3): a Laib change, to be
+   proposed and approved.
 
 ## Steps
 
 1. Triggers: `/napi/ausloeser` (+ `/tag`, `/tags`), the app's NFC activity,
    the Auslöser screen, the charger report. *(this PR, and homes-android)*
-2. Laib's Automat knows the tags and `homes_laden`. *(mdopp/laib)*
-3. The line „Sag Homes: …“ after a tag is written and on the Auslöser
-   screen, opening the Sprechen field on Homes.
+2. Naming (§2): name an existing id, rename, remove, unique names; the
+   app's „Benennen“ on an unknown tag, rename and remove on the Auslöser
+   screen. *(homes, homes-android)*
+3. The Automat's tools in the Werkstatt through Laib, with the tags and
+   `homes_laden`. *(mdopp/laib, a proposal)*
