@@ -169,6 +169,33 @@ and the conversation goes on until the automation is right:
 - The Bote's sentence on Signal keeps working for the rest of the family
   (the same Automat).
 
+### 4. A tag can do something of Homes' own: the scanner
+
+The owner, 2026-11-26: „Können wir … das Scannen in meinen persönlichen
+Paperless Account (also privat, nicht Familie) starten? Oder einen
+weiteren, der das für die Familie macht?“ Homes already starts a stack
+(the Scannen buttons on Dokumente, `laib scan`), so a tag is one more
+button, not an HA automation (that would need HA to call Homes back, a new
+key, and „for whom“ would go round in a circle).
+
+- When a tag is named, the app asks „Was soll der Tag tun?“: *Home
+  Assistant melden* (§1, the default), *Scannen – für mich*, *Scannen – für
+  den Haushalt* (`aktionen` in `GET /napi/ausloeser/tags`; the scan ones
+  only where Homes has Laib).
+- **„Für mich“ is always the toucher's**: the stack belongs to the person
+  whose paired phone touched the tag (`laib scan start` with `person` and
+  `fuer: person`, as the button „für mich“), never to the tag's maker. One
+  tag at the scanner serves everyone, and nobody scans into another
+  person's Paperless. A phone without a login of its own is refused in
+  words. „Für den Haushalt“ sends no `fuer`.
+- A tag with an action reports nothing to HA. The phone says „Der Scanner
+  startet – nur für dich.“ (or „– für den Haushalt.“, or why not); the
+  stack's closing message comes as the buttons' does, on the person's chat
+  channel.
+- Which tag does what is Homes' behaviour, so Homes keeps it
+  (`internal/tagaktion`, `HOMES_DATA/tag-aktionen.json`, tag id → action);
+  the name stays in HA. Removing a tag removes its action.
+
 ## Consequences
 
 - Step 1 needs no new key between services: Homes' HA user is already an
@@ -201,3 +228,5 @@ Both answered by the owner on 2026-11-26 („Go. Passt alles“):
    screen. *(homes, homes-android)*
 3. The Automat's tools in the Werkstatt through Laib, with the tags and
    `homes_laden`. *(mdopp/laib, a proposal)*
+4. A tag's action of Homes' own: the scanner, for the toucher or the
+   household (§4). *(homes, homes-android)*

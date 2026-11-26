@@ -26,7 +26,7 @@ bad=0
 p() { for x in "$@"; do printf 'internal/%s ' "$x"; done; }
 connectors=$(p abs bote caldav discogs ha immich jellyfin judge laib musicbrainz paperless plugin qmd reitti samba werkstatt)
 shared=$(p abruf app assistent cards code128 erreichbar jsonfile markdown mcpserver modul namen texte)
-household=$(p ansicht devices dokumente drucker einkauf einrichten energie favoriten gesehen gesichter haushalt kontaktantwort library merken musik netz notes papierkorb podcasts schalter takeout uebernahme usage zugang)
+household=$(p ansicht devices dokumente drucker einkauf einrichten energie favoriten gesehen gesichter haushalt kontaktantwort library merken musik netz notes papierkorb podcasts schalter tagaktion takeout uebernahme usage zugang)
 
 budget() { # budget <name> <cap> <dir…>
   name=$1 cap=$2; shift 2
@@ -138,7 +138,9 @@ budget pages 20057 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-26, owner approved 2026-11-26 (ADR 0004, the phone as a trigger without HA's app; napi 5,342 -> 5,538; 5,537 used, the
 # minimum): POST /napi/ausloeser (an NFC tag as HA's tag_scanned, the charger as homes_laden), /tag, /tags;
 # naming (ADR 0004 §2): an existing id named or renamed in place, unique names, DELETE, the name field's suggestions
-budget napi 5538 internal/napi        # the app's widgets' and share sheet's API: 4,793
+# 2026-11-26, owner's go 2026-11-26 („Go. Passt alles“, the needed raise with it; ADR 0004 §4, napi 5,538 -> 5,629; 5,628 used, the minimum):
+# the scan tag in /napi/ausloeser: „für mich“ the toucher's stack, the action kept and offered (aktionen)
+budget napi 5629 internal/napi        # the app's widgets' and share sheet's API: 4,793
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): the module catalog,
 # cmd/homes/module.go, 1,150 with it; plus 5 %. H3–H6 move the routes out of main.go into it
 # 2026-11-04, step H8 (§10, owner: „Keine Funktion soll versteckt werden“): the routes of the traces
@@ -154,7 +156,9 @@ budget napi 5538 internal/napi        # the app's widgets' and share sheet's API
 # drucker.json keeps each printer's last known address
 # 2026-11-15, owner's request homes#375 (1,455 -> 1,460; 1,458 used): the plugins from HOMES_PLUGIN_*, kept in HOMES_DATA, asked every 5 minutes
 # 2026-11-18, owner's decision 2026-11-18 (Homes in the client's language: „ja, baue es so“; 1,460 -> 1,462; 1,461 used): Vary: Accept-Language on every answer
-budget cmd 1462 cmd/homes             # homes' wiring: 1,018 with the demo then
+# 2026-11-26, owner's go 2026-11-26 („Go. Passt alles“, the needed raise with it; ADR 0004 §4, cmd 1,462 -> 1,474; 1,473 used, the minimum):
+# tagAktionen in the wiring, out of main (gocognit)
+budget cmd 1474 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-04, the caps moved with the packages, none raised (sum 24,134 as before): abs and
 # musicbrainz (1,227 lines, 1,289 of cap) from household to connectors once merken's fetcher
 # was internal/abruf (235 lines of merken, 247 of cap, to shared) and jellyfin.Plain
@@ -277,7 +281,9 @@ budget connectors 16363 $connectors   # one client per service, with its fake: 1
 # their state in words, IPP's state reasons in short German, one line for the app
 # 2026-11-14, owner's request 2026-11-14 („Kein Mensch“ on „Wer ist das?“: a toy's face asked as a person; household 15,035 -> 15,095;
 # 15,092 used, to be OK'd in the PR): gesichter.Ausblenden and Einblenden (Rückgängig), the hidden kept with their faces
-budget household 15095 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-26, owner's go 2026-11-26 („Go. Passt alles“, the needed raise with it; ADR 0004 §4, household 15,095 -> 15,180; 15,179 used, the minimum):
+# internal/tagaktion, which tag starts a scan (HOMES_DATA/tag-aktionen.json)
+budget household 15180 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one

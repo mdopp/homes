@@ -51,6 +51,7 @@ import (
 	"github.com/mdopp/homes/internal/reitti"
 	"github.com/mdopp/homes/internal/samba"
 	"github.com/mdopp/homes/internal/schalter"
+	"github.com/mdopp/homes/internal/tagaktion"
 	"github.com/mdopp/homes/internal/uebernahme"
 	"github.com/mdopp/homes/internal/usage"
 	"github.com/mdopp/homes/internal/werkstatt"
@@ -463,6 +464,7 @@ func main() {
 	cfg.Validate = func(_ context.Context, b string) bool { _, ok := store.Lookup(b); return ok }
 	// one favorites store for the pages' ☆ and the app's start screen
 	cfg.Favorites = favoriten.Open(dataDir)
+	cfg.TagAktionen = tagAktionen(dataDir)      // which tag starts a scan (ADR 0004 §4)
 	if cfg.HA, err = ha.FromEnv(); err != nil { // the house paths and the event stream from HA; unset, 404
 		log.Fatalf("homes: %v", err)
 	}
@@ -628,4 +630,14 @@ func netzVon(g *gesichter.Gesichter) *netz.Netz {
 	n := &netz.Netz{G: g}
 	g.Danach = n.Rechnen
 	return n
+}
+
+// tagAktionen opens which tag starts a scan (ADR 0004 §4); a file Homes
+// cannot read stops it rather than forget what the tags do.
+func tagAktionen(dir string) *tagaktion.Store {
+	s, err := tagaktion.Open(dir)
+	if err != nil {
+		log.Fatalf("homes: tag-aktionen: %v", err)
+	}
+	return s
 }

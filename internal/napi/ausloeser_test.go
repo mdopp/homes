@@ -180,12 +180,12 @@ func TestAnUnknownIdIsNamedNotRewritten(t *testing.T) {
 func TestRenameKeepsTheId(t *testing.T) {
 	fake, h := triggers(t)
 	fake.AddTag("homes-aaaaaaaaaaaa", "Bürotür")
-	code, body := raw(t, h, "POST", "/napi/ausloeser/tag", "dev1", `{"name":"Büro Tür","tag":"homes-aaaaaaaaaaaa"}`)
+	code, body := raw(t, h, "POST", "/napi/ausloeser/tag", "dev1", `{"aktion":"","name":"Büro Tür","tag":"homes-aaaaaaaaaaaa"}`)
 	if code != http.StatusOK || reply(t, body)["tag"] != "homes-aaaaaaaaaaaa" {
 		t.Fatalf("%d %s", code, body)
 	}
 	_, body = raw(t, h, "GET", "/napi/ausloeser/tags", "dev1", "")
-	if !strings.Contains(body, `{"name":"Büro Tür","tag":"homes-aaaaaaaaaaaa"}`) || strings.Count(body, `"tag":"`) != 1 {
+	if !strings.Contains(body, `{"aktion":"","name":"Büro Tür","tag":"homes-aaaaaaaaaaaa"}`) || strings.Count(body, `"tag":"`) != 1 {
 		t.Fatalf("after rename: %s", body)
 	}
 	// its own name again, in another case, is no clash with itself
