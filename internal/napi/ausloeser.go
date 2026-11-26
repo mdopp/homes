@@ -1,6 +1,7 @@
 package napi
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/mdopp/homes/internal/ha"
 	"github.com/mdopp/homes/internal/tagaktion"
+	"github.com/mdopp/homes/internal/telefon"
 )
 
 // The phone as a trigger (ADR 0004 §1): the app reports an NFC tag it
@@ -50,11 +52,28 @@ type ausloeser struct {
 	uid   func(*http.Request) (string, bool)
 	tag   *tagaktion.Dienst        // what a tag does: HA's, the scanner's, its automations (ADR 0004 §4, §8)
 	admin func(person string) bool // an admin when last seen on a page (einrichten.Admins)
+	// the phone as a device in HA (§7): its scans and its charger through
+	// its registration; nil: the raw events only
+	tel    *telefon.Telefone
+	geraet func(bearer string) (telefon.Geraet, bool)
+}
+
+// telefon is the phone behind the request, as HA's device; false: none.
+func (a *ausloeser) telefon(r *http.Request) (telefon.Geraet, bool) {
+	b, ok := bearerOf(r)
+	if !ok || a.tel == nil || a.geraet == nil {
+		return telefon.Geraet{}, false
+	}
+	return a.geraet(b)
 }
 
 // nfc is a touched tag: its action of Homes' own, else HA's tag_scanned.
 func (a *ausloeser) nfc(w http.ResponseWriter, r *http.Request, tag, person string) {
-	e, err := a.tag.Ausloesen(r.Context(), tag, person)
+	var scan func(context.Context, string) bool
+	if g, ok := a.telefon(r); ok { // HA's own scan by the phone's device; else the raw tag_scanned
+		scan = func(ctx context.Context, tag string) bool { return a.tel.Tag(ctx, g, tag) }
+	}
+	e, err := a.tag.AusloesenMit(r.Context(), tag, person, scan)
 	if err != nil {
 		nein := tagaktion.Als(err)
 		sagNein(w, nein.Status, nein.Satz)
@@ -115,6 +134,9 @@ func (a *ausloeser) melden(w http.ResponseWriter, r *http.Request) {
 		if err := a.ha.Fire(r.Context(), LadenEvent, map[string]any{"person": person, "zustand": in.Zustand, "ladeart": in.Ladeart}); err != nil {
 			haSagt(w, "laden", err)
 			return
+		}
+		if g, ok := a.telefon(r); ok { // and the device's sensors (§7); homes_laden goes once nothing uses it
+			a.tel.Laden(r.Context(), g, in.Zustand, in.Ladeart)
 		}
 		answer(w, http.StatusOK, map[string]any{"ok": true})
 	default:

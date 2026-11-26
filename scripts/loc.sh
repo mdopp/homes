@@ -26,7 +26,7 @@ bad=0
 p() { for x in "$@"; do printf 'internal/%s ' "$x"; done; }
 connectors=$(p abs bote caldav discogs ha immich jellyfin judge laib musicbrainz paperless plugin qmd reitti samba werkstatt)
 shared=$(p abruf app assistent cards code128 erreichbar jsonfile markdown mcpserver modul namen texte)
-household=$(p ansicht devices dokumente drucker einkauf einrichten energie favoriten gesehen gesichter haushalt kontaktantwort library merken musik netz notes papierkorb podcasts schalter tagaktion takeout uebernahme usage zugang)
+household=$(p ansicht devices dokumente drucker einkauf einrichten energie favoriten gesehen gesichter haushalt kontaktantwort library merken musik netz notes papierkorb podcasts schalter tagaktion takeout telefon uebernahme usage zugang)
 
 budget() { # budget <name> <cap> <dir…>
   name=$1 cap=$2; shift 2
@@ -145,7 +145,9 @@ budget pages 20420 internal/pages     # the family's pages, one per file: 14,684
 # the scan tag in /napi/ausloeser: „für mich“ the toucher's stack, the action kept and offered (aktionen)
 # 2026-11-26, owner approved 2026-11-26, ADR 0004 §5 §8 (napi 5,629 -> 5,670; 5,669 used, the minimum): GET /napi/automationen, POST …/tag/{tag}/verbinden|loesen|neu,
 # GET …/freigabe/{id} (ausloeser_automationen.go); the tag's action moved to tagaktion.Dienst (shared with the page)
-budget napi 5670 internal/napi        # the app's widgets' and share sheet's API: 4,793
+# 2026-11-26, owner approved 2026-11-26, ADR 0004 §7 (napi 5,670 -> 5,698; 5,697 used, the minimum): the phone behind the bearer as HA's device,
+# a tag as its scan_tag, the charger as its sensors (ausloeser.go)
+budget napi 5698 internal/napi        # the app's widgets' and share sheet's API: 4,793
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): the module catalog,
 # cmd/homes/module.go, 1,150 with it; plus 5 %. H3–H6 move the routes out of main.go into it
 # 2026-11-04, step H8 (§10, owner: „Keine Funktion soll versteckt werden“): the routes of the traces
@@ -165,7 +167,9 @@ budget napi 5670 internal/napi        # the app's widgets' and share sheet's API
 # tagAktionen in the wiring, out of main (gocognit)
 # 2026-11-26, owner approved 2026-11-26, ADR 0004 §5 §8 (cmd 1,474 -> 1,493; 1,492 used, the minimum): the Dienst wired for the app and the pages, its admins
 # and Bote, the daily drop of old wishes, HOMES_APP_SHA256's route
-budget cmd 1493 cmd/homes             # homes' wiring: 1,018 with the demo then
+# 2026-11-26, owner approved 2026-11-26, ADR 0004 §7 (cmd 1,493 -> 1,520; 1,519 used, the minimum): telefoneAnschliessen: the registrations, removed on
+# unpairing, the hourly look
+budget cmd 1520 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-04, the caps moved with the packages, none raised (sum 24,134 as before): abs and
 # musicbrainz (1,227 lines, 1,289 of cap) from household to connectors once merken's fetcher
 # was internal/abruf (235 lines of merken, 247 of cap, to shared) and jellyfin.Plain
@@ -230,7 +234,9 @@ budget cmd 1493 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-26, owner approved 2026-11-26 (ADR 0004; connectors 16,230 -> 16,363; 16,362 used, the minimum): ha.Fire, ha.Tags, ha.CreateTag, ha.UpdateTag, ha.DeleteTag (tags.go) and the fake's events and tag registry
 # 2026-11-26, owner approved 2026-11-26, ADR 0004 §5 §8 (connectors 16,363 -> 16,532; 16,531 used, the minimum): ha.Automations, AutomationConfig,
 # SetAutomationConfig (automationen.go), the registry's unique_ids; the fakes: hafake's automation config API, laibfake's tell and scan
-budget connectors 16532 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
+# 2026-11-26, owner approved 2026-11-26, ADR 0004 §7 (connectors 16,532 -> 16,759; 16,758 used, the minimum): ha.RegisterMobileApp, MobileWebhook,
+# MobileAppEntries, DeleteConfigEntry (mobile.go); hafake's registrations, webhooks and config entry delete
+budget connectors 16759 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
 # 2026-11-04, internal/jsonfile (47 lines, 50 of cap) from household's cap to shared's: it
 # replaces nine copies of a save, 62 of their lines in household
 # 2026-11-05, owner 2026-11-05 yes: Immich for the contacts (9,583 -> 9,874):
@@ -295,7 +301,9 @@ budget connectors 16532 $connectors   # one client per service, with its fake: 1
 # 2026-11-26, owner approved 2026-11-26, ADR 0004 §5 §8 (household 15,180 -> 16,122; 16,121 used, the minimum): tagaktion's Dienst (the scanner's modes through
 # HA's buttons or laib scan, the old names read as new), a tag's automations (found, linked, loosed back to exactly what was, new by the
 # Bote) and the wishes waiting for an admin (told, tasked, first answer counts, dropped after 7 days); einrichten.AdminListe
-budget household 16122 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-26, owner approved 2026-11-26, ADR 0004 §7 (household 16,122 -> 16,415; 16,414 used, the minimum): internal/telefon (a reporting phone registered
+# with HA's mobile_app, its sensors, scan_tag, removed when unpaired, telefone.json), tagaktion.AusloesenMit, devices' Weg and Gibt
+budget household 16415 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one

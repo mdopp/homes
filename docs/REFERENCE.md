@@ -1352,6 +1352,17 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   phone whose uid is no login; it answers `{"ok":true,"name","aktion",
   "text":"Der Scanner startet – nur für dich."}` (or „– für den
   Haushalt.“); no scanner 503, Laib or HA silent 502, each in words.
+- Each reporting phone a device in Home Assistant (ADR 0004 §7, the
+  app's requests unchanged): its first `POST /napi/ausloeser` registers it
+  with HA's `mobile_app` (`device_id` `homes-<device id>`, named „Annas
+  Pixel 9“), with the sensors „Lädt“ (`binary_sensor`, `laedt`) and
+  „Ladeart“ (`sensor`, `ladeart`: kabellos, kabel, usb, keine). Then a tag
+  that reports to HA is HA's own `scan_tag` through the registration's
+  webhook (HA fires `tag_scanned` with `device_id`; not the raw event
+  too), a charger report `update_sensor_states` beside `homes_laden`.
+  Without a registration (no mobile_app in HA, HA refusing) the raw
+  `tag_scanned {tag_id, person}` as before, asked again after an hour.
+  Unpairing a phone deletes its registration's config entry in HA.
 - A tag's automations (ADR 0004 §8, module `geraete`): `GET
   /napi/automationen?q=` lists HA's automations that have a config id,
   by name, `q` a case-blind part of the name: `{"ok":true,

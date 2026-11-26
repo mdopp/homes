@@ -50,6 +50,8 @@ login, so Laib's route needs it in `bypass` as it has `/napi/`.
 `tag-verbindungen.json` (an automation's config before Homes linked a tag
 to it, for „Lösen“) and `tag-freigaben.json` (the wishes waiting for an
 admin, dropped after 7 days, decided ones kept 30), ADR 0004 §8.
+It also holds `telefone.json` (each reporting phone's registration with
+HA's mobile_app: its webhook id, a secret, 0600; ADR 0004 §7).
 `HOMES_DATA` (default `/data`) holds `devices.json`, `favoriten.json`
 and `kontakt-antworten.json` (the links' hashes and the answers, 0600), and `plugins.json` (each
 registered plugin's last answer per person, its handed-over tasks with their text, 0600; `HOMES_PLUGIN_<NAME>`
