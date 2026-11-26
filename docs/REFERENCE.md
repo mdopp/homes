@@ -1310,14 +1310,22 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   "ladeart":"kabellos"|"kabel"|"usb"|""}` fires `homes_laden` `{person,
   zustand, ladeart}` and answers `{"ok":true}`. `person` is the device's
   uid; Homes decides nothing and keeps nothing, every condition is the
-  automation's in HA. `POST /napi/ausloeser/tag {"name"}` creates
-  `homes-<12 hex>` in HA's tag registry and answers `{"ok":true,"tag",
-  "uri":"cloud.dopp.homes://tag/<id>"}`, what the app writes onto the tag;
-  `GET /napi/ausloeser/tags` is `{"ok":true,"tags":[{"tag","name"}]}`. A
-  refusal is `{"ok":false,"error":"<a German sentence>"}`: 400 for a body
-  Homes cannot read, an id that is not 1–64 of `A-Za-z0-9_-`, a name
-  empty or over 60 characters; 502 when HA does not answer or refuses
-  (HA's detail stays in the log). Without HA, 404 as every house path.
+  automation's in HA. Naming (ADR 0004 §2): `POST /napi/ausloeser/tag
+  {"name","tag"?}` without `tag` creates `homes-<12 hex>` in HA's tag
+  registry, with it names that id (`tag/create`) or renames it in place
+  (`tag/update`), the tag not written again; it answers `{"ok":true,"tag",
+  "uri":"cloud.dopp.homes://tag/<id>"}`, what the app writes onto a new
+  tag. A name is unique among the tags, case aside: 409 „Es gibt schon
+  einen Tag „…“ – nimm einen anderen Namen.“ `DELETE
+  /napi/ausloeser/tag/{tag}` removes it (`tag/delete`; 404 when HA has no
+  such tag). `GET /napi/ausloeser/tags` is `{"ok":true,"tags":[{"tag",
+  "name"}],"vorschlaege":[…]}`, the suggestions for the name field: the
+  house's rooms from HA, sorted, then Tür, Bett, Schreibtisch,
+  Ladestation. A refusal is `{"ok":false,"error":"<a German sentence>"}`:
+  400 for a body Homes cannot read, an id that is not 1–64 of
+  `A-Za-z0-9_-`, a name empty or over 60 characters; 502 when HA does not
+  answer or refuses (HA's detail stays in the log). Without HA, 404 as
+  every house path.
 - Share → Homes (haus#120): `POST /napi/merken` with JSON `{"text"}`,
   what the phone shared (a browser's link, often with the page's title
   around it). The first http(s) address is the link, the words around it

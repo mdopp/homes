@@ -162,3 +162,80 @@ func TestTagsListIsEmptyNotNull(t *testing.T) {
 		t.Fatalf("%d %s", code, body)
 	}
 }
+
+// ADR 0004 §2: a tag is named where it is in the person's hand, once, in HA.
+
+func TestAnUnknownIdIsNamedNotRewritten(t *testing.T) {
+	fake, h := triggers(t)
+	code, body := raw(t, h, "POST", "/napi/ausloeser/tag", "dev1", `{"name":"Bett","tag":"5f0ba733-172f"}`)
+	if m := reply(t, body); code != http.StatusOK || m["tag"] != "5f0ba733-172f" || m["uri"] != "cloud.dopp.homes://tag/5f0ba733-172f" {
+		t.Fatalf("%d %s", code, body)
+	}
+	if _, body = raw(t, h, "POST", "/napi/ausloeser", "dev1", `{"art":"nfc","tag":"5f0ba733-172f"}`); reply(t, body)["name"] != "Bett" {
+		t.Fatalf("touched after naming: %s", body)
+	}
+	_ = fake
+}
+
+func TestRenameKeepsTheId(t *testing.T) {
+	fake, h := triggers(t)
+	fake.AddTag("homes-aaaaaaaaaaaa", "Bürotür")
+	code, body := raw(t, h, "POST", "/napi/ausloeser/tag", "dev1", `{"name":"Büro Tür","tag":"homes-aaaaaaaaaaaa"}`)
+	if code != http.StatusOK || reply(t, body)["tag"] != "homes-aaaaaaaaaaaa" {
+		t.Fatalf("%d %s", code, body)
+	}
+	_, body = raw(t, h, "GET", "/napi/ausloeser/tags", "dev1", "")
+	if !strings.Contains(body, `{"name":"Büro Tür","tag":"homes-aaaaaaaaaaaa"}`) || strings.Count(body, `"tag":"`) != 1 {
+		t.Fatalf("after rename: %s", body)
+	}
+	// its own name again, in another case, is no clash with itself
+	if code, body := raw(t, h, "POST", "/napi/ausloeser/tag", "dev1", `{"name":"büro tür","tag":"homes-aaaaaaaaaaaa"}`); code != http.StatusOK {
+		t.Fatalf("own name: %d %s", code, body)
+	}
+}
+
+func TestANameIsUniqueCaseAside(t *testing.T) {
+	fake, h := triggers(t)
+	fake.AddTag("homes-aaaaaaaaaaaa", "Bürotür")
+	fake.AddTag("homes-bbbbbbbbbbbb", "Bett")
+	for _, body := range []string{`{"name":" bürotür "}`, `{"name":"BÜROTÜR","tag":"homes-bbbbbbbbbbbb"}`} {
+		code, got := raw(t, h, "POST", "/napi/ausloeser/tag", "dev1", body)
+		if m := reply(t, got); code != http.StatusConflict || m["ok"] != false || !strings.Contains(m["error"].(string), "„Bürotür“") {
+			t.Errorf("%s: %d %s", body, code, got)
+		}
+	}
+	if _, body := raw(t, h, "GET", "/napi/ausloeser/tags", "dev1", ""); strings.Count(body, `"tag":"`) != 2 || !strings.Contains(body, `"name":"Bett"`) {
+		t.Fatalf("a refused name changed the registry: %s", body)
+	}
+}
+
+func TestRemoveATag(t *testing.T) {
+	fake, h := triggers(t)
+	fake.AddTag("homes-aaaaaaaaaaaa", "Bürotür")
+	if code, body := raw(t, h, "DELETE", "/napi/ausloeser/tag/homes-aaaaaaaaaaaa", "dev1", ""); code != http.StatusOK || reply(t, body)["ok"] != true {
+		t.Fatalf("%d %s", code, body)
+	}
+	if _, body := raw(t, h, "GET", "/napi/ausloeser/tags", "dev1", ""); !strings.Contains(body, `"tags":[]`) {
+		t.Fatalf("still there: %s", body)
+	}
+	code, body := raw(t, h, "DELETE", "/napi/ausloeser/tag/homes-aaaaaaaaaaaa", "dev1", "")
+	if m := reply(t, body); code != http.StatusNotFound || m["ok"] != false || !strings.Contains(m["error"].(string), "nicht mehr") {
+		t.Fatalf("twice: %d %s", code, body)
+	}
+	if code, _ := raw(t, h, "DELETE", "/napi/ausloeser/tag/homes-aaaaaaaaaaaa", "", ""); code != http.StatusUnauthorized {
+		t.Fatalf("without a device: %d", code)
+	}
+}
+
+func TestTheNameFieldSuggestsTheRoomsThenPlaces(t *testing.T) {
+	fake, h := triggers(t)
+	fake.SetRegistries([]map[string]any{{"area_id": "buero", "name": "Büro"}, {"area_id": "bad", "name": "Bad"}}, nil, nil)
+	_, body := raw(t, h, "GET", "/napi/ausloeser/tags", "dev1", "")
+	var m struct {
+		Vorschlaege []string `json:"vorschlaege"`
+	}
+	json.Unmarshal([]byte(body), &m)
+	if strings.Join(m.Vorschlaege, ",") != "Bad,Büro,Tür,Bett,Schreibtisch,Ladestation" {
+		t.Fatalf("%s", body)
+	}
+}

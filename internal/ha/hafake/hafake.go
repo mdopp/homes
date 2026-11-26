@@ -899,6 +899,19 @@ func (h *HA) websocket(w http.ResponseWriter, r *http.Request) {
 			t := map[string]any{"id": m["tag_id"], "name": m["name"]}
 			h.tags = append(h.tags, t)
 			result = t
+		case "tag/update", "tag/delete":
+			i := slices.IndexFunc(h.tags, func(t map[string]any) bool { return t["id"] == m["tag_id"] })
+			if i < 0 {
+				h.mu.Unlock()
+				c.send(map[string]any{"id": m["id"], "type": "result", "success": false, "error": map[string]any{"code": "not_found", "message": "Tag not found"}})
+				continue
+			}
+			if m["type"] == "tag/delete" {
+				h.tags = slices.Delete(h.tags, i, i+1)
+			} else {
+				h.tags[i]["name"] = m["name"]
+			}
+			result = map[string]any{}
 		case "config/label_registry/create", "config/entity_registry/get", "config/entity_registry/update":
 			res, ok := h.registryWrite(m)
 			if !ok {

@@ -3,6 +3,7 @@ package ha
 import (
 	"cmp"
 	"context"
+	"errors"
 	"net/url"
 	"time"
 )
@@ -42,6 +43,25 @@ func (c *Client) Tags(ctx context.Context) ([]Tag, error) {
 // CreateTag adds the tag id with its name to HA's tag registry (tag/create).
 func (c *Client) CreateTag(ctx context.Context, id, name string) error {
 	return c.command(ctx, map[string]any{"type": "tag/create", "tag_id": id, "name": name}, nil)
+}
+
+// UpdateTag renames the tag id in HA's tag registry (tag/update);
+// ErrNotFound when HA has no such tag.
+func (c *Client) UpdateTag(ctx context.Context, id, name string) error {
+	return notFound(c.command(ctx, map[string]any{"type": "tag/update", "tag_id": id, "name": name}, nil))
+}
+
+// DeleteTag removes the tag id from HA's tag registry (tag/delete);
+// ErrNotFound when HA has no such tag.
+func (c *Client) DeleteTag(ctx context.Context, id string) error {
+	return notFound(c.command(ctx, map[string]any{"type": "tag/delete", "tag_id": id}, nil))
+}
+
+func notFound(err error) error {
+	if errors.Is(err, errNotFound) {
+		return ErrNotFound
+	}
+	return err
 }
 
 // command sends one WebSocket command and reads its result into out (nil:
