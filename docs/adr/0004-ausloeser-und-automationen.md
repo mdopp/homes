@@ -5,7 +5,7 @@ touched, the phone laid on its charger), when someone sets up, changes
 or switches off a Home Assistant automation, or when someone asks
 for "a rule" in the house that is not a single switch.
 
-- **Status:** Proposed, 2026-11-26. Step 1 (the triggers) is built in the
+- **Status:** Accepted, 2026-11-26 (the owner: „Go. Passt alles“). Step 1 (the triggers) is built in the
   PR that adds this ADR. Amended the same day by the owner: no editor of
   building blocks on Homes; automations are set up and changed by
   language, in the Werkstatt (§3); and how tags are named (§2).
@@ -90,7 +90,7 @@ service (`realtime/LiveService.kt`), which already runs; it registers for
 `ACTION_POWER_CONNECTED`/`DISCONNECTED` while it runs, and sends the one
 request even with the screen off. That is a second exception to the app's
 "no network while the screen is off" (the first is Daten sichern) and
-needs the owner's yes in homes-android's AGENTS.md. The person turns it on
+the owner said yes to on 2026-11-26 (homes-android's AGENTS.md). The person turns it on
 in the app (Mehr → Auslöser → „Ladestation melden“); it is off by default.
 
 ### 2. Naming tags: one name, in HA, given where the tag is in your hand
@@ -183,11 +183,14 @@ and the conversation goes on until the automation is right:
   switch) and one activity that a tag opens, answers in one line and
   closes.
 
-## Open questions for the owner
+## Questions the owner answered
 
-1. **The charger report with the screen off** (§1): yes or no.
-2. **The Automat's tools for the Werkstatt** (§3): a Laib change, to be
-   proposed and approved.
+Both answered by the owner on 2026-11-26 („Go. Passt alles“):
+
+1. **The charger report with the screen off** (§1): yes, behind its
+   switch, off by default.
+2. **The Automat's tools for the Werkstatt** (§3): yes, built in Laib;
+   the box changes only when the owner approves it in the Inbox.
 
 ## Steps
 
