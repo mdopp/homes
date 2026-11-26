@@ -301,6 +301,9 @@ type Registry struct {
 	ConfigURLs map[string]string
 	// Entries is entity → its config entry's id (EntryHost reads its address)
 	Entries map[string]string
+	// UniqueIDs is an enabled entity's unique_id → its entity id: a button
+	// another program announced by its own name (the scanner's, ADR 0004 §6)
+	UniqueIDs map[string]string
 }
 
 // Standard says whether entity carries the label StandardLabel.
@@ -346,6 +349,7 @@ func (c *Client) registries(ctx context.Context) (Registry, error) {
 		TranslationKey string   `json:"translation_key"`
 		DisabledBy     string   `json:"disabled_by"`
 		ConfigEntryID  string   `json:"config_entry_id"`
+		UniqueID       string   `json:"unique_id"`
 	}
 	for _, q := range []struct {
 		cmd string
@@ -377,7 +381,7 @@ func (c *Client) registries(ctx context.Context) (Registry, error) {
 	twin := twins(devices)
 	reg := Registry{Rooms: map[string]string{}, Hidden: map[string]bool{}, Devices: map[string]string{}, Platforms: map[string]string{}, Twins: map[string]string{}, WakeWords: map[string]bool{},
 		AreaIDs: areaID, Labels: map[string][]string{}, StandardLabelID: standardLabel(labels), ConfigURLs: configURL,
-		Entries: map[string]string{}}
+		Entries: map[string]string{}, UniqueIDs: map[string]string{}}
 	for _, e := range entities {
 		if e.EntityID == "" {
 			continue
@@ -394,6 +398,7 @@ func (c *Client) registries(ctx context.Context) (Registry, error) {
 		}
 		reg.Labels[e.EntityID] = e.Labels
 		reg.Entries[e.EntityID] = e.ConfigEntryID
+		enabledUnique(reg.UniqueIDs, e.UniqueID, e.DisabledBy, e.EntityID)
 		if t := twin[e.DeviceID]; t != "" {
 			reg.Twins[e.EntityID] = t
 		}
@@ -408,6 +413,13 @@ func (c *Client) registries(ctx context.Context) (Registry, error) {
 		}
 	}
 	return reg, nil
+}
+
+// enabledUnique notes an enabled entity under its unique_id.
+func enabledUnique(m map[string]string, uniqueID, disabledBy, entity string) {
+	if uniqueID != "" && disabledBy == "" {
+		m[uniqueID] = entity
+	}
 }
 
 // device is one entry of HA's device registry, as registries reads it.

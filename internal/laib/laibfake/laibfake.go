@@ -1,7 +1,8 @@
 // Package laibfake is Laib's MCP as far as a module's wish goes (laib#1038,
 // homes ADR 0001 §10): tools/list names laib_wish with modul, laib_wish
-// files a wish and answers its stand, laib_aufgabe ticks one off. For the
-// tests and cmd/homesdemo only.
+// files a wish and answers its stand, laib_aufgabe ticks one off; and a
+// tag's (homes ADR 0004): laib_tell tells a person a line, laib_scan takes
+// a scan order. For the tests and cmd/homesdemo only.
 package laibfake
 
 import (
@@ -30,6 +31,23 @@ type Laib struct {
 	Erledigt []int             // the Box-Aufgaben ticked off
 	Modul    []string          // laib_module's proposals: "<liste>|<grund>" (laib#1036)
 	status   map[string]string // laib_status: a service's own status (its JSON)
+	Gesagt   []string          // laib_tell's lines: "<person>: <text>"
+	Scans    []map[string]any  // laib_scan's orders, their arguments
+	OhneScan bool              // laib_scan answers that the box has no scan service
+}
+
+// Gesagte are the lines told so far.
+func (f *Laib) Gesagte() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]string(nil), f.Gesagt...)
+}
+
+// Scanauftraege are the scan orders so far.
+func (f *Laib) Scanauftraege() []map[string]any {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]map[string]any(nil), f.Scans...)
 }
 
 // New is a fake with no wish yet.
@@ -133,6 +151,19 @@ func (f *Laib) Tools() []map[string]any {
 func (f *Laib) Antwort(name string, args map[string]any) (text string, isErr, ok bool) {
 	str := func(k string) string { s, _ := args[k].(string); return s }
 	switch {
+	case name == "laib_tell":
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		f.Gesagt = append(f.Gesagt, str("person")+": "+str("text"))
+		return `{"message":"gesagt"}`, false, true
+	case name == "laib_scan":
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		if f.OhneScan {
+			return "Der Dienst scan ist nicht eingerichtet.", true, true
+		}
+		f.Scans = append(f.Scans, args)
+		return `{"message":"Stapel angenommen"}`, false, true
 	case name == "laib_status":
 		f.mu.Lock()
 		defer f.mu.Unlock()

@@ -1,6 +1,6 @@
 // Package hafake is a fake Home Assistant for tests: the REST calls Homes
 // makes (/api/states, /api/services, /api/history/period,
-// /api/camera_proxy, /api/stt) and the WebSocket
+// /api/camera_proxy, /api/stt, /api/config/automation/config) and the WebSocket
 // (/api/websocket: auth, subscribe_events, the three registries, the Assist pipelines' debug store,
 // the recorder's long-term statistics). Its frame
 // code is written for the server side on purpose, so it shares nothing with
@@ -65,10 +65,35 @@ type HA struct {
 	apply    bool              // a call turns a light or switch on or off, like HA (the demo)
 	statDown bool
 	statAsks []map[string]any
-	energy   map[string]any   // energy/get_prefs' answer; nil: HA's not_found (no energy dashboard)
-	diag     map[string]any   // config entry id → its diagnostics' data (GET /api/diagnostics/config_entry/<id>)
-	events   []Event          // what POST /api/events fired
-	tags     []map[string]any // the tag registry: id, name
+	energy   map[string]any            // energy/get_prefs' answer; nil: HA's not_found (no energy dashboard)
+	diag     map[string]any            // config entry id → its diagnostics' data (GET /api/diagnostics/config_entry/<id>)
+	events   []Event                   // what POST /api/events fired
+	tags     []map[string]any          // the tag registry: id, name
+	autos    map[string]map[string]any // the automations' configs by id (/api/config/automation/config/<id>)
+}
+
+// AddAutomation is an automation HA has: its entity (automation.<slug of
+// id>, on, with the attributes id and friendly_name) and its config,
+// which /api/config/automation/config/<id> reads and writes. Again with
+// the same id replaces the config, as an edit in HA does.
+func (h *HA) AddAutomation(id, name string, config map[string]any) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.autos == nil {
+		h.autos = map[string]map[string]any{}
+	}
+	h.autos[id] = config
+	h.set("automation."+strings.ReplaceAll(strings.ToLower(id), "-", "_"), "on", map[string]any{"id": id, "friendly_name": name})
+}
+
+// AutomationConfig is one automation's config as it is now (nil: none).
+func (h *HA) AutomationConfig(id string) map[string]any {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	b, _ := json.Marshal(h.autos[id])
+	var out map[string]any
+	json.Unmarshal(b, &out)
+	return out
 }
 
 // Event is one event fired on the fake's bus (POST /api/events/<type>).
@@ -611,6 +636,8 @@ func (h *HA) serve(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		json.NewEncoder(w).Encode(s)
+	case strings.HasPrefix(r.URL.Path, "/api/config/automation/config/"):
+		h.automation(w, r, strings.TrimPrefix(r.URL.Path, "/api/config/automation/config/"))
 	case r.Method == "POST" && strings.HasPrefix(r.URL.Path, "/api/events/"):
 		if h.notAdmin {
 			http.Error(w, "401: Unauthorized", http.StatusUnauthorized)
@@ -708,6 +735,39 @@ func (h *HA) serve(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode([][]map[string]any{pts})
 	default:
 		http.NotFound(w, r)
+	}
+}
+
+// automation answers HA's config API for one automation, an
+// administrator's: GET its config, POST a new one (HA's {"result":"ok"}).
+// h.mu is held.
+func (h *HA) automation(w http.ResponseWriter, r *http.Request, id string) {
+	if h.notAdmin {
+		http.Error(w, "401: Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	switch r.Method {
+	case "GET":
+		c, ok := h.autos[id]
+		if !ok {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"message":"Resource not found"}`))
+			return
+		}
+		json.NewEncoder(w).Encode(c)
+	case "POST":
+		var c map[string]any
+		if json.NewDecoder(r.Body).Decode(&c) != nil {
+			http.Error(w, `{"message":"Message format incorrect"}`, http.StatusBadRequest)
+			return
+		}
+		if h.autos == nil {
+			h.autos = map[string]map[string]any{}
+		}
+		h.autos[id] = c
+		w.Write([]byte(`{"result":"ok"}`))
+	default:
+		http.Error(w, "405", http.StatusMethodNotAllowed)
 	}
 }
 
