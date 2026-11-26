@@ -178,6 +178,24 @@ func (q *Quellen) IstAdmin(person string) bool {
 	return a.set[person]
 }
 
+// AdminListe are the logins that were admins when last seen, sorted.
+func (q *Quellen) AdminListe() []string {
+	a := q.admins()
+	if a == nil {
+		return nil
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	var out []string
+	for p, ja := range a.set {
+		if ja {
+			out = append(out, p)
+		}
+	}
+	slices.Sort(out)
+	return out
+}
+
 func (q *Quellen) admins() *Admins {
 	if q == nil {
 		return nil

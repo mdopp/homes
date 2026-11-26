@@ -84,6 +84,10 @@ func aufgabenListe(r *http.Request, cfg StartConfig, l laibTeil) []aufgabe {
 		for _, row := range zugangRows(cfg) { // a visitor asking for access (owner 2026-11-08)
 			as = append(as, aufgabe{titel: row[0], warum: row[1], href: ZugangPath, art: artEntscheiden, name: "zugang", icon: "box"})
 		}
+		for _, f := range cfg.Tags.Offen() { // a tag's automation someone wishes (ADR 0004 §8): the household's, not Laib's inbox
+			as = append(as, aufgabe{titel: f.Text, warum: "Freigeben oder ablehnen; die erste Antwort eines Admins zählt.", href: TagFreigabePath + f.ID,
+				art: artEntscheiden, name: "tag-freigabe-" + f.ID, icon: "aufgabe"})
+		}
 	}
 	as = append(as, pluginAufgaben(cfg, l.plugins)...) // the plugins' handed-over tasks (homes ADR 0003)
 	slices.SortStableFunc(as, func(a, b aufgabe) int { return a.art - b.art })

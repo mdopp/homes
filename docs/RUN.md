@@ -8,6 +8,7 @@ HOMES_PROXY_SECRET=<what Caddy sends as X-Homes-Proxy> LAIB_PUBLIC_URL=https://l
 HOMES_LISTEN=0.0.0.0:8650 HOMES_ASSISTANT=Homes \
 HOMES_KONTAKT_LISTEN=0.0.0.0:8652 HOMES_KONTAKT_URL=https://kontakt.<domain> \
 HOMES_TEASER_HOST=<domain> HOMES_TEASER_PERSON=<box.yml notify.person> \
+HOMES_APP_SHA256=<the Homes app's signing certificate SHA-256, AB:CD:…; comma-separated for several> \
 HOMES_HA_URL=http://host.containers.internal:8123 HOMES_HA_TOKEN=<a long-lived HA token> \
 HOMES_ENERGY_FLOW=pv=sensor.…,house=sensor.…,grid=sensor.…,battery=sensor.… HOMES_ENERGY_TOTALS=PV-Erzeugung=sensor.…,… \
 HOMES_ENERGY_STATS=bezug=sensor.…,einspeisung=sensor.…,solar=sensor.… \
@@ -37,7 +38,19 @@ on the same listener for that Host (Laib's route on the domain itself,
 auth none); unset, the listener is Kontakt prüfen lassen's alone, on any
 Host. `HOMES_TEASER_PERSON` is whom Laib tells of a *Zugang anfragen*
 request (box.yml `notify.person`); unset, nobody, the request still waits
-on the admins' Start. `HOMES_DATA` (default `/data`) holds `devices.json`, `favoriten.json`
+on the admins' Start. `HOMES_APP_SHA256` is the Homes app's signing
+certificate fingerprint (SHA-256, with or without colons; several
+comma-separated: the release key and Play's app signing key): Homes then
+serves `/.well-known/assetlinks.json` for the app's package, so a tag's
+`<HOMES_PUBLIC_URL>/tag/<id>` opens the app directly (an Android App Link,
+ADR 0004 §5); unset or no valid fingerprint, that path is 404 and a tag
+opens the browser's `/tag/<id>` page. Android fetches the file without a
+login, so Laib's route needs it in `bypass` as it has `/napi/`.
+`HOMES_DATA` also holds `tag-aktionen.json` (what a tag does of Homes' own),
+`tag-verbindungen.json` (an automation's config before Homes linked a tag
+to it, for „Lösen“) and `tag-freigaben.json` (the wishes waiting for an
+admin, dropped after 7 days, decided ones kept 30), ADR 0004 §8.
+`HOMES_DATA` (default `/data`) holds `devices.json`, `favoriten.json`
 and `kontakt-antworten.json` (the links' hashes and the answers, 0600), and `plugins.json` (each
 registered plugin's last answer per person, its handed-over tasks with their text, 0600; `HOMES_PLUGIN_<NAME>`
 and `HOMES_PLUGINKEY_<NAME>_<PERSON>` are the plugins Laib registers, docs/REFERENCE.md „Plugins“); `HOMES_PUBLIC_URL` is the

@@ -124,7 +124,10 @@ budget() { # budget <name> <cap> <dir…>
 # 2026-11-18, owner's decision 2026-11-18 (Homes in the client's language: „ja, baue es so“; pages 20,035 -> 20,057; 20,056 used, the minimum,
 # to be OK'd in the PR): <html lang> and the selection in the reader's language (navWortIn), Start's words and date in it, texte.Von(r) at
 # every catalog word a page has its request for
-budget pages 20057 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-26, owner approved 2026-11-26, ADR 0004 §5 §8 (pages 20,057 -> 20,420; 20,419 used, the minimum): a tag's own page /tag/<id> (tag.go: the button
+# as the signed-in person, the automations with Lösen, linking and a new one, the sentence before saving, the wish followed in place),
+# the admins' answer /tag/freigabe/<id> (tag_freigabe.go), /.well-known/assetlinks.json (assetlinks.go), the wish on Deine Aufgaben
+budget pages 20420 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -140,7 +143,9 @@ budget pages 20057 internal/pages     # the family's pages, one per file: 14,684
 # naming (ADR 0004 §2): an existing id named or renamed in place, unique names, DELETE, the name field's suggestions
 # 2026-11-26, owner's go 2026-11-26 („Go. Passt alles“, the needed raise with it; ADR 0004 §4, napi 5,538 -> 5,629; 5,628 used, the minimum):
 # the scan tag in /napi/ausloeser: „für mich“ the toucher's stack, the action kept and offered (aktionen)
-budget napi 5629 internal/napi        # the app's widgets' and share sheet's API: 4,793
+# 2026-11-26, owner approved 2026-11-26, ADR 0004 §5 §8 (napi 5,629 -> 5,670; 5,669 used, the minimum): GET /napi/automationen, POST …/tag/{tag}/verbinden|loesen|neu,
+# GET …/freigabe/{id} (ausloeser_automationen.go); the tag's action moved to tagaktion.Dienst (shared with the page)
+budget napi 5670 internal/napi        # the app's widgets' and share sheet's API: 4,793
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): the module catalog,
 # cmd/homes/module.go, 1,150 with it; plus 5 %. H3–H6 move the routes out of main.go into it
 # 2026-11-04, step H8 (§10, owner: „Keine Funktion soll versteckt werden“): the routes of the traces
@@ -158,7 +163,9 @@ budget napi 5629 internal/napi        # the app's widgets' and share sheet's API
 # 2026-11-18, owner's decision 2026-11-18 (Homes in the client's language: „ja, baue es so“; 1,460 -> 1,462; 1,461 used): Vary: Accept-Language on every answer
 # 2026-11-26, owner's go 2026-11-26 („Go. Passt alles“, the needed raise with it; ADR 0004 §4, cmd 1,462 -> 1,474; 1,473 used, the minimum):
 # tagAktionen in the wiring, out of main (gocognit)
-budget cmd 1474 cmd/homes             # homes' wiring: 1,018 with the demo then
+# 2026-11-26, owner approved 2026-11-26, ADR 0004 §5 §8 (cmd 1,474 -> 1,493; 1,492 used, the minimum): the Dienst wired for the app and the pages, its admins
+# and Bote, the daily drop of old wishes, HOMES_APP_SHA256's route
+budget cmd 1493 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-04, the caps moved with the packages, none raised (sum 24,134 as before): abs and
 # musicbrainz (1,227 lines, 1,289 of cap) from household to connectors once merken's fetcher
 # was internal/abruf (235 lines of merken, 247 of cap, to shared) and jellyfin.Plain
@@ -221,7 +228,9 @@ budget cmd 1474 cmd/homes             # homes' wiring: 1,018 with the demo then
 # internal/plugin, the contract's client: HOMES_PLUGIN_* as Laib renders them, the answer checked against contract 1, what Homes keeps
 # of each plugin per person (plugins.json), the background ask
 # 2026-11-26, owner approved 2026-11-26 (ADR 0004; connectors 16,230 -> 16,363; 16,362 used, the minimum): ha.Fire, ha.Tags, ha.CreateTag, ha.UpdateTag, ha.DeleteTag (tags.go) and the fake's events and tag registry
-budget connectors 16363 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
+# 2026-11-26, owner approved 2026-11-26, ADR 0004 §5 §8 (connectors 16,363 -> 16,532; 16,531 used, the minimum): ha.Automations, AutomationConfig,
+# SetAutomationConfig (automationen.go), the registry's unique_ids; the fakes: hafake's automation config API, laibfake's tell and scan
+budget connectors 16532 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
 # 2026-11-04, internal/jsonfile (47 lines, 50 of cap) from household's cap to shared's: it
 # replaces nine copies of a save, 62 of their lines in household
 # 2026-11-05, owner 2026-11-05 yes: Immich for the contacts (9,583 -> 9,874):
@@ -283,7 +292,10 @@ budget connectors 16363 $connectors   # one client per service, with its fake: 1
 # 15,092 used, to be OK'd in the PR): gesichter.Ausblenden and Einblenden (Rückgängig), the hidden kept with their faces
 # 2026-11-26, owner's go 2026-11-26 („Go. Passt alles“, the needed raise with it; ADR 0004 §4, household 15,095 -> 15,180; 15,179 used, the minimum):
 # internal/tagaktion, which tag starts a scan (HOMES_DATA/tag-aktionen.json)
-budget household 15180 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-26, owner approved 2026-11-26, ADR 0004 §5 §8 (household 15,180 -> 16,122; 16,121 used, the minimum): tagaktion's Dienst (the scanner's modes through
+# HA's buttons or laib scan, the old names read as new), a tag's automations (found, linked, loosed back to exactly what was, new by the
+# Bote) and the wishes waiting for an admin (told, tasked, first answer counts, dropped after 7 days); einrichten.AdminListe
+budget household 16122 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one

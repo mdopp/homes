@@ -264,6 +264,40 @@ test('Deine Geräte are the app\'s tiles', async ({ page }, info) => {
   expect(cells, 'one width for every tile').toHaveLength(1);
 });
 
+// ADR 0004 §5, §8: a tag's own page. Its button acts in place as the signed-in
+// person; another person's link shows its sentence, then waits for an admin
+// (fetched again), who answers from Deine Aufgaben; the page then says what came of it.
+test('a tag page acts in place, and a link waits for an admin', async ({ page, context }, info) => {
+  await page.goto('/tag/homes-b0e70e000001');
+  await expect(page.getByRole('heading', { name: 'Bürotür' })).toBeVisible();
+  await mark(page);
+  await page.getByRole('button', { name: 'Auslösen' }).click();
+  await expect(page.getByRole('status')).toContainText('Ausgelöst: Home Assistant hat es bekommen.');
+  expect(await stays(page)).toBe(true);
+
+  await context.addCookies([{ name: 'wer', value: 'ben', url: info.project.use.baseURL }]);
+  await page.goto('/tag/homes-b0e70e000001');
+  await page.getByLabel('Mit einer Automation verbinden').selectOption({ label: 'Gute Nacht' });
+  await page.getByRole('button', { name: 'Verbinden', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'So wird es' })).toBeVisible();
+  await expect(page.getByText('Ein Admin gibt das frei')).toBeVisible();
+  await page.getByRole('button', { name: 'Ja, verbinden' }).click();
+  await expect(page.getByRole('status')).toContainText('Wartet auf Freigabe: Ben möchte ‚Bürotür‘ mit ‚Gute Nacht‘ verbinden.');
+  const waiting = page.url();
+
+  await context.clearCookies();
+  await page.goto('/aufgaben');
+  await page.getByText('Ben möchte ‚Bürotür‘ mit ‚Gute Nacht‘ verbinden.').first().click();
+  await expect(page.getByRole('heading', { name: 'Freigabe' })).toBeVisible();
+  await page.getByRole('button', { name: 'Freigeben' }).click();
+  await expect(page.getByRole('status')).toContainText('Verbunden: ‚Bürotür‘ startet jetzt ‚Gute Nacht‘.');
+
+  await context.addCookies([{ name: 'wer', value: 'ben', url: info.project.use.baseURL }]);
+  await page.goto(waiting);
+  await expect(page.getByRole('status').first()).toContainText('Verbunden');
+  await context.clearCookies();
+});
+
 test('a player pauses in place', async ({ page }) => {
   await page.goto('/raeume');
   await mark(page);
@@ -696,7 +730,7 @@ test('Standortverlauf, connected, leads with the timeline and ends with a quiet 
 const PAGES = ['/start', '/raeume', '/raeume/light.kueche', '/energie', '/energie?zeitraum=jahr', '/kalender', '/kalender/verwalten', '/kontakte', '/kontakte/h3', '/kontakte/privat', '/kontakte/privat/k0', '/kontakte/dieselbe',
   '/notizen', '/notizen?tag=kochen', '/notizen/einkaufsliste.md', '/notizen/markdown.md', '/notizen/einkaufsliste.md?bearbeiten=1', '/mehr', '/musik', '/platte', '/discogs', '/aktivierungswort', '/aufgaben', '/dokumente', '/dokumente/zuordnen', '/dokumente/suche?q=strom', '/dokumente/suche?nur=versicherungen', '/willkommen', '/einrichten/fotos', '/box/geraete', '/pair-device', '/podcasts', '/gesehen', '/standort',
   '/meine-daten', '/aufgaben?nur=box', '/netzlaufwerk', '/box', '/box/auslastung', '/box/haushalt', '/box/personen', '/box/module', '/adresse',
-  '/einkauf', '/einkauf?liste=liste-baumarkt', '/einkauf?liste=liste-musik', '/einkauf/rezepte', '/einkauf/rezepte?n=rezepte%2Flasagne.md', '/notizen/rezepte/lasagne.md'];
+  '/einkauf', '/einkauf?liste=liste-baumarkt', '/einkauf?liste=liste-musik', '/einkauf/rezepte', '/einkauf/rezepte?n=rezepte%2Flasagne.md', '/notizen/rezepte/lasagne.md', '/tag/homes-b0e70e000001'];
 for (const path of PAGES) {
   test(`layout of ${path}`, async ({ page }) => {
     await page.goto(path);

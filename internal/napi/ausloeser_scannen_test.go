@@ -48,13 +48,14 @@ func scanTags(t *testing.T) (*hafake.HA, *scanLaib, *tagaktion.Store, http.Handl
 	sl := &scanLaib{}
 	srv := httptest.NewServer(http.HandlerFunc(sl.serve))
 	t.Cleanup(srv.Close)
-	store, err := tagaktion.Open(t.TempDir())
+	dir := t.TempDir()
+	store, err := tagaktion.Open(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
 	fake, h := houseWith(t, func(c *Config) {
 		c.Laib = &laib.Client{URL: srv.URL, Token: "ops"}
-		c.TagAktionen = store
+		c.Tags = &tagaktion.Dienst{HA: c.HA, Laib: c.Laib, Store: store, Dir: dir, PublicURL: "https://www.example.org"}
 		c.Whoami = func(b string) (string, bool) {
 			p, ok := map[string]string{"dev1": "anna", "dev2": "ben", "dev3": "Kein Login!"}[b]
 			return p, ok
@@ -68,17 +69,18 @@ func scanTags(t *testing.T) (*hafake.HA, *scanLaib, *tagaktion.Store, http.Handl
 func TestATagOffersTheScanAndKeepsWhatItDoes(t *testing.T) {
 	_, _, store, h := scanTags(t)
 	code, body := raw(t, h, "POST", "/napi/ausloeser/tag", "dev1", `{"name":"Scanner","tag":"homes-5ca11e000001","aktion":"scannen-ich"}`)
-	if code != http.StatusOK || reply(t, body)["aktion"] != "scannen-ich" || store.Von("homes-5ca11e000001") != "scannen-ich" {
+	if code != http.StatusOK || reply(t, body)["aktion"] != "scanner-ich" || store.Von("homes-5ca11e000001") != "scanner-ich" {
 		t.Fatalf("%d %s", code, body)
 	}
 	_, body = raw(t, h, "GET", "/napi/ausloeser/tags", "dev2", "")
-	if !strings.Contains(body, `"aktion":"scannen-ich","name":"Scanner"`) ||
-		!strings.Contains(body, `"aktionen":[{"id":"","titel":"Home Assistant melden"},{"id":"scannen-ich","titel":"Scannen – für mich"},{"id":"scannen-haushalt","titel":"Scannen – für den Haushalt"}]`) {
+	if !strings.Contains(body, `"aktion":"scanner-ich","automationen":[],"name":"Scanner"`) ||
+		!strings.Contains(body, `"aktionen":[{"id":"","titel":"Home Assistant melden"},{"id":"scanner-fragen","titel":"Scanner – fragen, für wen"},`+
+			`{"id":"scanner-ich","titel":"Scanner – direkt für mich"},{"id":"scanner-haushalt","titel":"Scanner – direkt für den Haushalt"}]`) {
 		t.Fatalf("tags: %s", body)
 	}
 	// a rename without "aktion" keeps it; "" takes it away
 	raw(t, h, "POST", "/napi/ausloeser/tag", "dev1", `{"name":"Scanner Flur","tag":"homes-5ca11e000001"}`)
-	if store.Von("homes-5ca11e000001") != "scannen-ich" {
+	if store.Von("homes-5ca11e000001") != "scanner-ich" {
 		t.Fatal("a rename dropped the action")
 	}
 	raw(t, h, "POST", "/napi/ausloeser/tag", "dev1", `{"name":"Scanner Flur","tag":"homes-5ca11e000001","aktion":""}`)
@@ -94,11 +96,11 @@ func TestATagOffersTheScanAndKeepsWhatItDoes(t *testing.T) {
 // same tag; never the household's, never another person's.
 func TestScanForMeIsTheTouchersOwn(t *testing.T) {
 	fake, sl, store, h := scanTags(t)
-	store.Setze("homes-5ca11e000001", tagaktion.ScannenIch)
+	store.Setze("homes-5ca11e000001", tagaktion.ScannerIch)
 	for _, who := range []struct{ dev, person string }{{"dev1", "anna"}, {"dev2", "ben"}} {
 		code, body := raw(t, h, "POST", "/napi/ausloeser", who.dev, `{"art":"nfc","tag":"homes-5ca11e000001"}`)
 		m := reply(t, body)
-		if code != http.StatusOK || m["text"] != "Der Scanner startet – nur für dich." || m["aktion"] != "scannen-ich" || m["name"] != "Scanner" {
+		if code != http.StatusOK || m["text"] != "Der Scanner startet – nur für dich." || m["aktion"] != "scanner-ich" || m["name"] != "Scanner" {
 			t.Fatalf("%s: %d %s", who.person, code, body)
 		}
 	}
@@ -118,7 +120,7 @@ func TestScanForMeIsTheTouchersOwn(t *testing.T) {
 
 func TestScanForTheHouseholdSendsNoFuer(t *testing.T) {
 	_, sl, store, h := scanTags(t)
-	store.Setze("homes-5ca11e000001", tagaktion.ScannenHaushalt)
+	store.Setze("homes-5ca11e000001", tagaktion.ScannerHaushalt)
 	code, body := raw(t, h, "POST", "/napi/ausloeser", "dev2", `{"art":"nfc","tag":"homes-5ca11e000001"}`)
 	if code != http.StatusOK || reply(t, body)["text"] != "Der Scanner startet – für den Haushalt." {
 		t.Fatalf("%d %s", code, body)
@@ -130,7 +132,7 @@ func TestScanForTheHouseholdSendsNoFuer(t *testing.T) {
 
 func TestScanForMeWantsALogin(t *testing.T) {
 	_, sl, store, h := scanTags(t)
-	store.Setze("homes-5ca11e000001", tagaktion.ScannenIch)
+	store.Setze("homes-5ca11e000001", tagaktion.ScannerIch)
 	code, body := raw(t, h, "POST", "/napi/ausloeser", "dev3", `{"art":"nfc","tag":"homes-5ca11e000001"}`)
 	if code != http.StatusForbidden || !strings.Contains(reply(t, body)["error"].(string), "Login") || len(sl.orders) != 0 {
 		t.Fatalf("%d %s %v", code, body, sl.orders)
@@ -139,7 +141,7 @@ func TestScanForMeWantsALogin(t *testing.T) {
 
 func TestScanTagWhenTheScannerIsMissingOrSilent(t *testing.T) {
 	_, sl, store, h := scanTags(t)
-	store.Setze("homes-5ca11e000001", tagaktion.ScannenHaushalt)
+	store.Setze("homes-5ca11e000001", tagaktion.ScannerHaushalt)
 	sl.answer = "scan: nicht eingerichtet"
 	code, body := raw(t, h, "POST", "/napi/ausloeser", "dev1", `{"art":"nfc","tag":"homes-5ca11e000001"}`)
 	if code != http.StatusServiceUnavailable || !strings.Contains(body, "kein Scanner eingerichtet") {
@@ -154,7 +156,7 @@ func TestScanTagWhenTheScannerIsMissingOrSilent(t *testing.T) {
 
 func TestRemovingATagTakesItsAction(t *testing.T) {
 	_, _, store, h := scanTags(t)
-	store.Setze("homes-5ca11e000001", tagaktion.ScannenIch)
+	store.Setze("homes-5ca11e000001", tagaktion.ScannerIch)
 	if code, _ := raw(t, h, "DELETE", "/napi/ausloeser/tag/homes-5ca11e000001", "dev1", ""); code != http.StatusOK || store.Von("homes-5ca11e000001") != "" {
 		t.Fatalf("%d, action %q", code, store.Von("homes-5ca11e000001"))
 	}

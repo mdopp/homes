@@ -110,6 +110,7 @@ type site struct {
 	zugang                   *zugang.Store
 	zuordnen                 *zuordnen       // „Wem gehört dieser Scan?“ (laib DATA.md gap 6); nil without the Haushalt bearer
 	plugins                  *plugin.Plugins // the programs Laib registered (homes ADR 0003, HOMES_PLUGIN_*), what Homes keeps of them in HOMES_DATA
+	appSHA                   string          // the Homes app's signing certificates (HOMES_APP_SHA256): the App Link of a tag's address (ADR 0004 §5)
 }
 
 // routes is Homes' whole surface: /napi for the app, /mcp/haushalt for the
@@ -138,6 +139,7 @@ func routes(s site) http.Handler {
 	if s.zuordnen != nil { // what Dokumente could not give anyone, posted from the box (zuordnen.go)
 		mux.Handle(zuordnenPfad, s.zuordnen)
 	}
+	mux.Handle(pages.AssetLinksPath, pages.RequireProxy(s.proxySecret, pages.AssetLinks(s.appSHA))) // a tag's address opens the app (ADR 0004 §5)
 	// counted behind the proxy secret: only what Caddy let through is a page view (haus#50)
 	mux.Handle("/", pages.RequireProxy(s.proxySecret, pages.Counted(s.usage, familyMux(s))))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { // each answer is in the client's language (owner 2026-11-18)
@@ -185,7 +187,8 @@ func familyOf(s site) pages.StartConfig {
 		Reitti: s.napi.Reitti, Module: s.napi.Module, Einrichtung: s.napi.Einrichtung, PhoneCountry: s.hh.PhoneCountry, Gesichter: s.gesichter, Netz: s.netz}
 	family.Archive, family.ArchivURL = archivOf(s)
 	family.Antworten, family.DNS, family.KontaktURL, family.Plugins = s.antworten, net.DefaultResolver, s.kontaktURL, s.plugins
-	family.Zugang = s.zugang // the teaser's access requests, for the admins' Start and /zugang (owner 2026-11-08)
+	family.Tags = s.napi.Tags // a tag's page and the wishes for its automations (ADR 0004 §5, §8)
+	family.Zugang = s.zugang  // the teaser's access requests, for the admins' Start and /zugang (owner 2026-11-08)
 	if s.zuordnen != nil {
 		family.Zuordnen = s.zuordnen
 	}
@@ -464,10 +467,10 @@ func main() {
 	cfg.Validate = func(_ context.Context, b string) bool { _, ok := store.Lookup(b); return ok }
 	// one favorites store for the pages' ☆ and the app's start screen
 	cfg.Favorites = favoriten.Open(dataDir)
-	cfg.TagAktionen = tagAktionen(dataDir)      // which tag starts a scan (ADR 0004 §4)
 	if cfg.HA, err = ha.FromEnv(); err != nil { // the house paths and the event stream from HA; unset, 404
 		log.Fatalf("homes: %v", err)
 	}
+	cfg.Tags = tagDienst(cfg.HA, ops, dataDir) // what a tag does (ADR 0004 §4, §8)
 	if cfg.Energy, err = napi.EnergyFromEnv(); err != nil {
 		log.Fatalf("homes: %v", err)
 	}
@@ -556,7 +559,8 @@ func main() {
 		docsMail: docsMail, paperlessPublic: paperlessPublic, paperlessLAN: paperlessLAN, musik: musicInbox(), boteSignal: strings.TrimSpace(os.Getenv("HOMES_BOTE_SIGNAL")),
 		domain: einrichten.Domain(os.Getenv("HOMES_PUBLIC_URL")), archive: archive, gesichter: gesichter.FromEnv(dataDir),
 		antworten: &kontaktantwort.Store{Path: filepath.Join(dataDir, kontaktantwort.Datei)}, kontaktURL: os.Getenv("HOMES_KONTAKT_URL"),
-		teaserHost: os.Getenv("HOMES_TEASER_HOST"), teaserPerson: os.Getenv("HOMES_TEASER_PERSON"), zugang: &zugang.Store{Path: filepath.Join(dataDir, zugang.Datei)}}
+		teaserHost: os.Getenv("HOMES_TEASER_HOST"), teaserPerson: os.Getenv("HOMES_TEASER_PERSON"), zugang: &zugang.Store{Path: filepath.Join(dataDir, zugang.Datei)},
+		appSHA: os.Getenv("HOMES_APP_SHA256")}
 	st.zuordnen = openZuordnen(filepath.Join(dataDir, "zuordnen.json"), hh.Token)
 	st.plugins = plugin.Open(plugin.FromEnv(os.Environ()), filepath.Join(dataDir, "plugins.json"))
 	st.napi.Antworten = st.antworten   // the phone's accepted corrections of its own contacts
@@ -566,6 +570,7 @@ func main() {
 	st.napi.Module = logModule(&st)    // HOMES_MODULE_AUS takes what it switches off out of st
 	st.napi.Eigen = eigenOf(st)        // the app's „Dein Archiv“ and Dokumente-Adresse, once the modules are off as asked
 	st.napi.Einrichtung = einrichtung(st, devices.Gekoppelt(store), jellyfin.KeyFromEnv())
+	tagsAnschliessen(ctx, st)
 	// the counter stops only once the server has: a page is counted after
 	// it is answered, so the last flush waits for the requests under way (#92)
 	counting, stopCounting := context.WithCancel(context.Background())
@@ -632,12 +637,25 @@ func netzVon(g *gesichter.Gesichter) *netz.Netz {
 	return n
 }
 
-// tagAktionen opens which tag starts a scan (ADR 0004 §4); a file Homes
-// cannot read stops it rather than forget what the tags do.
-func tagAktionen(dir string) *tagaktion.Store {
+// tagsAnschliessen sends a wish for a tag's automation to the admins Homes
+// saw, a new one to the Bote as the modules left it, and drops what waited
+// too long (ADR 0004 §8).
+func tagsAnschliessen(ctx context.Context, st site) {
+	if t := st.napi.Tags; t != nil {
+		t.Admins, t.Bote = st.napi.Einrichtung.AdminListe, st.bote
+		go t.Pflegen(ctx, time.Hour)
+	}
+}
+
+// tagDienst is what a tag does with HA (ADR 0004 §4, §8); nil without
+// HA. A file Homes cannot read stops it rather than forget what the tags do.
+func tagDienst(h *ha.Client, l *laib.Client, dir string) *tagaktion.Dienst {
+	if h == nil {
+		return nil
+	}
 	s, err := tagaktion.Open(dir)
 	if err != nil {
 		log.Fatalf("homes: tag-aktionen: %v", err)
 	}
-	return s
+	return &tagaktion.Dienst{HA: h, Laib: l, Store: s, Dir: dir, PublicURL: os.Getenv("HOMES_PUBLIC_URL")}
 }
