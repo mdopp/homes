@@ -1325,7 +1325,16 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   400 for a body Homes cannot read, an id that is not 1–64 of
   `A-Za-z0-9_-`, a name empty or over 60 characters; 502 when HA does not
   answer or refuses (HA's detail stays in the log). Without HA, 404 as
-  every house path.
+  every house path. A tag's own action (ADR 0004 §4): `"aktion"` in
+  `POST /napi/ausloeser/tag` (`""` HA, `scannen-ich`, `scannen-haushalt`;
+  absent: unchanged; one this box cannot do, 400) is kept in
+  `HOMES_DATA/tag-aktionen.json`; `GET …/tags` gives each tag its
+  `aktion` and the box's `aktionen` `[{"id","titel"}]`. Touching a scan
+  tag sends nothing to HA: Homes orders `laib scan start` as the
+  device's person, `fuer` that person for `scannen-ich` (403 for a phone
+  whose uid is no login), and answers `{"ok":true,"name","aktion",
+  "text":"Der Scanner startet – nur für dich."}`; no scanner 503, Laib
+  silent 502, each in words.
 - Share → Homes (haus#120): `POST /napi/merken` with JSON `{"text"}`,
   what the phone shared (a browser's link, often with the page's title
   around it). The first http(s) address is the link, the words around it

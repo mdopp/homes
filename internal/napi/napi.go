@@ -35,6 +35,7 @@ import (
 	"github.com/mdopp/homes/internal/papierkorb"
 	"github.com/mdopp/homes/internal/reitti"
 	"github.com/mdopp/homes/internal/schalter"
+	"github.com/mdopp/homes/internal/tagaktion"
 	"github.com/mdopp/homes/internal/usage"
 )
 
@@ -47,8 +48,11 @@ type Config struct {
 	Validate Validator
 	Whoami   func(bearer string) (string, bool) // the paired devices: uid behind a bearer
 	Witness  *schalter.Witness                  // who switched what (haus#89); nil: the log only
-	HA       *ha.Client                         // Home Assistant for the house paths and the event stream (home.go, live.go); nil = 404
-	Ping     time.Duration                      // the event stream's keepalive; 0 = 90s
+	// TagAktionen: which NFC tag starts a scan instead of reporting to HA
+	// (ADR 0004 §4); nil: every tag reports to HA
+	TagAktionen *tagaktion.Store
+	HA          *ha.Client    // Home Assistant for the house paths and the event stream (home.go, live.go); nil = 404
+	Ping        time.Duration // the event stream's keepalive; 0 = 90s
 	// SensorEvery: a sensor's card_state at most this often; 0 = 10s
 	SensorEvery time.Duration
 	Energy      EnergyMap // the energy entities (energy.go); empty = by friendly name
@@ -309,7 +313,7 @@ func Gruppen(c Config) map[string][]modul.Route {
 	if c.HA != nil { // the house paths (geraete) and the energy picture (energie, unless it is off)
 		h := &homeAPI{ha: c.HA, sources: c.Energy, witness: c.Witness, whoami: c.Whoami, favs: c.Favorites, loc: c.Haushalt.Loc, now: c.Now}
 		h.routes(gs)
-		(&ausloeser{ha: c.HA, uid: c.uid}).routes(gs) // the phone as a trigger (ADR 0004)
+		(&ausloeser{ha: c.HA, uid: c.uid, laib: c.Laib, aktion: c.TagAktionen}).routes(gs) // the phone as a trigger (ADR 0004)
 		if !c.OhneEnergie {
 			gs.add("energie", "GET /napi/portal/energy", h.energy)
 		}
