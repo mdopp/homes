@@ -52,6 +52,7 @@ import (
 	"github.com/mdopp/homes/internal/samba"
 	"github.com/mdopp/homes/internal/schalter"
 	"github.com/mdopp/homes/internal/tagaktion"
+	"github.com/mdopp/homes/internal/telefon"
 	"github.com/mdopp/homes/internal/uebernahme"
 	"github.com/mdopp/homes/internal/usage"
 	"github.com/mdopp/homes/internal/werkstatt"
@@ -571,6 +572,7 @@ func main() {
 	st.napi.Eigen = eigenOf(st)        // the app's „Dein Archiv“ and Dokumente-Adresse, once the modules are off as asked
 	st.napi.Einrichtung = einrichtung(st, devices.Gekoppelt(store), jellyfin.KeyFromEnv())
 	tagsAnschliessen(ctx, st)
+	telefoneAnschliessen(ctx, &st)
 	// the counter stops only once the server has: a page is counted after
 	// it is answered, so the last flush waits for the requests under way (#92)
 	counting, stopCounting := context.WithCancel(context.Background())
@@ -645,6 +647,31 @@ func tagsAnschliessen(ctx context.Context, st site) {
 		t.Admins, t.Bote = st.napi.Einrichtung.AdminListe, st.bote
 		go t.Pflegen(ctx, time.Hour)
 	}
+}
+
+// telefoneAnschliessen makes each reporting phone a device in HA (ADR 0004
+// §7): its registration from the paired device, removed when it is
+// unpaired, and hourly what HA or the pairing lost meanwhile.
+func telefoneAnschliessen(ctx context.Context, st *site) {
+	if st.napi.HA == nil {
+		return
+	}
+	t := &telefon.Telefone{HA: st.napi.HA, Dir: st.dataDir, Version: Version}
+	st.napi.Telefone = t
+	st.napi.Geraet = func(b string) (telefon.Geraet, bool) {
+		d, ok := st.store.Lookup(b)
+		return telefon.Geraet{ID: d.ID, Name: d.Name, Person: d.UID}, ok
+	}
+	st.store.Weg = func(d devices.Device) {
+		go func() {
+			c, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
+			defer cancel()
+			if err := t.Entfernen(c, d.ID); err != nil {
+				log.Printf("homes: telefon: removing %s from Home Assistant: %v (again within the hour)", telefon.DeviceID(d.ID), err)
+			}
+		}()
+	}
+	go t.Pflegen(ctx, time.Hour, st.store.Gibt)
 }
 
 // tagDienst is what a tag does with HA (ADR 0004 §4, §8); nil without

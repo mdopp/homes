@@ -54,3 +54,21 @@ func TestMintLookupRevoke(t *testing.T) {
 		t.Fatal("revoked token still valid")
 	}
 }
+
+// A revoked device is told to Weg once the file is written (its HA
+// registration goes, ADR 0004 §7); an unknown one is not.
+func TestRevokeTellsWeg(t *testing.T) {
+	s, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var weg []Device
+	s.Weg = func(d Device) { weg = append(weg, d) }
+	d, _, _ := s.Mint("Pixel 9", "anna")
+	if !s.Gibt(d.ID) || s.Revoke(d.ID) != nil || s.Gibt(d.ID) {
+		t.Fatal("revoke")
+	}
+	if s.Revoke("nope") == nil || len(weg) != 1 || weg[0].ID != d.ID || weg[0].UID != "anna" {
+		t.Fatalf("%+v", weg)
+	}
+}

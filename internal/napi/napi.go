@@ -36,6 +36,7 @@ import (
 	"github.com/mdopp/homes/internal/reitti"
 	"github.com/mdopp/homes/internal/schalter"
 	"github.com/mdopp/homes/internal/tagaktion"
+	"github.com/mdopp/homes/internal/telefon"
 	"github.com/mdopp/homes/internal/usage"
 )
 
@@ -52,8 +53,13 @@ type Config struct {
 	// a tag's automations and the wishes waiting for an admin; nil: every
 	// tag reports to HA, nothing else
 	Tags *tagaktion.Dienst
-	HA   *ha.Client    // Home Assistant for the house paths and the event stream (home.go, live.go); nil = 404
-	Ping time.Duration // the event stream's keepalive; 0 = 90s
+	// Telefone: each reporting phone a device in HA's mobile_app (ADR 0004
+	// §7), Geraet the phone behind a bearer; nil: tags as the raw
+	// tag_scanned, the charger as homes_laden only
+	Telefone *telefon.Telefone
+	Geraet   func(bearer string) (telefon.Geraet, bool)
+	HA       *ha.Client    // Home Assistant for the house paths and the event stream (home.go, live.go); nil = 404
+	Ping     time.Duration // the event stream's keepalive; 0 = 90s
 	// SensorEvery: a sensor's card_state at most this often; 0 = 10s
 	SensorEvery time.Duration
 	Energy      EnergyMap // the energy entities (energy.go); empty = by friendly name
@@ -318,7 +324,7 @@ func Gruppen(c Config) map[string][]modul.Route {
 		if tags == nil {
 			tags = &tagaktion.Dienst{HA: c.HA}
 		}
-		(&ausloeser{ha: c.HA, uid: c.uid, tag: tags, admin: c.Einrichtung.IstAdmin}).routes(gs) // the phone as a trigger (ADR 0004)
+		(&ausloeser{ha: c.HA, uid: c.uid, tag: tags, admin: c.Einrichtung.IstAdmin, tel: c.Telefone, geraet: c.Geraet}).routes(gs) // the phone as a trigger (ADR 0004)
 		if !c.OhneEnergie {
 			gs.add("energie", "GET /napi/portal/energy", h.energy)
 		}

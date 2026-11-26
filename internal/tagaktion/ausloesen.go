@@ -139,8 +139,19 @@ const (
 // HA's tag_scanned (§1). „Für mich“ is always the toucher's, never the
 // tag's maker's (§4).
 func (d *Dienst) Ausloesen(ctx context.Context, tag, person string) (Ergebnis, error) {
+	return d.AusloesenMit(ctx, tag, person, nil)
+}
+
+// AusloesenMit is Ausloesen from a phone that is a device in HA (§7): a
+// tag that reports to HA is scan's, HA's own scan by that device; only
+// when scan did not send it (nil, or false) the raw tag_scanned — never
+// both, as HA's scan fires tag_scanned itself.
+func (d *Dienst) AusloesenMit(ctx context.Context, tag, person string, scan func(context.Context, string) bool) (Ergebnis, error) {
 	akt := d.Von(tag)
 	if akt == "" {
+		if scan != nil && scan(ctx, tag) {
+			return Ergebnis{Name: d.Name(ctx, tag)}, nil
+		}
 		if err := d.HA.Fire(ctx, "tag_scanned", map[string]any{"tag_id": tag, "person": person}); err != nil {
 			return Ergebnis{}, HANein("nfc", err)
 		}

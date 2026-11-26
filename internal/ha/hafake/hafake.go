@@ -1,6 +1,7 @@
 // Package hafake is a fake Home Assistant for tests: the REST calls Homes
 // makes (/api/states, /api/services, /api/history/period,
-// /api/camera_proxy, /api/stt, /api/config/automation/config) and the WebSocket
+// /api/camera_proxy, /api/stt, /api/config/automation/config,
+// /api/mobile_app/registrations, /api/webhook, /api/config/config_entries) and the WebSocket
 // (/api/websocket: auth, subscribe_events, the three registries, the Assist pipelines' debug store,
 // the recorder's long-term statistics). Its frame
 // code is written for the server side on purpose, so it shares nothing with
@@ -70,6 +71,122 @@ type HA struct {
 	events   []Event                   // what POST /api/events fired
 	tags     []map[string]any          // the tag registry: id, name
 	autos    map[string]map[string]any // the automations' configs by id (/api/config/automation/config/<id>)
+	mobile   mobileApp
+}
+
+// mobileApp is the mobile_app integration (homes ADR 0004 §7): its
+// registrations, their webhooks, what came through them.
+type mobileApp struct {
+	off     bool                 // the integration not loaded: registrations answer 404
+	regs    []map[string]any     // what was registered, in order
+	hooks   map[string][2]string // webhook id → config entry id, device_id
+	deleted map[string]bool      // webhook ids of removed registrations: 410, as HA says
+	calls   []Webhook
+	next    int
+}
+
+// Webhook is one command a registration's webhook received.
+type Webhook struct {
+	ID, Type, DeviceID string
+	Data               any
+}
+
+// MobileAppOff makes the integration absent (404), as on an HA without it.
+func (h *HA) MobileAppOff(off bool) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.mobile.off = off
+}
+
+// Registrations are the registrations HA received, their bodies.
+func (h *HA) Registrations() []map[string]any {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return slices.Clone(h.mobile.regs)
+}
+
+// Webhooks are the commands the registrations' webhooks received.
+func (h *HA) Webhooks() []Webhook {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return slices.Clone(h.mobile.calls)
+}
+
+// register is POST /api/mobile_app/registrations: a device in the device
+// registry (identifiers mobile_app/<device_id>, its config entry), a
+// webhook; a device_id registered again replaces its entry. h.mu is held.
+func (h *HA) register(w http.ResponseWriter, r *http.Request) {
+	if h.mobile.off {
+		http.Error(w, "404: Not Found", http.StatusNotFound)
+		return
+	}
+	var reg map[string]any
+	json.NewDecoder(r.Body).Decode(&reg)
+	for _, k := range []string{"app_id", "app_name", "app_version", "device_name", "manufacturer", "model", "os_name"} {
+		if s, _ := reg[k].(string); s == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]any{"message": "Message format incorrect: required key not provided @ data['" + k + "']"})
+			return
+		}
+	}
+	dev, _ := reg["device_id"].(string)
+	for id, hk := range h.mobile.hooks {
+		if hk[1] == dev {
+			h.removeEntry(hk[0])
+			delete(h.mobile.hooks, id)
+		}
+	}
+	h.mobile.next++
+	entry, hook := fmt.Sprintf("entry-%d", h.mobile.next), fmt.Sprintf("webhook-%d", h.mobile.next)
+	if h.mobile.hooks == nil {
+		h.mobile.hooks, h.mobile.deleted = map[string][2]string{}, map[string]bool{}
+	}
+	h.mobile.hooks[hook] = [2]string{entry, dev}
+	h.mobile.regs = append(h.mobile.regs, reg)
+	h.devices = append(slices.Clone(h.devices), map[string]any{"id": "dev-" + entry, "name": reg["device_name"],
+		"identifiers": []any{[]any{"mobile_app", dev}}, "config_entries": []any{entry}})
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]any{"webhook_id": hook, "secret": nil, "cloudhook_url": nil, "remote_ui_url": nil})
+}
+
+// removeEntry drops a config entry's devices. h.mu is held.
+func (h *HA) removeEntry(entry string) bool {
+	n := len(h.devices)
+	h.devices = slices.DeleteFunc(slices.Clone(h.devices), func(d map[string]any) bool {
+		es, _ := d["config_entries"].([]any)
+		return slices.Contains(es, any(entry))
+	})
+	return len(h.devices) < n
+}
+
+// webhook is POST /api/webhook/<id>, no bearer needed: a removed
+// registration's 410, an unknown id HA's empty 200, else the command.
+// h.mu is held.
+func (h *HA) webhook(w http.ResponseWriter, r *http.Request, id string) {
+	if h.mobile.deleted[id] {
+		w.WriteHeader(http.StatusGone)
+		return
+	}
+	hk, ok := h.mobile.hooks[id]
+	if !ok {
+		return
+	}
+	var cmd struct {
+		Type string `json:"type"`
+		Data any    `json:"data"`
+	}
+	json.NewDecoder(r.Body).Decode(&cmd)
+	h.mobile.calls = append(h.mobile.calls, Webhook{ID: id, Type: cmd.Type, DeviceID: hk[1], Data: cmd.Data})
+	switch cmd.Type {
+	case "scan_tag": // HA's own scan: tag_scanned with the device
+		data, _ := cmd.Data.(map[string]any)
+		h.events = append(h.events, Event{Type: "tag_scanned", Data: map[string]any{"tag_id": data["tag_id"], "device_id": "dev-" + hk[0]}})
+		w.Write([]byte("{}"))
+	case "register_sensor":
+		json.NewEncoder(w).Encode(map[string]any{"success": true})
+	default:
+		w.Write([]byte("{}"))
+	}
 }
 
 // AddAutomation is an automation HA has: its entity (automation.<slug of
@@ -590,6 +707,13 @@ func (h *HA) serve(w http.ResponseWriter, r *http.Request) {
 		h.websocket(w, r)
 		return
 	}
+	if id, ok := strings.CutPrefix(r.URL.Path, "/api/webhook/"); ok && r.Method == "POST" {
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		h.webhook(w, r, id)
+		return
+	}
 	if r.Header.Get("Authorization") != "Bearer "+h.Token {
 		http.Error(w, "401: Unauthorized", http.StatusUnauthorized)
 		return
@@ -636,6 +760,22 @@ func (h *HA) serve(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		json.NewEncoder(w).Encode(s)
+	case r.Method == "POST" && r.URL.Path == "/api/mobile_app/registrations":
+		h.register(w, r)
+	case r.Method == "DELETE" && strings.HasPrefix(r.URL.Path, "/api/config/config_entries/entry/"):
+		entry := strings.TrimPrefix(r.URL.Path, "/api/config/config_entries/entry/")
+		if !h.removeEntry(entry) {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"message":"Invalid entry specified"}`))
+			return
+		}
+		for id, hk := range h.mobile.hooks {
+			if hk[0] == entry {
+				delete(h.mobile.hooks, id)
+				h.mobile.deleted[id] = true
+			}
+		}
+		w.Write([]byte(`{"require_restart":false}`))
 	case strings.HasPrefix(r.URL.Path, "/api/config/automation/config/"):
 		h.automation(w, r, strings.TrimPrefix(r.URL.Path, "/api/config/automation/config/"))
 	case r.Method == "POST" && strings.HasPrefix(r.URL.Path, "/api/events/"):

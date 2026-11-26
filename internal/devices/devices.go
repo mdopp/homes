@@ -38,6 +38,9 @@ type Store struct {
 	path string
 	mu   sync.Mutex
 	list []Device
+	// Weg is told of a device revoked, after the file is written: its
+	// registration in Home Assistant goes too (homes ADR 0004 §7); nil: nobody
+	Weg func(Device)
 }
 
 // Open loads (or starts) the store at dir/devices.json.
@@ -85,6 +88,11 @@ func (s *Store) Mint(name, uid string) (Device, string, error) {
 	return d, token, s.save()
 }
 
+// Gibt says whether the device id is still paired.
+func (s *Store) Gibt(id string) bool {
+	return slices.ContainsFunc(s.List(), func(d Device) bool { return d.ID == id })
+}
+
 // Lookup returns the device behind a bearer and notes the sighting.
 // A bearer without app.TokenPrefix is no device, whatever devices.json holds
 // (laib ADR 0022 §4) — except a token of the old Haus app
@@ -111,14 +119,19 @@ func (s *Store) Lookup(bearer string) (Device, bool) {
 // Revoke forgets a device.
 func (s *Store) Revoke(id string) error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	for i := range s.list {
-		if s.list[i].ID == id {
-			s.list = append(s.list[:i], s.list[i+1:]...)
-			return s.save()
-		}
+	i := slices.IndexFunc(s.list, func(x Device) bool { return x.ID == id })
+	if i < 0 {
+		s.mu.Unlock()
+		return errors.New("no such device")
 	}
-	return errors.New("no such device")
+	d := s.list[i]
+	s.list = slices.Delete(s.list, i, i+1)
+	err := s.save()
+	s.mu.Unlock()
+	if err == nil && s.Weg != nil {
+		s.Weg(d)
+	}
+	return err
 }
 
 // List is every device, newest first.

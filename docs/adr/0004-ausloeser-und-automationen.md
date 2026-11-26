@@ -260,6 +260,48 @@ under Homes' HA user, the device named after the person and the phone
 The webhook ids are secrets Homes keeps in `HOMES_DATA`; a phone
 unpaired is a registration removed. The app's requests do not change.
 
+**As built in Homes (§7; 2026-11-26).** Package `internal/telefon`.
+
+- *When.* A phone is registered on its first report to `/napi/ausloeser`
+  (a tag or the charger), not at pairing: only a phone that reports becomes
+  a device, phones paired before this registered too, and pairing never
+  waits for HA. `POST /api/mobile_app/registrations` with `device_id`
+  `homes-<the Homes device's id>`, `app_id` `cloud.dopp.homes`, `app_name`
+  „Homes“, `app_version` Homes' version, `device_name` „<Person>s <the
+  paired device's name>“ („Michaels Pixel 9“, „Hans’ Telefon“),
+  `manufacturer` „Homes“, `model` „Homes-App“ (HA requires both; Android
+  does not tell Homes), `os_name` Android, `supports_encryption` false.
+  The `webhook_id` is kept in `HOMES_DATA/telefone.json` (0600), never
+  logged. Then `register_sensor`: `binary_sensor` „Lädt“ (`unique_id`
+  `laedt`, `device_class` `battery_charging`) and `sensor` „Ladeart“
+  (`ladeart`: kabellos, kabel, usb, keine; an icon per value).
+- *Reports.* A charger report is `update_sensor_states` (Lädt; Ladeart, or
+  `keine` once off; a charge of no known kind leaves Ladeart as it was)
+  and `homes_laden` as before. A tag that reports to HA is `scan_tag`
+  `{tag_id}` only — HA's own scan fires `tag_scanned` itself (with
+  `device_id` and Homes' HA user, without §1's `person`), so the raw
+  event is not fired too. Without a registration (HA has no mobile_app:
+  404; HA refusing or silent) the raw `tag_scanned {tag_id, person}` as
+  before, the app's answer unchanged, the log saying so once; HA is asked
+  again after an hour. A tag with an action of Homes' own is no scan in HA.
+- *Removed.* A phone unpaired (`devices.Revoke`) is its registration's
+  config entry deleted (`DELETE /api/config/config_entries/entry/<id>`,
+  the entry found through the device registry's `mobile_app` identifier)
+  and its webhook forgotten. Hourly Homes removes what was unpaired while
+  it was down, and forgets a registration HA no longer has (HA's 410 for
+  a removed one, or the device gone from the registry: HA answers an
+  unknown webhook with an empty 200); the next report registers again.
+- *Goes later.* `homes_laden` is fired alongside the sensors until no
+  automation triggers on it; then it goes (a step of its own, told here).
+  An automation that read `person` from `tag_scanned` reads `device_id`
+  now; HA's tag trigger is unchanged.
+- *Unverified against a live HA.* The registration's fields, the 410 and
+  the empty 200, and that a `device_id` registered again replaces its
+  entry follow HA's mobile_app as read, tested against `hafake`; on the
+  box: the device „Michaels Pixel 9“ under Einstellungen → Geräte, its
+  two sensors with history, a touched tag's „zuletzt gescannt“ with the
+  device, and the device gone after unpairing.
+
 ### 8. A tag offers what it can do: the scanner's choice, existing automations, a new one
 
 After naming, „Was soll ‚<Name>‘ tun?“:
@@ -356,7 +398,7 @@ Both answered by the owner on 2026-11-26 („Go. Passt alles“):
 (§5–§8, 2026-11-26 evening: 5. the tag's own address and App Link
 *(homes: built; the app's `autoVerify` intent filter and the Auslöser
 screen's choices are homes-android's)*; 6. the scanner as an HA device, in
-Laib; 7. phones as HA devices *(later)*; 8. what a tag does, with the
+Laib; 7. phones as HA devices *(homes: built)*; 8. what a tag does, with the
 admins' approval on Signal *(homes: built)*.)
 
 
