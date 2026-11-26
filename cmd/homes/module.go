@@ -70,7 +70,7 @@ func katalog(s site) []modul.Modul {
 	ms := []modul.Modul{
 		bau(modul.Modul{Name: "geraete", Backend: "home-assistant",
 			Env:   []string{"HOMES_HA_URL", "HOMES_HA_TOKEN", "HOMES_HA_PUBLIC_URL", "HOMES_COVER_INVERTED"},
-			Start: []string{"im-haus", "meine-geraete"}, App: modul.Angebot{Widgets: []string{"geraet"}}},
+			Start: []string{"im-haus", "meine-geraete"}, App: modul.Angebot{Widgets: []string{"geraet"}, Mehr: []string{"ausloeser"}}}, // Mehr → Auslöser: NFC tags and the charger (ADR 0004)
 			n.HA != nil, "Auf dieser Box läuft kein Home Assistant."),
 		bau(modul.Modul{Name: "energie", Backend: "home-assistant", Braucht: []string{"geraete"},
 			Env: []string{"HOMES_ENERGY_FLOW", "HOMES_ENERGY_TOTALS", "HOMES_ENERGY_STATS"},

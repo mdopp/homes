@@ -65,8 +65,30 @@ type HA struct {
 	apply    bool              // a call turns a light or switch on or off, like HA (the demo)
 	statDown bool
 	statAsks []map[string]any
-	energy   map[string]any // energy/get_prefs' answer; nil: HA's not_found (no energy dashboard)
-	diag     map[string]any // config entry id → its diagnostics' data (GET /api/diagnostics/config_entry/<id>)
+	energy   map[string]any   // energy/get_prefs' answer; nil: HA's not_found (no energy dashboard)
+	diag     map[string]any   // config entry id → its diagnostics' data (GET /api/diagnostics/config_entry/<id>)
+	events   []Event          // what POST /api/events fired
+	tags     []map[string]any // the tag registry: id, name
+}
+
+// Event is one event fired on the fake's bus (POST /api/events/<type>).
+type Event struct {
+	Type string
+	Data map[string]any
+}
+
+// Events is what was fired, oldest first.
+func (h *HA) Events() []Event {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return append([]Event(nil), h.events...)
+}
+
+// AddTag puts a tag into the tag registry.
+func (h *HA) AddTag(id, name string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.tags = append(h.tags, map[string]any{"id": id, "name": name})
 }
 
 // SetDiagnostics sets what a config entry's diagnostics answer under
@@ -589,6 +611,16 @@ func (h *HA) serve(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		json.NewEncoder(w).Encode(s)
+	case r.Method == "POST" && strings.HasPrefix(r.URL.Path, "/api/events/"):
+		if h.notAdmin {
+			http.Error(w, "401: Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		var data map[string]any
+		json.NewDecoder(r.Body).Decode(&data)
+		typ := strings.TrimPrefix(r.URL.Path, "/api/events/")
+		h.events = append(h.events, Event{Type: typ, Data: data})
+		json.NewEncoder(w).Encode(map[string]any{"message": "Event " + typ + " fired."})
 	case r.Method == "POST" && strings.HasPrefix(r.URL.Path, "/api/services/"):
 		parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/services/"), "/")
 		if len(parts) != 2 {
@@ -861,6 +893,12 @@ func (h *HA) websocket(w http.ResponseWriter, r *http.Request) {
 			result = h.entities
 		case "config/label_registry/list":
 			result = h.labels
+		case "tag/list":
+			result = h.tags
+		case "tag/create":
+			t := map[string]any{"id": m["tag_id"], "name": m["name"]}
+			h.tags = append(h.tags, t)
+			result = t
 		case "config/label_registry/create", "config/entity_registry/get", "config/entity_registry/update":
 			res, ok := h.registryWrite(m)
 			if !ok {

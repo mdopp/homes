@@ -1302,6 +1302,22 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   `bad_params`; Radicale in trouble 502. It is not destructive (the
   phone unticks it), so it asks no `confirmed`; Homes adds, files or
   changes nothing else from a row.
+- The phone as a trigger (ADR 0004, module `geraete`, Mehr key
+  `ausloeser`): `POST /napi/ausloeser` with `{"art":"nfc","tag":id}`
+  fires HA's own `tag_scanned` `{tag_id, person}` (HA's tag trigger) and
+  answers `{"ok":true,"name"}`, the tag's name in HA's tag registry or ""
+  for one HA does not know; `{"art":"laden","zustand":"an"|"aus",
+  "ladeart":"kabellos"|"kabel"|"usb"|""}` fires `homes_laden` `{person,
+  zustand, ladeart}` and answers `{"ok":true}`. `person` is the device's
+  uid; Homes decides nothing and keeps nothing, every condition is the
+  automation's in HA. `POST /napi/ausloeser/tag {"name"}` creates
+  `homes-<12 hex>` in HA's tag registry and answers `{"ok":true,"tag",
+  "uri":"cloud.dopp.homes://tag/<id>"}`, what the app writes onto the tag;
+  `GET /napi/ausloeser/tags` is `{"ok":true,"tags":[{"tag","name"}]}`. A
+  refusal is `{"ok":false,"error":"<a German sentence>"}`: 400 for a body
+  Homes cannot read, an id that is not 1–64 of `A-Za-z0-9_-`, a name
+  empty or over 60 characters; 502 when HA does not answer or refuses
+  (HA's detail stays in the log). Without HA, 404 as every house path.
 - Share → Homes (haus#120): `POST /napi/merken` with JSON `{"text"}`,
   what the phone shared (a browser's link, often with the page's title
   around it). The first http(s) address is the link, the words around it
