@@ -135,7 +135,10 @@ budget pages 20057 internal/pages     # the family's pages, one per file: 14,684
 # archiv#64; napi 5,280 -> 5,340; 5,337 used): only age-encrypted uploads (ageLeser), a medium sent before still counts in
 # /fehlend, every .age file of letzte/ back through the open archive (ausArchiv, ageKlar)
 # 2026-11-18, owner's decision 2026-11-18 (Homes in the client's language: „ja, baue es so“; napi 5,340 -> 5,342; 5,341 used): /napi/kann's titles in the phone's language
-budget napi 5342 internal/napi        # the app's widgets' and share sheet's API: 4,793
+# 2026-11-26, owner approved 2026-11-26 (ADR 0004, the phone as a trigger without HA's app; napi 5,342 -> 5,538; 5,537 used, the
+# minimum): POST /napi/ausloeser (an NFC tag as HA's tag_scanned, the charger as homes_laden), /tag, /tags;
+# naming (ADR 0004 §2): an existing id named or renamed in place, unique names, DELETE, the name field's suggestions
+budget napi 5538 internal/napi        # the app's widgets' and share sheet's API: 4,793
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): the module catalog,
 # cmd/homes/module.go, 1,150 with it; plus 5 %. H3–H6 move the routes out of main.go into it
 # 2026-11-04, step H8 (§10, owner: „Keine Funktion soll versteckt werden“): the routes of the traces
@@ -213,7 +216,8 @@ budget cmd 1462 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-15, owner's request homes#375 (ADR 0003 §3, connectors 15,850 -> 16,230; 16,224 used, the minimum, to be OK'd in the PR):
 # internal/plugin, the contract's client: HOMES_PLUGIN_* as Laib renders them, the answer checked against contract 1, what Homes keeps
 # of each plugin per person (plugins.json), the background ask
-budget connectors 16230 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
+# 2026-11-26, owner approved 2026-11-26 (ADR 0004; connectors 16,230 -> 16,363; 16,362 used, the minimum): ha.Fire, ha.Tags, ha.CreateTag, ha.UpdateTag, ha.DeleteTag (tags.go) and the fake's events and tag registry
+budget connectors 16363 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
 # 2026-11-04, internal/jsonfile (47 lines, 50 of cap) from household's cap to shared's: it
 # replaces nine copies of a save, 62 of their lines in household
 # 2026-11-05, owner 2026-11-05 yes: Immich for the contacts (9,583 -> 9,874):

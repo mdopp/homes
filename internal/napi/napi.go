@@ -2,7 +2,8 @@
 // its data/*.kt parsers; laib ADR 0022): the four Box keys under
 // app.BoxPrefix served from Laib, operate and verdicts behind the right
 // token, the house paths, the event stream and the camera from Home
-// Assistant (home.go, live.go, camera.go), the tool widgets from the
+// Assistant (home.go, live.go, camera.go), the phone as a trigger
+// (ausloeser.go, ADR 0004), the tool widgets from the
 // Haushalt source (tools.go), the capture upload (upload.go), the phone's
 // message backups (sicherung.go), the phone's contacts mirrored
 // (kontakte.go), the household's shared contacts and calendars for the
@@ -308,6 +309,7 @@ func Gruppen(c Config) map[string][]modul.Route {
 	if c.HA != nil { // the house paths (geraete) and the energy picture (energie, unless it is off)
 		h := &homeAPI{ha: c.HA, sources: c.Energy, witness: c.Witness, whoami: c.Whoami, favs: c.Favorites, loc: c.Haushalt.Loc, now: c.Now}
 		h.routes(gs)
+		(&ausloeser{ha: c.HA, uid: c.uid}).routes(gs) // the phone as a trigger (ADR 0004)
 		if !c.OhneEnergie {
 			gs.add("energie", "GET /napi/portal/energy", h.energy)
 		}
