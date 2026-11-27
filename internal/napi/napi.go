@@ -184,7 +184,7 @@ func Handler(c Config) http.Handler {
 		writeJSON(w, map[string]any{
 			"servicesUp": up, "servicesFailed": failed, "servicesDown": down,
 			"pendingApprovals": len(open) - len(updates(open)), "pendingUpdates": len(updates(open)),
-			"state": ready.State, "drift": ready.Drift, "lastHeard": ready.LastHeard, "operator": ready.Operator,
+			"state": ready.State, "drift": ready.Drift, "lastHeard": ready.LastHeard, "operator": ready.Operator, "gut": laib.Gut(ready, rows), // „Deinem Zuhause geht es gut.“ (owner 2026-11-27)
 		})
 	}))
 	mux.HandleFunc("GET "+prefix+"/services", auth(func(w http.ResponseWriter, r *http.Request) {

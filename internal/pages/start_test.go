@@ -208,7 +208,7 @@ func TestStartIsHomes(t *testing.T) {
 	if code != 200 {
 		t.Fatalf("status %d", code)
 	}
-	mustContain(t, body, "<title>Homes</title>", "<h1>Homes</h1>", "Dein Zuhause, klar im Blick.", "<header class=marke><svg", "url(#marke-clip)", "Mittwoch, 14. Oktober", `lang=de`,
+	mustContain(t, body, "<title>Homes</title>", "<h1>Homes</h1>", "<p class=claim>Deinem Zuhause geht es gut.</p>", "<header class=marke><svg", "url(#marke-clip)", "Mittwoch, 14. Oktober", `lang=de`,
 		"<h2 id=karte-deine-geraete>Deine Geräte</h2>", "<h2 id=karte-heute>Heute</h2>", "<h2 id=karte-im-haus>Im Haus</h2>")
 	mustNotContain(t, body, "Ada", "karte-braucht-dich", "Heute und demnächst", "Alles in Ordnung", "gesichert", "einzurichten", "Netzlaufwerk",
 		"Alles läuft", "Letzte Sicherung", "Orten", "Letzte Änderung", "Paperless wird installiert", "Operator", "Laib",

@@ -411,3 +411,22 @@ func TestEveryNapiRouteWantsADevice(t *testing.T) {
 		t.Fatalf("Laib was asked without a device: %v", calls)
 	}
 }
+
+// owner 2026-11-27: the app's start screen says „Deinem Zuhause geht es
+// gut.“ only when /napi/box/home's gut is true: ready, no problem, every
+// service green — the page's rule (laib.Gut).
+func TestBoxHomeSaysGut(t *testing.T) {
+	for status, want := range map[string]bool{
+		`{"ready":{"state":"bereit"},"services":[{"name":"immich","state":"grün"}]}`:                              true,
+		`{"ready":{"state":"bereit"},"services":[{"name":"immich","state":"gelb"}]}`:                              false,
+		`{"ready":{"state":"bereit"},"services":[{"name":"immich","state":"rot"}]}`:                               false,
+		`{"ready":{"state":"eingeschränkt"},"services":[{"name":"immich","state":"grün"}]}`:                       false,
+		`{"ready":{"state":"bereit","problems":[{"what":"disk"}]},"services":[{"name":"immich","state":"grün"}]}`: false,
+	} {
+		lb := laibAnswering(t, map[string]string{"laib_status": status, "laib_inbox": `[]`})
+		h := Handler(Config{Laib: lb, Validate: StaticValidator([]string{"dev1"})})
+		if code, home := get(t, h, "GET", "/napi/box/home", "dev1", ""); code != 200 || home["gut"] != want {
+			t.Errorf("%s: %d %v", status, code, home["gut"])
+		}
+	}
+}

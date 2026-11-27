@@ -121,7 +121,7 @@ func TestStartDoesNotWaitForLaib(t *testing.T) {
 // to fetch. Anything else under /start is a 404 in the family's frame.
 func TestStartBoxLineWhenLaibDoesNotAnswer(t *testing.T) {
 	h := Start(StartConfig{Laib: brokenLaib(t), Loc: berlin(t)})
-	if rec := ask(h, StartBoxPath); rec.Code != 200 || rec.Body.String() != "" {
+	if rec := ask(h, StartBoxPath); rec.Code != 200 || rec.Body.String() != `<span hidden data-claim="Dein Zuhause, klar im Blick."></span>` { // the neutral claim: Laib did not say all is well
 		t.Fatalf("family → %d %q", rec.Code, rec.Body.String())
 	}
 	rec := ask(h, StartBoxPath, "admins")
@@ -170,10 +170,10 @@ func TestStartBrauchtDich(t *testing.T) {
 	mustContain(t, fam, "Gerade nicht erreichbar: Immich (Fotos).")
 	mustNotContain(t, fam, "Box:", "Entscheidung", "Zweite Platte", "weitere", "Bens Sache")
 
-	// all well, nothing of one's own: nothing at all
+	// all well, nothing of one's own: no card, only the claim that all is well
 	calm := Start(StartConfig{Laib: fakeLaib(t, allGreen(t), nil), Loc: berlin(t), Now: cfg.Now})
 	for _, g := range []string{"family", "family,admins"} {
-		if b := ask(calm, StartBoxPath, g).Body.String(); b != "" {
+		if b := ask(calm, StartBoxPath, g).Body.String(); b != `<span hidden data-claim="Deinem Zuhause geht es gut."></span>` {
 			t.Errorf("%s, all well: %q", g, b)
 		}
 	}
@@ -200,5 +200,48 @@ func TestMehrListsWhatItHolds(t *testing.T) {
 	}
 	if code, _, _ := familyPage(t, Mehr, StartConfig{}, "GET", "/mehr/x", "family"); code != http.StatusNotFound {
 		t.Errorf("/mehr/x → %d", code)
+	}
+}
+
+// owner 2026-11-27: „Deinem Zuhause geht es gut.“ never lies — only while
+// the box is ready, without a problem, every service green; yellow, red,
+// eingeschränkt, a problem or Laib silent keep the neutral claim, on the
+// page and in StartBoxPath's answer that swaps it; in the reader's language.
+func TestTheClaimSaysGutOnlyWhenAllIsWell(t *testing.T) {
+	gruen := []map[string]any{{"name": "immich", "state": "grün"}}
+	mit := func(k string, v any) map[string]any { r := allGreen(t); r[k] = v; return r }
+	for name, c := range map[string]struct {
+		ready map[string]any
+		rows  []map[string]any
+		gut   bool
+	}{
+		"all green":     {allGreen(t), gruen, true},
+		"yellow":        {allGreen(t), []map[string]any{{"name": "immich", "state": "gelb"}}, false},
+		"red":           {allGreen(t), []map[string]any{{"name": "immich", "state": "grün"}, {"name": "paperless", "state": "rot"}}, false},
+		"eingeschränkt": {mit("state", "eingeschränkt"), gruen, false},
+		"a problem":     {mit("problems", []any{map[string]any{"what": "backup"}}), gruen, false},
+	} {
+		lb := fakeLaib(t, c.ready, c.rows)
+		want := map[bool]string{true: "Deinem Zuhause geht es gut.", false: "Dein Zuhause, klar im Blick."}[c.gut]
+		_, body := startPageAs(t, StartConfig{Laib: lb}, "anna", "family")
+		mustContain(t, body, "<p class=claim>"+want+"</p>")
+		if b := ask(Start(StartConfig{Laib: lb, Loc: berlin(t)}), StartBoxPath, "family").Body.String(); !strings.Contains(b, `data-claim="`+want+`"`) {
+			t.Errorf("%s: /start/box %q", name, b)
+		}
+	}
+	// Laib silent: the page never waited, the swap says the neutral one
+	_, body := startPageAs(t, StartConfig{Laib: brokenLaib(t)}, "anna", "family")
+	mustContain(t, body, "<p class=claim>Dein Zuhause, klar im Blick.</p>")
+	// in the reader's language, in the swap too
+	lb := fakeLaib(t, allGreen(t), gruen)
+	for accept, want := range map[string]string{"en": "Your home is doing fine.", "fr": "Ta maison va bien.", "es": "Tu hogar está bien."} {
+		req := httptest.NewRequest("GET", StartBoxPath, nil)
+		req.Header.Set("Remote-User", "anna")
+		req.Header.Set("Accept-Language", accept)
+		rec := httptest.NewRecorder()
+		Start(StartConfig{Laib: lb, Loc: berlin(t)}).ServeHTTP(rec, req)
+		if !strings.Contains(rec.Body.String(), `data-claim="`+want+`"`) {
+			t.Errorf("%s: %q", accept, rec.Body.String())
+		}
 	}
 }

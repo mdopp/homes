@@ -128,7 +128,9 @@ budget() { # budget <name> <cap> <dir…>
 # as the signed-in person, the automations with Lösen, linking and a new one, the sentence before saving, the wish followed in place),
 # the admins' answer /tag/freigabe/<id> (tag_freigabe.go), /.well-known/assetlinks.json (assetlinks.go), the wish on Deine Aufgaben
 # 2026-11-27, owner approved 2026-11-27 („Alles OK. Go ahead“), ADR 0004 §9 (pages 20,420 -> 20,431; 20,430 used, the minimum): the line after Auslösen, „Zuletzt …“ (tag.go)
-budget pages 20431 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-27, owner's request 2026-11-27 („Deinem Zuhause geht es gut.“), owner approved 2026-11-27 „Bitte umsetzen“ (pages 20,431 -> 20,439; 20,438 used, the minimum): the claim as Laib says
+# all is well, swapped once by StartBoxPath's answer (start.go, start_box.go)
+budget pages 20439 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -241,7 +243,8 @@ budget cmd 1530 cmd/homes             # homes' wiring: 1,018 with the demo then
 # MobileAppEntries, DeleteConfigEntry (mobile.go); hafake's registrations, webhooks and config entry delete
 # 2026-11-27, owner approved 2026-11-27 („Alles OK. Go ahead“), ADR 0004 §9 (connectors 16,759 -> 16,973; 16,972 used, the minimum): ha.Laeufe, ha.Spur (traces.go), ha.MobileAppDevices;
 # hafake's trace/list, trace/get and runs on a scanned tag
-budget connectors 16973 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
+# 2026-11-27, owner's request 2026-11-27 („Deinem Zuhause geht es gut.“), owner approved 2026-11-27 „Bitte umsetzen“ (connectors 16,973 -> 16,979; 16,978 used, the minimum): laib.Gut, one rule for the page and the app
+budget connectors 16979 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
 # 2026-11-04, internal/jsonfile (47 lines, 50 of cap) from household's cap to shared's: it
 # replaces nine copies of a save, 62 of their lines in household
 # 2026-11-05, owner 2026-11-05 yes: Immich for the contacts (9,583 -> 9,874):

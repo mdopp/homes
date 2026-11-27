@@ -176,8 +176,15 @@ var marke = func() string {
 	return "<header class=marke>" + s + "<div><h1>Homes</h1><p class=claim>"
 }()
 
-// claim closes marke with the claim in sp.
-func claim(sp texte.Sprache) string { return sp.T(texte.StartClaim) + "</p></div></header>" }
+// claimWort is the claim, „Deinem Zuhause geht es gut.“ only while the box is well (laib.Gut; owner 2026-11-27: never a lie).
+func claimWort(sp texte.Sprache, gut bool) string {
+	return sp.T(map[bool]texte.ID{true: texte.StartGut, false: texte.StartClaim}[gut])
+}
+
+// claim closes marke with it as kept; StartBoxPath's answer says it as Laib does now (data-claim), the script swaps it once.
+func claim(sp texte.Sprache, gut bool) string {
+	return claimWort(sp, gut) + "</p></div></header><script>(function(){function f(){var m=document.querySelector('[data-claim]'),c=document.querySelector('.marke .claim');if(m&&c){c.textContent=m.getAttribute('data-claim');m.remove()}}f();if(!window.homesClaim&&window.MutationObserver){window.homesClaim=1;new MutationObserver(f).observe(document.documentElement,{childList:true,subtree:true})}})()</script>"
+}
 
 // Start is the family's page (haus#12, haus#35; owner 2026-11-07: „Rigoros
 // einfach“, docs/DOMAIN.md Gestaltungsregeln): Homes' mark and the day, then
@@ -246,7 +253,7 @@ func Start(cfg StartConfig) http.HandlerFunc {
 
 		b, sp := familyHead(r, cfg, "Homes", "Start"), texte.Von(r)
 		b.WriteString(liveRefresh("alle", 120)) // lamps and players by push; the day and Braucht dich every two minutes
-		b.WriteString(marke + claim(sp) + "<p class=datum>" + dateWords(sp, now, loc) + "</p>")
+		b.WriteString(marke + claim(sp, kept != nil && laib.Gut(kept.ready, kept.services)) + "<p class=datum>" + dateWords(sp, now, loc) + "</p>")
 		b.WriteString(brauchtDichSpaeter(r, cfg, kept))
 		if cfg.Bote != nil { // the chat stays (owner 2026-11-07): one line and the microphone, after what needs you
 			b.WriteString(sprechenField(cfg, false))

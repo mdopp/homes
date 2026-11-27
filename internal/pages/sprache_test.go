@@ -8,17 +8,17 @@ import "testing"
 func TestStartSpeaksTheClientsLanguage(t *testing.T) {
 	named(t, "Ada")
 	type want struct{ has, hasNot []string }
-	german := want{[]string{"<html lang=de>", "Dein Zuhause, klar im Blick.", "Mittwoch, 14. Oktober", "<h2 id=karte-deine-geraete>Deine Geräte</h2>",
+	german := want{[]string{"<html lang=de>", "<p class=claim>Deinem Zuhause geht es gut.</p>", "Mittwoch, 14. Oktober", "<h2 id=karte-deine-geraete>Deine Geräte</h2>",
 		"<h2 id=karte-heute>Heute</h2>", "<h2 id=karte-im-haus>Im Haus</h2>", "</svg>Start</a>", "</svg>Abmelden</a>", "Angemeldet als"},
 		[]string{"Your home", "Wednesday", "Ta maison"}}
-	english := want{[]string{"<html lang=en>", "Your home, at a glance.", "Wednesday, 14 October", "<h2 id=karte-deine-geraete>Your devices</h2>",
+	english := want{[]string{"<html lang=en>", "<p class=claim>Your home is doing fine.</p>", "Wednesday, 14 October", "<h2 id=karte-deine-geraete>Your devices</h2>",
 		">Today</h2>", "<h2 id=karte-im-haus>At home</h2>", "</svg>Home</a>", "</svg>More<", "</svg>Sign out</a>", "Signed in as",
 		"Calendar →", ">All →</a>", "Tap to switch"},
-		[]string{"lang=de", "Dein Zuhause", "Mittwoch", "Im Haus</h2>", "Abmelden"}}
-	french := want{[]string{"<html lang=fr>", "Ta maison, d'un coup d'œil.", "mercredi 14 octobre", ">Aujourd&#39;hui</h2>",
+		[]string{"lang=de", "Deinem Zuhause", "Mittwoch", "Im Haus</h2>", "Abmelden"}}
+	french := want{[]string{"<html lang=fr>", "<p class=claim>Ta maison va bien.</p>", "mercredi 14 octobre", ">Aujourd&#39;hui</h2>",
 		"<h2 id=karte-im-haus>À la maison</h2>", "</svg>Accueil</a>", "</svg>Se déconnecter</a>"},
-		[]string{"lang=de", "Dein Zuhause", "Your home"}}
-	spanish := want{[]string{"<html lang=es>", "Tu hogar, de un vistazo.", "miércoles, 14 de octubre", "</svg>Inicio</a>"}, []string{"lang=de", "Your home"}}
+		[]string{"lang=de", "Deinem Zuhause", "Your home"}}
+	spanish := want{[]string{"<html lang=es>", "<p class=claim>Tu hogar está bien.</p>", "miércoles, 14 de octubre", "</svg>Inicio</a>"}, []string{"lang=de", "Your home"}}
 	for accept, w := range map[string]want{
 		"":                           german,
 		"en-US,en;q=0.9":             english,
