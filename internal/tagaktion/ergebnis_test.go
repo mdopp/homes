@@ -134,3 +134,30 @@ func TestConditionWords(t *testing.T) {
 func spurMit(c map[string]any) ha.Spur {
 	return ha.Spur{Lauf: ha.Lauf{Execution: "failed_conditions", LastStep: "condition/0"}, Config: map[string]any{"conditions": []any{c}}}
 }
+
+// homes-android#290: the tags in one line, with the newest run any of them started.
+func TestStand(t *testing.T) {
+	r := newRig(t)
+	loc := time.UTC
+	now := time.Date(2026, 11, 27, 23, 30, 0, 0, loc)
+	if got := r.d.Stand(context.Background(), now, loc); got != "1 Tag" {
+		t.Fatalf("no run yet: %q", got)
+	}
+	r.ha.AddTag("homes-zweiter00001", "Bett")
+	trig := map[string]any{"platform": "tag", "event": map[string]any{"event_type": "tag_scanned", "data": map[string]any{"tag_id": buero}}}
+	r.ha.AddTrace("1700000000002", hafake.Trace("a", time.Date(2026, 11, 27, 23, 14, 0, 0, loc), "finished", "action/0", r.ha.AutomationConfig("1700000000002"), trig))
+	r.d.spuren = spurenCache{} // the lists were read a moment ago
+	if got := r.d.Stand(context.Background(), now, loc); got != "2 Tags · zuletzt heute 23:14" {
+		t.Fatalf("%q", got)
+	}
+	if got := r.d.Stand(context.Background(), now.AddDate(0, 0, 1), loc); got != "2 Tags · zuletzt gestern 23:14" {
+		t.Fatalf("%q", got)
+	}
+	if got := r.d.Stand(context.Background(), now.AddDate(0, 0, 3), loc); got != "2 Tags · zuletzt 27.11. 23:14" {
+		t.Fatalf("%q", got)
+	}
+	r.ha.Down(true) // tag/list is the WebSocket's; the states are down, the tags answer, the automations not
+	if got := r.d.Stand(context.Background(), now, loc); got != "2 Tags" {
+		t.Fatalf("HA's automations silent: %q", got)
+	}
+}

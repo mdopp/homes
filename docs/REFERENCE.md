@@ -1058,6 +1058,22 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   device token → the device's person's modules that are on (not the
   admins' ones), each with an address to open or its own app:
 
+  For the app's start screen (homes-android#290, owner 2026-11-27), additively:
+  a task's `aufgabe` carries `"dringend": true` when something waits for
+  it — a decision (Laib's inbox, an access request, a tag's wish) or a key
+  or permission the box lacks; a setup, a question or a Box-Aufgabe is
+  never urgent (the rows' own order, Deine Aufgaben's first two kinds).
+  An entry whose feature is new in this release carries `"neu"`, one short
+  line (a table in `internal/einrichten`: `ausloeser` „Tags benennen und
+  mit Automationen verbinden“, `rezepte` „Rezepte an einem Ort“). And
+  `"bereiche"` is the start screen's areas by key, each
+  `{"stand"?, "neu"?}`: `ausloeser` „3 Tags · zuletzt heute 23:14“ (HA's
+  tags and the newest run any of them started, ADR 0004 §9), `archiv` the
+  person's archive's own line (its plugin's `zeile`, „2 Fragen offen“),
+  `dokumente` „3 diese Woche“ / „nichts Neues diese Woche“ (what Paperless
+  filed in the last 7 days, of the newest 50), `rezepte` with `neu` only;
+  each read within 2 s and left out when its backend does not answer.
+
   The household's recipes (owner 2026-11-27) are a row of their own right
   after `notizen` while Notizen is on: `name` `rezepte`, `oeffnen` true,
   `web` Homes' `/rezepte`, `anzahl` how many recipe notes there are and
@@ -1303,6 +1319,13 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   *bereit · Papier leer · Schwarz 40 %*, *nicht erreichbar*. The same on
   `/napi/portal/state` and the stream's `card_state` (from the states the
   stream has seen; a marker's change sends its printer's card again).
+- A device's card (`/napi/portal/favorites`, `…/state`, `…/active`, the
+  stream's `card_state`) carries `"achtung": "<a few German words>"` only
+  when it needs a look (homes-android#290): „nicht erreichbar“ (HA's
+  `unavailable`), „Batterie fast leer“ (a `battery` sensor under 20 %, a
+  `battery` binary sensor on), a printer's own („nicht erreichbar“, its
+  state reason such as „Papier leer“, „Schwarz fast leer“ under 15 %;
+  `drucker.Achtung`); absent otherwise.
 - The tool widgets, from the Haushalt source's backends (haus#10, the
   same variables as below; none set, they are 404): `GET /napi/defs/tool`
   lists a tool per backend that is set: `task` (*Erinnerungen*,
