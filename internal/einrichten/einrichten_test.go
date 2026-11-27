@@ -163,7 +163,8 @@ func TestNapiAnswer(t *testing.T) {
 		`"aufgabe":{"titel":"Filme und Musik auf dem Handy einrichten","erledigt":true,"am":"` + time.Now().Format("2006-01-02") + `","wie":"app","einrichten":"https://homes.box.test/einrichten/filme"}},` +
 		`{"name":"notizen","titel":"Notizen","icon":"notiz","oeffnen":true,"web":"https://homes.box.test/notizen","nur_web":true},` +
 		`{"name":"standort","titel":"Standort","icon":"standort","oeffnen":false,"web":"https://reitti.box.test","ziel":"https://reitti.box.test/timeline","stand":"Zuletzt aufgezeichnet heute 08:40","nur_web":true}],` +
-		`"ziele":{"einkauf":"https://homes.box.test/einkauf"}}`
+		`"ziele":{"einkauf":"https://homes.box.test/einkauf"},` +
+		`"bereiche":{"ausloeser":{"neu":"Tags benennen und mit Automationen verbinden"},"rezepte":{"neu":"Rezepte an einem Ort"}}}`
 	if string(b) != want {
 		t.Errorf("got\n%s\nwant\n%s", b, want)
 	}
@@ -246,5 +247,23 @@ func TestImmichFragenAlsAufgabe(t *testing.T) {
 	}
 	if _, ok := q.Eine("anna", ImmichPruefen); ok {
 		t.Fatal("the questions are no module's setup")
+	}
+}
+
+// homes-android#290: a row something waits for is dringend, the others
+// say nothing; each area's line and what is new come under bereiche.
+func TestDringendAndBereiche(t *testing.T) {
+	q := &Quellen{Module: &modul.Liste{}, Liste: func(context.Context, string) []Zeile {
+		return []Zeile{{Name: "entscheiden", Titel: "1 Entscheidung wartet", Link: "https://laib.box.test/inbox", Vorn: true, Dringend: true},
+			{Name: "antworten", Titel: "2 Antworten prüfen", Link: "https://homes.box.test/kontakte/antworten", Vorn: true}}
+	}, Bereiche: func(context.Context, string) map[string]string {
+		return map[string]string{"ausloeser": "3 Tags · zuletzt heute 23:14", "dokumente": "3 diese Woche"}
+	}}
+	b, _ := json.Marshal(q.Napi(context.Background(), "anna"))
+	for _, want := range []string{`"einrichten":"https://laib.box.test/inbox","dringend":true}`, `"einrichten":"https://homes.box.test/kontakte/antworten"}`,
+		`"bereiche":{"ausloeser":{"stand":"3 Tags · zuletzt heute 23:14","neu":"Tags benennen und mit Automationen verbinden"},"dokumente":{"stand":"3 diese Woche"},"rezepte":{"neu":"Rezepte an einem Ort"}}`} {
+		if !strings.Contains(string(b), want) {
+			t.Errorf("lacks %s:\n%s", want, b)
+		}
 	}
 }

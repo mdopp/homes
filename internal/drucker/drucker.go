@@ -243,6 +243,23 @@ func (p Drucker) Detail() (string, bool) {
 	return strings.Join(parts, " · "), reason != "" || low
 }
 
+// Achtung is why the printer needs a hand, in a few words („nicht
+// erreichbar“, „Papier leer“, „Schwarz fast leer“); "" while it needs none.
+func (p Drucker) Achtung() string {
+	if !p.Reachable() {
+		return "nicht erreichbar"
+	}
+	if r := p.Reason(); r != "" {
+		return r
+	}
+	if s, ok := p.Black(); ok {
+		if v, ok := Level(s); ok && v < InkLow {
+			return "Schwarz fast leer"
+		}
+	}
+	return ""
+}
+
 // Text is the printer in one line, as the app's „Deine Geräte“ shows it:
 // „druckt · Schwarz 12 %“, „bereit · Papier leer · Schwarz 40 %“, „nicht
 // erreichbar“.

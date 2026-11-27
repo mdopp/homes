@@ -127,6 +127,24 @@ type Quellen struct {
 	// Nach are rows of the app's that follow a module's (the Rezepte after
 	// Notizen, owner 2026-11-27): no module, opened like one; nil: none
 	Nach func(ctx context.Context, person, modul string) []NapiModul
+	// Bereiche is each area's line on the app's start screen for person
+	// (homes-android#290): ausloeser, archiv, dokumente; nil: none
+	Bereiche func(ctx context.Context, person string) map[string]string
+}
+
+// Bereich is one area of the app's start screen: its line, and what is
+// new in it in this release.
+type Bereich struct {
+	Stand string `json:"stand,omitempty"`
+	Neu   string `json:"neu,omitempty"`
+}
+
+// Neu is what is new in this release, by area (an entry's name, or a
+// Bereiche key): the app's dot says it once. A small table, changed with a
+// release.
+var Neu = map[string]string{
+	"ausloeser": "Tags benennen und mit Automationen verbinden",
+	"rezepte":   "Rezepte an einem Ort",
 }
 
 // Zeile is a row of „Deine Aufgaben“ that is no module's setup; Link is
@@ -134,6 +152,7 @@ type Quellen struct {
 type Zeile struct {
 	Name, Titel, Warum, Icon, Link string
 	Vorn                           bool
+	Dringend                       bool // something waits for it (a decision, a missing key): NapiAufgabe.Dringend
 }
 
 // Admins remembers who Authelia said is an admin (HOMES_DATA/admins.json),
@@ -328,6 +347,8 @@ type Antwort struct {
 	Offen   int               `json:"offen"`
 	Module  []NapiModul       `json:"module"`
 	Ziele   map[string]string `json:"ziele"`
+	// Bereiche: the start screen's areas by key, their line and what is new (homes-android#290)
+	Bereiche map[string]Bereich `json:"bereiche"`
 }
 
 // NapiModul is one module that is on, for everyone, with an address or an app.
@@ -343,6 +364,7 @@ type NapiModul struct {
 	NurWeb  bool         `json:"nur_web"`
 	Aufgabe *NapiAufgabe `json:"aufgabe,omitempty"`
 	Anzahl  int          `json:"anzahl,omitempty"` // how many it holds, where that is cheap to say (the recipes)
+	Neu     string       `json:"neu,omitempty"`    // what is new in it in this release (Neu)
 }
 
 // NapiApp is a module's own phone app.
@@ -360,6 +382,10 @@ type NapiAufgabe struct {
 	Wie        string `json:"wie,omitempty"`
 	Einrichten string `json:"einrichten"`      // the setup's page, the whole address
 	Warum      string `json:"warum,omitempty"` // one line why (homes#362)
+	// Dringend: something waits for it — a decision (Laib's inbox, an
+	// access request, a tag's wish) or a key or permission the box lacks;
+	// a setup or a question is never urgent (homes-android#290)
+	Dringend bool `json:"dringend,omitempty"`
 }
 
 // Napi is the person's Antwort: Deine Aufgaben's first rows, the modules,
@@ -373,7 +399,7 @@ func (q *Quellen) Napi(ctx context.Context, person string) Antwort {
 		for _, z := range zeilen { // a row is no module: an entry of its own, only while open
 			if z.Vorn == vorn {
 				out.Module = append(out.Module, NapiModul{Name: z.Name, Titel: z.Titel, Icon: z.Icon, Web: z.Link, NurWeb: true,
-					Aufgabe: &NapiAufgabe{Titel: z.Titel, Einrichten: z.Link, Warum: z.Warum}})
+					Aufgabe: &NapiAufgabe{Titel: z.Titel, Einrichten: z.Link, Warum: z.Warum, Dringend: z.Dringend}})
 				out.Offen++
 			}
 		}
@@ -381,7 +407,7 @@ func (q *Quellen) Napi(ctx context.Context, person string) Antwort {
 	zeile(true)
 	for _, m := range q.Module.Module() {
 		e := cmp.Or(m.Einrichtung, &modul.Einrichtung{})
-		n := NapiModul{Name: m.Name, Titel: m.Titel, Icon: cmp.Or(m.Icon, m.Name), Oeffnen: m.Oeffnen, Web: e.Web, NurWeb: e.App == ""}
+		n := NapiModul{Name: m.Name, Titel: m.Titel, Icon: cmp.Or(m.Icon, m.Name), Oeffnen: m.Oeffnen, Web: e.Web, NurWeb: e.App == "", Neu: Neu[m.Name]}
 		if len(m.Nav) > 0 { // its page in Homes before its service's own
 			n.Web = q.Adresse + m.Nav[0].Pfad
 		}
@@ -405,10 +431,28 @@ func (q *Quellen) Napi(ctx context.Context, person string) Antwort {
 		}
 		out.Module = append(out.Module, n)
 		if q.Nach != nil {
-			out.Module = append(out.Module, q.Nach(ctx, person, m.Name)...)
+			for _, x := range q.Nach(ctx, person, m.Name) {
+				x.Neu = cmp.Or(x.Neu, Neu[x.Name])
+				out.Module = append(out.Module, x)
+			}
 		}
 	}
 	zeile(false)
+	out.Bereiche = q.bereiche(ctx, person)
+	return out
+}
+
+// bereiche are the areas' lines and what is new, by key.
+func (q *Quellen) bereiche(ctx context.Context, person string) map[string]Bereich {
+	out := map[string]Bereich{}
+	for k, neu := range Neu {
+		out[k] = Bereich{Neu: neu}
+	}
+	if q.Bereiche != nil {
+		for k, stand := range q.Bereiche(ctx, person) {
+			out[k] = Bereich{Stand: stand, Neu: Neu[k]}
+		}
+	}
 	return out
 }
 

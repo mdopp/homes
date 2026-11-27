@@ -297,3 +297,36 @@ func (d *Dienst) Zuletzt(ctx context.Context, mit map[string][]Verbindung) map[s
 	}
 	return out
 }
+
+// Stand is the tags in one line for the app's start screen
+// (homes-android#290): „3 Tags · zuletzt heute 23:14“ — how many HA knows
+// and the newest run any of them started; "" when HA does not answer.
+func (d *Dienst) Stand(ctx context.Context, now time.Time, loc *time.Location) string {
+	tags, err := d.HA.Tags(ctx)
+	if err != nil {
+		return ""
+	}
+	s := strconv.Itoa(len(tags)) + map[bool]string{true: " Tag", false: " Tags"}[len(tags) == 1]
+	mit, err := d.Verbunden(ctx)
+	if err != nil {
+		return s
+	}
+	var neu time.Time
+	for _, l := range d.Zuletzt(ctx, mit) {
+		if l.Wann.After(neu) {
+			neu = l.Wann
+		}
+	}
+	if neu.IsZero() {
+		return s
+	}
+	n, w := now.In(loc), neu.In(loc)
+	tag := w.Format("02.01.")
+	switch {
+	case w.Format(time.DateOnly) == n.Format(time.DateOnly):
+		tag = "heute"
+	case w.Format(time.DateOnly) == n.AddDate(0, 0, -1).Format(time.DateOnly):
+		tag = "gestern"
+	}
+	return s + " · zuletzt " + tag + " " + w.Format("15:04")
+}

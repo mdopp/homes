@@ -155,7 +155,8 @@ budget pages 20525 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-27, owner approved 2026-11-27 („Alles OK. Go ahead“), ADR 0004 §9 (napi 5,698 -> 5,716; 5,715 used, the minimum): ergebnisse and text after nfc, zuletzt per tag
 # 2026-11-27, owner 2026-11-27: Notizen- und Dokumente-Widget ausgebaut (napi 5,716 -> 5,656; 5,655 used): /napi/portal/notes and
 # /napi/portal/documents and their catalog entries gone (tools.go)
-budget napi 5656 internal/napi        # the app's widgets' and share sheet's API: 4,793
+# 2026-11-27, owner approved the app's start screen 2026-11-27 („Bitte umsetzen“, homes-android#290), owner approved 2026-11-27 („Bau alles“) (napi 5,656 -> 5,682; 5,681 used, the minimum): achtung on a device's card (home.go)
+budget napi 5682 internal/napi        # the app's widgets' and share sheet's API: 4,793
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): the module catalog,
 # cmd/homes/module.go, 1,150 with it; plus 5 %. H3–H6 move the routes out of main.go into it
 # 2026-11-04, step H8 (§10, owner: „Keine Funktion soll versteckt werden“): the routes of the traces
@@ -180,7 +181,8 @@ budget napi 5656 internal/napi        # the app's widgets' and share sheet's API
 # 2026-11-27, owner approved 2026-11-27 („Alles OK. Go ahead“), ADR 0004 §9 (cmd 1,520 -> 1,530; 1,529 used, the minimum): whose phone a scan's HA device is, wired
 # 2026-11-27, owner's request 2026-11-27 (Rezepte: „werden die mir nicht mehr in der App angezeigt“), owner approved 2026-11-27 („Bau alles“) (cmd 1,530 -> 1,542; 1,541 used, the minimum): the app's Rezepte row after Notizen, with how many;
 # the widgets' Angebot gone
-budget cmd 1542 cmd/homes             # homes' wiring: 1,018 with the demo then
+# 2026-11-27, owner approved the app's start screen 2026-11-27 („Bitte umsetzen“, homes-android#290), owner approved 2026-11-27 („Bau alles“) (cmd 1,542 -> 1,580; 1,579 used, the minimum): bereiche: the tags, the archive's line, Paperless's week
+budget cmd 1580 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-04, the caps moved with the packages, none raised (sum 24,134 as before): abs and
 # musicbrainz (1,227 lines, 1,289 of cap) from household to connectors once merken's fetcher
 # was internal/abruf (235 lines of merken, 247 of cap, to shared) and jellyfin.Plain
@@ -320,7 +322,9 @@ budget connectors 16979 $connectors   # one client per service, with its fake: 1
 # 2026-11-27, owner approved 2026-11-27 („Alles OK. Go ahead“), ADR 0004 §9 (household 16,415 -> 16,756; 16,755 used, the minimum): tagaktion's ergebnis.go: the runs after a
 # touch, waited for, a condition in words, each tag's last run, the traces kept 10 s; telefon.Person: a scan's HA device → its person
 # 2026-11-27, owner's request 2026-11-27 (Rezepte: „werden die mir nicht mehr in der App angezeigt“), owner approved 2026-11-27 („Bau alles“) (household 16,756 -> 16,763; 16,762 used, the minimum): einrichten's rows after a module (Nach), anzahl
-budget household 16763 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-27, owner approved the app's start screen 2026-11-27 („Bitte umsetzen“, homes-android#290), owner approved 2026-11-27 („Bau alles“) (household 16,763 -> 16,857; 16,856 used, the minimum): einrichten's bereiche, neu and dringend,
+# tagaktion.Stand, drucker.Achtung
+budget household 16857 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one

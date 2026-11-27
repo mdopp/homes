@@ -174,6 +174,12 @@ func TestAppListeIsThePageList(t *testing.T) {
 	if z := zs[5]; z.Link != "https://www.box.test/aufgaben#aufgabe-23" || z.Vorn {
 		t.Errorf("%+v", z)
 	}
+	// dringend (homes-android#290): a decision and a missing key; a question, a task not
+	for i, want := range []bool{true, true, true, false, false, false} {
+		if zs[i].Dringend != want {
+			t.Errorf("%s: dringend %v", zs[i].Name, zs[i].Dringend)
+		}
+	}
 	if got := strings.Join(names(liste(context.Background(), "ben")), " "); got != "aufgabe-25 aufgabe-23 aufgabe-24" {
 		t.Errorf("ben's rows: %s", got)
 	}

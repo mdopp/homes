@@ -1,12 +1,14 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"log"
 	"maps"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -377,6 +379,7 @@ func einrichtung(s site, gekoppelt func(string) bool, jf *jellyfin.Client) *einr
 			return []einrichten.NapiModul{row}
 		}
 	}
+	q.Bereiche = bereiche(s) // the start screen's areas (homes-android#290)
 	q.Zeile = func(person string, m modul.Modul) (ziel, stand string) {
 		if pfad := map[string]string{"standort": pages.StandortPath, "musik": pages.MusikPath}[m.Name]; pfad != "" {
 			ziel, stand = pages.Zeile(seiten, person, pfad)
@@ -384,4 +387,39 @@ func einrichtung(s site, gekoppelt func(string) bool, jf *jellyfin.Client) *einr
 		return ziel, stand
 	}
 	return q
+}
+
+// bereiche are the lines of the app's start screen's areas for a person
+// (homes-android#290), each read within 2 s, left out when its backend
+// does not answer: ausloeser the tags and their last run, archiv the
+// person's archive's own line, dokumente what Paperless filed this week.
+func bereiche(s site) func(context.Context, string) map[string]string {
+	return func(ctx context.Context, person string) map[string]string {
+		out := map[string]string{}
+		c, cancel := context.WithTimeout(ctx, 2*time.Second)
+		defer cancel()
+		now, loc := time.Now(), cmp.Or(s.hh.Loc, time.Local)
+		if t := s.napi.Tags; t != nil {
+			if st := t.Stand(c, now, loc); st != "" {
+				out["ausloeser"] = st
+			}
+		}
+		for _, p := range s.plugins.Lesen(c, person) {
+			if p.Plugin == "archiv" && p.Zeile != "" {
+				out["archiv"] = p.Zeile
+			}
+		}
+		if d := s.hh.Documents; d != nil {
+			if docs, err := d.Recent(c, 50); err == nil {
+				n := 0
+				for _, doc := range docs {
+					if now.Sub(doc.Added) < 7*24*time.Hour {
+						n++
+					}
+				}
+				out["dokumente"] = map[bool]string{true: "nichts Neues diese Woche", false: strconv.Itoa(n) + " diese Woche"}[n == 0]
+			}
+		}
+		return out
+	}
 }

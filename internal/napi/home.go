@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -134,18 +135,43 @@ func card(s ha.State) map[string]any {
 			c[k] = v
 		}
 	}
+	if a := achtung(s); a != "" {
+		c["achtung"] = a
+	}
 	return c
+}
+
+// achtung is why a device needs a look, in a few words, for the app's
+// start screen (homes-android#290): HA does not reach it, or its battery
+// is low; "" for none (a printer's is drucker's, withText).
+func achtung(s ha.State) string {
+	low := false
+	if s.Attributes["device_class"] == "battery" {
+		v, err := strconv.ParseFloat(s.State, 64)
+		low = strings.HasPrefix(s.EntityID, "binary_sensor.") && s.State == "on" || err == nil && v < 20
+	}
+	switch {
+	case s.State == "unavailable":
+		return "nicht erreichbar"
+	case low:
+		return "Batterie fast leer"
+	}
+	return ""
 }
 
 // withText adds the card's family words where Homes has its own, as
 // Geräte says them (owner 2026-11-14: „Bitte in der App und auf der
 // Webseite gleich“): a printer's state sensor, „druckt · Schwarz 12 %“,
 // „nicht erreichbar“ (internal/drucker). The app shows text instead of the
-// raw state; absent for everything else.
+// raw state; absent for everything else. A printer's achtung is its own.
 func withText(c map[string]any, states []ha.State, reg ha.Registry) {
 	id, _ := c["entity_id"].(string)
 	if p, ok := drucker.Of(states, reg, id); ok && p.Status.EntityID == id {
 		c["text"] = p.Text()
+		delete(c, "achtung")
+		if a := p.Achtung(); a != "" { // the printer's own: unreachable, paper, ink
+			c["achtung"] = a
+		}
 	}
 }
 

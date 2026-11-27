@@ -440,7 +440,7 @@ func AppListe(cfg StartConfig) func(ctx context.Context, person string) []einric
 				continue
 			}
 			out = append(out, einrichten.Zeile{Name: cmp.Or(a.name, fmt.Sprint("aufgabe-", i)), Titel: a.titel, Warum: a.sagt(),
-				Icon: cmp.Or(a.icon, "aufgabe"), Link: link, Vorn: a.art < artEinrichten})
+				Icon: cmp.Or(a.icon, "aufgabe"), Link: link, Vorn: a.art < artEinrichten, Dringend: a.art <= artSchluessel})
 		}
 		return out
 	}
