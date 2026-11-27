@@ -243,3 +243,21 @@ func TestTheTagPageSaysWhatCameOfIt(t *testing.T) {
 	mustContain(t, rec.Body.String(), `<div class=gut role=status><span class=punkt></span><p>Bürotür: ‚Flurlicht‘ ausgeführt</p>`)
 	mustContain(t, tagGet(t, Tag(r.cfg), TagPath+tagBuero, "anna").Body.String(), "<p class=k>Zuletzt ", " (ben): ‚Flurlicht‘ ausgeführt</p>")
 }
+
+// owner 2026-11-27: phone first — the action first and alone, the
+// automations as rows, each way to another a stacked card; the select
+// asks first. (The widths are e2e's.)
+func TestTheTagPageIsStacked(t *testing.T) {
+	r := newTagRig(t)
+	body := tagGet(t, Tag(r.cfg), TagPath+tagBuero, "anna").Body.String()
+	mustContain(t, body, `<form method=post class=tag-haupt action="/tag/homes-b0e70e000001">`, `<li class=tu><span>Flurlicht</span>`,
+		`<h2><label for=tag-automation>Mit einer Automation verbinden</label></h2><form method=post class=eingabe`,
+		`<select id=tag-automation name=automation required><option value="" disabled selected>Automation wählen …</option><option value="1700000000001">`,
+		`<h2><label for=tag-neu>Neue Automation</label></h2><form method=post class=eingabe`)
+	if strings.Index(body, "tag-haupt") > strings.Index(body, "<h2>Automationen</h2>") {
+		t.Fatal("Auslösen after the automations")
+	}
+	if rec := tagPostAs(t, Tag(r.cfg), TagPath+tagBuero, url.Values{"tun": {"verbinden"}}, "anna"); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "Wähle zuerst eine Automation.") {
+		t.Fatalf("no choice: %d %s", rec.Code, rec.Body.String())
+	}
+}

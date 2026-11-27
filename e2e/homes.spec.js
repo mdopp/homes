@@ -264,6 +264,32 @@ test('Deine Geräte are the app\'s tiles', async ({ page }, info) => {
   expect(cells, 'one width for every tile').toHaveLength(1);
 });
 
+// owner 2026-11-27 („Nicht schön“, on a 412 px phone): the tag page stacks its
+// blocks — the one action as the primary button over the whole width, the
+// automations as rows with a small Lösen, each way to another a card with its
+// field over the whole width and its button under it. The picture is kept.
+test('the tag page stacks its blocks on a phone', async ({ page }, info) => {
+  await page.goto('/tag/homes-b0e70e000001');
+  const box = async (sel) => page.locator(sel).first().boundingBox();
+  const vw = page.viewportSize().width;
+  const knopf = await box('form.tag-haupt button');
+  expect(knopf.width, 'Auslösen over the whole width').toBeGreaterThan(vw - 60);
+  const sel = await box('#tag-automation');
+  const verbinden = await box('form:has(#tag-automation) button');
+  expect(sel.width, 'the select over the whole width').toBeGreaterThan(vw - 60);
+  expect(verbinden.y, 'Verbinden under the select').toBeGreaterThan(sel.y + sel.height - 1);
+  expect(verbinden.width).toBeGreaterThan(vw - 60);
+  const feld = await box('#tag-neu');
+  const weiter = await box('form:has(#tag-neu) button');
+  expect(feld.width).toBeGreaterThan(vw - 60);
+  expect(weiter.y, 'Weitergeben under the field').toBeGreaterThan(feld.y + feld.height - 1);
+  await expect(page.locator('#tag-automation option').first()).toHaveText('Automation wählen …');
+  const loesen = await box('li.tu button');
+  expect(loesen.width, 'Lösen small on its row').toBeLessThan(vw / 2);
+  expect(knopf.y, 'Auslösen before the automations').toBeLessThan((await box('section.karte')).y);
+  await page.screenshot({ path: info.outputPath('tag-seite.png'), fullPage: true });
+});
+
 // ADR 0004 §5, §8: a tag's own page. Its button acts in place as the signed-in
 // person; another person's link shows its sentence, then waits for an admin
 // (fetched again), who answers from Deine Aufgaben; the page then says what came of it.

@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/mdopp/homes/internal/assistent"
 	"github.com/mdopp/homes/internal/ha"
 	"github.com/mdopp/homes/internal/tagaktion"
 )
@@ -30,11 +31,12 @@ const TagPath = "/tag/"
 
 var tagPageID = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
 
-// tagStyle is the page's rows and forms: a row's name beside its button,
-// a field over the whole width, its button under it.
-const tagStyle = `<style>.tag-zeilen{list-style:none;margin:0 0 8px;padding:0}.tag-zeilen li{display:flex;gap:10px;align-items:center;justify-content:space-between;` +
-	`padding:6px 0;border-bottom:1px solid var(--line)}.tag-zeilen li:last-child{border-bottom:0}.tag-zeilen span{min-width:0;overflow-wrap:anywhere}` +
-	`.tag-form label{display:block;margin:14px 0 6px}.tag-form select,.tag-form textarea{display:block;width:100%;box-sizing:border-box}.tag-form button{margin-top:8px}</style>`
+// tagStyle is the page phone first in the cards' patterns: the action the primary button, the automations
+// rows with their action (li.tu), each way to another a card, field and button stacked (form.eingabe).
+const tagStyle = `<style>.tag-haupt{margin:16px 0 0}.tag-haupt button{width:100%;min-height:52px;border-radius:999px;background:var(--accent);` +
+	`color:var(--accent-ink);font-size:1rem}.karte h2 label{font:inherit;color:inherit}.karte form.eingabe p.k{margin:0 0 8px}` +
+	`.karte form.eingabe select,.karte form.eingabe textarea{display:block;width:100%;box-sizing:border-box}.karte form.eingabe textarea{min-height:5rem;padding:10px 14px;resize:vertical}` +
+	`.karte form.eingabe button{display:block;width:100%;margin-top:10px}.karte form.eingabe a{display:block;text-align:center;margin-top:12px}.karte li.tu span{min-width:0}</style>`
 
 // tagDoes is what each change's confirmation says, and while it runs.
 var tagDoes = map[string][2]string{
@@ -96,8 +98,8 @@ func tagPost(w http.ResponseWriter, r *http.Request, cfg StartConfig, id string)
 		tagSeite(w, r, cfg, id, tagGesagt{gut: satz, nicht: nicht}) // what its automations made of it (§9)
 		return
 	}
-	if _, ok := tagDoes[tun]; !ok {
-		http.Error(w, "Das lässt sich hier nicht tun.", http.StatusBadRequest)
+	if _, ok := tagDoes[tun]; !ok || tun == tagaktion.Verbinden && r.PostForm.Get("automation") == "" { // the select's prompt sends none
+		http.Error(w, map[bool]string{true: "Das lässt sich hier nicht tun.", false: "Wähle zuerst eine Automation."}[!ok], http.StatusBadRequest)
 		return
 	}
 	wunsch := tagaktion.Wunsch{Art: tun, Tag: id, Automation: r.PostForm.Get("automation"), Satz: r.PostForm.Get("satz")}
@@ -125,7 +127,7 @@ func tagKnopf(id, akt string) string {
 	case tagaktion.ScannerHaushalt:
 		text, laeuft = "Scannen – für den Haushalt", "Startet …"
 	}
-	return `<form method=post action="` + TagPath + id + `"><input type=hidden name=tun value=ausloesen><button data-laeuft="` + laeuft + `">` + text + `</button></form>`
+	return `<form method=post class=tag-haupt action="` + TagPath + id + `"><input type=hidden name=tun value=ausloesen><button data-laeuft="` + laeuft + `">` + text + `</button></form>`
 }
 
 func tagSeite(w http.ResponseWriter, r *http.Request, cfg StartConfig, id string, g tagGesagt) {
@@ -142,6 +144,7 @@ func tagSeite(w http.ResponseWriter, r *http.Request, cfg StartConfig, id string
 	} else {
 		b.WriteString(`<p>` + html.EscapeString(tagaktion.TitelVon(akt)) + `.</p>`)
 	}
+	b.WriteString(tagKnopf(id, akt)) // the one action first, under its one line
 	b.WriteString(tagFreigabeStand(r, cfg))
 	switch {
 	case g.vorschau != nil:
@@ -154,7 +157,6 @@ func tagSeite(w http.ResponseWriter, r *http.Request, cfg StartConfig, id string
 			b.WriteString(`<section class=karte><h2>Antwort</h2><p>` + strings.ReplaceAll(html.EscapeString(g.bote), "\n", "<br>") + `</p></section>`)
 		}
 	}
-	b.WriteString(tagKnopf(id, akt))
 	if akt == "" {
 		b.WriteString(tagAutomationen(r, cfg, id))
 	}
@@ -168,10 +170,10 @@ func tagBestaetigen(id string, g tagGesagt) string {
 	if g.freigabe {
 		out += `<p class=k>Ein Admin gibt das frei; bis dahin bleibt alles, wie es ist.</p>`
 	}
-	return out + `<form method=post action="` + TagPath + id + `"><input type=hidden name=tun value="` + html.EscapeString(g.vorschau.Art) + `">` +
+	return out + `<form method=post class=eingabe action="` + TagPath + id + `"><input type=hidden name=tun value="` + html.EscapeString(g.vorschau.Art) + `">` +
 		`<input type=hidden name=automation value="` + html.EscapeString(g.vorschau.Automation) + `">` +
 		`<input type=hidden name=satz value="` + html.EscapeString(g.vorschau.Satz) + `"><input type=hidden name=bestaetigt value=1>` +
-		`<button data-laeuft="` + does[1] + `">` + does[0] + `</button> <a href="` + TagPath + id + `">Abbrechen</a></form></section>`
+		`<button data-laeuft="` + does[1] + `">` + does[0] + `</button><a href="` + TagPath + id + `">Abbrechen</a></form></section>`
 }
 
 // tagFreigabeStand is the wish the page follows (?freigabe=), for the
@@ -200,28 +202,26 @@ func tagAutomationen(r *http.Request, cfg StartConfig, id string) string {
 		return `<section class=karte><h2>Automationen</h2><p class=k>Home Assistant sagt gerade nicht, welche Automationen es gibt. Versuch es gleich noch einmal.</p></section>`
 	}
 	var b strings.Builder
-	act := `<form method=post class=tag-form action="` + TagPath + id + `">`
+	act := `<form method=post class=eingabe action="` + TagPath + id + `">`
 	b.WriteString(`<section class=karte><h2>Automationen</h2>`)
 	if l, ok := cfg.Tags.Zuletzt(r.Context(), map[string][]tagaktion.Verbindung{id: mit[id]})[id]; ok { // its last run, from HA's traces (§9)
 		_, loc := cfg.clock()
-		wer := ""
-		if l.Person != "" {
-			wer = " (" + l.Person + ")"
-		}
+		wer := strings.TrimSuffix(" ("+l.Person+")", " ()")
 		b.WriteString(`<p class=k>Zuletzt ` + l.Wann.In(loc).Format("02.01. 15:04") + wer + `: ` + html.EscapeString(l.Satz()) + `</p>`)
 	}
 	if len(mit[id]) == 0 {
 		b.WriteString(`<p class=k>Noch startet keine Automation auf diesem Tag.</p>`)
 	} else {
-		b.WriteString(`<ul class=tag-zeilen>`)
+		b.WriteString(`<ul>`)
 	}
 	for _, v := range mit[id] {
-		b.WriteString(`<li><span>` + html.EscapeString(v.Name) + `</span><form method=post action="` + TagPath + id + `"><input type=hidden name=tun value=loesen>` +
+		b.WriteString(`<li class=tu><span>` + html.EscapeString(v.Name) + `</span><form method=post action="` + TagPath + id + `"><input type=hidden name=tun value=loesen>` +
 			`<input type=hidden name=automation value="` + html.EscapeString(v.ID) + `"><button data-laeuft="Prüft …">Lösen</button></form></li>`)
 	}
 	if len(mit[id]) > 0 {
 		b.WriteString(`</ul>`)
 	}
+	b.WriteString(`</section>`)
 	var frei []ha.Automation
 	for _, a := range alle {
 		if !slices.ContainsFunc(mit[id], func(v tagaktion.Verbindung) bool { return v.ID == a.ID }) {
@@ -229,17 +229,17 @@ func tagAutomationen(r *http.Request, cfg StartConfig, id string) string {
 		}
 	}
 	if len(frei) > 0 {
-		b.WriteString(act + `<input type=hidden name=tun value=verbinden><label for=tag-automation>Mit einer Automation verbinden</label>` +
-			`<select id=tag-automation name=automation>`)
+		b.WriteString(`<section class=karte><h2><label for=tag-automation>Mit einer Automation verbinden</label></h2>` + act +
+			`<input type=hidden name=tun value=verbinden><select id=tag-automation name=automation required><option value="" disabled selected>Automation wählen …</option>`)
 		for _, a := range frei {
 			b.WriteString(`<option value="` + html.EscapeString(a.ID) + `">` + html.EscapeString(a.Name) + `</option>`)
 		}
-		b.WriteString(`</select><button data-laeuft="Prüft …">Verbinden</button></form>`)
+		b.WriteString(`</select><button data-laeuft="Prüft …">Verbinden</button></form></section>`)
 	}
 	if cfg.Tags.Bote != nil {
-		b.WriteString(act + `<input type=hidden name=tun value=neu><label for=tag-neu>Neue Automation: Was soll passieren, wenn jemand diesen Tag berührt?</label>` +
-			`<textarea id=tag-neu name=satz rows=2 maxlength=500 required placeholder="Licht im Flur an"></textarea><button data-laeuft="Prüft …">Weitergeben</button></form>`)
+		b.WriteString(`<section class=karte><h2><label for=tag-neu>Neue Automation</label></h2>` + act + `<input type=hidden name=tun value=neu>` +
+			`<p class=k>Was soll passieren, wenn jemand diesen Tag berührt? ` + html.EscapeString(assistent.Name()) + ` schlägt die Automation vor.</p>` +
+			`<textarea id=tag-neu name=satz rows=3 maxlength=500 required placeholder="Licht im Flur an"></textarea><button data-laeuft="Prüft …">Weitergeben</button></form></section>`)
 	}
-	b.WriteString(`</section>`)
 	return b.String()
 }
