@@ -370,7 +370,7 @@ func TestEveryNapiRouteWantsADevice(t *testing.T) {
 		"GET /napi/portal/active": true, "GET /napi/portal/camera/{entity_id}/snapshot": true, "GET /napi/portal/start/addable": true, "GET /napi/portal/favorites": true,
 		"POST /napi/portal/watch": true, "GET /napi/portal/events": true,
 		"GET /napi/defs/tool": true, "POST /napi/action-callback": true, "GET /napi/portal/tasks": true, "GET /napi/portal/contacts": true,
-		"GET /napi/portal/documents": true, "GET /napi/portal/notes": true, "POST /napi/upload": true, "POST /napi/merken": true,
+		"POST /napi/upload": true, "POST /napi/merken": true,
 		"GET /napi/sicherung/stand": true, "POST /napi/sicherung/fehlend": true, "POST /napi/sicherung/uploads": true,
 		"HEAD /napi/sicherung/uploads/{id}": true, "PATCH /napi/sicherung/uploads/{id}": true,
 		"GET /napi/sicherung/schluessel": true, "POST /napi/kontakte": true,

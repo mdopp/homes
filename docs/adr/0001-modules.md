@@ -120,7 +120,7 @@ type Route struct {
 // Angebot is what a module offers the app, in the app's keys
 // (GET /napi/kann "app"; the keys are listed in ADR 0001 §2).
 type Angebot struct {
-	Widgets   []string // "geraet", "energie", "tool:note"
+	Widgets   []string // "geraet", "energie", "tool:task"
 	Teilen    []string // share targets: "merken", "dokument", "standort-import", "archiv"
 	Konto     []string // the Homes account's parts: "kontakte", "kalender"
 	Sicherung []string // the backup's parts: "whatsapp", "signal", "sms", "kontakte"
@@ -238,7 +238,7 @@ carries an `ETag` and is a 304 on `If-None-Match`.
      "warum": "aus",   "grund": "Auf dieser Box ausgeschaltet."}
   ],
   "app": {
-    "widgets":   ["geraet", "energie", "tool:note", "tool:doc"],
+    "widgets":   ["geraet", "energie", "tool:task", "tool:contacts"],
     "teilen":    ["merken", "dokument"],
     "konto":     ["kontakte", "kalender"],
     "sicherung": ["whatsapp", "signal", "sms", "kontakte"],
@@ -390,8 +390,8 @@ module: `LAIB_URL`, `LAIB_TOKEN`, `LAIB_PUBLIC_URL`, `LAIB_DOMAIN`,
 | `kontakte` | Kontakte | radicale (CardDAV) | Radicale, `_ADDRESSBOOK` | `/kontakte/…` · none | – | `portal/contacts`, def `contacts`, `POST kontakte` | widgets `tool:contacts`; sicherung `kontakte` |
 | `konto` | Homes-Konto | radicale | Radicale | – | – | `gemeinsam/{kontakte,kalender}`, live frame `gemeinsam` | konto `kontakte`, `kalender` |
 | `einkauf` | Einkauf | radicale (VTODO lists) | Radicale | `/einkauf`, `/einkauf/rezepte` · Haushalt | – | – | Bote list tools |
-| `notizen` | Notizen | file-share (folder); opt. qmd, the house model | `HOMES_NOTES_DIR`; opt. `HOMES_QMD_URL`, `_COLLECTION`, `HOMES_LLM_URL`, `_KEY`, `_MODEL` | `/notizen`, `/notizen/…` · Haushalt | – | `portal/notes`, def `note`, `POST merken` | widgets `tool:note`; teilen `merken` |
-| `dokumente` | Dokumente | paperless | `HOMES_PAPERLESS_URL`, `_TOKEN`; opt. `_PUBLIC_URL`, `_LAN_ONLY`, `HOMES_UPLOAD_DIR`, `HOMES_DOCUMENTS_MAIL`, `HOMES_DOCUMENTS_DIR`, `HOMES_QMD_DOCUMENTS` | `/dokumente`, `/dokumente/…`, `/scannen`, `/scannen/trennblatt` · Mehr | – | `portal/documents`, def `doc`, `POST upload` | widgets `tool:doc`; teilen `dokument` |
+| `notizen` | Notizen | file-share (folder); opt. qmd, the house model | `HOMES_NOTES_DIR`; opt. `HOMES_QMD_URL`, `_COLLECTION`, `HOMES_LLM_URL`, `_KEY`, `_MODEL` | `/notizen`, `/notizen/…`, `/rezepte` · Haushalt | – | `POST merken` | teilen `merken`; the app's „Öffnen“ row `rezepte` (no widget since 2026-11-27) |
+| `dokumente` | Dokumente | paperless | `HOMES_PAPERLESS_URL`, `_TOKEN`; opt. `_PUBLIC_URL`, `_LAN_ONLY`, `HOMES_UPLOAD_DIR`, `HOMES_DOCUMENTS_MAIL`, `HOMES_DOCUMENTS_DIR`, `HOMES_QMD_DOCUMENTS` | `/dokumente`, `/dokumente/…`, `/scannen`, `/scannen/trennblatt` · Mehr | – | `POST upload` | teilen `dokument` (no widget since 2026-11-27) |
 | `musik` | Musik | music inbox (beets), radicale (wishes), MusicBrainz; opt. media (Jellyfin, for the wish list), Discogs, the house model | `HOMES_MUSIC_INBOX` (or the `/musik-eingang` mount); opt. `HOMES_JELLYFIN_URL`, `_TOKEN`, `HOMES_DISCOGS_KEY`, `_SECRET`, `HOMES_LLM_VISION_MODEL` | `/musik`, `/discogs`, `/discogs/zurueck`, `/platte`, `/platte/bild` · Mehr | – | `POST musik` | teilen `musik` (with the inbox); Bote wish tools |
 | `podcasts` | Podcasts | audiobookshelf | `HOMES_ABS_URL`, `HOMES_ABS_TOKEN` | `/podcasts` · Mehr | – | – | Bote podcast tool; new episodes told |
 | `gesehen` | Gesehen & Gehört | media (Jellyfin) and/or audiobookshelf; radicale (wishes) | `HOMES_JELLYFIN_URL`, `HOMES_JELLYFIN_KEY`; `HOMES_ABS_*` | `/gesehen` · Mehr | – | – | – |

@@ -66,7 +66,9 @@ func TestShareToHomes(t *testing.T) {
 	if len(got) != 1 || !got[0].Kopf.Has([]string{"herbst"}) {
 		t.Errorf("notes %+v", got)
 	}
-	if code, out := shareText(t, h, "dev1", `{"text":"`+site.URL+`/rezept."}`); code != 200 || out["schon"] != true {
+	// shared again: still a recipe with its page, so the app can say „Ansehen“ (owner 2026-11-27)
+	if code, out := shareText(t, h, "dev1", `{"text":"`+site.URL+`/rezept."}`); code != 200 || out["schon"] != true || out["art"] != "rezept" ||
+		!strings.HasPrefix(out["notiz"].(string), "https://homes.box.test/notizen/") {
 		t.Errorf("again → %d %v", code, out)
 	}
 	if code, out := shareText(t, h, "dev1", `{"text":"nur Text, kein Link"}`); code != 400 || !strings.Contains(out["error"].(string), "kein Link") {

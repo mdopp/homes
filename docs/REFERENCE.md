@@ -775,6 +775,16 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     (the hint's #words too) and `quelle` in the head; the link and the
     page's text at the end. A link kept once opens its note again; a page
     that answers but cannot be read keeps link and title, said so.
+  - *Rezepte* (`GET /rezepte`, module `notizen`, owner 2026-11-27, linked
+    from Notizen and the app's „Öffnen“): the household's recipe notes
+    (art `rezept`), the newest first, each to its note's page; a search
+    (`?q=`, the notes' own word search, recipes only); *Für den Einkauf
+    auswählen* into Einkauf's recipe choice (`/einkauf/rezepte`, with
+    Einkauf). None yet: *Noch kein Rezept. Teile eine Rezeptseite mit der
+    Homes-App oder schick den Link an <Assistent>.* The recipes are the
+    household's, the same for everyone. A recipe shared with the app
+    answers `POST /napi/merken` with `"art":"rezept"` and `"notiz"` its
+    page, the first time and again.
   - *Notizen* says where notes come from (the house's „Merk dir …“, Neue
     Notiz, a file in `notes` on the share) and lets a person write them
     (owner, 2026-10-24): *Neue Notiz* (`POST /notizen`: `titel`, `text`;
@@ -1048,6 +1058,12 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   device token → the device's person's modules that are on (not the
   admins' ones), each with an address to open or its own app:
 
+  The household's recipes (owner 2026-11-27) are a row of their own right
+  after `notizen` while Notizen is on: `name` `rezepte`, `oeffnen` true,
+  `web` Homes' `/rezepte`, `anzahl` how many recipe notes there are and
+  `stand` the same in words („12 Rezepte“; both left out when the notes do
+  not answer within 2 s). No module: nothing to set up, no `aufgabe`.
+
   ```json
   {
     "version": 1,
@@ -1067,6 +1083,8 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
                    "am": "2026-11-04", "wie": "app", "einrichten": "https://homes.example.org/einrichten/filme"}},
       {"name": "einkauf", "titel": "Einkauf", "icon": "einkauf", "oeffnen": false, "web": "https://homes.example.org/einkauf", "nur_web": true},
       {"name": "dokumente", "titel": "Dokumente", "icon": "dokumente", "oeffnen": true, "web": "https://homes.example.org/dokumente", "nur_web": true},
+      {"name": "rezepte", "titel": "Rezepte", "icon": "rezepte", "oeffnen": true, "web": "https://homes.example.org/rezepte", "nur_web": true,
+       "stand": "12 Rezepte", "anzahl": 12},
       {"name": "immich-pruefen", "titel": "3 Personen in Immich prüfen", "icon": "fotos", "oeffnen": false,
        "web": "https://homes.example.org/kontakte/dieselbe", "nur_web": true,
        "aufgabe": {"titel": "3 Personen in Immich prüfen", "erledigt": false,
@@ -1288,17 +1306,17 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
 - The tool widgets, from the Haushalt source's backends (haus#10, the
   same variables as below; none set, they are 404): `GET /napi/defs/tool`
   lists a tool per backend that is set: `task` (*Erinnerungen*,
-  `HOMES_RADICALE_*`), `contacts`, `doc` (`HOMES_PAPERLESS_*`), `note`
-  (`HOMES_NOTES_DIR`). Each def names its
-  row path (`/napi/portal/tasks|contacts|documents|notes`: the open
+  `HOMES_RADICALE_*`) and `contacts`. The Notizen and Dokumente widgets
+  (`note`, `doc`, `/napi/portal/notes|documents`) went on 2026-11-27 (the
+  owner: „Kann ganz weg“); an older app asking for them gets the JSON 404.
+  Each def names its
+  row path (`/napi/portal/tasks|contacts`: the open
   reminders, soonest first, due in house time, each with `status` and
   its UID trimmed as `id`, and with `?done=1` the done (`done`) and
   cancelled (`dismissed`) ones after them, the latest first; contacts by
-  name with the first number and address; the newest Paperless
-  documents; the newest notes; at most 40 rows, no JSON `null`, a
+  name with the first number and address; at most 40 rows, no JSON `null`, a
   backend in trouble 502). Each row with an id names its item page
-  (`page`, above); a document only when Paperless's public address is
-  set. No def names a create page: Homes has none. A path whose backend is
+  (`page`, above). No def names a create page: Homes has none. A path whose backend is
   not set is 404.
   `POST /napi/action-callback` (at most 64 KB, else 413 `too_large`)
   knows one action; any other id is 404 `unknown_action`.

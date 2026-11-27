@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/mdopp/homes/internal/app"
+	"github.com/mdopp/homes/internal/einkauf"
 	"github.com/mdopp/homes/internal/einrichten"
 	"github.com/mdopp/homes/internal/haushalt"
 	"github.com/mdopp/homes/internal/jellyfin"
@@ -58,10 +59,7 @@ var oeffnen = []string{"dokumente", "standort", "musik"}
 func katalog(s site) []modul.Modul {
 	hh, n, musicInbox := s.hh, s.napi, s.musik
 	docs := s.docsMail != "" || n.UploadDir != "" || s.paperlessPublic != "" || hh.Documents != nil
-	var dokApp modul.Angebot
-	if hh.Documents != nil {
-		dokApp.Widgets = []string{"tool:doc"}
-	}
+	var dokApp modul.Angebot // no widget since 2026-11-27 (owner: „Kann ganz weg“)
 	if n.UploadDir != "" {
 		dokApp.Teilen = []string{"dokument"}
 	}
@@ -95,7 +93,7 @@ func katalog(s site) []modul.Modul {
 			hh.Einkauf != nil, "Auf dieser Box läuft kein Radicale."),
 		bau(modul.Modul{Name: "notizen", Backend: "file-share",
 			Env: []string{"HOMES_NOTES_DIR", "HOMES_QMD_URL", "HOMES_QMD_COLLECTION", "HOMES_LLM_URL", "HOMES_LLM_KEY", "HOMES_LLM_MODEL"},
-			App: modul.Angebot{Widgets: []string{"tool:note"}, Teilen: []string{"merken"}}},
+			App: modul.Angebot{Teilen: []string{"merken"}}}, // its widget went (owner 2026-11-27)
 			hh.Notes != nil, "Auf dieser Box gibt es keinen Ordner für Notizen."),
 		bau(modul.Modul{Name: "dokumente", Backend: "paperless",
 			Env: []string{"HOMES_PAPERLESS_URL", "HOMES_PAPERLESS_TOKEN", "HOMES_PAPERLESS_PUBLIC_URL", "HOMES_PAPERLESS_LAN_ONLY",
@@ -365,6 +363,20 @@ func einrichtung(s site, gekoppelt func(string) bool, jf *jellyfin.Client) *einr
 	// the app's rows of Standortverlauf and Musik say where they stand, as Mehr does, and
 	// Standortverlauf's tap opens the timeline itself once connected (owner 2026-11-08: „direkter“)
 	seiten := pages.StartConfig{Reitti: s.napi.Reitti, PublicURL: s.publicURL, MusicInbox: s.musik, Loc: s.hh.Loc}
+	if d := s.hh.Notes; d != nil && s.publicURL != "" { // the recipes after Notizen, under „Öffnen“, with how many (owner 2026-11-27)
+		q.Nach = func(ctx context.Context, _, name string) []einrichten.NapiModul {
+			if name != "notizen" {
+				return nil
+			}
+			row := einrichten.NapiModul{Name: "rezepte", Titel: "Rezepte", Icon: "rezepte", Oeffnen: true, Web: s.publicURL + pages.RezeptePath, NurWeb: true}
+			c, cancel := context.WithTimeout(ctx, 2*time.Second)
+			defer cancel()
+			if es, err := einkauf.Rezepte(c, d); err == nil {
+				row.Anzahl, row.Stand = len(es), texte.Anzahl(len(es), "Rezept", "Rezepte")
+			}
+			return []einrichten.NapiModul{row}
+		}
+	}
 	q.Zeile = func(person string, m modul.Modul) (ziel, stand string) {
 		if pfad := map[string]string{"standort": pages.StandortPath, "musik": pages.MusikPath}[m.Name]; pfad != "" {
 			ziel, stand = pages.Zeile(seiten, person, pfad)

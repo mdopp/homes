@@ -124,6 +124,9 @@ type Quellen struct {
 	// Liste is „Deine Aufgaben“ but the modules' setups (homes#362); nil: Fragen alone
 	Liste  func(ctx context.Context, person string) []Zeile
 	Admins *Admins // who Homes saw among Authelia's admins; nil: none
+	// Nach are rows of the app's that follow a module's (the Rezepte after
+	// Notizen, owner 2026-11-27): no module, opened like one; nil: none
+	Nach func(ctx context.Context, person, modul string) []NapiModul
 }
 
 // Zeile is a row of „Deine Aufgaben“ that is no module's setup; Link is
@@ -339,6 +342,7 @@ type NapiModul struct {
 	App     *NapiApp     `json:"app,omitempty"`
 	NurWeb  bool         `json:"nur_web"`
 	Aufgabe *NapiAufgabe `json:"aufgabe,omitempty"`
+	Anzahl  int          `json:"anzahl,omitempty"` // how many it holds, where that is cheap to say (the recipes)
 }
 
 // NapiApp is a module's own phone app.
@@ -400,6 +404,9 @@ func (q *Quellen) Napi(ctx context.Context, person string) Antwort {
 			}
 		}
 		out.Module = append(out.Module, n)
+		if q.Nach != nil {
+			out.Module = append(out.Module, q.Nach(ctx, person, m.Name)...)
+		}
 	}
 	zeile(false)
 	return out

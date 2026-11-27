@@ -130,7 +130,9 @@ budget() { # budget <name> <cap> <dir…>
 # 2026-11-27, owner approved 2026-11-27 („Alles OK. Go ahead“), ADR 0004 §9 (pages 20,420 -> 20,431; 20,430 used, the minimum): the line after Auslösen, „Zuletzt …“ (tag.go)
 # 2026-11-27, owner's request 2026-11-27 („Deinem Zuhause geht es gut.“), owner approved 2026-11-27 „Bitte umsetzen“ (pages 20,431 -> 20,439; 20,438 used, the minimum): the claim as Laib says
 # all is well, swapped once by StartBoxPath's answer (start.go, start_box.go)
-budget pages 20439 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-27, owner's request 2026-11-27 (Rezepte: „werden die mir nicht mehr in der App angezeigt“), owner approved 2026-11-27 („Bau alles“) (pages 20,439 -> 20,525; 20,524 used, the minimum): /rezepte (rezepte.go: the recipes newest
+# first, the search, the way into Einkauf's choice, empty and failing in words), the link on Notizen
+budget pages 20525 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -151,7 +153,9 @@ budget pages 20439 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-26, owner approved 2026-11-26, ADR 0004 §7 (napi 5,670 -> 5,698; 5,697 used, the minimum): the phone behind the bearer as HA's device,
 # a tag as its scan_tag, the charger as its sensors (ausloeser.go)
 # 2026-11-27, owner approved 2026-11-27 („Alles OK. Go ahead“), ADR 0004 §9 (napi 5,698 -> 5,716; 5,715 used, the minimum): ergebnisse and text after nfc, zuletzt per tag
-budget napi 5716 internal/napi        # the app's widgets' and share sheet's API: 4,793
+# 2026-11-27, owner 2026-11-27: Notizen- und Dokumente-Widget ausgebaut (napi 5,716 -> 5,656; 5,655 used): /napi/portal/notes and
+# /napi/portal/documents and their catalog entries gone (tools.go)
+budget napi 5656 internal/napi        # the app's widgets' and share sheet's API: 4,793
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): the module catalog,
 # cmd/homes/module.go, 1,150 with it; plus 5 %. H3–H6 move the routes out of main.go into it
 # 2026-11-04, step H8 (§10, owner: „Keine Funktion soll versteckt werden“): the routes of the traces
@@ -174,7 +178,9 @@ budget napi 5716 internal/napi        # the app's widgets' and share sheet's API
 # 2026-11-26, owner approved 2026-11-26, ADR 0004 §7 (cmd 1,493 -> 1,520; 1,519 used, the minimum): telefoneAnschliessen: the registrations, removed on
 # unpairing, the hourly look
 # 2026-11-27, owner approved 2026-11-27 („Alles OK. Go ahead“), ADR 0004 §9 (cmd 1,520 -> 1,530; 1,529 used, the minimum): whose phone a scan's HA device is, wired
-budget cmd 1530 cmd/homes             # homes' wiring: 1,018 with the demo then
+# 2026-11-27, owner's request 2026-11-27 (Rezepte: „werden die mir nicht mehr in der App angezeigt“), owner approved 2026-11-27 („Bau alles“) (cmd 1,530 -> 1,542; 1,541 used, the minimum): the app's Rezepte row after Notizen, with how many;
+# the widgets' Angebot gone
+budget cmd 1542 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-04, the caps moved with the packages, none raised (sum 24,134 as before): abs and
 # musicbrainz (1,227 lines, 1,289 of cap) from household to connectors once merken's fetcher
 # was internal/abruf (235 lines of merken, 247 of cap, to shared) and jellyfin.Plain
@@ -313,7 +319,8 @@ budget connectors 16979 $connectors   # one client per service, with its fake: 1
 # with HA's mobile_app, its sensors, scan_tag, removed when unpaired, telefone.json), tagaktion.AusloesenMit, devices' Weg and Gibt
 # 2026-11-27, owner approved 2026-11-27 („Alles OK. Go ahead“), ADR 0004 §9 (household 16,415 -> 16,756; 16,755 used, the minimum): tagaktion's ergebnis.go: the runs after a
 # touch, waited for, a condition in words, each tag's last run, the traces kept 10 s; telefon.Person: a scan's HA device → its person
-budget household 16756 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-27, owner's request 2026-11-27 (Rezepte: „werden die mir nicht mehr in der App angezeigt“), owner approved 2026-11-27 („Bau alles“) (household 16,756 -> 16,763; 16,762 used, the minimum): einrichten's rows after a module (Nach), anzahl
+budget household 16763 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one

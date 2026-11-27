@@ -215,6 +215,7 @@ func main() {
 	mux.HandleFunc(pages.StandortPath, pages.Standort(standort))
 	mux.HandleFunc("/demo/standort", func(w http.ResponseWriter, r *http.Request) { reittiKonto(r.URL.Query().Get("punkte") != "0") })
 	mux.HandleFunc("/notizen", pages.Notizen(cfg))
+	mux.HandleFunc(pages.RezeptePath, pages.Rezepte(cfg)) // the household's recipes (owner 2026-11-27)
 	mux.HandleFunc(cards.NotePages, pages.Notizen(cfg))
 	// Mehr with a Laib whose task list takes a while: the Einrichtung card
 	// fills itself after the page (owner 2026-11-03)

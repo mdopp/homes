@@ -26,8 +26,6 @@ GET /napi/defs/tool → GET /napi/defs/tool
 POST /napi/action-callback → POST /napi/action-callback
 GET /napi/portal/tasks → GET /napi/portal/tasks
 GET /napi/portal/contacts → GET /napi/portal/contacts
-GET /napi/portal/documents → GET /napi/portal/documents
-GET /napi/portal/notes → GET /napi/portal/notes
 POST /napi/upload → POST /napi/upload
 POST /napi/musik → /napi/
 GET /napi/sicherung/stand → GET /napi/sicherung/stand
@@ -81,8 +79,6 @@ GET /napi/defs/tool → GET /napi/defs/tool
 POST /napi/action-callback → POST /napi/action-callback
 GET /napi/portal/tasks → GET /napi/portal/tasks
 GET /napi/portal/contacts → GET /napi/portal/contacts
-GET /napi/portal/documents → GET /napi/portal/documents
-GET /napi/portal/notes → GET /napi/portal/notes
 POST /napi/upload → /napi/
 POST /napi/musik → /napi/
 GET /napi/sicherung/stand → GET /napi/sicherung/stand
@@ -136,8 +132,6 @@ GET /napi/defs/tool → /napi/
 POST /napi/action-callback → /napi/
 GET /napi/portal/tasks → /napi/
 GET /napi/portal/contacts → /napi/
-GET /napi/portal/documents → /napi/
-GET /napi/portal/notes → /napi/
 POST /napi/upload → /napi/
 POST /napi/musik → /napi/
 GET /napi/sicherung/stand → GET /napi/sicherung/stand
@@ -191,8 +185,6 @@ GET /napi/defs/tool → GET /napi/defs/tool
 POST /napi/action-callback → POST /napi/action-callback
 GET /napi/portal/tasks → GET /napi/portal/tasks
 GET /napi/portal/contacts → GET /napi/portal/contacts
-GET /napi/portal/documents → GET /napi/portal/documents
-GET /napi/portal/notes → GET /napi/portal/notes
 POST /napi/upload → POST /napi/upload
 POST /napi/musik → /napi/
 GET /napi/sicherung/stand → GET /napi/sicherung/stand
@@ -246,8 +238,6 @@ GET /napi/defs/tool → GET /napi/defs/tool
 POST /napi/action-callback → POST /napi/action-callback
 GET /napi/portal/tasks → GET /napi/portal/tasks
 GET /napi/portal/contacts → GET /napi/portal/contacts
-GET /napi/portal/documents → GET /napi/portal/documents
-GET /napi/portal/notes → GET /napi/portal/notes
 POST /napi/upload → POST /napi/upload
 POST /napi/musik → /napi/
 GET /napi/sicherung/stand → GET /napi/sicherung/stand
@@ -301,8 +291,6 @@ GET /napi/defs/tool → GET /napi/defs/tool
 POST /napi/action-callback → POST /napi/action-callback
 GET /napi/portal/tasks → GET /napi/portal/tasks
 GET /napi/portal/contacts → GET /napi/portal/contacts
-GET /napi/portal/documents → GET /napi/portal/documents
-GET /napi/portal/notes → GET /napi/portal/notes
 POST /napi/upload → POST /napi/upload
 POST /napi/musik → /napi/
 GET /napi/sicherung/stand → GET /napi/sicherung/stand
@@ -356,8 +344,6 @@ GET /napi/defs/tool → GET /napi/defs/tool
 POST /napi/action-callback → POST /napi/action-callback
 GET /napi/portal/tasks → GET /napi/portal/tasks
 GET /napi/portal/contacts → GET /napi/portal/contacts
-GET /napi/portal/documents → GET /napi/portal/documents
-GET /napi/portal/notes → GET /napi/portal/notes
 POST /napi/upload → POST /napi/upload
 POST /napi/musik → /napi/
 GET /napi/sicherung/stand → GET /napi/sicherung/stand
@@ -411,8 +397,6 @@ GET /napi/defs/tool → GET /napi/defs/tool
 POST /napi/action-callback → POST /napi/action-callback
 GET /napi/portal/tasks → /napi/
 GET /napi/portal/contacts → GET /napi/portal/contacts
-GET /napi/portal/documents → GET /napi/portal/documents
-GET /napi/portal/notes → GET /napi/portal/notes
 POST /napi/upload → POST /napi/upload
 POST /napi/musik → /napi/
 GET /napi/sicherung/stand → GET /napi/sicherung/stand
@@ -466,8 +450,6 @@ GET /napi/defs/tool → GET /napi/defs/tool
 POST /napi/action-callback → POST /napi/action-callback
 GET /napi/portal/tasks → GET /napi/portal/tasks
 GET /napi/portal/contacts → /napi/
-GET /napi/portal/documents → GET /napi/portal/documents
-GET /napi/portal/notes → GET /napi/portal/notes
 POST /napi/upload → POST /napi/upload
 POST /napi/musik → /napi/
 GET /napi/sicherung/stand → GET /napi/sicherung/stand
@@ -521,8 +503,6 @@ GET /napi/defs/tool → GET /napi/defs/tool
 POST /napi/action-callback → POST /napi/action-callback
 GET /napi/portal/tasks → GET /napi/portal/tasks
 GET /napi/portal/contacts → GET /napi/portal/contacts
-GET /napi/portal/documents → GET /napi/portal/documents
-GET /napi/portal/notes → GET /napi/portal/notes
 POST /napi/upload → POST /napi/upload
 POST /napi/musik → /napi/
 GET /napi/sicherung/stand → GET /napi/sicherung/stand
@@ -576,8 +556,6 @@ GET /napi/defs/tool → GET /napi/defs/tool
 POST /napi/action-callback → POST /napi/action-callback
 GET /napi/portal/tasks → GET /napi/portal/tasks
 GET /napi/portal/contacts → GET /napi/portal/contacts
-GET /napi/portal/documents → GET /napi/portal/documents
-GET /napi/portal/notes → GET /napi/portal/notes
 POST /napi/upload → POST /napi/upload
 POST /napi/musik → /napi/
 GET /napi/sicherung/stand → GET /napi/sicherung/stand
@@ -631,8 +609,6 @@ GET /napi/defs/tool → GET /napi/defs/tool
 POST /napi/action-callback → POST /napi/action-callback
 GET /napi/portal/tasks → GET /napi/portal/tasks
 GET /napi/portal/contacts → GET /napi/portal/contacts
-GET /napi/portal/documents → GET /napi/portal/documents
-GET /napi/portal/notes → /napi/
 POST /napi/upload → POST /napi/upload
 POST /napi/musik → /napi/
 GET /napi/sicherung/stand → GET /napi/sicherung/stand
@@ -686,8 +662,6 @@ GET /napi/defs/tool → GET /napi/defs/tool
 POST /napi/action-callback → POST /napi/action-callback
 GET /napi/portal/tasks → GET /napi/portal/tasks
 GET /napi/portal/contacts → GET /napi/portal/contacts
-GET /napi/portal/documents → /napi/
-GET /napi/portal/notes → GET /napi/portal/notes
 POST /napi/upload → /napi/
 POST /napi/musik → /napi/
 GET /napi/sicherung/stand → GET /napi/sicherung/stand
@@ -741,8 +715,6 @@ GET /napi/defs/tool → GET /napi/defs/tool
 POST /napi/action-callback → POST /napi/action-callback
 GET /napi/portal/tasks → GET /napi/portal/tasks
 GET /napi/portal/contacts → GET /napi/portal/contacts
-GET /napi/portal/documents → GET /napi/portal/documents
-GET /napi/portal/notes → GET /napi/portal/notes
 POST /napi/upload → POST /napi/upload
 POST /napi/musik → /napi/
 GET /napi/sicherung/stand → GET /napi/sicherung/stand
@@ -796,8 +768,6 @@ GET /napi/defs/tool → GET /napi/defs/tool
 POST /napi/action-callback → POST /napi/action-callback
 GET /napi/portal/tasks → GET /napi/portal/tasks
 GET /napi/portal/contacts → GET /napi/portal/contacts
-GET /napi/portal/documents → GET /napi/portal/documents
-GET /napi/portal/notes → GET /napi/portal/notes
 POST /napi/upload → POST /napi/upload
 POST /napi/musik → /napi/
 GET /napi/sicherung/stand → GET /napi/sicherung/stand
@@ -851,8 +821,6 @@ GET /napi/defs/tool → GET /napi/defs/tool
 POST /napi/action-callback → POST /napi/action-callback
 GET /napi/portal/tasks → GET /napi/portal/tasks
 GET /napi/portal/contacts → GET /napi/portal/contacts
-GET /napi/portal/documents → GET /napi/portal/documents
-GET /napi/portal/notes → GET /napi/portal/notes
 POST /napi/upload → POST /napi/upload
 POST /napi/musik → /napi/
 GET /napi/sicherung/stand → GET /napi/sicherung/stand
@@ -906,8 +874,6 @@ GET /napi/defs/tool → GET /napi/defs/tool
 POST /napi/action-callback → POST /napi/action-callback
 GET /napi/portal/tasks → GET /napi/portal/tasks
 GET /napi/portal/contacts → GET /napi/portal/contacts
-GET /napi/portal/documents → GET /napi/portal/documents
-GET /napi/portal/notes → GET /napi/portal/notes
 POST /napi/upload → POST /napi/upload
 POST /napi/musik → /napi/
 GET /napi/sicherung/stand → GET /napi/sicherung/stand
@@ -961,8 +927,6 @@ GET /napi/defs/tool → GET /napi/defs/tool
 POST /napi/action-callback → POST /napi/action-callback
 GET /napi/portal/tasks → GET /napi/portal/tasks
 GET /napi/portal/contacts → GET /napi/portal/contacts
-GET /napi/portal/documents → GET /napi/portal/documents
-GET /napi/portal/notes → GET /napi/portal/notes
 POST /napi/upload → POST /napi/upload
 POST /napi/musik → /napi/
 GET /napi/sicherung/stand → GET /napi/sicherung/stand
@@ -1016,8 +980,6 @@ GET /napi/defs/tool → GET /napi/defs/tool
 POST /napi/action-callback → POST /napi/action-callback
 GET /napi/portal/tasks → GET /napi/portal/tasks
 GET /napi/portal/contacts → GET /napi/portal/contacts
-GET /napi/portal/documents → GET /napi/portal/documents
-GET /napi/portal/notes → GET /napi/portal/notes
 POST /napi/upload → POST /napi/upload
 POST /napi/musik → /napi/
 GET /napi/sicherung/stand → GET /napi/sicherung/stand
@@ -1071,8 +1033,6 @@ GET /napi/defs/tool → GET /napi/defs/tool
 POST /napi/action-callback → POST /napi/action-callback
 GET /napi/portal/tasks → GET /napi/portal/tasks
 GET /napi/portal/contacts → GET /napi/portal/contacts
-GET /napi/portal/documents → GET /napi/portal/documents
-GET /napi/portal/notes → GET /napi/portal/notes
 POST /napi/upload → POST /napi/upload
 POST /napi/musik → /napi/
 GET /napi/sicherung/stand → GET /napi/sicherung/stand
@@ -1126,8 +1086,6 @@ GET /napi/defs/tool → GET /napi/defs/tool
 POST /napi/action-callback → POST /napi/action-callback
 GET /napi/portal/tasks → GET /napi/portal/tasks
 GET /napi/portal/contacts → GET /napi/portal/contacts
-GET /napi/portal/documents → GET /napi/portal/documents
-GET /napi/portal/notes → GET /napi/portal/notes
 POST /napi/upload → POST /napi/upload
 POST /napi/musik → /napi/
 GET /napi/sicherung/stand → GET /napi/sicherung/stand
@@ -1181,8 +1139,6 @@ GET /napi/defs/tool → GET /napi/defs/tool
 POST /napi/action-callback → POST /napi/action-callback
 GET /napi/portal/tasks → GET /napi/portal/tasks
 GET /napi/portal/contacts → GET /napi/portal/contacts
-GET /napi/portal/documents → GET /napi/portal/documents
-GET /napi/portal/notes → GET /napi/portal/notes
 POST /napi/upload → POST /napi/upload
 POST /napi/musik → /napi/
 GET /napi/sicherung/stand → GET /napi/sicherung/stand
@@ -1236,8 +1192,6 @@ GET /napi/defs/tool → GET /napi/defs/tool
 POST /napi/action-callback → POST /napi/action-callback
 GET /napi/portal/tasks → GET /napi/portal/tasks
 GET /napi/portal/contacts → GET /napi/portal/contacts
-GET /napi/portal/documents → GET /napi/portal/documents
-GET /napi/portal/notes → GET /napi/portal/notes
 POST /napi/upload → POST /napi/upload
 POST /napi/musik → /napi/
 GET /napi/sicherung/stand → GET /napi/sicherung/stand
@@ -1291,8 +1245,6 @@ GET /napi/defs/tool → GET /napi/defs/tool
 POST /napi/action-callback → POST /napi/action-callback
 GET /napi/portal/tasks → GET /napi/portal/tasks
 GET /napi/portal/contacts → GET /napi/portal/contacts
-GET /napi/portal/documents → GET /napi/portal/documents
-GET /napi/portal/notes → GET /napi/portal/notes
 POST /napi/upload → POST /napi/upload
 POST /napi/musik → /napi/
 GET /napi/sicherung/stand → GET /napi/sicherung/stand
@@ -1346,8 +1298,6 @@ GET /napi/defs/tool → GET /napi/defs/tool
 POST /napi/action-callback → POST /napi/action-callback
 GET /napi/portal/tasks → GET /napi/portal/tasks
 GET /napi/portal/contacts → GET /napi/portal/contacts
-GET /napi/portal/documents → GET /napi/portal/documents
-GET /napi/portal/notes → GET /napi/portal/notes
 POST /napi/upload → POST /napi/upload
 POST /napi/musik → /napi/
 GET /napi/sicherung/stand → GET /napi/sicherung/stand

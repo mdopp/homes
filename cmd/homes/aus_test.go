@@ -86,12 +86,10 @@ func TestEachLeafModuleOff(t *testing.T) {
 		"gesehen":      {{"/mehr", `href="/gesehen"`, `!href="/gesehen"`}, {"/gesehen", "eintragen musst du nichts", "Gibt es hier noch nicht"}},
 		"standort":     {{"/mehr", `href="/standort"`, `!href="/standort"`}, {"/standort", "Reitti", "Gibt es hier noch nicht"}, {"napi:/napi/standort", "#200", "#503"}},
 		"sicherung":    {{"/meine-daten", "Handy wechseln", "!Handy wechseln"}, {"napi:/napi/sicherung/stand", "#200", "#503"}},
-		// H4: the tool widgets' catalog, the app's paths and the Bote's tools follow
+		// H4: the app's paths and the Bote's tools follow (their widgets went, owner 2026-11-27)
 		"dokumente": {{"/mehr", `href="/dokumente"`, `!href="/dokumente"`}, {"/dokumente", "scan@example.org", "Gibt es hier noch nicht"},
-			{"napi:/napi/defs/tool", `"tool-id":"doc"`, `!"tool-id":"doc"`}, {"napi:/napi/portal/documents", "#200", "#404"},
 			{"napi:POST /napi/upload", "#400", "#404"}, {"mcp:", `"dokumente_suchen"`, `!"dokumente_suchen"`}},
 		"notizen": {{wunschliste, `href=/notizen`, `!href=/notizen`}, {"/notizen", "Neue Notiz", "noch nicht eingerichtet"},
-			{"napi:/napi/defs/tool", `"tool-id":"note"`, `!"tool-id":"note"`}, {"napi:/napi/portal/notes", "#200", "#404"},
 			{"napi:POST /napi/merken", "#400", "#404"}, {"mcp:", `"notiz_anlegen"`, `!"notiz_anlegen"`}},
 		"musik": {{"/mehr", `href="/musik"`, `!href="/musik"`}, {"/musik", "Auf dem Handy: Lieder", "#404"}, {"/discogs", "#200", "#404"}},
 		// the music wish list is musik's: it stays with einkauf off, the other lists go

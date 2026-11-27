@@ -20,8 +20,9 @@ import (
 // (GET /napi/defs/tool), fetches each tool's rows from the path the def
 // names, maps them through the def's cell schema, and sends a row's action
 // to POST /napi/action-callback (the app's ToolDefs.kt, ToolCells.kt).
-// Homes' catalog is the Haushalt source's backends that are set: reminders,
-// contacts, documents, notes. Homes has no page for creating or opening an
+// Homes' catalog is the Haushalt source's backends that are set: reminders
+// and contacts (the Notizen and Dokumente widgets went, owner 2026-11-27:
+// „Kann ganz weg“; an old app asking for them gets the JSON 404). Homes has no page for creating or opening an
 // item, so no def names one (tool-compose-path, tool-item-id-field): a
 // guessed route would be a 404.
 
@@ -37,7 +38,7 @@ type toolsAPI struct {
 }
 
 func newTools(hh haushalt.Config) *toolsAPI {
-	if hh.Calendar == nil && hh.Contacts == nil && hh.Documents == nil && hh.Notes == nil {
+	if hh.Calendar == nil && hh.Contacts == nil {
 		return nil
 	}
 	loc := hh.Loc
@@ -56,12 +57,6 @@ func (t *toolsAPI) routes(gs gruppen) {
 	if t.hh.Contacts != nil {
 		gs.add("kontakte", "GET /napi/portal/contacts", t.contacts)
 	}
-	if t.hh.Documents != nil {
-		gs.add("dokumente", "GET /napi/portal/documents", t.documents)
-	}
-	if t.hh.Notes != nil {
-		gs.add("notizen", "GET /napi/portal/notes", t.notes)
-	}
 }
 
 // def is one catalog entry in the keys ToolDefs.parseDef reads. Every key
@@ -79,14 +74,6 @@ func (t *toolsAPI) defs(w http.ResponseWriter, r *http.Request) {
 	if t.hh.Contacts != nil {
 		defs = append(defs, def("contacts", "Kontakte", "/napi/portal/contacts",
 			map[string]any{"title": "name", "meta": []string{"phone", "email", "birthday"}}))
-	}
-	if t.hh.Documents != nil {
-		defs = append(defs, def("doc", "Dokumente", "/napi/portal/documents",
-			map[string]any{"title": "title", "meta": []string{"created", "correspondent"}}))
-	}
-	if t.hh.Notes != nil {
-		defs = append(defs, def("note", "Notizen", "/napi/portal/notes",
-			map[string]any{"title": "title", "meta": []string{"changed"}}))
 	}
 	if t.hh.Calendar != nil {
 		d := def("task", "Erinnerungen", "/napi/portal/tasks",
@@ -214,53 +201,6 @@ func (t *toolsAPI) contacts(w http.ResponseWriter, r *http.Request) {
 		out = append(out, row)
 	}
 	answer(w, http.StatusOK, map[string]any{"ok": true, "contacts": out})
-}
-
-// GET /napi/portal/documents → {ok, documents:[{id, title, created?, correspondent?, link?, page?}]}:
-// the newest in Paperless, what its token's user may see. A page only when
-// Paperless's public address is known: Homes' page sends the tap on there.
-func (t *toolsAPI) documents(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), rowsTimeout)
-	defer cancel()
-	docs, err := t.hh.Documents.Recent(ctx, maxRows)
-	if err != nil {
-		rowsFailed(w, "documents", err)
-		return
-	}
-	out := []map[string]any{}
-	for _, d := range docs {
-		row := map[string]any{"id": d.ID, "title": oneLine(d.Title)}
-		if row["title"] == "" {
-			row["title"] = "–"
-		}
-		if !d.Created.IsZero() {
-			row["created"] = d.Created.Format("02.01.2006")
-		}
-		if c := oneLine(d.Correspondent); c != "" {
-			row["correspondent"] = c
-		}
-		if d.Link != "" {
-			row["link"], row["page"] = d.Link, cards.DocumentPage(d.ID)
-		}
-		out = append(out, row)
-	}
-	answer(w, http.StatusOK, map[string]any{"ok": true, "documents": out})
-}
-
-// GET /napi/portal/notes → {ok, notes:[{id, page, title, changed}]}: the newest notes.
-func (t *toolsAPI) notes(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), rowsTimeout)
-	defer cancel()
-	es, err := t.hh.Notes.Recent(ctx, maxRows)
-	if err != nil {
-		rowsFailed(w, "notes", err)
-		return
-	}
-	out := []map[string]any{}
-	for _, e := range es {
-		out = append(out, map[string]any{"id": e.Name, "page": cards.NotePage(e.Name), "title": e.Title, "changed": haushalt.DayTime(e.Changed.In(t.loc))})
-	}
-	answer(w, http.StatusOK, map[string]any{"ok": true, "notes": out})
 }
 
 // actionDone ticks a reminder off: the one row action Homes has. It is not

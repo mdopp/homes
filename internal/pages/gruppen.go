@@ -63,6 +63,7 @@ func Gruppen(cfg StartConfig) map[string][]modul.Route {
 	}
 	gs.add("notizen", "/notizen", Notizen(cfg))
 	gs.add("notizen", cards.NotePages, Notizen(cfg))             // a note's own page
+	gs.add("notizen", RezeptePath, Rezepte(cfg))                 // the household's recipes (owner 2026-11-27)
 	gs.add("dokumente", DokumentePath, Dokumente(cfg))           // the ways into the archive (haus#68)
 	gs.add("dokumente", DokumenteSuchePath, DokumenteSuche(cfg)) // the household's documents by words, Bereich, type, person (owner 2026-11-06)
 	gs.add("dokumente", ScannenPath, Scannen(cfg))               // the scan orders to Laib (haus#76, laib#568)

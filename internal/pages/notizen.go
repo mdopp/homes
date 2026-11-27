@@ -69,7 +69,7 @@ func Notizen(cfg StartConfig) http.HandlerFunc {
 			field = "Notizen und Dokumente durchsuchen"
 		}
 		b := familyHead(r, cfg, "Notizen", "Notizen")
-		b.WriteString(noteStyle + "<h1>Notizen</h1><p class=k>" + html.EscapeString(saysNotesHow()) + "</p>")
+		b.WriteString(noteStyle + "<h1>Notizen</h1><p class=k>" + html.EscapeString(saysNotesHow()) + "</p><p><a href=" + RezeptePath + ">Rezepte</a></p>")
 		if said := noteSaid[r.URL.Query().Get("gesagt")]; said != "" { // haus#183: after a delete, Rückgängig right here
 			b.WriteString("<div class=gut role=status><span class=punkt></span><p>" + html.EscapeString(said) + "</p></div>")
 			if id := r.URL.Query().Get("korb"); id != "" {

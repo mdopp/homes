@@ -149,8 +149,6 @@ func TestToolPathsWantAPairedDevice(t *testing.T) {
 		{"GET", "/napi/defs/tool", ""},
 		{"GET", "/napi/portal/tasks", ""},
 		{"GET", "/napi/portal/contacts", ""},
-		{"GET", "/napi/portal/documents", ""},
-		{"GET", "/napi/portal/notes", ""},
 		{"POST", "/napi/action-callback", `{"action_id":"task.set_status","params":{"entity_id":"milch-1","status":"done"}}`},
 	} {
 		for _, bearer := range []string{"", "wrong"} {
@@ -186,10 +184,10 @@ func TestToolCatalog(t *testing.T) {
 		ids = append(ids, id)
 		byID[id] = m
 	}
-	if strings.Join(ids, ",") != "contacts,doc,note,task" {
+	if strings.Join(ids, ",") != "contacts,task" { // the Notizen and Dokumente widgets went (owner 2026-11-27)
 		t.Fatalf("tools, by id: %v", ids)
 	}
-	paths := map[string]string{"task": "/napi/portal/tasks", "contacts": "/napi/portal/contacts", "doc": "/napi/portal/documents", "note": "/napi/portal/notes"}
+	paths := map[string]string{"task": "/napi/portal/tasks", "contacts": "/napi/portal/contacts"}
 	for id, d := range byID {
 		if d["tool-api-path"] != paths[id] {
 			t.Errorf("%s: tool-api-path %v, want %s", id, d["tool-api-path"], paths[id])
@@ -230,12 +228,12 @@ func TestToolCatalog(t *testing.T) {
 }
 
 func TestToolCatalogListsOnlyWhatIsSet(t *testing.T) {
-	s := toolsWith(t, which{notes: true})
+	s := toolsWith(t, which{contacts: true})
 	code, body := raw(t, s.h, "GET", "/napi/defs/tool", "dev1", "")
 	out := decode(t, body)
 	defs, _ := out["defs"].([]any)
-	if code != 200 || len(defs) != 1 || defs[0].(map[string]any)["tool-id"] != "note" {
-		t.Fatalf("notes only: %d %s", code, body)
+	if code != 200 || len(defs) != 1 || defs[0].(map[string]any)["tool-id"] != "contacts" {
+		t.Fatalf("contacts only: %d %s", code, body)
 	}
 	// one Homes does not know is 404, passed on to nobody
 	if code, body := raw(t, s.h, "POST", "/napi/action-callback", "dev1", `{"action_id":"task.set_status","params":{"entity_id":"x","status":"done"}}`); code != 404 || !strings.Contains(body, "unknown_action") {
@@ -302,7 +300,7 @@ func TestTaskRowsAreTheOpenReminders(t *testing.T) {
 	}
 }
 
-func TestContactDocumentAndNoteRows(t *testing.T) {
+func TestContactRows(t *testing.T) {
 	s := allTools(t)
 	cs := rows(t, s.h, "/napi/portal/contacts", "contacts")
 	if len(cs) != 2 || cs[0]["name"] != "anna Arndt" || cs[1]["name"] != "Bernd Bauer" {
@@ -318,22 +316,18 @@ func TestContactDocumentAndNoteRows(t *testing.T) {
 		t.Fatalf("no phone is no key: %v", cs[0])
 	}
 
-	ds := rows(t, s.h, "/napi/portal/documents", "documents")
-	if len(ds) != 2 || ds[0]["title"] != "Stromrechnung" || ds[0]["correspondent"] != "Stadtwerke" || ds[0]["created"] != "30.09.2026" {
-		t.Fatalf("the newest documents first: %v", ds)
-	}
-	if _, ok := ds[1]["correspondent"]; ok {
-		t.Fatalf("no correspondent is no key: %v", ds[1])
-	}
-	last := s.docs.Seen()[0].URL.Query()
-	// the newest filed (document 641, 2026-11-09), not the newest letter date
-	if last.Get("ordering") != "-added" || last.Has("query") {
-		t.Fatalf("the newest, not a search: %v", last)
-	}
+}
 
-	ns := rows(t, s.h, "/napi/portal/notes", "notes")
-	if len(ns) != 2 || ns[0]["title"] != "Urlaub 2027" || ns[0]["id"] != "urlaub.md" || ns[1]["title"] != "Einkauf" {
-		t.Fatalf("the newest notes, hidden ones never: %v", ns)
+// owner 2026-11-27 („Widget für Notizen … Dokumente … Kann ganz weg“): their
+// rows and their catalog entries are gone; an old app asking gets the JSON 404.
+func TestTheNoteAndDocumentWidgetsAreGone(t *testing.T) {
+	s := allTools(t)
+	for _, p := range []string{"/napi/portal/documents", "/napi/portal/notes"} {
+		code, body := raw(t, s.h, "GET", p, "dev1", "")
+		notFound(t, p, code, body)
+	}
+	if _, body := raw(t, s.h, "GET", "/napi/defs/tool", "dev1", ""); strings.Contains(body, `"note"`) || strings.Contains(body, `"doc"`) {
+		t.Fatalf("%s", body)
 	}
 }
 
@@ -345,11 +339,10 @@ func TestEveryToolRowNamesItsPage(t *testing.T) {
 	s := allTools(t)
 	for _, c := range []struct{ path, key string }{
 		{"/napi/portal/tasks?done=1", "tasks"}, {"/napi/portal/contacts", "contacts"},
-		{"/napi/portal/documents", "documents"}, {"/napi/portal/notes", "notes"},
 	} {
 		for _, r := range rows(t, s.h, c.path, c.key) {
 			want := map[string]string{
-				"tasks": "/kalender/erinnerung/", "contacts": "/kontakte/", "documents": "/dokumente/", "notes": "/notizen/",
+				"tasks": "/kalender/erinnerung/", "contacts": "/kontakte/",
 			}[c.key] + url.PathEscape(fmt.Sprint(r["id"]))
 			if r["page"] != want {
 				t.Errorf("%s: page %v, want %q: %v", c.key, r["page"], want, r)
@@ -376,15 +369,6 @@ func TestEveryToolRowNamesItsPage(t *testing.T) {
 		if r["id"] == "a/b c?" && r["page"] != "/kalender/erinnerung/a%2Fb%20c%3F" {
 			t.Fatalf("an odd UID: %v", r)
 		}
-	}
-}
-
-func TestToolRowsWhenTheBackendFails(t *testing.T) {
-	s := allTools(t)
-	s.docs.Status = 500
-	code, body := raw(t, s.h, "GET", "/napi/portal/documents", "dev1", "")
-	if code != 502 || strings.Contains(body, "pl-token") {
-		t.Fatalf("Paperless down: %d %s", code, body)
 	}
 }
 
