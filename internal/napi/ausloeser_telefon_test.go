@@ -2,7 +2,9 @@ package napi
 
 import (
 	"net/http"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/mdopp/homes/internal/ha/hafake"
 	"github.com/mdopp/homes/internal/tagaktion"
@@ -22,7 +24,7 @@ func telefone(t *testing.T) (*hafake.HA, http.Handler) {
 		c.Whoami = func(b string) (string, bool) { g, ok := geraete[b]; return g.Person, ok }
 		c.Geraet = func(b string) (telefon.Geraet, bool) { g, ok := geraete[b]; return g, ok }
 		c.Telefone = &telefon.Telefone{HA: c.HA, Dir: dir, Version: "test"}
-		c.Tags = &tagaktion.Dienst{HA: c.HA, Laib: c.Laib, Store: store, Dir: dir}
+		c.Tags = &tagaktion.Dienst{HA: c.HA, Laib: c.Laib, Store: store, Dir: dir, LaufWarte: 300 * time.Millisecond}
 	})
 }
 
@@ -82,5 +84,75 @@ func TestAScannerTagIsNoScanInHA(t *testing.T) {
 	raw(t, h, "POST", "/napi/ausloeser", "dev1", `{"art":"nfc","tag":"`+id+`"}`)
 	if code != 200 || len(fake.Webhooks()) != 0 || len(fake.Events()) != 0 {
 		t.Fatalf("%d %v %v", code, fake.Webhooks(), fake.Events())
+	}
+}
+
+// ADR 0004 §9: the answer says what the tag's automations made of the
+// touch, from HA's traces; the tags' list each tag's last run.
+func TestTheAnswerSaysWhatCameOfIt(t *testing.T) {
+	fake, h := telefone(t)
+	fake.AddTag("homes-b0e70e000001", "Büro")
+	fake.AddAutomation("1700000000005", "Büro und Bambi aus (nachts)", map[string]any{"id": "1700000000005",
+		"triggers": []any{map[string]any{"trigger": "tag", "tag_id": "homes-b0e70e000001"}}, "conditions": []any{map[string]any{"condition": "time", "after": "23:00:00", "before": "05:00:00"}}})
+	fake.RunsOnTag("1700000000005", "failed_conditions", "condition/0")
+	fake.MobileAppOff(true) // the raw event, with the person
+	_, body := raw(t, h, "POST", "/napi/ausloeser", "dev1", `{"art":"nfc","tag":"homes-b0e70e000001"}`)
+	if want := `"ergebnisse":[{"automation":"1700000000005","grund":"nur zwischen 23 und 5 Uhr","lief":false,"name":"Büro und Bambi aus (nachts)"}],` +
+		`"name":"Büro","ok":true,"text":"Büro: ‚Büro und Bambi aus (nachts)‘ nicht ausgeführt – nur zwischen 23 und 5 Uhr"}`; !strings.HasSuffix(strings.TrimSpace(body), want) {
+		t.Fatalf("%s", body)
+	}
+	_, body = raw(t, h, "GET", "/napi/ausloeser/tags", "dev2", "")
+	if !strings.Contains(body, `"zuletzt":{"person":"anna","text":"‚Büro und Bambi aus (nachts)‘ nicht ausgeführt – nur zwischen 23 und 5 Uhr","wann":"20`) {
+		t.Fatalf("%s", body)
+	}
+	// nothing from HA in time: said so
+	fake.RunsOnTag("1700000000005", "", "")
+	fake.AddAutomation("1700000000006", "Später", map[string]any{"id": "1700000000006", "triggers": []any{map[string]any{"trigger": "tag", "tag_id": "homes-b0e70e000001"}}})
+	_, body = raw(t, h, "POST", "/napi/ausloeser", "dev1", `{"art":"nfc","tag":"homes-b0e70e000001"}`)
+	if !strings.Contains(body, `{"automation":"1700000000006","grund":"noch nicht gemeldet","lief":false,"name":"Später"}`) {
+		t.Fatalf("%s", body)
+	}
+}
+
+// zuletzt names the person of a phone registered through §7: its scan
+// names the HA device, which is one of Homes' registrations; a device
+// Homes does not know names nobody.
+func TestZuletztNamesTheRegisteredPhonesPerson(t *testing.T) {
+	geraete := map[string]telefon.Geraet{"dev1": {ID: "a1a1a1a1a1a1", Name: "Pixel 9", Person: "anna"}, "dev2": {ID: "b2b2b2b2b2b2", Name: "Pixel 7", Person: "ben"}}
+	dir := t.TempDir()
+	store, _ := tagaktion.Open(dir)
+	fake, h := houseWith(t, func(c *Config) {
+		c.Whoami = func(b string) (string, bool) { g, ok := geraete[b]; return g.Person, ok }
+		c.Validate = StaticValidator([]string{"dev1", "dev2"})
+		c.Geraet = func(b string) (telefon.Geraet, bool) { g, ok := geraete[b]; return g, ok }
+		tel := &telefon.Telefone{HA: c.HA, Dir: dir, Version: "test", Wer: func(id string) string {
+			for _, g := range geraete {
+				if g.ID == id {
+					return g.Person
+				}
+			}
+			return ""
+		}}
+		c.Telefone = tel
+		c.Tags = &tagaktion.Dienst{HA: c.HA, Store: store, Dir: dir, LaufWarte: 300 * time.Millisecond, PersonVon: tel.Person}
+	})
+	fake.AddTag("homes-b0e70e000001", "Büro")
+	fake.AddTag("homes-fremd0000001", "Fremd")
+	fake.AddAutomation("1700000000005", "Büro aus", map[string]any{"id": "1700000000005",
+		"triggers": []any{map[string]any{"trigger": "tag", "tag_id": "homes-b0e70e000001"}, map[string]any{"trigger": "tag", "tag_id": "homes-fremd0000001"}}})
+	fake.RunsOnTag("1700000000005", "finished", "action/0")
+	// a scan by a device Homes does not know (HA's own app on another phone)
+	fake.AddTrace("1700000000005", hafake.Trace("fremd", time.Now().Add(-time.Minute), "finished", "action/0", fake.AutomationConfig("1700000000005"),
+		map[string]any{"platform": "tag", "event": map[string]any{"event_type": "tag_scanned", "data": map[string]any{"tag_id": "homes-fremd0000001", "device_id": "dev-unbekannt"}}}))
+	_, body := raw(t, h, "POST", "/napi/ausloeser", "dev2", `{"art":"nfc","tag":"homes-b0e70e000001"}`)
+	if ev := fake.Events(); len(ev) != 1 || ev[0].Data["person"] != nil || ev[0].Data["device_id"] == nil {
+		t.Fatalf("not HA's own scan: %+v %s", ev, body)
+	}
+	_, body = raw(t, h, "GET", "/napi/ausloeser/tags", "dev1", "") // the lists read for the touch are kept 10 s: the earlier run is in them
+	if !strings.Contains(body, `"zuletzt":{"person":"ben","text":"‚Büro aus‘ ausgeführt"`) {
+		t.Fatalf("ben's scan: %s", body)
+	}
+	if !strings.Contains(body, `"zuletzt":{"text":"‚Büro aus‘ ausgeführt","wann":`) {
+		t.Fatalf("the unknown device's: %s", body)
 	}
 }

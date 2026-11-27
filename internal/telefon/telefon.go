@@ -45,9 +45,14 @@ type Telefone struct {
 	Dir     string // HOMES_DATA
 	Version string // Homes' version, the registration's app_version
 	Now     func() time.Time
+	// Wer is the person of a Homes device by its id ("" for one no longer
+	// paired): whose phone an HA device is (homes ADR 0004 §9)
+	Wer func(id string) string
 
 	mu        sync.Mutex
-	gesagt    bool      // the fallback said in the log, until a registration works again
+	gesagt    bool              // the fallback said in the log, until a registration works again
+	geraete   map[string]string // HA's device id → its registration's device_id, read at gelesen
+	gelesen   time.Time
 	bisWieder time.Time // after a refusal, HA is not asked again before
 }
 
@@ -266,4 +271,31 @@ func (t *Telefone) pflegen(ctx context.Context, gibt func(id string) bool) {
 			t.vergessen(id)
 		}
 	}
+}
+
+// Person is whose phone the HA device haDevice (a scan's device_id) is:
+// one of Homes' registrations, its paired device's person; "" for a device
+// Homes does not know. HA's registry is read at most once a minute.
+func (t *Telefone) Person(ctx context.Context, haDevice string) string {
+	if t == nil || t.HA == nil || t.Wer == nil || haDevice == "" {
+		return ""
+	}
+	t.mu.Lock()
+	m, at := t.geraete, t.gelesen
+	t.mu.Unlock()
+	if m == nil || time.Since(at) > time.Minute {
+		var err error
+		if m, err = t.HA.MobileAppDevices(ctx); err != nil {
+			log.Printf("homes: telefone: the device registry: %v", err)
+			return ""
+		}
+		t.mu.Lock()
+		t.geraete, t.gelesen = m, time.Now()
+		t.mu.Unlock()
+	}
+	id, ok := strings.CutPrefix(m[haDevice], "homes-")
+	if !ok {
+		return ""
+	}
+	return t.Wer(id)
 }

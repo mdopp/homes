@@ -26,10 +26,15 @@ type Dienst struct {
 	Dir       string       // HOMES_DATA: the configs kept for Lösen, the wishes waiting
 	Admins    func() []string
 	Now       func() time.Time
+	LaufWarte time.Duration // how long a report waits for its automations' runs (§9); 0: 4 s
+	// PersonVon is whose phone an HA device is (a scan's device_id, §7);
+	// nil, or "": none said
+	PersonVon func(ctx context.Context, haDevice string) string
 
-	vmu    sync.Mutex // the configs kept for Lösen
-	fmu    sync.Mutex // the wishes
-	laeuft sync.Map   // the wishes an admin's Freigeben is being written for
+	vmu    sync.Mutex  // the configs kept for Lösen
+	fmu    sync.Mutex  // the wishes
+	laeuft sync.Map    // the wishes an admin's Freigeben is being written for
+	spuren spurenCache // HA's runs, read for what came of a touch (§9)
 }
 
 // Nein is a refusal in the person's words, with the status the app gets.
@@ -123,6 +128,7 @@ type Ergebnis struct {
 	Aktion  string // its action of Homes' own, "" for HA's
 	Text    string // what the phone says; "" for HA's (the app says „gemeldet“)
 	Oeffnen string // where it leads on: Homes' Scannen for scanner-fragen
+	Laeufe  []Lauf // what the tag's automations made of it (§9); nil: none trigger on it
 }
 
 // scanLogin is a person the scan service takes (box.yml people, lower case),
@@ -149,13 +155,17 @@ func (d *Dienst) Ausloesen(ctx context.Context, tag, person string) (Ergebnis, e
 func (d *Dienst) AusloesenMit(ctx context.Context, tag, person string, scan func(context.Context, string) bool) (Ergebnis, error) {
 	akt := d.Von(tag)
 	if akt == "" {
-		if scan != nil && scan(ctx, tag) {
-			return Ergebnis{Name: d.Name(ctx, tag)}, nil
+		seit := time.Now()
+		if scan == nil || !scan(ctx, tag) {
+			if err := d.HA.Fire(ctx, "tag_scanned", map[string]any{"tag_id": tag, "person": person}); err != nil {
+				return Ergebnis{}, HANein("nfc", err)
+			}
 		}
-		if err := d.HA.Fire(ctx, "tag_scanned", map[string]any{"tag_id": tag, "person": person}); err != nil {
-			return Ergebnis{}, HANein("nfc", err)
+		out := Ergebnis{Name: d.Name(ctx, tag), Laeufe: d.Nachher(ctx, tag, seit)}
+		if len(out.Laeufe) > 0 {
+			out.Text = Zeile(out.Name, out.Laeufe)
 		}
-		return Ergebnis{Name: d.Name(ctx, tag)}, nil
+		return out, nil
 	}
 	out := Ergebnis{Aktion: akt}
 	if akt == ScannerFragen {

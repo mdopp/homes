@@ -272,7 +272,7 @@ test('a tag page acts in place, and a link waits for an admin', async ({ page, c
   await expect(page.getByRole('heading', { name: 'Bürotür' })).toBeVisible();
   await mark(page);
   await page.getByRole('button', { name: 'Auslösen' }).click();
-  await expect(page.getByRole('status')).toContainText('Ausgelöst: Home Assistant hat es bekommen.');
+  await expect(page.getByRole('status')).toContainText('Bürotür: ‚Flurlicht‘ ausgeführt');
   expect(await stays(page)).toBe(true);
 
   await context.addCookies([{ name: 'wer', value: 'ben', url: info.project.use.baseURL }]);

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mdopp/homes/internal/einrichten"
 	"github.com/mdopp/homes/internal/laib"
@@ -32,7 +33,7 @@ func tagAutomationen(t *testing.T) (*laibfake.Laib, http.Handler, func(string) m
 	fake, h := houseWith(t, func(c *Config) {
 		c.Laib = &laib.Client{URL: srv.URL, Token: "ops"}
 		c.Einrichtung = q
-		c.Tags = &tagaktion.Dienst{HA: c.HA, Laib: c.Laib, Store: store, Dir: dir, PublicURL: "https://www.example.org", Admins: q.AdminListe}
+		c.Tags = &tagaktion.Dienst{HA: c.HA, Laib: c.Laib, Store: store, Dir: dir, PublicURL: "https://www.example.org", Admins: q.AdminListe, LaufWarte: 300 * time.Millisecond}
 		c.Whoami = func(b string) (string, bool) {
 			p, ok := map[string]string{"dev1": "anna", "dev2": "ben", "devM": "michael", "devP": "petra"}[b]
 			return p, ok

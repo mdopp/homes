@@ -57,10 +57,29 @@ func (c *Client) MobileWebhook(ctx context.Context, webhookID, typ string, data 
 // MobileAppEntries is, for each mobile_app device in HA's device registry,
 // its device_id → the config entry of its registration.
 func (c *Client) MobileAppEntries(ctx context.Context) (map[string]string, error) {
-	var devices []struct {
-		Identifiers   [][]string `json:"identifiers"`
-		ConfigEntries []string   `json:"config_entries"`
+	return c.mobileApp(ctx, func(d mobileDevice) string { return d.ConfigEntries[0] })
+}
+
+// MobileAppDevices is, for each mobile_app device, its id in HA's device
+// registry (what a scan's tag_scanned names) → its registration's device_id.
+func (c *Client) MobileAppDevices(ctx context.Context) (map[string]string, error) {
+	byDevice, err := c.mobileApp(ctx, func(d mobileDevice) string { return d.ID })
+	out := map[string]string{}
+	for dev, id := range byDevice {
+		out[id] = dev
 	}
+	return out, err
+}
+
+type mobileDevice struct {
+	ID            string     `json:"id"`
+	Identifiers   [][]string `json:"identifiers"`
+	ConfigEntries []string   `json:"config_entries"`
+}
+
+// mobileApp is each mobile_app device's device_id → what of reads of it.
+func (c *Client) mobileApp(ctx context.Context, of func(mobileDevice) string) (map[string]string, error) {
+	var devices []mobileDevice
 	if err := c.command(ctx, map[string]any{"type": "config/device_registry/list"}, &devices); err != nil {
 		return nil, err
 	}
@@ -68,7 +87,7 @@ func (c *Client) MobileAppEntries(ctx context.Context) (map[string]string, error
 	for _, d := range devices {
 		for _, id := range d.Identifiers {
 			if len(id) == 2 && id[0] == MobileApp && len(d.ConfigEntries) > 0 {
-				out[id[1]] = d.ConfigEntries[0]
+				out[id[1]] = of(d)
 			}
 		}
 	}
