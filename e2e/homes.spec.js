@@ -13,6 +13,27 @@ test.beforeEach(async ({ page, request }) => {
 });
 test.afterEach(() => expect(errors, 'script errors').toEqual([]));
 
+// A picture is a by-product, not the test (2026-11-27: the tag page's
+// assertions passed, its picture failed with „Unable to capture
+// screenshot“): taking it fails like that once more after a moment, a note
+// goes with the run and the test goes on. Any other failure (an element
+// that is not there) still fails the test.
+async function bild(target, info, name, opts = {}) {
+  for (let i = 0; ; i++) {
+    try {
+      await target.screenshot({ path: info.outputPath(name), ...opts });
+      return;
+    } catch (e) {
+      if (!/Unable to capture screenshot/.test(String(e))) throw e;
+      if (i > 0) {
+        await info.attach(`${name}: kein Bild`, { body: String(e), contentType: 'text/plain' });
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+}
+
 const stays = (page) => page.evaluate(() => window.homesBleibt === 1);
 const mark = (page) => page.evaluate(() => { window.homesBleibt = 1; });
 
@@ -71,7 +92,7 @@ test('a swipe over a card sends nothing; the level opens its sheet', async ({ pa
   await expect(slider(page, 'Küchenlicht Helligkeit')).toBeHidden();
   expect((await kueche.boundingBox()).height, 'a finger hits the level').toBeGreaterThanOrEqual(44);
   await kueche.scrollIntoViewIfNeeded();
-  await page.screenshot({ path: info.outputPath('raeume-karte.png') });
+  await bild(page, info, 'raeume-karte.png');
 
   // a finger scrolling the page over the card, up, across and aslant: nothing opens, nothing is sent
   const b = await kueche.boundingBox();
@@ -93,7 +114,7 @@ test('a swipe over a card sends nothing; the level opens its sheet', async ({ pa
   const w = (await sheet(page, 'Küchenlicht').boundingBox()).width;
   expect(w, 'the sheet fits the phone').toBeLessThanOrEqual(page.viewportSize().width);
   await page.waitForTimeout(200);
-  await page.screenshot({ path: info.outputPath('blatt-licht.png') });
+  await bild(page, info, 'blatt-licht.png');
   // Fertig, Escape and a tap outside close it
   await sheet(page, 'Küchenlicht').getByRole('button', { name: 'Fertig' }).tap();
   await expect(sheet(page, 'Küchenlicht')).toBeHidden();
@@ -114,7 +135,7 @@ test('a swipe over a card sends nothing; the level opens its sheet', async ({ pa
   await expect(sheet(page, 'Rollo')).toBeVisible();
   for (const step of ['Auf', '½', 'Zu']) await expect(sheet(page, 'Rollo').getByRole('button', { name: 'Position ' + step })).toBeVisible();
   await page.waitForTimeout(200);
-  await page.screenshot({ path: info.outputPath('blatt-rollo.png') });
+  await bild(page, info, 'blatt-rollo.png');
   await sheet(page, 'Rollo').getByRole('button', { name: 'Fertig' }).tap();
   expect(sent, 'opening and closing send nothing').toEqual([]);
 });
@@ -169,14 +190,14 @@ test('a dimmer that is off says aus as its level; a step turns it on', async ({ 
     await expect(page.getByRole('switch', { name: 'Flurlicht' })).toHaveAttribute('aria-checked', 'false');
     await expect(level(page, 'Flurlicht')).toHaveCount(0);
     await kueche.scrollIntoViewIfNeeded();
-    await page.screenshot({ path: info.outputPath('aus-karte.png') });
+    await bild(page, info, 'aus-karte.png');
 
     await kueche.tap();
     await expect(sheet(page, 'Küchenlicht')).toBeVisible();
     await expect(sheet(page, 'Küchenlicht').locator('output')).toHaveText('aus');
     await expect(slider(page, 'Küchenlicht Helligkeit')).toHaveValue('0');
     await page.waitForTimeout(200);
-    await page.screenshot({ path: info.outputPath('aus-licht.png') });
+    await bild(page, info, 'aus-licht.png');
 
     sent.length = 0;
     await sheet(page, 'Küchenlicht').getByRole('button', { name: 'Helligkeit 25 %' }).tap();
@@ -228,7 +249,7 @@ test('Deine Geräte are the app\'s tiles', async ({ page }, info) => {
   const wide = await page.evaluate(() => [...document.querySelectorAll('.kachel')].map((k) => Math.round(k.getBoundingClientRect().width)));
   expect(wide[0], 'Bürolicht, alone before a blind, takes the row').toBe(wide[1]);
   expect(wide[4], 'Küchenlicht and Haustür share a row').toBeLessThan(wide[1] / 2 + 1);
-  await page.screenshot({ path: info.outputPath('kacheln-360.png'), fullPage: true });
+  await bild(page, info, 'kacheln-360.png', { fullPage: true });
 
   const buero = page.getByRole('switch', { name: 'Bürolicht' });
   await expect(buero).toHaveAttribute('aria-checked', 'false');
@@ -287,7 +308,7 @@ test('the tag page stacks its blocks on a phone', async ({ page }, info) => {
   const loesen = await box('li.tu button');
   expect(loesen.width, 'Lösen small on its row').toBeLessThan(vw / 2);
   expect(knopf.y, 'Auslösen before the automations').toBeLessThan((await box('section.karte')).y);
-  await page.screenshot({ path: info.outputPath('tag-seite.png'), fullPage: true });
+  await bild(page, info, 'tag-seite.png', { fullPage: true });
 });
 
 // ADR 0004 §5, §8: a tag's own page. Its button acts in place as the signed-in
@@ -432,7 +453,7 @@ test('Deine Aufgaben: one list in the owner\'s order, each row one tap away', as
   expect(await above(page, 'text=Dokumenten-Mails: Passwort', 'text=Im Archiv: 2 Fragen offen')).toBe(true);
   expect(await above(page, 'text=Im Archiv: 2 Fragen offen', 'text=Wächter von außen einrichten')).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await page.screenshot({ path: info.outputPath('deine-aufgaben.png'), fullPage: true });
+  await bild(page, info, 'deine-aufgaben.png', { fullPage: true });
   await page.getByRole('link', { name: 'Box', exact: true }).click();
   await expect(page).toHaveURL(/\/aufgaben\?nur=box$/);
   await expect(page.locator('#aufgabe-2')).toContainText('Wächter von außen einrichten');
@@ -454,7 +475,7 @@ test('Meine Daten: one line per source, the ways in below', async ({ page }, inf
   await expect(wege).toContainText('anna+doc@example.org');
   expect(await above(page, 'section:has(h2:text-is("Was ankommt"))', 'section:has(h2:text-is("So kommt mehr dazu"))')).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await page.screenshot({ path: info.outputPath('meine-daten.png'), fullPage: true });
+  await bild(page, info, 'meine-daten.png', { fullPage: true });
 });
 
 // Netzlaufwerk once the password is set: the addresses first, the state in a line, the change folded.
@@ -474,7 +495,7 @@ test('Wem gehört dieser Scan: an admin gives it to a person', async ({ page }, 
   await expect(page.locator('h1')).toHaveText('Wem gehört dieser Scan?');
   await expect(page.locator('section.karte h2')).toHaveText('Von Praxis Dr. Muster');
   await expect(page.getByRole('button', { name: 'Haushalt (die ganze Familie)' })).toBeVisible();
-  await page.screenshot({ path: info.outputPath('dokumente-zuordnen.png'), fullPage: true });
+  await bild(page, info, 'dokumente-zuordnen.png', { fullPage: true });
   await page.getByRole('button', { name: 'Ben' }).click();
   await expect(page.locator('.gut')).toContainText('Gemerkt. Dokumente gibt es beim nächsten Durchgang weiter');
   await expect(page.locator('.zustand')).toContainText('Geht an Ben');
@@ -489,7 +510,7 @@ test('Dokumente leads with Paperless, then filing, the title after a file', asyn
   const big = page.locator('label.vorne', { hasText: 'Foto machen oder Datei ablegen' });
   await expect(big).toBeVisible();
   expect(await above(page, 'a.vorne', 'label.vorne')).toBe(true);
-  await page.screenshot({ path: info.outputPath('dokumente.png'), fullPage: true });
+  await bild(page, info, 'dokumente.png', { fullPage: true });
   expect(await above(page, 'label.vorne', 'text=Oder per Mail an')).toBe(true);
   await expect(page.getByLabel('Titel (wenn du magst)')).toBeHidden();
   await page.locator('input[type=file]').setInputFiles({ name: 'brief.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4') });
@@ -595,13 +616,13 @@ test('Musik is how music gets in, its files, and the records by Discogs', async 
   await expect(rows.nth(1).getByRole('button')).toHaveText(['Noch einmal einsortieren', 'Löschen']);
   await expect(page.locator('.musik-platten')).toContainText('Platte erfassen');
   await expect(page.locator('p.ruhig').last()).toContainText('Discogs: verbunden mit');
-  await page.screenshot({ path: info.outputPath('musik-demo.png'), fullPage: true });
+  await bild(page, info, 'musik-demo.png', { fullPage: true });
   await request.get('/demo/musik?leer=1&discogs=0');
   await page.reload();
   await expect(rows).toHaveCount(0);
   await expect(page.locator('[data-auffrischen]')).toHaveCount(0);
   await expect(page.locator('.musik-platten a')).toHaveText([/Wunschliste · \d+/, 'Mit Discogs verbinden']);
-  await page.screenshot({ path: info.outputPath('musik-leer.png'), fullPage: true });
+  await bild(page, info, 'musik-leer.png', { fullPage: true });
   await request.get('/demo/musik?leer=0');
 });
 
@@ -738,7 +759,7 @@ test('Standortverlauf, connected, leads with the timeline and ends with a quiet 
   expect(await y('.vorne')).toBeLessThan(await y('.zustand'));
   expect(await y('.zustand')).toBeLessThan(await y('.schritt'));
   expect(await y('.schritt')).toBeLessThan(await y('form.leise-weg'));
-  await page.screenshot({ path: info.outputPath('standort-verbunden-ohne-punkte.png'), fullPage: true });
+  await bild(page, info, 'standort-verbunden-ohne-punkte.png', { fullPage: true });
 
   await request.get('/demo/standort?punkte=1');
   await page.reload();
@@ -746,7 +767,7 @@ test('Standortverlauf, connected, leads with the timeline and ends with a quiet 
   await expect(page.locator('.schritt')).toHaveCount(0);
   expect(await y('.vorne')).toBeLessThan(await y('.zustand'));
   expect(await y('.zustand')).toBeLessThan(await y('form.leise-weg'));
-  await page.screenshot({ path: info.outputPath('standort-verbunden.png'), fullPage: true });
+  await bild(page, info, 'standort-verbunden.png', { fullPage: true });
 });
 
 // Every page, every field, on a phone (owner 2026-10-24: "werden alle
@@ -821,14 +842,14 @@ test('Box: three tabs fit a phone, the Übersicht says what needs me, Haushalt l
   const op = page.locator('details#operator');
   await expect(op.locator('summary')).toContainText('Operator: läuft');
   expect(await op.evaluate((d) => d.open), 'the Operator is folded').toBe(false);
-  await page.screenshot({ path: info.outputPath('box-uebersicht-411.png'), fullPage: true });
+  await bild(page, info, 'box-uebersicht-411.png', { fullPage: true });
   await op.locator('summary').click();
   await expect(op.getByText('Alle Skills liefen zuletzt gut.')).toBeVisible();
   const skill = op.locator('li', { hasText: 'Schreibt jeden Morgen' });
   await expect(skill).toBeHidden();
   await op.getByText('Alle Skills zeigen').click();
   await expect(skill).toBeVisible();
-  await page.screenshot({ path: info.outputPath('box-operator-411.png'), fullPage: true });
+  await bild(page, info, 'box-operator-411.png', { fullPage: true });
 
   await tabs.filter({ hasText: 'Haushalt' }).click();
   await expect(page).toHaveURL(/\/box\/haushalt$/);
@@ -837,7 +858,7 @@ test('Box: three tabs fit a phone, the Übersicht says what needs me, Haushalt l
   await expect(rows.filter({ hasText: 'Geräte' })).toContainText(/Telefone? gekoppelt/);
   await expect(rows.filter({ hasText: 'Adresse' })).toContainText('Adresse gesetzt');
   await expect(rows.filter({ hasText: 'Module' })).toContainText('Modulen an');
-  await page.screenshot({ path: info.outputPath('box-haushalt-411.png'), fullPage: true });
+  await bild(page, info, 'box-haushalt-411.png', { fullPage: true });
   await rows.filter({ hasText: 'Personen' }).locator('a').click();
   await expect(page).toHaveURL(/\/box\/personen$/);
   await expect(page.locator('nav.unter a[aria-current=page]')).toHaveText('Haushalt');
@@ -856,9 +877,9 @@ test('Auslastung shows the box and refreshes its values in place', async ({ page
   await page.waitForResponse((r) => r.url().includes('/box/teil?was=auslastung'), { timeout: 8000 });
   await page.waitForResponse((r) => r.url().includes('/box/teil?was=auslastung'), { timeout: 8000 });
   expect(await page.evaluate(() => window.nichtNeu), 'the page was not reloaded').toBe(1);
-  await page.screenshot({ path: info.outputPath('auslastung-411.png'), fullPage: true });
+  await bild(page, info, 'auslastung-411.png', { fullPage: true });
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.screenshot({ path: info.outputPath('auslastung-1280.png'), fullPage: true });
+  await bild(page, info, 'auslastung-1280.png', { fullPage: true });
 });
 
 // owner 2026-11-05 („Web zeigt, Handy bearbeitet“): the household's address book, by name;
@@ -883,7 +904,7 @@ test('Kontakte lists the address book, the search filters while typing, a row op
   await page.getByText('Wie das funktioniert').click();
   await expect(page.getByText('Neue Kontakte und Änderungen machst du auf dem Handy')).toBeVisible();
   await expect(page.locator('a.ruf', { hasText: '0711 556677' })).toHaveAttribute('href', 'tel:0711556677');
-  await page.screenshot({ path: info.outputPath('kontakte-411.png'), fullPage: true });
+  await bild(page, info, 'kontakte-411.png', { fullPage: true });
   const suche = page.getByRole('searchbox', { name: 'Name, Nummer, E-Mail' });
   await suche.fill('müller');
   await expect(page.locator('.kontakte li:visible')).toHaveCount(1);
@@ -905,7 +926,7 @@ test('Kontakte lists the address book, the search filters while typing, a row op
   await expect(page.getByRole('heading', { name: 'Dieselbe Person?' })).toBeVisible(); // its questions on it, under its fields
   expect((await oben.last().boundingBox()).y).toBeLessThan((await page.locator('.karte').first().boundingBox()).y); // its links before its fields
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
-  await page.screenshot({ path: info.outputPath('kontakt-411.png'), fullPage: true });
+  await bild(page, info, 'kontakt-411.png', { fullPage: true });
   await page.locator('nav.pfad').getByRole('link', { name: 'Kontakte' }).click();
   await expect(page).toHaveURL(/\/kontakte$/);
   await page.goto('/kalender');
@@ -938,7 +959,7 @@ test('Beziehungen: a contact lists its relations, each changed, removed and forg
   await expect(art()).toHaveValue('partner');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
   await anna().scrollIntoViewIfNeeded();
-  await page.screenshot({ path: info.outputPath('kontakt-beziehungen-411.png'), fullPage: true });
+  await bild(page, info, 'kontakt-beziehungen-411.png', { fullPage: true });
   await art().selectOption('freund');
   await expect(page.getByText('Gespeichert: Anna Beispiel ist Freund/in von Ben Beispiel.')).toBeVisible();
   await expect(art()).toHaveValue('freund');
@@ -984,7 +1005,7 @@ test('Gruppen: a contact joins and leaves a group, Kontakte picks by group', asy
   await expect(page.getByText('Hinzugefügt: „Chor“.')).toBeVisible();
   await expect(chips.getByRole('link', { name: 'Chor', exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
-  await page.screenshot({ path: info.outputPath('kontakt-gruppen-411.png'), fullPage: true });
+  await bild(page, info, 'kontakt-gruppen-411.png', { fullPage: true });
   await page.getByRole('button', { name: 'Aus „Stammtisch“ entfernen' }).click();
   await expect(page.getByText('Aus „Stammtisch“ entfernt.')).toBeVisible();
   await expect(chips.getByRole('link', { name: 'Stammtisch', exact: true })).toHaveCount(0);
@@ -1004,7 +1025,7 @@ test('Meine Kontakte: the own Handy-Kontakte, each with its page and its person 
   await expect(page).toHaveURL(/\/kontakte\/privat$/);
   await expect(page.locator('nav.pfad')).toHaveText('Kontakte › Meine');
   await expect(page.locator('.kontakte li')).toHaveCount(5);
-  await page.screenshot({ path: info.outputPath('meine-kontakte-411.png'), fullPage: true });
+  await bild(page, info, 'meine-kontakte-411.png', { fullPage: true });
   await page.getByRole('link', { name: /^Opa Karl/ }).click();
   await expect(page).toHaveURL(/\/kontakte\/privat\/k1$/);
   await expect(page.locator('nav.pfad')).toHaveText('Kontakte › Meine › Opa Karl');
@@ -1037,7 +1058,7 @@ test('Dieselbe Person? on the contact takes a Nein', async ({ page }, info) => {
     expect(b.x + b.width, 'each small face on the screen').toBeLessThanOrEqual(411);
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
-  await page.screenshot({ path: info.outputPath('dieselbe-411.png'), fullPage: true });
+  await bild(page, info, 'dieselbe-411.png', { fullPage: true });
   await paare.last().getByRole('button', { name: 'Nein' }).click();
   await expect(page.getByText('Gemerkt: Nach diesen beiden fragt Homes nicht wieder.')).toBeVisible();
   await expect(page).toHaveURL(/\/kontakte\/privat\/k0$/);
@@ -1047,7 +1068,7 @@ test('Dieselbe Person? on the contact takes a Nein', async ({ page }, info) => {
   const dann = page.locator('section.paar.wer').first();
   await expect(dann).toContainText('ohne Namen');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
-  await page.screenshot({ path: info.outputPath('dieselbe-nein-411.png'), fullPage: true });
+  await bild(page, info, 'dieselbe-nein-411.png', { fullPage: true });
   await dann.getByRole('textbox', { name: 'Name' }).fill('Tante Erika');
   await dann.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.getByText('Gespeichert: Das Gesicht heißt in Immich jetzt Tante Erika.')).toBeVisible();
@@ -1060,7 +1081,7 @@ test('Dieselbe Person? on the contact takes a Nein', async ({ page }, info) => {
   await expect(page.locator('section.paar')).toHaveCount(1);
   await expect(page.locator('h1, h2')).toHaveText([/^(Dieselbe Person\?|Ist das …\?)$/]);
   await expect(page.getByText(/^Frage 1 von \d+/)).toBeVisible();
-  await page.screenshot({ path: info.outputPath('eine-frage-411.png'), fullPage: true });
+  await bild(page, info, 'eine-frage-411.png', { fullPage: true });
   // owner 2026-11-11: one tap first — every „Dieselbe Person?“ and „Ist das …?“ before „Wer ist das?“ (typing)
   const anzahl = Number((await page.getByText(/^Frage 1 von \d+/).textContent()).match(/von (\d+)/)[1]);
   const fragen = [];
@@ -1082,7 +1103,7 @@ test('Dieselbe Person? on the contact takes a Nein', async ({ page }, info) => {
   await expect(wer.first().getByRole('textbox', { name: 'Name' })).toBeVisible();
   await expect(wer.first().getByRole('button', { name: 'Kenne ich nicht' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
-  await page.screenshot({ path: info.outputPath('wer-ist-das-411.png'), fullPage: true });
+  await bild(page, info, 'wer-ist-das-411.png', { fullPage: true });
   const offen = page.locator('section.paar:not(.frage):not(.wer)');
   const vorher = await offen.count();
   expect(vorher).toBeGreaterThan(0);
@@ -1103,7 +1124,7 @@ test('Kein Mensch: a face hidden at once, Rückgängig brings it back', async ({
   await expect(status).toContainText('Ausgeblendet.');
   await expect(page.locator(`section.paar.wer input[name=wer][value="${id}"]`)).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
-  await page.screenshot({ path: info.outputPath('kein-mensch-411.png'), fullPage: true });
+  await bild(page, info, 'kein-mensch-411.png', { fullPage: true });
   await status.getByRole('button', { name: 'Rückgängig' }).click();
   await expect(page.getByRole('status')).toContainText('Wieder da');
   await expect(page.locator(`section.paar.wer input[name=wer][value="${id}"]`).first()).toBeAttached();
@@ -1120,7 +1141,7 @@ test('Namensvorschläge: typing shows the matching names as rows, a tap fills th
   const zeilen = page.locator('section.paar.wer').first().locator('ul.vorschlaege');
   await expect(zeilen.getByRole('button')).toHaveText(['Oma Hilde']);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
-  await page.screenshot({ path: info.outputPath('namen-vorschlaege-411.png'), fullPage: true });
+  await bild(page, info, 'namen-vorschlaege-411.png', { fullPage: true });
   await zeilen.getByRole('button', { name: 'Oma Hilde' }).click();
   await expect(feld).toHaveValue('Oma Hilde');
   await expect(zeilen).toBeHidden();
@@ -1152,13 +1173,13 @@ test('Ist das …? asks on the contact and takes a Nein', async ({ page }, info)
   await expect(fragen).toContainText('Ist das Lena Schmidt?');
   await expect(fragen).toContainText('Bild im Kontakt');
   await expect(fragen.getByRole('button', { name: 'Ja, das ist Lena Schmidt' })).toBeVisible();
-  await page.screenshot({ path: info.outputPath('ist-das-411.png'), fullPage: true });
+  await bild(page, info, 'ist-das-411.png', { fullPage: true });
   await page.goto('/kontakte/privat/b1');
   await expect(fragen).toContainText('Oma Hilde');
   await fragen.getByRole('button', { name: 'Nein' }).click();
   await expect(page.getByText('Gemerkt: Homes hat das Bild aus Immich genommen und fragt nach dieser Person nicht wieder.')).toBeVisible();
   await expect(fragen).toHaveCount(0);
-  await page.screenshot({ path: info.outputPath('ist-das-nein-411.png'), fullPage: true });
+  await bild(page, info, 'ist-das-nein-411.png', { fullPage: true });
 });
 
 // Pictures of the main pages as a phone shows them, for a look at the
@@ -1166,7 +1187,7 @@ test('Ist das …? asks on the contact and takes a Nein', async ({ page }, info)
 for (const path of ['/start', '/raeume', '/energie', '/notizen', '/mehr', '/musik', '/kalender/verwalten', '/kontakte']) {
   test(`picture of ${path}`, async ({ page }, info) => {
     await page.goto(path);
-    await page.screenshot({ path: info.outputPath(path.slice(1) + '.png'), fullPage: true });
+    await bild(page, info, path.slice(1) + '.png', { fullPage: true });
   });
 }
 
@@ -1210,14 +1231,14 @@ test('picture of /start at 411 px', async ({ page }, info) => {
   await page.setViewportSize({ width: 411, height: 900 });
   await page.goto('/start');
   await page.waitForLoadState('networkidle');
-  await page.screenshot({ path: info.outputPath('start-411.png'), fullPage: true });
+  await bild(page, info, 'start-411.png', { fullPage: true });
 });
 
 // Energie in the widget's look (owner, 2026-11-03), for the owner to see
 // before it merges: the Jahr span, and the page in the light.
 test('picture of /energie in Jahr', async ({ page }, info) => {
   await page.goto('/energie?zeitraum=jahr');
-  await page.screenshot({ path: info.outputPath('energie-jahr.png'), fullPage: true });
+  await bild(page, info, 'energie-jahr.png', { fullPage: true });
 });
 // The chosen hour (owner 2026-11-11: „was in der Stunde, die ich ausgewählt
 // habe, auch verbraucht wurde“): the latest hour is chosen at first; a tap
@@ -1238,7 +1259,7 @@ test('a tapped hour says what the house used in it', async ({ page }, info) => {
   await expect(line).toContainText(/^1–2 Uhr:/);
   await expect(page.locator('.verlauf g[data-zeile]').nth(1)).toBeFocused();
   await expect(page.locator('.verlauf svg text', { hasText: /^−[\d,]*[1-9][\d,]* kWh$/ })).toHaveCount(1); // never „−0 kWh“
-  await page.locator('.verlauf').first().screenshot({ path: info.outputPath('energie-stunde.png') });
+  await bild(page.locator('.verlauf').first(), info, 'energie-stunde.png');
 });
 // Every span (owner 2026-11-11: „Das sollte bei jedem stehen“): Woche
 // names the day, Jahr the month; a tap on the first bar says its name.
@@ -1260,7 +1281,7 @@ test.describe('light', () => {
   test.use({ colorScheme: 'light' });
   test('picture of /energie in the light', async ({ page }, info) => {
     await page.goto('/energie');
-    await page.screenshot({ path: info.outputPath('energie-hell.png'), fullPage: true });
+    await bild(page, info, 'energie-hell.png', { fullPage: true });
   });
 });
 
@@ -1282,35 +1303,35 @@ test('what the box lacks is a quiet trace; a wish follows Laib', async ({ page, 
   const muted = await page.evaluate(() => { const d = document.createElement('span'); d.style.color = 'var(--muted)'; document.body.appendChild(d); const c = getComputedStyle(d).color; d.remove(); return c; });
   expect(color).toBe(muted);
   await card.scrollIntoViewIfNeeded();
-  await card.screenshot({ path: info.outputPath('spuren-1-nicht-eingerichtet.png') });
+  await bild(card, info, 'spuren-1-nicht-eingerichtet.png');
 
   await mark(page);
   const ask = standort.getByRole('button', { name: 'Standortverlauf: Hier anfordern' });
   await request.get('/demo/laib?ms=600&fehler=0'); // Laib takes a moment: the button says what runs
   await ask.click();
   await expect(standort.getByRole('button')).toHaveText('Wird angefordert …');
-  await standort.screenshot({ path: info.outputPath('spuren-2-wird-angefordert.png') });
+  await bild(standort, info, 'spuren-2-wird-angefordert.png');
   await expect(page.locator('#spur-standort')).toContainText('angefordert', { timeout: 10_000 });
   await expect(page.locator('#spur-standort').getByRole('button')).toHaveCount(0);
   expect(await stays(page), 'no reload').toBe(true);
-  await page.locator('#spur-standort').screenshot({ path: info.outputPath('spuren-3-angefordert.png') });
+  await bild(page.locator('#spur-standort'), info, 'spuren-3-angefordert.png');
 
   await request.get('/demo/laib?ms=0&fehler=0');
   await request.get('/demo/wunsch?modul=standort&stand=wartet');
   await page.goto('/mehr');
   await expect(page.locator('#spur-standort')).toContainText('wartet auf Freigabe');
-  await page.locator('#spur-standort').screenshot({ path: info.outputPath('spuren-4-wartet.png') });
+  await bild(page.locator('#spur-standort'), info, 'spuren-4-wartet.png');
 
   await request.get('/demo/wunsch?modul=standort&stand=eingerichtet');
   await page.goto('/mehr');
   await expect(page.locator('#spur-standort')).toContainText('wird eingerichtet');
-  await page.locator('#spur-standort').screenshot({ path: info.outputPath('spuren-5-wird-eingerichtet.png') });
+  await bild(page.locator('#spur-standort'), info, 'spuren-5-wird-eingerichtet.png');
 
   await request.get('/demo/wunsch?modul=standort&stand=abgelehnt');
   await page.goto('/mehr');
   await expect(page.locator('#spur-standort')).toContainText('abgelehnt');
   await expect(page.locator('#spur-standort').getByRole('button', { name: 'Standortverlauf: Hier anfordern' })).toBeVisible();
-  await page.getByRole('region', { name: 'Gibt es hier noch nicht' }).screenshot({ path: info.outputPath('spuren-6-abgelehnt.png') });
+  await bild(page.getByRole('region', { name: 'Gibt es hier noch nicht' }), info, 'spuren-6-abgelehnt.png');
 });
 
 test('a wish Laib cannot take is said on the page, the trace stays', async ({ page, request }, info) => {
@@ -1325,7 +1346,7 @@ test('a wish Laib cannot take is said on the page, the trace stays', async ({ pa
   await expect(page.locator('#homes-hinweis')).toContainText('nicht aufschreiben');
   await expect(spur.getByRole('button')).toHaveText('Hier anfordern');
   expect(await stays(page)).toBe(true);
-  await page.screenshot({ path: info.outputPath('spuren-7-fehler.png') });
+  await bild(page, info, 'spuren-7-fehler.png');
   await request.get('/demo/laib?ms=0&fehler=0');
 });
 
@@ -1355,7 +1376,7 @@ for (const scheme of ['dark', 'light']) {
       for (const href of await geht.evaluateAll((as) => as.map((a) => a.getAttribute('href')))) {
         expect(href).toMatch(/^(\/(kontakte|kalender|standort|raeume|mehr#spuren)|https:\/\/photos\.example)$/);
       }
-      await page.screenshot({ path: info.outputPath(`zusammen-411-${scheme}.png`), fullPage: true });
+      await bild(page, info, `zusammen-411-${scheme}.png`, { fullPage: true });
     });
   });
 }
@@ -1375,14 +1396,14 @@ for (const scheme of ['dark', 'light']) {
       await expect(finden.getByRole('link', { name: /^Rechnung/ })).toBeVisible();
       await expect(finden.getByRole('link', { name: 'Für Anna' })).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
-      await page.screenshot({ path: info.outputPath(`dokumente-finden-411-${scheme}.png`), fullPage: true });
+      await bild(page, info, `dokumente-finden-411-${scheme}.png`, { fullPage: true });
       await mark(page);
       const suche = finden.getByRole('searchbox', { name: 'Name, Nummer, Produkt' });
       await suche.fill('104711');
       await expect(page.locator('#dsuche-treffer')).toContainText('Stromrechnung Oktober');
       await expect(page.locator('#dsuche-treffer')).toContainText('Rechnung SW-2026-104711 · 84,50 €');
       expect(await stays(page), 'no reload').toBe(true);
-      await page.screenshot({ path: info.outputPath(`dokumente-suche-nummer-411-${scheme}.png`), fullPage: true });
+      await bild(page, info, `dokumente-suche-nummer-411-${scheme}.png`, { fullPage: true });
       await suche.fill('3704 0044');
       await expect(page.locator('#dsuche-treffer')).toContainText('Abschlag Strom 2027');
       await suche.fill('kfz123456');
@@ -1396,14 +1417,14 @@ for (const scheme of ['dark', 'light']) {
       await expect(page).toHaveURL(/\/dokumente\/suche\?bereich=Haus$/);
       await expect(page.locator('h1')).toHaveText('Haus');
       await expect(page.locator('.karte li')).toHaveCount(3);
-      await page.screenshot({ path: info.outputPath(`dokumente-bereich-411-${scheme}.png`), fullPage: true });
+      await bild(page, info, `dokumente-bereich-411-${scheme}.png`, { fullPage: true });
       await page.goto('/dokumente/suche?nur=versicherungen');
       await expect(page.locator('.karte li', { hasText: 'Vollkasko' })).toContainText('HUK-Coburg · Vers.-Nr. KFZ 123 456 789 · kündbar bis 01.12.2026');
       await expect(page.locator('.karte li', { hasText: 'Privathaftpflicht' })).toContainText('kündbar bis 15.12.2026');
-      await page.screenshot({ path: info.outputPath(`dokumente-versicherungen-411-${scheme}.png`), fullPage: true });
+      await bild(page, info, `dokumente-versicherungen-411-${scheme}.png`, { fullPage: true });
       await page.goto('/dokumente/suche?nur=garantie');
       await expect(page.locator('.karte li')).toHaveText(/Waschmaschine WM 7 Pro.*Garantie bis 03\.06\.2027/);
-      await page.screenshot({ path: info.outputPath(`dokumente-garantie-411-${scheme}.png`), fullPage: true });
+      await bild(page, info, `dokumente-garantie-411-${scheme}.png`, { fullPage: true });
     });
   });
 }
@@ -1439,7 +1460,7 @@ test('Kontakt prüfen lassen: link, the public form, the review', async ({ page,
   // nothing wider than the phone: no field pushed off the right edge
   expect(await kontakt.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
   expect(await kontakt.locator('input[name=tel]').first().evaluate((e) => e.offsetWidth)).toBeGreaterThan(150); // the number readable, not „071“
-  await kontakt.screenshot({ path: info.outputPath('kontakt-formular-411.png'), fullPage: true });
+  await bild(kontakt, info, 'kontakt-formular-411.png', { fullPage: true });
   await kontakt.locator('input[name=tel]').nth(1).fill('0171 2345678');
   await kontakt.locator('input[name=mail]').first().fill('hilde@nowhere.example');
   await kontakt.locator('input[name=adr-strasse]').first().fill('Lindenweg 3');
@@ -1450,7 +1471,7 @@ test('Kontakt prüfen lassen: link, the public form, the review', async ({ page,
   await kontakt.locator('input[name=geb-jahr]').fill('1941');
   await kontakt.getByRole('button', { name: 'Änderungen senden' }).click();
   await expect(kontakt.getByRole('heading', { name: 'Danke!' })).toBeVisible();
-  await kontakt.screenshot({ path: info.outputPath('kontakt-danke-411.png'), fullPage: true });
+  await bild(kontakt, info, 'kontakt-danke-411.png', { fullPage: true });
   await kontakt.goto(link);
   await expect(kontakt.getByRole('heading', { name: 'Link ungültig oder abgelaufen' })).toBeVisible();
   await ctx.close();
@@ -1465,11 +1486,11 @@ test('Kontakt prüfen lassen: link, the public form, the review', async ({ page,
   await expect(zeilen.filter({ hasText: 'hilde@nowhere.example' })).toContainText('gibt es nicht');
   await expect(zeilen.filter({ hasText: 'hilde@nowhere.example' }).locator('input')).not.toBeChecked();
   await expect(zeilen.filter({ hasText: '0171 2345678' }).locator('input')).toBeChecked();
-  await page.screenshot({ path: info.outputPath('kontakt-antwort-411.png'), fullPage: true });
+  await bild(page, info, 'kontakt-antwort-411.png', { fullPage: true });
   await page.getByRole('button', { name: 'Ausgewählte übernehmen' }).click();
   await expect(page.getByText('3 Änderungen ins Adressbuch geschrieben')).toBeVisible();
   await expect(zeilen.filter({ hasText: 'hilde@nowhere.example' })).toContainText('nicht übernommen');
-  await page.screenshot({ path: info.outputPath('kontakt-antwort-entschieden-411.png'), fullPage: true });
+  await bild(page, info, 'kontakt-antwort-entschieden-411.png', { fullPage: true });
   await expect(page.locator('.karte').first()).toContainText('+49 171 2345678'); // the card as written (the household's form), on the same page
   await page.goto('/kontakte/h6');
   await expect(page.locator('body')).toContainText('+49 171 2345678');
@@ -1491,7 +1512,7 @@ test('Kontakt prüfen lassen: formats, address, removal, photo, message', async 
   await knopf.click();
   await expect(knopf).toHaveText('Link kopiert');
   const link = (await page.evaluate(() => navigator.clipboard.readText())).match(/http:\/\/127\.0\.0\.1:8652\/[A-Za-z0-9_-]{43}/)[0];
-  await page.screenshot({ path: info.outputPath('kontakte-kopiert-411.png'), fullPage: true });
+  await bild(page, info, 'kontakte-kopiert-411.png', { fullPage: true });
 
   const ctx = await browser.newContext({ viewport: { width: 411, height: 900 }, colorScheme: 'light' });
   const k = await ctx.newPage();
@@ -1505,7 +1526,7 @@ test('Kontakt prüfen lassen: formats, address, removal, photo, message', async 
   const bad = await k.evaluate(() => [...document.querySelectorAll('[pattern]')].filter((e) => { try { new RegExp('^(?:' + e.pattern + ')$', 'v'); return !e.dataset.fehler; } catch (x) { return true; } }).map((e) => e.name));
   expect(bad).toEqual([]);
   expect(await k.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
-  await k.screenshot({ path: info.outputPath('kontakt-v2-leer-411.png'), fullPage: true });
+  await bild(k, info, 'kontakt-v2-leer-411.png', { fullPage: true });
 
   // wrong forms: the browser stops, each error in German beside its field
   await k.locator('input[name=vorname]').fill('Ben2');
@@ -1519,7 +1540,7 @@ test('Kontakt prüfen lassen: formats, address, removal, photo, message', async 
     await expect(k.locator('.fehler', { hasText: t })).toBeVisible();
   }
   await expect(k.getByRole('heading', { name: 'Danke!' })).toHaveCount(0);
-  await k.screenshot({ path: info.outputPath('kontakt-v2-fehler-411.png'), fullPage: true });
+  await bild(k, info, 'kontakt-v2-fehler-411.png', { fullPage: true });
 
   // right: the kinds, a new main number, the old one removed, the photo, a message
   await k.locator('input[name=vorname]').fill('Ben');
@@ -1547,7 +1568,7 @@ test('Kontakt prüfen lassen: formats, address, removal, photo, message', async 
   await k.locator('input[name=foto]').setInputFiles({ name: 'ben.png', mimeType: 'image/png', buffer: png });
   await expect(k.locator('#foto-bild')).toBeVisible();
   await k.locator('textarea[name=nachricht]').fill('Wir sind umgezogen, die neue Nummer ist die vom Büro.');
-  await k.screenshot({ path: info.outputPath('kontakt-v2-ausgefuellt-411.png'), fullPage: true });
+  await bild(k, info, 'kontakt-v2-ausgefuellt-411.png', { fullPage: true });
   await k.getByRole('button', { name: 'Änderungen senden' }).click();
   await expect(k.getByRole('heading', { name: 'Danke!' })).toBeVisible();
   await ctx.close();
@@ -1565,12 +1586,12 @@ test('Kontakt prüfen lassen: formats, address, removal, photo, message', async 
   const notiz = zeilen.filter({ hasText: 'Wir sind umgezogen' });
   await expect(notiz.locator('input')).not.toBeChecked();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
-  await page.screenshot({ path: info.outputPath('kontakt-v2-antwort-411.png'), fullPage: true });
+  await bild(page, info, 'kontakt-v2-antwort-411.png', { fullPage: true });
   await page.getByRole('button', { name: 'Alle übernehmen' }).click();
   await expect(page.getByText('ins Adressbuch geschrieben')).toBeVisible();
   await expect(weg).toContainText('nicht übernommen');
   await expect(notiz).toContainText('nicht übernommen');
-  await page.screenshot({ path: info.outputPath('kontakt-v2-entschieden-411.png'), fullPage: true });
+  await bild(page, info, 'kontakt-v2-entschieden-411.png', { fullPage: true });
   await page.goto('/kontakte/h1');
   await expect(page.locator('body')).toContainText('+49 711 2345678');
   await expect(page.locator('body')).toContainText('Gartenstraße 9');
