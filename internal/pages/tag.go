@@ -77,6 +77,7 @@ type tagGesagt struct {
 	gut, bote string
 	vorschau  *tagaktion.Wunsch // a change to confirm, with its sentence in gut
 	freigabe  bool              // the change waits for an admin
+	nicht     bool              // an automation did not run: the line is no success
 }
 
 func tagPost(w http.ResponseWriter, r *http.Request, cfg StartConfig, id string) {
@@ -88,11 +89,11 @@ func tagPost(w http.ResponseWriter, r *http.Request, cfg StartConfig, id string)
 			http.Error(w, n.Satz, n.Status)
 			return
 		}
-		satz := e.Text
+		satz, nicht := e.Text, slices.ContainsFunc(e.Laeufe, func(l tagaktion.Lauf) bool { return !l.Lief })
 		if satz == "" {
 			satz = "Ausgelöst: Home Assistant hat es bekommen."
 		}
-		tagSeite(w, r, cfg, id, tagGesagt{gut: satz})
+		tagSeite(w, r, cfg, id, tagGesagt{gut: satz, nicht: nicht}) // what its automations made of it (§9)
 		return
 	}
 	if _, ok := tagDoes[tun]; !ok {
@@ -145,6 +146,8 @@ func tagSeite(w http.ResponseWriter, r *http.Request, cfg StartConfig, id string
 	switch {
 	case g.vorschau != nil:
 		b.WriteString(tagBestaetigen(id, g))
+	case g.nicht:
+		b.WriteString(`<p class=k role=status>` + html.EscapeString(g.gut) + `</p>`)
 	case g.gut != "":
 		b.WriteString(`<div class=gut role=status><span class=punkt></span><p>` + html.EscapeString(g.gut) + `</p></div>`)
 		if g.bote != "" {
@@ -199,6 +202,14 @@ func tagAutomationen(r *http.Request, cfg StartConfig, id string) string {
 	var b strings.Builder
 	act := `<form method=post class=tag-form action="` + TagPath + id + `">`
 	b.WriteString(`<section class=karte><h2>Automationen</h2>`)
+	if l, ok := cfg.Tags.Zuletzt(r.Context(), map[string][]tagaktion.Verbindung{id: mit[id]})[id]; ok { // its last run, from HA's traces (§9)
+		_, loc := cfg.clock()
+		wer := ""
+		if l.Person != "" {
+			wer = " (" + l.Person + ")"
+		}
+		b.WriteString(`<p class=k>Zuletzt ` + l.Wann.In(loc).Format("02.01. 15:04") + wer + `: ` + html.EscapeString(l.Satz()) + `</p>`)
+	}
 	if len(mit[id]) == 0 {
 		b.WriteString(`<p class=k>Noch startet keine Automation auf diesem Tag.</p>`)
 	} else {

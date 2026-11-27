@@ -72,6 +72,95 @@ type HA struct {
 	tags     []map[string]any          // the tag registry: id, name
 	autos    map[string]map[string]any // the automations' configs by id (/api/config/automation/config/<id>)
 	mobile   mobileApp
+	traces   map[string][]map[string]any // automation id → its runs' full traces (trace/list, trace/get), oldest first
+	plaene   map[string][2]string        // automation id → how its next run on a tag ends: script_execution, last_step
+}
+
+// AddTrace puts one run's full trace (trace/get's shape: run_id,
+// timestamp, script_execution, last_step, trace, config) under automation id.
+func (h *HA) AddTrace(id string, trace map[string]any) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.traces == nil {
+		h.traces = map[string][]map[string]any{}
+	}
+	h.traces[id] = append(h.traces[id], trace)
+}
+
+// RunsOnTag makes automation id run, as HA would, whenever a tag it
+// triggers on is scanned (a tag_scanned event or a webhook's scan_tag): a
+// trace ending as execution at lastStep (finished at the last action,
+// failed_conditions at condition/0, …). Without it, a scan leaves no trace.
+func (h *HA) RunsOnTag(id, execution, lastStep string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.plaene == nil {
+		h.plaene = map[string][2]string{}
+	}
+	h.plaene[id] = [2]string{execution, lastStep}
+}
+
+// laufen is a scan's runs: each planned automation whose config has a tag
+// trigger on its tag_id. h.mu is held.
+func (h *HA) laufen(data map[string]any) {
+	for id, plan := range h.plaene {
+		cfg := h.autos[id]
+		trig, _ := cfg["triggers"].([]any)
+		if t, ok := cfg["trigger"].([]any); ok {
+			trig = t
+		}
+		for _, t := range trig {
+			m, _ := t.(map[string]any)
+			ed, _ := m["event_data"].(map[string]any)
+			platform := "tag"
+			if m["event_type"] == "tag_scanned" && ed["tag_id"] == data["tag_id"] {
+				platform = "event"
+			} else if m["tag_id"] != data["tag_id"] {
+				continue
+			}
+			if h.traces == nil {
+				h.traces = map[string][]map[string]any{}
+			}
+			h.traces[id] = append(h.traces[id], Trace(fmt.Sprintf("run-%s-%d", id, len(h.traces[id])+1), time.Now(), plan[0], plan[1], cfg,
+				map[string]any{"platform": platform, "description": "Tag scanned", "event": map[string]any{"event_type": "tag_scanned", "data": data}}))
+			break
+		}
+	}
+}
+
+// Trace is one run's full trace as trace/get answers it: trigger the
+// trigger's variables; a failed_conditions run's last step answers false.
+func Trace(runID string, start time.Time, execution, lastStep string, config, trigger map[string]any) map[string]any {
+	steps := map[string]any{"trigger/0": []any{map[string]any{"path": "trigger/0", "timestamp": start.UTC().Format(time.RFC3339Nano),
+		"changed_variables": map[string]any{"trigger": trigger}}}}
+	if lastStep != "" {
+		steps[lastStep] = []any{map[string]any{"path": lastStep, "result": map[string]any{"result": execution != "failed_conditions"}}}
+	}
+	return map[string]any{"run_id": runID, "domain": "automation", "item_id": config["id"], "state": "stopped", "script_execution": execution,
+		"last_step": lastStep, "trigger": "Tag scanned", "timestamp": map[string]any{"start": start.UTC().Format(time.RFC3339Nano),
+			"finish": start.UTC().Format(time.RFC3339Nano)}, "config": config, "trace": steps}
+}
+
+// traceCmd answers trace/list (the runs' summaries) and trace/get (one
+// run in full). h.mu is held.
+func (h *HA) traceCmd(m map[string]any) (any, bool) {
+	runs := h.traces[fmt.Sprint(m["item_id"])]
+	if m["type"] == "trace/list" {
+		out := []any{}
+		for _, t := range runs {
+			sum := maps.Clone(t)
+			delete(sum, "trace")
+			delete(sum, "config")
+			out = append(out, sum)
+		}
+		return out, true
+	}
+	for _, t := range runs {
+		if t["run_id"] == m["run_id"] {
+			return t, true
+		}
+	}
+	return nil, false
 }
 
 // mobileApp is the mobile_app integration (homes ADR 0004 §7): its
@@ -180,7 +269,9 @@ func (h *HA) webhook(w http.ResponseWriter, r *http.Request, id string) {
 	switch cmd.Type {
 	case "scan_tag": // HA's own scan: tag_scanned with the device
 		data, _ := cmd.Data.(map[string]any)
-		h.events = append(h.events, Event{Type: "tag_scanned", Data: map[string]any{"tag_id": data["tag_id"], "device_id": "dev-" + hk[0]}})
+		ev := map[string]any{"tag_id": data["tag_id"], "device_id": "dev-" + hk[0]}
+		h.events = append(h.events, Event{Type: "tag_scanned", Data: ev})
+		h.laufen(ev)
 		w.Write([]byte("{}"))
 	case "register_sensor":
 		json.NewEncoder(w).Encode(map[string]any{"success": true})
@@ -787,6 +878,9 @@ func (h *HA) serve(w http.ResponseWriter, r *http.Request) {
 		json.NewDecoder(r.Body).Decode(&data)
 		typ := strings.TrimPrefix(r.URL.Path, "/api/events/")
 		h.events = append(h.events, Event{Type: typ, Data: data})
+		if typ == "tag_scanned" {
+			h.laufen(data)
+		}
 		json.NewEncoder(w).Encode(map[string]any{"message": "Event " + typ + " fired."})
 	case r.Method == "POST" && strings.HasPrefix(r.URL.Path, "/api/services/"):
 		parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/services/"), "/")
@@ -1112,6 +1206,14 @@ func (h *HA) websocket(w http.ResponseWriter, r *http.Request) {
 				h.tags[i]["name"] = m["name"]
 			}
 			result = map[string]any{}
+		case "trace/list", "trace/get":
+			res, ok := h.traceCmd(m)
+			if !ok {
+				h.mu.Unlock()
+				c.send(map[string]any{"id": m["id"], "type": "result", "success": false, "error": map[string]any{"code": "not_found", "message": "The trace could not be found"}})
+				continue
+			}
+			result = res
 		case "config/label_registry/create", "config/entity_registry/get", "config/entity_registry/update":
 			res, ok := h.registryWrite(m)
 			if !ok {

@@ -2,7 +2,9 @@ package napi
 
 import (
 	"net/http"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/mdopp/homes/internal/ha/hafake"
 	"github.com/mdopp/homes/internal/tagaktion"
@@ -22,7 +24,7 @@ func telefone(t *testing.T) (*hafake.HA, http.Handler) {
 		c.Whoami = func(b string) (string, bool) { g, ok := geraete[b]; return g.Person, ok }
 		c.Geraet = func(b string) (telefon.Geraet, bool) { g, ok := geraete[b]; return g, ok }
 		c.Telefone = &telefon.Telefone{HA: c.HA, Dir: dir, Version: "test"}
-		c.Tags = &tagaktion.Dienst{HA: c.HA, Laib: c.Laib, Store: store, Dir: dir}
+		c.Tags = &tagaktion.Dienst{HA: c.HA, Laib: c.Laib, Store: store, Dir: dir, LaufWarte: 300 * time.Millisecond}
 	})
 }
 
@@ -82,5 +84,32 @@ func TestAScannerTagIsNoScanInHA(t *testing.T) {
 	raw(t, h, "POST", "/napi/ausloeser", "dev1", `{"art":"nfc","tag":"`+id+`"}`)
 	if code != 200 || len(fake.Webhooks()) != 0 || len(fake.Events()) != 0 {
 		t.Fatalf("%d %v %v", code, fake.Webhooks(), fake.Events())
+	}
+}
+
+// ADR 0004 §9: the answer says what the tag's automations made of the
+// touch, from HA's traces; the tags' list each tag's last run.
+func TestTheAnswerSaysWhatCameOfIt(t *testing.T) {
+	fake, h := telefone(t)
+	fake.AddTag("homes-b0e70e000001", "Büro")
+	fake.AddAutomation("1700000000005", "Büro und Bambi aus (nachts)", map[string]any{"id": "1700000000005",
+		"triggers": []any{map[string]any{"trigger": "tag", "tag_id": "homes-b0e70e000001"}}, "conditions": []any{map[string]any{"condition": "time", "after": "23:00:00", "before": "05:00:00"}}})
+	fake.RunsOnTag("1700000000005", "failed_conditions", "condition/0")
+	fake.MobileAppOff(true) // the raw event, with the person
+	_, body := raw(t, h, "POST", "/napi/ausloeser", "dev1", `{"art":"nfc","tag":"homes-b0e70e000001"}`)
+	if want := `"ergebnisse":[{"automation":"1700000000005","grund":"nur zwischen 23 und 5 Uhr","lief":false,"name":"Büro und Bambi aus (nachts)"}],` +
+		`"name":"Büro","ok":true,"text":"Büro: ‚Büro und Bambi aus (nachts)‘ nicht ausgeführt – nur zwischen 23 und 5 Uhr"}`; !strings.HasSuffix(strings.TrimSpace(body), want) {
+		t.Fatalf("%s", body)
+	}
+	_, body = raw(t, h, "GET", "/napi/ausloeser/tags", "dev2", "")
+	if !strings.Contains(body, `"zuletzt":{"person":"anna","text":"‚Büro und Bambi aus (nachts)‘ nicht ausgeführt – nur zwischen 23 und 5 Uhr","wann":"20`) {
+		t.Fatalf("%s", body)
+	}
+	// nothing from HA in time: said so
+	fake.RunsOnTag("1700000000005", "", "")
+	fake.AddAutomation("1700000000006", "Später", map[string]any{"id": "1700000000006", "triggers": []any{map[string]any{"trigger": "tag", "tag_id": "homes-b0e70e000001"}}})
+	_, body = raw(t, h, "POST", "/napi/ausloeser", "dev1", `{"art":"nfc","tag":"homes-b0e70e000001"}`)
+	if !strings.Contains(body, `{"automation":"1700000000006","grund":"noch nicht gemeldet","lief":false,"name":"Später"}`) {
+		t.Fatalf("%s", body)
 	}
 }

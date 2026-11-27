@@ -56,7 +56,7 @@ func newRig(t *testing.T) *rig {
 	}
 	r.d = &Dienst{HA: &ha.Client{URL: r.ha.URL, Token: "t"}, Laib: &laib.Client{URL: srv.URL, Token: "x"}, Store: store,
 		Bote: &bote.Client{URL: r.bote.Base(), Key: "k"}, PublicURL: "https://www.example.org", Dir: dir,
-		Admins: func() []string { return []string{"michael", "petra"} }, Now: func() time.Time { return r.now }}
+		Admins: func() []string { return []string{"michael", "petra"} }, Now: func() time.Time { return r.now }, LaufWarte: 300 * time.Millisecond}
 	r.ha.AddTag(buero, "Bürotür")
 	r.ha.AddAutomation("1700000000001", "Gute Nacht", gutenacht())
 	r.ha.AddAutomation("1700000000002", "Flurlicht", map[string]any{"id": "1700000000002", "alias": "Flurlicht",

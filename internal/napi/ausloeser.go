@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/mdopp/homes/internal/ha"
 	"github.com/mdopp/homes/internal/tagaktion"
@@ -29,11 +30,12 @@ import (
 // household; that tag reports nothing to HA. A tag's automations (§8) are
 // in ausloeser_automationen.go.
 //
-//	POST /napi/ausloeser      {"art":"nfc","tag":id} → {"ok":true,"name":"Bürotür"|"","aktion"?,"text"?,"oeffnen"?}
+//	POST /napi/ausloeser      {"art":"nfc","tag":id} → {"ok":true,"name":"Bürotür"|"","aktion"?,"text"?,"oeffnen"?,
+//	                          "ergebnisse"?:[{"automation","name","lief","grund"}]}
 //	                          {"art":"laden","zustand":"an"|"aus","ladeart":…} → {"ok":true}
 //	POST /napi/ausloeser/tag  {"name":"Bürotür","tag"?,"aktion"?} → {"ok":true,"tag":id,"uri":"<HOMES_PUBLIC_URL>/tag/<id>","aktion"}
 //	DELETE /napi/ausloeser/tag/{tag} → {"ok":true}
-//	GET  /napi/ausloeser/tags → {"ok":true,"tags":[{"tag","name","aktion","automationen":[{"id","name"}]}],"vorschlaege":[…],"aktionen":[{"id","titel"}]}
+//	GET  /napi/ausloeser/tags → {"ok":true,"tags":[{"tag","name","aktion","automationen":[{"id","name"}],"zuletzt"?:{"wann","person"?,"text"}}],"vorschlaege":[…],"aktionen":[{"id","titel"}]}
 //
 // A refusal is {"ok":false,"error": a German sentence}.
 
@@ -85,6 +87,13 @@ func (a *ausloeser) nfc(w http.ResponseWriter, r *http.Request, tag, person stri
 	}
 	if e.Oeffnen != "" {
 		out["oeffnen"] = e.Oeffnen
+	}
+	if len(e.Laeufe) > 0 { // what the tag's automations made of it (§9)
+		erg := []map[string]any{}
+		for _, l := range e.Laeufe {
+			erg = append(erg, map[string]any{"automation": l.Automation, "name": l.Name, "lief": l.Lief, "grund": l.Grund})
+		}
+		out["ergebnisse"], out["text"] = erg, e.Text
 	}
 	answer(w, http.StatusOK, out)
 }
@@ -235,10 +244,19 @@ func (a *ausloeser) tags(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("homes: ausloeser tags: the automations: %v", err)
 	}
+	zuletzt := a.tag.Zuletzt(r.Context(), mit) // each tag's last run, from HA's traces (§9)
 	out := []map[string]any{}
 	for _, t := range tags {
 		autos := []tagaktion.Verbindung{}
-		out = append(out, map[string]any{"tag": t.ID, "name": t.Name, "aktion": a.tag.Von(t.ID), "automationen": append(autos, mit[t.ID]...)})
+		row := map[string]any{"tag": t.ID, "name": t.Name, "aktion": a.tag.Von(t.ID), "automationen": append(autos, mit[t.ID]...)}
+		if l, ok := zuletzt[t.ID]; ok {
+			z := map[string]any{"wann": l.Wann.UTC().Format(time.RFC3339), "text": l.Satz()}
+			if l.Person != "" {
+				z["person"] = l.Person
+			}
+			row["zuletzt"] = z
+		}
+		out = append(out, row)
 	}
 	reg, _ := a.ha.CachedRegistry(r.Context()) // the rooms are a suggestion: without them, the places
 	vor := slices.Sorted(maps.Keys(reg.AreaIDs))

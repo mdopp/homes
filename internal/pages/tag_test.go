@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mdopp/homes/internal/bote"
 	"github.com/mdopp/homes/internal/bote/botefake"
@@ -39,7 +40,7 @@ func newTagRig(t *testing.T) *tagRig {
 	dir := t.TempDir()
 	store, _ := tagaktion.Open(dir)
 	d := &tagaktion.Dienst{HA: hc, Laib: &laib.Client{URL: srv.URL, Token: "x"}, Store: store, Bote: &bote.Client{URL: b.Base(), Key: "k"},
-		PublicURL: "https://www.box.test", Dir: dir, Admins: func() []string { return []string{"michael", "petra"} }}
+		PublicURL: "https://www.box.test", Dir: dir, LaufWarte: 300 * time.Millisecond, Admins: func() []string { return []string{"michael", "petra"} }}
 	fake.AddTag(tagBuero, "Bürotür")
 	fake.AddAutomation("1700000000001", "Gute Nacht", map[string]any{"id": "1700000000001", "alias": "Gute Nacht", "triggers": []any{}})
 	fake.AddAutomation("1700000000002", "Flurlicht", map[string]any{"id": "1700000000002", "triggers": []any{map[string]any{"trigger": "tag", "tag_id": tagBuero}}})
@@ -94,7 +95,7 @@ func TestTheTagPageShowsAndAGetDoesNothing(t *testing.T) {
 func TestTheTagPagesButtonActsAsThePerson(t *testing.T) {
 	r := newTagRig(t)
 	rec := tagPostAs(t, Tag(r.cfg), TagPath+tagBuero, url.Values{"tun": {"ausloesen"}}, "ben")
-	mustContain(t, rec.Body.String(), `<div class=gut role=status><span class=punkt></span><p>Ausgelöst: Home Assistant hat es bekommen.</p>`)
+	mustContain(t, rec.Body.String(), `<p class=k role=status>Bürotür: ‚Flurlicht‘ noch nicht gemeldet</p>`)
 	if ev := r.ha.Events(); len(ev) != 1 || ev[0].Data["person"] != "ben" || ev[0].Data["tag_id"] != tagBuero {
 		t.Fatalf("%+v", ev)
 	}
@@ -231,4 +232,14 @@ func TestAssetLinks(t *testing.T) {
 	if rec.Code != 200 || rec.Header().Get("Content-Type") != "application/json" || rec.Body.String() != want {
 		t.Fatalf("%d %s", rec.Code, rec.Body.String())
 	}
+}
+
+// ADR 0004 §9 on the page: after Auslösen, what the automations made of
+// it, in place; on the page, the tag's last run.
+func TestTheTagPageSaysWhatCameOfIt(t *testing.T) {
+	r := newTagRig(t)
+	r.ha.RunsOnTag("1700000000002", "finished", "action/0")
+	rec := tagPostAs(t, Tag(r.cfg), TagPath+tagBuero, url.Values{"tun": {"ausloesen"}}, "ben")
+	mustContain(t, rec.Body.String(), `<div class=gut role=status><span class=punkt></span><p>Bürotür: ‚Flurlicht‘ ausgeführt</p>`)
+	mustContain(t, tagGet(t, Tag(r.cfg), TagPath+tagBuero, "anna").Body.String(), "<p class=k>Zuletzt ", " (ben): ‚Flurlicht‘ ausgeführt</p>")
 }

@@ -370,6 +370,36 @@ After naming, „Was soll ‚<Name>‘ tun?“:
   rule that it decides nothing (haus#1) is about Laib's inbox, which
   stays Laib's page alone (`/napi/…/approve|deny` still answer 403).
 
+### 9. What came of it: HA's traces, in the family's words
+
+The owner, 2026-11-27: „wenn eine Aktion ausgelöst wird, sehe ich das auch
+irgendwo?“ Homes stores nothing new: it reads Home Assistant's own
+automation traces (WebSocket `trace/list` with `domain: automation` and
+the automation's config id, `trace/get` for one run; an administrator's,
+as Homes' HA user is).
+
+- **After a touch** of a tag that reports to HA, the answer waits up to
+  4 s (looking every 300 ms) for a run of each automation that triggers
+  on it, started since the report (a second's grace for the clocks), whose
+  trigger was this tag (the trigger's event data `tag_id`). It answers
+  each as `{automation, name, lief, grund}` and one line for the phone and
+  the page: „Büro: ‚Büro und Bambi aus (nachts)‘ ausgeführt“, „… nicht
+  ausgeführt – nur zwischen 23 und 5 Uhr“, several joined with „; “. A
+  run HA has not shown by then is „noch nicht gemeldet“ — the honest
+  timeout, not a failure.
+- **Why not**, in Homes' words, never HA's text: the condition the run
+  stopped at (`last_step` `condition/<n>`, read in the run's config) — its
+  `alias` when it has one; a time condition's hours („nur zwischen 23 und
+  5 Uhr“, „erst ab 22:30 Uhr“, „nur bis 6 Uhr“); otherwise „Bedingung nicht
+  erfüllt“. Other ends: „sie lief gerade schon“ (single mode), „abgebrochen“,
+  „mit einem Fehler abgebrochen“.
+- **The last run** of each tag (`zuletzt` in the tags' list, a line on the
+  tag's page): the newest run of its automations whose trigger was this tag
+  (the newest five runs per automation read), with the login when the
+  trigger names it (the raw `tag_scanned`'s `person`; HA's own `scan_tag`,
+  §7, names the device, not the person, so it is left out). One
+  `trace/list` per automation, kept 10 s; a stopped run is read once.
+
 ## Consequences
 
 - Step 1 needs no new key between services: Homes' HA user is already an
@@ -399,7 +429,8 @@ Both answered by the owner on 2026-11-26 („Go. Passt alles“):
 *(homes: built; the app's `autoVerify` intent filter and the Auslöser
 screen's choices are homes-android's)*; 6. the scanner as an HA device, in
 Laib; 7. phones as HA devices *(homes: built)*; 8. what a tag does, with the
-admins' approval on Signal *(homes: built)*.)
+admins' approval on Signal *(homes: built)*; 9. what came of a touch, from
+HA's traces *(homes: built)*.)
 
 
 1. Triggers: `/napi/ausloeser` (+ `/tag`, `/tags`), the app's NFC activity,

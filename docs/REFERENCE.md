@@ -1352,6 +1352,21 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   phone whose uid is no login; it answers `{"ok":true,"name","aktion",
   "text":"Der Scanner startet – nur für dich."}` (or „– für den
   Haushalt.“); no scanner 503, Laib or HA silent 502, each in words.
+- What came of a touch (ADR 0004 §9, from HA's automation traces, nothing
+  stored): `POST /napi/ausloeser` `{"art":"nfc"}` for a tag that reports to
+  HA and has automations waits up to 4 s for their runs and adds
+  `"ergebnisse":[{"automation":"<config id>","name","lief":bool,"grund":"<German:
+  „nur zwischen 23 und 5 Uhr“, a condition's alias, „Bedingung nicht
+  erfüllt“, „noch nicht gemeldet“ on the timeout; "" when it ran>"}]` and
+  `"text":"Büro: ‚Gute Nacht‘ ausgeführt; ‚Bambi‘ nicht ausgeführt – nur
+  zwischen 23 und 5 Uhr"`. A tag without automations answers as before
+  (no wait, no `text`). `GET /napi/ausloeser/tags` adds per tag
+  `"zuletzt":{"wann":"<RFC 3339, UTC>","person"?:"<login, when the trigger
+  names it>","text":"‚Gute Nacht‘ ausgeführt"}`, the newest run of its
+  automations that this tag triggered; absent without one. The tag's page
+  shows the same line after *Auslösen* (a success only when every
+  automation ran) and „Zuletzt 27.11. 23:14 (anna): …“ in its
+  Automationen card.
 - Each reporting phone a device in Home Assistant (ADR 0004 §7, the
   app's requests unchanged): its first `POST /napi/ausloeser` registers it
   with HA's `mobile_app` (`device_id` `homes-<device id>`, named „Annas

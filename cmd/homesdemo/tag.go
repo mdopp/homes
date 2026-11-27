@@ -21,6 +21,7 @@ func tagSeiten(mux *http.ServeMux, cfg pages.StartConfig, fake *hafake.HA, dir s
 		"triggers": []any{map[string]any{"trigger": "time", "at": "23:00:00"}}, "actions": []any{}})
 	fake.AddAutomation("1700000000002", "Flurlicht", map[string]any{"id": "1700000000002", "alias": "Flurlicht",
 		"triggers": []any{map[string]any{"trigger": "tag", "tag_id": "homes-b0e70e000001"}}, "actions": []any{}})
+	fake.RunsOnTag("1700000000002", "finished", "action/0") // what came of a touch, from HA's traces (§9)
 	store, err := tagaktion.Open(dir)
 	if err != nil {
 		log.Fatal(err)
