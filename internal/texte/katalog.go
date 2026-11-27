@@ -381,6 +381,7 @@ const (
 	NavAngemeldet    ID = "nav.angemeldet" // before the login: „Angemeldet als anna“
 	NavPlatte        ID = "nav.platte"
 	StartClaim       ID = "start.claim"   // under the name in Start's head
+	StartGut         ID = "start.gut"     // the same place while all is well on the box (owner 2026-11-27)
 	StartDatum       ID = "start.datum"   // the day at the top: weekday, day, month
 	StartHeute       ID = "start.heute"   // the card of today and tomorrow
 	StartWeitere     ID = "start.weitere" // its link when more come: „Kalender · 2 weitere →“
@@ -409,6 +410,7 @@ var de = map[ID]string{
 	NavAngemeldet:                "Angemeldet als",
 	NavPlatte:                    "Platte erfassen",
 	StartClaim:                   "Dein Zuhause, klar im Blick.",
+	StartGut:                     "Deinem Zuhause geht es gut.",
 	StartDatum:                   "%[1]s, %[2]d. %[3]s",
 	StartHeute:                   "Heute",
 	StartWeitere:                 "%s · %d weitere",
@@ -1012,6 +1014,7 @@ var uebersetzt = map[ID]map[string]string{
 	NavAngemeldet:        {"en": "Signed in as", "es": "Sesión iniciada como", "fr": "Connecté en tant que"},
 	NavPlatte:            {"en": "Add a record", "es": "Añadir un disco", "fr": "Ajouter un disque"},
 	StartClaim:           {"en": "Your home, at a glance.", "es": "Tu hogar, de un vistazo.", "fr": "Ta maison, d'un coup d'œil."},
+	StartGut:             {"en": "Your home is doing fine.", "es": "Tu hogar está bien.", "fr": "Ta maison va bien."},
 	StartDatum:           {"en": "%[1]s, %[2]d %[3]s", "es": "%[1]s, %[2]d de %[3]s", "fr": "%[1]s %[2]d %[3]s"},
 	StartHeute:           {"en": "Today", "es": "Hoy", "fr": "Aujourd'hui"},
 	StartWeitere:         {"en": "%s · %d more", "es": "%s · %d más", "fr": "%s · %d de plus"},

@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -110,6 +111,11 @@ type Service struct {
 	// names a service only by them, so both pages read the same
 	Title        string `json:"title,omitempty"`
 	Beschreibung string `json:"beschreibung,omitempty"`
+}
+
+// Gut is a box where all is well (owner 2026-11-27, „Deinem Zuhause geht es gut.“ never lies): ready, no problem, every service green.
+func Gut(r Readiness, services []Service) bool {
+	return r.State == "bereit" && len(r.Problems) == 0 && !slices.ContainsFunc(services, func(s Service) bool { return s.State != "grün" })
 }
 
 // Titel is the service's name as Laib gives it, its id from an older Laib.

@@ -2,6 +2,7 @@ package pages
 
 import (
 	"context"
+	"html"
 	"net/http"
 	"strconv"
 	"strings"
@@ -224,5 +225,5 @@ func startBox(w http.ResponseWriter, r *http.Request, cfg StartConfig, box *boxS
 	logErrs("start", map[string]error{"laib": l.statusErr, "befunde": derr, "inbox": ierr})
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
-	w.Write([]byte(brauchtDich(r, cfg, l)))
+	w.Write([]byte(brauchtDich(r, cfg, l) + `<span hidden data-claim="` + html.EscapeString(claimWort(texte.Von(r), l.status != nil && laib.Gut(l.status.ready, l.status.services))) + `"></span>`))
 }

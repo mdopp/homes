@@ -39,11 +39,18 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   mends it itself, red only when a person is needed. All well says nothing.
   Start does not wait for Laib (haus#67): the card comes with Homes' own
   tasks and the status as kept (45 s, at most 5 min), and fills itself
-  from `GET /start/box` (HTML, "" when nothing is open; the status, the
+  from `GET /start/box` (HTML, only the claim's marker when nothing is open; the status, the
   person's kept Box-Aufgaben and keys, the person's archive's counts, for
   admins `laib befunde` and `laib inbox`).
   Laib not answering says nothing to the family, to an admin *Wie es der
   Box geht, lässt sich gerade nicht sagen.*
+  The claim under *Homes* (owner 2026-11-27) is *Deinem Zuhause geht es
+  gut.* only while Laib says all is well (readiness `bereit`, no problem,
+  every service green: `laib.Gut`; yellow is not well), else *Dein Zuhause,
+  klar im Blick.*: the page says it as the kept status does (neutral with
+  none), and `/start/box`'s answer carries it as Laib says it now
+  (`<span hidden data-claim>`), which the page's script puts in place, one
+  swap; Laib silent, neutral. In the reader's language.
   *Deine Geräte*: the person's own things as the app's tiles (homes-android
   #245, variant A2; laib ADR 0017: favorites go to Homes):
   `HOMES_DATA/favoriten.json`, `{"<Remote-User>": ["light.buero", …]}`,
@@ -1006,7 +1013,12 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   widgets read, from `laib status`, `laib inbox`. `pendingUpdates` and
   `upgrades` are the open proposals of kind `template-update` (`laib
   template sync --propose` files one per update); `pendingApprovals` and
-  `approvals` are the others. An update is counted once, as an update. `POST …/services/{name}/operate`
+  `approvals` are the others. An update is counted once, as an update. `home`'s
+  `gut` (bool, owner 2026-11-27) is whether the start screen may say *Deinem
+  Zuhause geht es gut.*: Laib's readiness `bereit`, no `problems`, every
+  service green (yellow is not well; `laib.Gut`, the page's rule too);
+  false, the neutral *Dein Zuhause, klar im Blick.*; `home` failing (Laib
+  silent), neutral as well. `POST …/services/{name}/operate`
   (restart). `POST …/approvals/{id}/approve|deny` answers 403: Homes decides
   nothing (haus#1); approvals reach the admin through the relay (laib ADR 0012).
 
