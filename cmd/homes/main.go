@@ -658,6 +658,16 @@ func telefoneAnschliessen(ctx context.Context, st *site) {
 	}
 	t := &telefon.Telefone{HA: st.napi.HA, Dir: st.dataDir, Version: Version}
 	st.napi.Telefone = t
+	t.Wer = func(id string) string { // whose phone a scan's HA device is (ADR 0004 §9)
+		l := st.store.List()
+		if i := slices.IndexFunc(l, func(d devices.Device) bool { return d.ID == id }); i >= 0 {
+			return l[i].UID
+		}
+		return ""
+	}
+	if st.napi.Tags != nil {
+		st.napi.Tags.PersonVon = t.Person
+	}
 	st.napi.Geraet = func(b string) (telefon.Geraet, bool) {
 		d, ok := st.store.Lookup(b)
 		return telefon.Geraet{ID: d.ID, Name: d.Name, Person: d.UID}, ok

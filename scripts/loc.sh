@@ -171,7 +171,8 @@ budget napi 5716 internal/napi        # the app's widgets' and share sheet's API
 # and Bote, the daily drop of old wishes, HOMES_APP_SHA256's route
 # 2026-11-26, owner approved 2026-11-26, ADR 0004 §7 (cmd 1,493 -> 1,520; 1,519 used, the minimum): telefoneAnschliessen: the registrations, removed on
 # unpairing, the hourly look
-budget cmd 1520 cmd/homes             # homes' wiring: 1,018 with the demo then
+# 2026-11-27, owner's request 2026-11-27, ADR 0004 §9 — the raise to be OK'd in the PR (cmd 1,520 -> 1,530; 1,529 used, the minimum): whose phone a scan's HA device is, wired
+budget cmd 1530 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-04, the caps moved with the packages, none raised (sum 24,134 as before): abs and
 # musicbrainz (1,227 lines, 1,289 of cap) from household to connectors once merken's fetcher
 # was internal/abruf (235 lines of merken, 247 of cap, to shared) and jellyfin.Plain
@@ -238,9 +239,9 @@ budget cmd 1520 cmd/homes             # homes' wiring: 1,018 with the demo then
 # SetAutomationConfig (automationen.go), the registry's unique_ids; the fakes: hafake's automation config API, laibfake's tell and scan
 # 2026-11-26, owner approved 2026-11-26, ADR 0004 §7 (connectors 16,532 -> 16,759; 16,758 used, the minimum): ha.RegisterMobileApp, MobileWebhook,
 # MobileAppEntries, DeleteConfigEntry (mobile.go); hafake's registrations, webhooks and config entry delete
-# 2026-11-27, owner's request 2026-11-27, ADR 0004 §9 — the raise to be OK'd in the PR (connectors 16,759 -> 16,954; 16,953 used, the minimum): ha.Laeufe, ha.Spur (traces.go);
+# 2026-11-27, owner's request 2026-11-27, ADR 0004 §9 — the raise to be OK'd in the PR (connectors 16,759 -> 16,973; 16,972 used, the minimum): ha.Laeufe, ha.Spur (traces.go), ha.MobileAppDevices;
 # hafake's trace/list, trace/get and runs on a scanned tag
-budget connectors 16954 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
+budget connectors 16973 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
 # 2026-11-04, internal/jsonfile (47 lines, 50 of cap) from household's cap to shared's: it
 # replaces nine copies of a save, 62 of their lines in household
 # 2026-11-05, owner 2026-11-05 yes: Immich for the contacts (9,583 -> 9,874):
@@ -307,9 +308,9 @@ budget connectors 16954 $connectors   # one client per service, with its fake: 1
 # Bote) and the wishes waiting for an admin (told, tasked, first answer counts, dropped after 7 days); einrichten.AdminListe
 # 2026-11-26, owner approved 2026-11-26, ADR 0004 §7 (household 16,122 -> 16,415; 16,414 used, the minimum): internal/telefon (a reporting phone registered
 # with HA's mobile_app, its sensors, scan_tag, removed when unpaired, telefone.json), tagaktion.AusloesenMit, devices' Weg and Gibt
-# 2026-11-27, owner's request 2026-11-27, ADR 0004 §9 — the raise to be OK'd in the PR (household 16,415 -> 16,709; 16,708 used, the minimum): tagaktion's ergebnis.go: the runs after a
-# touch, waited for, a condition in words, each tag's last run, the traces kept 10 s
-budget household 16709 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-27, owner's request 2026-11-27, ADR 0004 §9 — the raise to be OK'd in the PR (household 16,415 -> 16,756; 16,755 used, the minimum): tagaktion's ergebnis.go: the runs after a
+# touch, waited for, a condition in words, each tag's last run, the traces kept 10 s; telefon.Person: a scan's HA device → its person
+budget household 16756 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one

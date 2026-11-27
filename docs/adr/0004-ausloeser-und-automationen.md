@@ -395,9 +395,11 @@ as Homes' HA user is).
   „mit einem Fehler abgebrochen“.
 - **The last run** of each tag (`zuletzt` in the tags' list, a line on the
   tag's page): the newest run of its automations whose trigger was this tag
-  (the newest five runs per automation read), with the login when the
-  trigger names it (the raw `tag_scanned`'s `person`; HA's own `scan_tag`,
-  §7, names the device, not the person, so it is left out). One
+  (the newest five runs per automation read), with the login of who
+  touched it: the raw `tag_scanned`'s `person`, or, for HA's own `scan_tag`
+  (§7), which names the HA device, the person of the paired phone whose
+  registration that device is (HA's device registry, read at most once a
+  minute); a device Homes did not register names nobody. One
   `trace/list` per automation, kept 10 s; a stopped run is read once.
 
 ## Consequences

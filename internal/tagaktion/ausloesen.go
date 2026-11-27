@@ -27,6 +27,9 @@ type Dienst struct {
 	Admins    func() []string
 	Now       func() time.Time
 	LaufWarte time.Duration // how long a report waits for its automations' runs (§9); 0: 4 s
+	// PersonVon is whose phone an HA device is (a scan's device_id, §7);
+	// nil, or "": none said
+	PersonVon func(ctx context.Context, haDevice string) string
 
 	vmu    sync.Mutex  // the configs kept for Lösen
 	fmu    sync.Mutex  // the wishes

@@ -134,6 +134,14 @@ func vonTag(s ha.Spur) (tag, person string) {
 	return tag, person
 }
 
+// geraet is the HA device a scan names (HA's own scan_tag, §7), "" for none.
+func geraet(s ha.Spur) string {
+	ev, _ := s.Trigger["event"].(map[string]any)
+	data, _ := ev["data"].(map[string]any)
+	d, _ := data["device_id"].(string)
+	return d
+}
+
 // lauf is a run in the family's words.
 func lauf(v Verbindung, s ha.Spur) Lauf {
 	l := Lauf{Automation: v.ID, Name: v.Name, Wann: s.Start}
@@ -225,7 +233,11 @@ func (d *Dienst) letzter(ctx context.Context, v Verbindung, tag string, seit tim
 			continue
 		}
 		if t, _ := vonTag(s); t == tag {
-			return lauf(v, s), true
+			l := lauf(v, s)
+			if dev := geraet(s); l.Person == "" && dev != "" && d.PersonVon != nil { // a phone registered in HA: its person
+				l.Person = d.PersonVon(ctx, dev)
+			}
+			return l, true
 		}
 	}
 	return Lauf{}, false

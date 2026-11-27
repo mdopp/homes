@@ -1361,8 +1361,10 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   `"text":"Büro: ‚Gute Nacht‘ ausgeführt; ‚Bambi‘ nicht ausgeführt – nur
   zwischen 23 und 5 Uhr"`. A tag without automations answers as before
   (no wait, no `text`). `GET /napi/ausloeser/tags` adds per tag
-  `"zuletzt":{"wann":"<RFC 3339, UTC>","person"?:"<login, when the trigger
-  names it>","text":"‚Gute Nacht‘ ausgeführt"}`, the newest run of its
+  `"zuletzt":{"wann":"<RFC 3339, UTC>","person"?:"<login: the raw event's
+  person, or the person of the paired phone whose HA device scanned it
+  (§7); absent for a device Homes did not register>","text":"‚Gute Nacht‘
+  ausgeführt"}`, the newest run of its
   automations that this tag triggered; absent without one. The tag's page
   shows the same line after *Auslösen* (a success only when every
   automation ran) and „Zuletzt 27.11. 23:14 (anna): …“ in its
