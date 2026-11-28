@@ -21,6 +21,7 @@ import (
 	"github.com/mdopp/homes/internal/caldav/davfake"
 	"github.com/mdopp/homes/internal/cards"
 	"github.com/mdopp/homes/internal/devices"
+	"github.com/mdopp/homes/internal/einrichten"
 	"github.com/mdopp/homes/internal/gesichter"
 	"github.com/mdopp/homes/internal/immich"
 	"github.com/mdopp/homes/internal/immich/immichfake"
@@ -28,6 +29,7 @@ import (
 	"github.com/mdopp/homes/internal/netz"
 	"github.com/mdopp/homes/internal/pages"
 	"github.com/mdopp/homes/internal/samba"
+	"github.com/mdopp/homes/internal/teilen"
 )
 
 // mehrSeiten mounts the Mehr pages the demo had left out (the Mehr audit,
@@ -117,6 +119,14 @@ func mehrSeiten(mux *http.ServeMux, cfg pages.StartConfig, dav *davfake.Server, 
 	mux.HandleFunc(pages.KontaktEinladenPath, pages.KontaktEinladen(cfg))
 	mux.HandleFunc(pages.AntwortenPath, pages.Antworten(cfg))
 	mux.HandleFunc(pages.AntwortenPath+"/", pages.Antworten(cfg))
+	// Kontakt austauschen (owner 2026-11-28): the app's /napi/teilen with the bearer "demo" as anna (an admin here), its page /t/<token> on the same listener
+	cfg.Teilen = &teilen.Store{}
+	admins := &einrichten.Quellen{Admins: einrichten.OpenAdmins(dir)}
+	admins.SahAdmin("anna", true)
+	api := napi.Handler(napi.Config{Validate: func(_ context.Context, b string) bool { return b == "demo" }, Whoami: func(string) (string, bool) { return "anna", true },
+		Teilen: cfg.Teilen, Antworten: cfg.Antworten, KontaktURL: cfg.KontaktURL, Einrichtung: admins})
+	mux.Handle("/napi/teilen", api)
+	mux.Handle("/napi/teilen/", api)
 	go func() { log.Print(http.ListenAndServe(*kontaktAddr, pages.KontaktServer(cfg))) }()
 	mux.HandleFunc(pages.KontaktePath, pages.Kontakte(cfg))
 	mux.HandleFunc(pages.MeineKontaktePath, pages.MeineKontakte(cfg))

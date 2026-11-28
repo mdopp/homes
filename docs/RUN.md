@@ -33,7 +33,12 @@ HOMES_USAGE_URL=http://host.containers.internal:8094 HOMES_USAGE_TOKEN=<usage-me
 without a login (module `kontakte`): a second listener on which Homes serves
 that one page and nothing else, behind Laib's route `kontakt.<domain>` (auth
 none, rate and body limited in Caddy); either unset, no listener and no
-links. `HOMES_TEASER_HOST` puts the teaser for visitors without an account
+links. *Kontakt austauschen*'s page (`/t/<token>`, its Server-Sent Events
+stream `/t/<token>/live` and `.vcf`) is on the same listener; its sessions
+are held in memory, so a restart of Homes ends every one of them (Caddy's
+`reverse_proxy` flushes a `text/event-stream` at once; a request-duration
+limit on the route would cut the stream, which reconnects after 5 s).
+`HOMES_TEASER_HOST` puts the teaser for visitors without an account
 on the same listener for that Host (Laib's route on the domain itself,
 auth none); unset, the listener is Kontakt prüfen lassen's alone, on any
 Host. `HOMES_TEASER_PERSON` is whom Laib tells of a *Zugang anfragen*

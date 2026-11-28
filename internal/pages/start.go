@@ -44,6 +44,7 @@ import (
 	"github.com/mdopp/homes/internal/samba"
 	"github.com/mdopp/homes/internal/schalter"
 	"github.com/mdopp/homes/internal/tagaktion"
+	"github.com/mdopp/homes/internal/teilen"
 	"github.com/mdopp/homes/internal/texte"
 	"github.com/mdopp/homes/internal/usage"
 	"github.com/mdopp/homes/internal/zugang"
@@ -135,7 +136,8 @@ type StartConfig struct {
 	// domains (net.DefaultResolver). nil: no such pages
 	Antworten  *kontaktantwort.Store
 	DNS        kontaktantwort.Resolver
-	KontaktURL string // the page's own host, https://kontakt.<domain> (HOMES_KONTAKT_URL)
+	KontaktURL string        // the page's own host, https://kontakt.<domain> (HOMES_KONTAKT_URL)
+	Teilen     *teilen.Store // Kontakt austauschen's sessions, shared with /napi/teilen (owner 2026-11-28); nil: /t/ is 404
 	// The teaser on the domain itself (owner 2026-11-08): the Host the
 	// public listener answers it on (HOMES_TEASER_HOST; "": no teaser, and
 	// no Host check), the requests, and whom Laib tells of a new one

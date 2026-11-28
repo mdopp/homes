@@ -563,6 +563,65 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     already left out; a value over one of the card's is not ticked), and
     *<Name> damit ergänzen*. Nothing reaches an address book without this
     review; the outcome is said on the page, with *Zum Kontakt ›*.
+  - *Kontakt austauschen* (owner 2026-11-28): the page the other phone
+    opens when two phones touch or a QR code is shown, `/t/<token>` on
+    the same public listener (`pages.Teilen`; the session is the app's,
+    `/napi/teilen` below). No login; `Cache-Control: no-store`,
+    `Referrer-Policy: no-referrer`, `X-Robots-Tag: noindex, nofollow`, a
+    CSP that allows only the page's own inline script and its own origin
+    for the live stream; GET and HEAD only; the same per-address rate
+    brake as the contact form. It names the sharer's first name from the
+    start: *<Vorname> möchte etwas mit dir teilen …*, and, while nothing
+    is released, *<Vorname> wählt gerade aus, was geteilt wird. Lass die
+    Seite offen – sie zeigt es, sobald es da ist.* beside three quiet
+    pulsing dots (still under `prefers-reduced-motion`). Each part is a
+    card and appears only while released:
+    - *<Vorname>s Kontakt speichern* (*Hans’* for a name ending in s, ß, x,
+      z, ce): the released fields as text (Name, Mobil, Telefon, E-Mail,
+      Adresse, Geburtstag as *1. April 1980*, Firma) and *Kontakt
+      speichern (.vcf)*, `/t/<token>/karte.vcf`: a vCard 3.0 of exactly
+      the released fields (`teilen.Karte.VCard`; `FN`/`N` the released
+      name, else the first name, as FN needs one; `TEL;TYPE=CELL`,
+      `TEL;TYPE=VOICE`, `EMAIL;TYPE=INTERNET`, `ADR` with the address as
+      its street, `BDAY`, `ORG`), `Content-Disposition: attachment`;
+      404 while no card is released and once the session is over.
+    - *Gast-WLAN*: the network's name and its password, each with
+      *Kopieren* (the clipboard, *Kopiert ✓*; without one the text is
+      selected, *Markiert – jetzt kopieren*); an open network says
+      *Offenes Netz – kein Kennwort nötig.* No `WIFI:` QR code: the guest
+      is on this very phone.
+    - *Und du?* (an admin's session with `eintragen`): the form of
+      *Kontaktdaten eintragen lassen*, as its own page has it, posting to
+      its own link (`/<token>`, the same checks, limits and review for the
+      sharer; one link per session, made on the first such PUT). Above it
+      *Aus deinen Kontakten wählen* (shown only where the browser has the
+      Contact Picker, `navigator.contacts.select`, Android's Chrome:
+      name, number, e-mail, address of the contact the guest picks) and
+      *Visitenkarte (.vcf) wählen* (a file input for iPhones: `N`/`FN`,
+      the first `TEL`, `EMAIL` and `ADR`, `BDAY`, `ORG`); either fills the
+      empty form and says *Übernommen – schau kurz drüber, dann „Angaben
+      senden“.*, a file without a vCard *In der Datei steht keine
+      Visitenkarte.* Nothing is sent before *Angaben senden*. Once
+      answered: *Danke – <Vorname> hat deine Angaben bekommen.*
+    The page follows the app live: `/t/<token>/live` is a Server-Sent
+    Events stream (`retry: 5000`, a comment every 25 s, its own read and
+    write deadlines past the listener's 20 s); each event is one JSON
+    object `{"titel","warten","karte","wlan","du","du_h","vorbei"}` (each
+    part's HTML, "" none), sent at once, on every change and at the
+    session's end, after which the stream closes. The inline script
+    replaces the parts in place; the form only by reloading the page when
+    its hash `du_h` changed, so nothing the guest typed is replaced under
+    them. Without EventSource the waiting page reloads every 10 s;
+    reloading always shows the same. Ended: *<Vorname> hat das Teilen
+    beendet.* (*Was geteilt war, ist hier nicht mehr zu sehen. …*); over:
+    *Das Teilen ist abgelaufen.* (*<Vorname> hat 30 Minuten lang geteilt,
+    die Zeit ist um. …*); both for two hours, then a token never made, an
+    unknown one and one long gone get the one page for every link that is
+    none. At the foot one card: *Geteilt mit Homes – das Zuhause der
+    ganzen Familie, auf eurer eigenen Box statt in fremden Clouds. Mehr
+    erfahren →*, linking to the box's teaser (`https://<HOMES_TEASER_HOST>/`,
+    reachable from outside, its form only at home), or to
+    https://github.com/mdopp/homes on a box without one.
   - *Die Box*, the teaser on the domain itself (owner 2026-11-08: a
     visitor without an account sees what the box is; `www.<domain>` stays
     behind Authelia). The same public listener, told apart by Host
@@ -1782,6 +1841,57 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     Admin prüfen. …*); `503` when the box has no public contact page
     (`HOMES_KONTAKT_URL` unset; *Kontakte fragen geht auf dieser Box noch
     nicht …*) or the link could not be stored.
+- Kontakt austauschen, for the app (owner 2026-11-28; module `kontakte`,
+  not served while it is off): two phones touch or one shows a QR code;
+  the app starts a session, hands its `link` to the other phone at once,
+  asks *Was teilen?* and sets what the public page `/t/<token>` (above)
+  shows, which follows live. Any paired person; a session belongs to the
+  device's person, and another person's answers `404` as one that never
+  was. Sessions are held **in memory only** (`internal/teilen`): a restart
+  of Homes ends every session (its page then says *Link ungültig oder
+  abgelaufen*); the Wi-Fi password never touches a disk or a log line,
+  and what was released is wiped the moment a session ends or runs out.
+  - `POST /napi/teilen`, body optional `{"vorname": "Michael"}` (the name
+    the page shows from the start; none, or over 60 characters: the
+    login's first part, capitalized) → `201 {"ok": true, "id": "<16
+    characters>", "link": "<HOMES_KONTAKT_URL>/t/<token>", "gueltig_bis":
+    "<RFC 3339, UTC>"}`. The token is 32 random bytes, base64url (43
+    characters); only its SHA-256 is kept. A session lives 30 minutes from
+    its start (`teilen.Dauer`), or until it is ended. At most 5 open per
+    person (`429` *Du teilst gerade schon fünfmal. Beende eins davon, dann
+    geht es wieder.*) and at most 20 started per person within an hour
+    (`429` with `Retry-After: 600`, *Du hast in der letzten Stunde sehr
+    oft geteilt. …*).
+  - `PUT /napi/teilen/{id}` `{"vorname": "Michael", "karte": {"name",
+    "mobil", "telefon", "mail", "adresse", "geburtstag", "firma"} | null,
+    "wlan": {"ssid", "kennwort", "offen": false} | null, "eintragen":
+    false}` → `200 {"ok": true}`. It sets the whole of what the page shows
+    (a part left out or `null` is taken back): the app sends exactly the
+    released fields; a field absent or `""` is not shown, a `karte` with
+    none is none. `vorname` `""` (or over 60 characters) keeps the name. `geburtstag` is
+    `YYYY-MM-DD` or `--MM-DD`; every card field at most 300 bytes; `ssid`
+    needed and at most 64 bytes, `kennwort` at most 128 (`400` *Ein Feld
+    passt nicht: …*); a body that does not parse (at most 8 KB) is `400`.
+    `eintragen: true` is an admin's only (`403` *Kontakte des Hauses lässt
+    nur ein Admin prüfen. …*, admins as `/napi/kontakte/fragen` knows
+    them): the first such PUT makes one link of *Kontaktdaten eintragen
+    lassen* (`kontaktantwort.Einladen`, for the device's person, 7 days,
+    once), kept for the session; its answer goes to that person's review
+    exactly as that link's does (Deine Aufgaben, `/kontakte/antworten/<id>`).
+  - `GET /napi/teilen/{id}` → `200 {"ok": true, "geoeffnet": bool,
+    "eingetragen": bool, "gueltig_bis": "<RFC 3339>"}`: `geoeffnet` once
+    the page (or its stream or .vcf) was fetched with GET, `eingetragen`
+    once the guest sent the form of *Und du?* — for the app's *Seite
+    geöffnet* and *hat eingetragen*.
+  - `DELETE /napi/teilen/{id}` → `200 {"ok": true}`: ends the session at
+    once; the page says *<Vorname> hat das Teilen beendet.* An ended one
+    stays ended (`200` again).
+  - Refusals, `{"ok": false, "error": <a German sentence>}`: `403` for a
+    device without a person; `404` for an id that is not the device's
+    person's (*Dieses Teilen gibt es nicht (mehr).*); `410` for GET and
+    PUT once it ended or ran out (*Dieses Teilen ist schon vorbei. Starte
+    ein neues.*; two hours later `404`); `503` when the box has no public
+    contact page (`HOMES_KONTAKT_URL` unset).
 - The phone's contacts (laib ADR 0029; optional in the app, behind
   Android's contacts permission): `POST /napi/kontakte`, `text/vcard`,
   all of the phone's contacts as concatenated vCards (≤ 64 MB, else 413),

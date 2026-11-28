@@ -26,7 +26,7 @@ bad=0
 p() { for x in "$@"; do printf 'internal/%s ' "$x"; done; }
 connectors=$(p abs bote caldav discogs ha immich jellyfin judge laib musicbrainz paperless plugin qmd reitti samba werkstatt)
 shared=$(p abruf app assistent cards code128 erreichbar jsonfile markdown mcpserver modul namen texte)
-household=$(p ansicht devices dokumente drucker einkauf einrichten energie favoriten gesehen gesichter haushalt kontaktantwort library merken musik netz notes papierkorb podcasts schalter tagaktion takeout telefon uebernahme usage zugang)
+household=$(p ansicht devices dokumente drucker einkauf einrichten energie favoriten gesehen gesichter haushalt kontaktantwort library merken musik netz notes papierkorb podcasts schalter tagaktion takeout teilen telefon uebernahme usage zugang)
 
 budget() { # budget <name> <cap> <dir…>
   name=$1 cap=$2; shift 2
@@ -138,7 +138,9 @@ budget() { # budget <name> <cap> <dir…>
 # 2026-11-28, owner's request 2026-11-28 (Kontaktdaten eintragen lassen), owner approved 2026-11-28 „Passt“ (pages 20,720 -> 20,956; 20,955 used, the minimum): kontakt_neu.go: Kontakte's „Jemanden seine Kontaktdaten
 # eintragen lassen“ and POST /kontakte/einladen, the review of a new person's answer at /kontakte/antworten/<id> (anlegen, „<Name> damit
 # ergänzen“, verwerfen); the public form's new-person title, hint, name rule and thanks (kontakt_frage.go); antwortFelder split for it
-budget pages 20956 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-28, owner's request 2026-11-28 (Kontakt austauschen), owner approved 2026-11-28 „Passt“ (pages 20,956 -> 21,264; 21,263 used, the minimum): teilen.go: the public page /t/<token> on the kontakt listener,
+# its parts (the card's released fields and .vcf, the guest Wi-Fi with Kopieren, „Und du?“ with the Contact Picker and a .vcf file), the SSE stream, ended and over, the card about Homes
+budget pages 21264 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -164,7 +166,8 @@ budget pages 20956 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-27, owner approved the app's start screen 2026-11-27 („Bitte umsetzen“, homes-android#290), owner approved 2026-11-27 („Bau alles“) (napi 5,656 -> 5,682; 5,681 used, the minimum): achtung on a device's card (home.go)
 # 2026-11-28, owner's request 2026-11-28 (Kontakte fragen auffindbar), owner approved 2026-11-28 „Ja zu allen“ (napi 5,682 -> 5,828; 5,827 used, the minimum): kontakte_fragen.go: POST /napi/kontakte/fragen, the household's card for a shared vCard (number, e-mail, name), the link and message, 404/409, anlegen
 # 2026-11-28, owner's request 2026-11-28 (Kontaktdaten eintragen lassen), owner approved 2026-11-28 „Passt“ (napi 5,828 -> 5,867; 5,866 used, the minimum): kontakte_fragen.go: POST /napi/kontakte/einladen, the admin check shared with /fragen
-budget napi 5867 internal/napi        # the app's widgets' and share sheet's API: 4,793
+# 2026-11-28, owner's request 2026-11-28 (Kontakt austauschen), owner approved 2026-11-28 „Passt“ (napi 5,867 -> 6,075; 6,074 used, the minimum): teilen.go: POST, PUT, GET and DELETE /napi/teilen, the refusals in words, eintragen an admin's
+budget napi 6075 internal/napi        # the app's widgets' and share sheet's API: 4,793
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): the module catalog,
 # cmd/homes/module.go, 1,150 with it; plus 5 %. H3–H6 move the routes out of main.go into it
 # 2026-11-04, step H8 (§10, owner: „Keine Funktion soll versteckt werden“): the routes of the traces
@@ -191,7 +194,8 @@ budget napi 5867 internal/napi        # the app's widgets' and share sheet's API
 # the widgets' Angebot gone
 # 2026-11-27, owner approved the app's start screen 2026-11-27 („Bitte umsetzen“, homes-android#290), owner approved 2026-11-27 („Bau alles“) (cmd 1,542 -> 1,580; 1,579 used, the minimum): bereiche: the tags, the archive's line, Paperless's week
 # 2026-11-28, owner 2026-11-28: Energie-Widget ausgebaut (cmd 1,580 -> 1,579; 1,578 used): the energie module offers no widget
-budget cmd 1579 cmd/homes             # homes' wiring: 1,018 with the demo then
+# 2026-11-28, owner's request 2026-11-28 (Kontakt austauschen), owner approved 2026-11-28 „Passt“ (cmd 1,579 -> 1,581; 1,580 used, the minimum): the in-memory sessions, shared by /napi/teilen and the kontakt listener
+budget cmd 1581 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-04, the caps moved with the packages, none raised (sum 24,134 as before): abs and
 # musicbrainz (1,227 lines, 1,289 of cap) from household to connectors once merken's fetcher
 # was internal/abruf (235 lines of merken, 247 of cap, to shared) and jellyfin.Plain
@@ -342,7 +346,9 @@ budget connectors 17051 $connectors   # one client per service, with its fake: 1
 # 2026-11-28, owner's request 2026-11-28 (Kontakte fragen auffindbar), owner approved 2026-11-28 „Ja zu allen“ (household 17,021 -> 17,176; 17,175 used, the minimum): kontaktantwort/fragen.go: Fehlt and FehltWorte, Mobil, Finden, Anlegen, Store.Link
 # 2026-11-28, owner's request 2026-11-28 (Kontaktdaten eintragen lassen), owner approved 2026-11-28 „Passt“ (household 17,176 -> 17,373; 17,372 used, the minimum): kontaktantwort/neu.go: Store.Einladen (7 days, several open),
 # Eingetragen, Treffer (number or e-mail), Ergaenzung/Ergaenzen, NeuAnlegen; Store.EntscheidenNeu, Frage.Neu and its Name, Pruefung.Neu
-budget household 17373 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-28, owner's request 2026-11-28 (Kontakt austauschen), owner approved 2026-11-28 „Passt“ (household 17,373 -> 17,710; 17,709 used, the minimum): internal/teilen: the sessions in memory (30 minutes, 5 open,
+# 20 an hour per person, the token's hash), what they release and wipe at the end, the released card as a vCard 3.0
+budget household 17710 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one

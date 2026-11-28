@@ -45,11 +45,12 @@ import (
 // page with the form empty, a name required and 7 days.
 
 // KontaktServer is everything the public listener serves: the page at
-// /<token>, and a robots.txt and a favicon that say nothing. With a
+// /<token>, Kontakt austauschen's /t/<token> (Teilen), and a robots.txt
+// and a favicon that say nothing. With a
 // TeaserHost (owner 2026-11-08) the listener tells its two hosts apart:
 // that Host gets the teaser, the kontakt host these pages, any other 404.
 func KontaktServer(cfg StartConfig) http.Handler {
-	page := KontaktFrage(cfg)
+	page, teilen := KontaktFrage(cfg), Teilen(cfg)
 	teaser := Teaser(cfg)
 	kontakt := ""
 	if u, err := url.Parse(cfg.KontaktURL); err == nil {
@@ -65,6 +66,10 @@ func KontaktServer(cfg StartConfig) http.Handler {
 				http.Error(w, saysNoSuchPage, http.StatusNotFound)
 				return
 			}
+		}
+		if strings.HasPrefix(r.URL.Path, TeilenPrefix) { // Kontakt austauschen (owner 2026-11-28)
+			teilen(w, r)
+			return
 		}
 		switch r.URL.Path {
 		case "/robots.txt":

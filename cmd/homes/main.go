@@ -52,6 +52,7 @@ import (
 	"github.com/mdopp/homes/internal/samba"
 	"github.com/mdopp/homes/internal/schalter"
 	"github.com/mdopp/homes/internal/tagaktion"
+	"github.com/mdopp/homes/internal/teilen"
 	"github.com/mdopp/homes/internal/telefon"
 	"github.com/mdopp/homes/internal/uebernahme"
 	"github.com/mdopp/homes/internal/usage"
@@ -158,7 +159,7 @@ func kontaktServer(ctx context.Context, st site) {
 	if addr == "" || st.kontaktURL == "" && st.teaserHost == "" {
 		return
 	}
-	cfg := pages.StartConfig{Antworten: st.antworten, DNS: net.DefaultResolver, PhoneCountry: st.hh.PhoneCountry, KontaktURL: st.kontaktURL,
+	cfg := pages.StartConfig{Antworten: st.antworten, Teilen: st.napi.Teilen, DNS: net.DefaultResolver, PhoneCountry: st.hh.PhoneCountry, KontaktURL: st.kontaktURL,
 		TeaserHost: st.teaserHost, TeaserPerson: st.teaserPerson, Zugang: st.zugang, Laib: st.ops, PublicURL: st.publicURL}
 	srv := &http.Server{Addr: addr, Handler: pages.KontaktServer(cfg), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 20 * time.Second,
 		WriteTimeout: 20 * time.Second, MaxHeaderBytes: 8 << 10}
@@ -565,6 +566,7 @@ func main() {
 	st.zuordnen = openZuordnen(filepath.Join(dataDir, "zuordnen.json"), hh.Token)
 	st.plugins = plugin.Open(plugin.FromEnv(os.Environ()), filepath.Join(dataDir, "plugins.json"))
 	st.napi.Antworten, st.napi.KontaktURL = st.antworten, st.kontaktURL // the phone's accepted corrections of its own contacts; the links it asks for
+	st.napi.Teilen = &teilen.Store{}                                    // Kontakt austauschen: in memory only, a restart ends every session
 	st.hh.Wessen = st.gesichter.Wessen                                  // handy_firmen: the Immich key owner's own phone contacts, nobody else's
 	st.netz = netzVon(st.gesichter)                                     // the relations after each hourly run, the phone books read once a day (owner 2026-11-09)
 	start := st                                                         // what the list is built from again once Laib says what runs (dienstePflegen)
