@@ -78,7 +78,7 @@ func (a *ausloeser) nfc(w http.ResponseWriter, r *http.Request, tag, person stri
 	e, err := a.tag.AusloesenMit(r.Context(), tag, person, scan)
 	if err != nil {
 		nein := tagaktion.Als(err)
-		sagNein(w, nein.Status, nein.Satz)
+		refuse(w, nein.Status, nein.Satz)
 		return
 	}
 	out := map[string]any{"ok": true, "name": e.Name}
@@ -106,14 +106,10 @@ func (a *ausloeser) routes(gs gruppen) {
 	a.automationRoutes(gs)
 }
 
-func sagNein(w http.ResponseWriter, code int, satz string) {
-	answer(w, code, map[string]any{"ok": false, "error": satz})
-}
-
 // haSagt is a failed HA call in the person's words; HA's detail goes to the log.
 func haSagt(w http.ResponseWriter, was string, err error) {
 	n := tagaktion.HANein(was, err)
-	sagNein(w, n.Status, n.Satz)
+	refuse(w, n.Status, n.Satz)
 }
 
 func (a *ausloeser) melden(w http.ResponseWriter, r *http.Request) {
@@ -124,20 +120,20 @@ func (a *ausloeser) melden(w http.ResponseWriter, r *http.Request) {
 		Ladeart string `json:"ladeart"`
 	}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 4<<10)).Decode(&in); err != nil {
-		sagNein(w, http.StatusBadRequest, "Das kam nicht lesbar an.")
+		refuse(w, http.StatusBadRequest, "Das kam nicht lesbar an.")
 		return
 	}
 	person, _ := a.uid(r)
 	switch in.Art {
 	case "nfc":
 		if !tagID.MatchString(in.Tag) {
-			sagNein(w, http.StatusBadRequest, "Diesen Tag kennt Homes nicht. Beschreibe ihn in der App neu.")
+			refuse(w, http.StatusBadRequest, "Diesen Tag kennt Homes nicht. Beschreibe ihn in der App neu.")
 			return
 		}
 		a.nfc(w, r, in.Tag, person)
 	case "laden":
 		if in.Zustand != "an" && in.Zustand != "aus" || !ladeart[in.Ladeart] {
-			sagNein(w, http.StatusBadRequest, "Das kam nicht lesbar an.")
+			refuse(w, http.StatusBadRequest, "Das kam nicht lesbar an.")
 			return
 		}
 		if err := a.ha.Fire(r.Context(), LadenEvent, map[string]any{"person": person, "zustand": in.Zustand, "ladeart": in.Ladeart}); err != nil {
@@ -149,7 +145,7 @@ func (a *ausloeser) melden(w http.ResponseWriter, r *http.Request) {
 		}
 		answer(w, http.StatusOK, map[string]any{"ok": true})
 	default:
-		sagNein(w, http.StatusBadRequest, "Das kennt Homes nicht. Bitte aktualisiere die App.")
+		refuse(w, http.StatusBadRequest, "Das kennt Homes nicht. Bitte aktualisiere die App.")
 	}
 }
 
@@ -163,16 +159,16 @@ func (a *ausloeser) neuerTag(w http.ResponseWriter, r *http.Request) {
 		Aktion *string `json:"aktion"` // absent: the tag keeps its action
 	}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 4<<10)).Decode(&in); err != nil || in.Tag != "" && !tagID.MatchString(in.Tag) {
-		sagNein(w, http.StatusBadRequest, "Das kam nicht lesbar an.")
+		refuse(w, http.StatusBadRequest, "Das kam nicht lesbar an.")
 		return
 	}
 	if in.Aktion != nil && *in.Aktion != "" && (!tagaktion.Gibt(*in.Aktion) || !a.tag.Scanner()) {
-		sagNein(w, http.StatusBadRequest, "Das kann ein Tag auf dieser Box nicht tun.")
+		refuse(w, http.StatusBadRequest, "Das kann ein Tag auf dieser Box nicht tun.")
 		return
 	}
 	name := strings.TrimSpace(in.Name)
 	if name == "" || len([]rune(name)) > 60 {
-		sagNein(w, http.StatusBadRequest, "Gib dem Tag einen kurzen Namen, zum Beispiel „Bürotür“.")
+		refuse(w, http.StatusBadRequest, "Gib dem Tag einen kurzen Namen, zum Beispiel „Bürotür“.")
 		return
 	}
 	tags, err := a.ha.Tags(r.Context())
@@ -184,7 +180,7 @@ func (a *ausloeser) neuerTag(w http.ResponseWriter, r *http.Request) {
 	for _, t := range tags {
 		known = known || t.ID == in.Tag
 		if t.ID != in.Tag && strings.EqualFold(strings.TrimSpace(t.Name), name) {
-			sagNein(w, http.StatusConflict, "Es gibt schon einen Tag „"+t.Name+"“ – nimm einen anderen Namen.")
+			refuse(w, http.StatusConflict, "Es gibt schon einen Tag „"+t.Name+"“ – nimm einen anderen Namen.")
 			return
 		}
 	}
@@ -207,7 +203,7 @@ func (a *ausloeser) neuerTag(w http.ResponseWriter, r *http.Request) {
 	if in.Aktion != nil && a.tag.Store != nil {
 		if err := a.tag.Store.Setze(id, *in.Aktion); err != nil {
 			log.Printf("homes: ausloeser aktion: %v", err)
-			sagNein(w, http.StatusInternalServerError, "Der Name ist gespeichert, was der Tag tun soll, aber nicht. Versuch es noch einmal.")
+			refuse(w, http.StatusInternalServerError, "Der Name ist gespeichert, was der Tag tun soll, aber nicht. Versuch es noch einmal.")
 			return
 		}
 	}
@@ -218,7 +214,7 @@ func (a *ausloeser) tagWeg(w http.ResponseWriter, r *http.Request) {
 	err := a.ha.DeleteTag(r.Context(), r.PathValue("tag"))
 	switch {
 	case errors.Is(err, ha.ErrNotFound):
-		sagNein(w, http.StatusNotFound, "Diesen Tag gibt es nicht mehr.")
+		refuse(w, http.StatusNotFound, "Diesen Tag gibt es nicht mehr.")
 	case err != nil:
 		haSagt(w, "tag weg", err)
 	default:

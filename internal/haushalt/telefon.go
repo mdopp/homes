@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/mdopp/homes/internal/caldav"
+	"github.com/mdopp/homes/internal/namen"
 )
 
 // vorwahlen are the German area codes (without the 0) Telefon splits off as they are, two and
@@ -24,7 +25,7 @@ const vorwahlen = " 30 40 69 89 201 202 203 208 209 211 212 214 221 228 231 234 
 // it, a length no such number has); then it is s as written.
 func Telefon(s, cc string) (string, bool) {
 	v := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(s), "tel:"))
-	if !phoneRE.MatchString(v) || !strings.HasPrefix(v, "+") && !strings.HasPrefix(digits(v), "0") {
+	if !phoneRE.MatchString(v) || !strings.HasPrefix(v, "+") && !strings.HasPrefix(namen.Ziffern(v), "0") {
 		return s, false
 	}
 	n, ok := strings.CutPrefix(International(v, cc), "49")
@@ -49,7 +50,7 @@ func Telefon(s, cc string) (string, bool) {
 		return s, false
 	}
 	if i := strings.LastIndex(v, "-"); area > 0 && i > 0 && strings.Trim(v[i+1:], "0123456789 ") == "" { // DIN 5008 keeps an extension apart: „+49 681 844-0“
-		if k := len(digits(v[i+1:])); k <= 5 && len(n)-area-k >= 2 {
+		if k := len(namen.Ziffern(v[i+1:])); k <= 5 && len(n)-area-k >= 2 {
 			return "+49 " + n[:area] + " " + n[area:len(n)-k] + "-" + n[len(n)-k:], true
 		}
 	}

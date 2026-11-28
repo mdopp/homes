@@ -28,6 +28,7 @@ import (
 	"unicode"
 
 	"github.com/mdopp/homes/internal/caldav"
+	"github.com/mdopp/homes/internal/namen"
 	"github.com/mdopp/homes/internal/notes"
 )
 
@@ -484,7 +485,7 @@ func contacts(ctx context.Context, a *archive, file string, t Target, rep *Repor
 			case "EMAIL":
 				mails = append(mails, strings.ToLower(strings.TrimPrefix(val, "mailto:")))
 			case "TEL":
-				if d := digits(val); d != "" {
+				if d := namen.Ziffern(val); d != "" {
 					tels = append(tels, d)
 				}
 			}
@@ -555,16 +556,6 @@ func propLine(l string) (string, string) {
 		key = key[j+1:]
 	}
 	return key, strings.TrimSpace(l[k+1:])
-}
-
-func digits(s string) string {
-	var b strings.Builder
-	for _, r := range s {
-		if r >= '0' && r <= '9' {
-			b.WriteRune(r)
-		}
-	}
-	return b.String()
 }
 
 // nameFromN is a card's structured name (family;given;additional;prefix;

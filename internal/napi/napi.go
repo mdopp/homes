@@ -25,6 +25,7 @@ import (
 	"github.com/mdopp/homes/internal/assistent"
 	"github.com/mdopp/homes/internal/caldav"
 	"github.com/mdopp/homes/internal/einrichten"
+	"github.com/mdopp/homes/internal/energie"
 	"github.com/mdopp/homes/internal/favoriten"
 	"github.com/mdopp/homes/internal/ha"
 	"github.com/mdopp/homes/internal/haushalt"
@@ -63,7 +64,7 @@ type Config struct {
 	Ping     time.Duration // the event stream's keepalive; 0 = 90s
 	// SensorEvery: a sensor's card_state at most this often; 0 = 10s
 	SensorEvery time.Duration
-	Energy      EnergyMap // the energy entities (energy.go); empty = by friendly name
+	Energy      energie.Map // the energy entities (energy.go); empty = by friendly name
 	// OhneEnergie: energie is switched off (ADR 0001 H6) while HA stays for
 	// the house paths: /napi/portal/energy is 404
 	OhneEnergie bool
@@ -359,6 +360,15 @@ func Gruppen(c Config) map[string][]modul.Route {
 func bearerOf(r *http.Request) (string, bool) {
 	b, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 	return b, ok && b != ""
+}
+
+// personOf is the person behind the request's device, "" without one.
+func personOf(r *http.Request, whoami func(string) (string, bool)) string {
+	if bearer, ok := bearerOf(r); ok && whoami != nil {
+		p, _ := whoami(bearer)
+		return p
+	}
+	return ""
 }
 
 // uid is the person behind the request's device; false without one.

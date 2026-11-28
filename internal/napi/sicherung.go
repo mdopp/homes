@@ -164,10 +164,7 @@ func (s *Sicherung) person(whoami func(string) (string, bool), next personHandle
 			fehler(w, http.StatusServiceUnavailable, saysArchivMissing)
 			return
 		}
-		person := ""
-		if bearer, ok := bearerOf(r); ok && whoami != nil {
-			person, _ = whoami(bearer)
-		}
+		person := personOf(r, whoami)
 		if !validPerson(person) {
 			fehler(w, http.StatusForbidden, saysNoPerson)
 			return

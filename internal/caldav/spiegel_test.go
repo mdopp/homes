@@ -33,7 +33,7 @@ func TestSplitCards(t *testing.T) {
 			t.Errorf("%q: %v", bad, err)
 		}
 	}
-	if CardHref("a.b%2F/..") != CardHref("a.b%2F/..") || strings.Trim(strings.TrimSuffix(CardHref("x/../y"), ".vcf"), "0123456789abcdef") != "" {
+	if h := CardHref("a.b%2F/.."); h != CardHref("a.b%2F/..") || strings.Trim(strings.TrimSuffix(CardHref("x/../y"), ".vcf"), "0123456789abcdef") != "" {
 		t.Fatalf("href %s", CardHref("x/../y"))
 	}
 }

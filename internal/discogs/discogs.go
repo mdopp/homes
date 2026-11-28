@@ -21,6 +21,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/mdopp/homes/internal/namen"
 )
 
 // Client is Discogs for one account: a personal access token (Token), or
@@ -166,21 +168,10 @@ type Hinweise struct {
 	Barcode, Katalognummer, Label, Kuenstler, Titel string
 }
 
-// digits is a barcode's digits alone.
-func digits(s string) string {
-	var b strings.Builder
-	for _, r := range s {
-		if r >= '0' && r <= '9' {
-			b.WriteRune(r)
-		}
-	}
-	return b.String()
-}
-
 // EAN says whether a barcode's check digit is right (EAN-13, EAN-8,
 // UPC-A): a misread digit fails it.
 func EAN(code string) bool {
-	d := digits(code)
+	d := namen.Ziffern(code)
 	if len(d) != 8 && len(d) != 12 && len(d) != 13 {
 		return false
 	}
@@ -210,7 +201,7 @@ func (c *Client) Finden(ctx context.Context, h Hinweise) ([]Treffer, error) {
 			}
 		}
 	}
-	if code := digits(h.Barcode); len(code) >= 8 {
+	if code := namen.Ziffern(h.Barcode); len(code) >= 8 {
 		ts, err := c.search(ctx, url.Values{"barcode": {code}})
 		if err != nil {
 			return nil, err

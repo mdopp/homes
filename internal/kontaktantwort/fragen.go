@@ -72,7 +72,7 @@ func Mobil(ct caldav.Contact, land string) string {
 		}
 	}
 	for _, t := range ts {
-		if n := haushalt.International(t.Nummer, land); len(n) >= 12 && (strings.HasPrefix(n, "4915") || strings.HasPrefix(n, "4916") || strings.HasPrefix(n, "4917")) {
+		if n := haushalt.International(t.Nummer, land); mobilNummer(n) {
 			return "+" + n
 		}
 	}

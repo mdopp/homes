@@ -149,7 +149,7 @@ func namenSchluessel(name string) string {
 	return strings.Join(ws, " ")
 }
 
-// mobilNummer says whether a TelSchluessel is a German mobile's (+49 15…, 16…, 17…).
+// mobilNummer says whether a number's digits (TelSchluessel, International) are a German mobile's (+49 15…, 16…, 17…).
 func mobilNummer(k string) bool {
 	return len(k) >= 12 && (strings.HasPrefix(k, "4915") || strings.HasPrefix(k, "4916") || strings.HasPrefix(k, "4917"))
 }

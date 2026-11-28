@@ -21,10 +21,9 @@ import (
 // names, maps them through the def's cell schema, and sends a row's action
 // to POST /napi/action-callback (the app's ToolDefs.kt, ToolCells.kt).
 // Homes' catalog is the Haushalt source's backends that are set: reminders
-// and contacts (the Notizen and Dokumente widgets went, owner 2026-11-27:
-// „Kann ganz weg“; an old app asking for them gets the JSON 404). Homes has no page for creating or opening an
-// item, so no def names one (tool-compose-path, tool-item-id-field): a
-// guessed route would be a 404.
+// and contacts; any other tool's path is the JSON 404. Homes has no page
+// for creating or opening an item, so no def names one (tool-compose-path,
+// tool-item-id-field): a guessed route would be a 404.
 
 // maxRows is what a widget shows at most (ToolDefs.MAX_ROWS).
 const maxRows = 40
@@ -90,7 +89,7 @@ func (t *toolsAPI) defs(w http.ResponseWriter, r *http.Request) {
 // rowsFailed: the widget keeps its last good rows; the detail stays in the log.
 func rowsFailed(w http.ResponseWriter, what string, err error) {
 	log.Printf("homes: tool rows %s: %v", what, err)
-	answer(w, http.StatusBadGateway, map[string]any{"ok": false, "error": "backend_unavailable"})
+	refuse(w, http.StatusBadGateway, "backend_unavailable")
 }
 
 func oneLine(s string) string { return strings.Join(strings.Fields(s), " ") }

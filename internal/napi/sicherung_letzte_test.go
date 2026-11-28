@@ -73,7 +73,7 @@ func newFakeArchiv(t *testing.T, secret string) *fakeArchiv {
 	f.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		f.saw = append(f.saw, r.URL.Path)
 		if r.Header.Get("X-Archiv-Homes") != secret {
-			http.Error(w, `{"fehler":"nein"}`, 401)
+			http.Error(w, `{"fehler":"nein"}`, http.StatusUnauthorized)
 			return
 		}
 		if !f.offen {

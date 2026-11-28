@@ -16,6 +16,7 @@ import (
 
 	"github.com/mdopp/homes/internal/caldav"
 	"github.com/mdopp/homes/internal/mcpserver"
+	"github.com/mdopp/homes/internal/namen"
 )
 
 // kontakt_ergaenzen (haus#163): a firm from a document into the family
@@ -183,7 +184,7 @@ func readErgaenzen(a map[string]any, e *ergaenzung) (ergaenzenArgs, error) {
 		}
 	}
 	if p := strings.TrimSpace(mcpserver.Str(a, "telefon")); p != "" {
-		if !phoneRE.MatchString(p) || len(digits(p)) < 3 {
+		if !phoneRE.MatchString(p) || len(namen.Ziffern(p)) < 3 {
 			e.set("telefon", stAbgelehnt, fmt.Sprintf("„%s“ ist keine Telefonnummer", cut(oneLine(p), 40)))
 		} else {
 			v.telefon = p

@@ -22,15 +22,6 @@ import (
 // ring; left out without a battery leg or a number from 0 to 100). Which
 // sensors those are is package energie's choice, the Energie page's too.
 
-// EnergyMap names the energy entities (package energie).
-type EnergyMap = energie.Map
-
-// EnergyTotal is one labelled lifetime counter.
-type EnergyTotal = energie.Total
-
-// EnergyFromEnv reads HOMES_ENERGY_FLOW and HOMES_ENERGY_TOTALS.
-func EnergyFromEnv() (EnergyMap, error) { return energie.FromEnv() }
-
 // meter is one sensor as the energy picture shows it (no nulls).
 func meter(s ha.State) map[string]any {
 	name, _ := s.Attributes["friendly_name"].(string)
@@ -38,7 +29,7 @@ func meter(s ha.State) map[string]any {
 		name = s.EntityID
 	}
 	m := map[string]any{"entity_id": s.EntityID, "name": name, "state": s.State}
-	if dc := deviceClass(s); dc != "" {
+	if dc := energie.DeviceClass(s); dc != "" {
 		m["device_class"] = dc
 	}
 	if u := s.Attributes["unit_of_measurement"]; u != nil {
@@ -46,8 +37,6 @@ func meter(s ha.State) map[string]any {
 	}
 	return m
 }
-
-func deviceClass(s ha.State) string { return energie.DeviceClass(s) }
 
 func (h *homeAPI) energy(w http.ResponseWriter, r *http.Request) {
 	states, err := h.ha.States(r.Context())
@@ -77,7 +66,7 @@ func (h *homeAPI) energy(w http.ResponseWriter, r *http.Request) {
 	}
 	circuits := []map[string]any{}
 	for _, s := range states {
-		if strings.HasPrefix(s.EntityID, "sensor.") && deviceClass(s) == "power" && !used[s.EntityID] {
+		if strings.HasPrefix(s.EntityID, "sensor.") && energie.DeviceClass(s) == "power" && !used[s.EntityID] {
 			circuits = append(circuits, meter(s))
 		}
 	}

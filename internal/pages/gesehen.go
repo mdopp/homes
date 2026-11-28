@@ -115,36 +115,12 @@ func writeGesehen(w http.ResponseWriter, r *http.Request, cfg StartConfig, code 
 	fetch(r, reads...)
 	now, loc := cfg.clock()
 	if svc.Filme != nil {
-		c := cards.Card{Title: "Geschaut"}
-		switch {
-		case errors.Is(fErr, jellyfin.ErrNoUser):
-			c.Add(saysJellyfinNoUser, "")
-		case fErr != nil:
-			log.Printf("homes: gesehen: jellyfin: %v", fErr)
-			c.Add(saysJellyfinDown, "")
-		case len(filme) == 0:
-			c.Add(saysJellyfinNone, "")
-		}
-		for _, g := range filme {
-			c.Add(g.Name, filmDetail(g, now, loc))
-		}
-		b.WriteString(c.HTML())
+		b.WriteString(gesehenKarte("Geschaut", "jellyfin", filme, fErr, jellyfin.ErrNoUser, [3]string{saysJellyfinNoUser, saysJellyfinDown, saysJellyfinNone},
+			func(g jellyfin.Gesehen) (string, string) { return g.Name, filmDetail(g, now, loc) }))
 	}
 	if svc.Buecher != nil {
-		c := cards.Card{Title: "Gehört"}
-		switch {
-		case errors.Is(bErr, abs.ErrNoUser):
-			c.Add(saysABSNoUser, "")
-		case bErr != nil:
-			log.Printf("homes: gesehen: audiobookshelf: %v", bErr)
-			c.Add(saysABSDown, "")
-		case len(buecher) == 0:
-			c.Add(saysABSNone, "")
-		}
-		for _, h := range buecher {
-			c.Add(h.Titel, buchDetail(h, now, loc))
-		}
-		b.WriteString(c.HTML())
+		b.WriteString(gesehenKarte("Gehört", "audiobookshelf", buecher, bErr, abs.ErrNoUser, [3]string{saysABSNoUser, saysABSDown, saysABSNone},
+			func(h abs.Gehoert) (string, string) { return h.Titel, buchDetail(h, now, loc) }))
 	}
 	if svc.DAV != nil {
 		b.WriteString(`<section class=karte aria-labelledby=k-naechstes><h2 id=k-naechstes>Was als Nächstes?</h2><form class=notizform method=post action=` + GesehenPath + `>` +
@@ -171,6 +147,24 @@ func writeGesehen(w http.ResponseWriter, r *http.Request, cfg StartConfig, code 
 		b.WriteString(c.HTML())
 	}
 	writePage(w, code, b)
+}
+
+// gesehenKarte is one service's card: its rows, else why there are none (says: no account, down, nothing yet).
+func gesehenKarte[T any](title, dienst string, xs []T, err, keinKonto error, says [3]string, zeile func(T) (string, string)) string {
+	c := cards.Card{Title: title}
+	switch {
+	case errors.Is(err, keinKonto):
+		c.Add(says[0], "")
+	case err != nil:
+		log.Printf("homes: gesehen: %s: %v", dienst, err)
+		c.Add(says[1], "")
+	case len(xs) == 0:
+		c.Add(says[2], "")
+	}
+	for _, x := range xs {
+		c.Add(zeile(x))
+	}
+	return c.HTML()
 }
 
 // filmDetail is a film's or series' quieter line: "Film · 2021 · gestern",

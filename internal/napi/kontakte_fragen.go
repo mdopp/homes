@@ -62,17 +62,14 @@ type fragenAn struct {
 // darf is the device's person when they may ask (an admin, the public page there); false: the refusal is written.
 func (f *fragen) darf(w http.ResponseWriter, r *http.Request, sp texte.Sprache) (string, bool) {
 	w.Header().Set("Cache-Control", "no-store")
-	person := ""
-	if bearer, ok := bearerOf(r); ok && f.whoami != nil {
-		person, _ = f.whoami(bearer)
-	}
+	person := personOf(r, f.whoami)
 	switch {
 	case !validPerson(person):
-		sagNein(w, http.StatusForbidden, saysNoPerson)
+		refuse(w, http.StatusForbidden, saysNoPerson)
 	case f.admin == nil || !f.admin(person):
-		sagNein(w, http.StatusForbidden, sp.T(texte.PruefenNurAdmins))
+		refuse(w, http.StatusForbidden, sp.T(texte.PruefenNurAdmins))
 	case f.store == nil || f.basis == "":
-		sagNein(w, http.StatusServiceUnavailable, sp.T(texte.FehltAus))
+		refuse(w, http.StatusServiceUnavailable, sp.T(texte.FehltAus))
 	default:
 		return person, true
 	}
@@ -89,7 +86,7 @@ func (f *fragen) einladen(w http.ResponseWriter, r *http.Request) {
 	link, frage, err := f.store.Einladen(person, "", f.basis)
 	if err != nil {
 		log.Printf("homes: kontakt einladen: the link not made: %v", err)
-		sagNein(w, http.StatusServiceUnavailable, sp.T(texte.PruefenNicht))
+		refuse(w, http.StatusServiceUnavailable, sp.T(texte.PruefenNicht))
 		return
 	}
 	log.Printf("homes: kontakt einladen: link %s made from the app", frage.ID)
@@ -105,9 +102,9 @@ func (f *fragen) post(w http.ResponseWriter, r *http.Request) {
 	var in fragenAn
 	switch {
 	case json.NewDecoder(http.MaxBytesReader(w, r.Body, 16<<10)).Decode(&in) != nil:
-		sagNein(w, http.StatusBadRequest, saysUnreadable)
+		refuse(w, http.StatusBadRequest, saysUnreadable)
 	case in.Name == "" && len(in.Telefon) == 0 && len(in.Mail) == 0 && in.UID == "":
-		sagNein(w, http.StatusBadRequest, sp.T(texte.FehltOhneAngaben))
+		refuse(w, http.StatusBadRequest, sp.T(texte.FehltOhneAngaben))
 	default:
 		in.Telefon, in.Mail = in.Telefon[:min(len(in.Telefon), kontaktantwort.GrenzeJeArt)], in.Mail[:min(len(in.Mail), kontaktantwort.GrenzeJeArt)]
 		if ct, neu, ok := f.kontakt(w, r, sp, in); ok {
@@ -122,7 +119,7 @@ func (f *fragen) kontakt(w http.ResponseWriter, r *http.Request, sp texte.Sprach
 	all, _, err := f.dav.Contacts(r.Context())
 	if err != nil {
 		log.Printf("homes: kontakte fragen: %v", err)
-		sagNein(w, http.StatusBadGateway, sp.T(texte.FehltNichtLesbar))
+		refuse(w, http.StatusBadGateway, sp.T(texte.FehltNichtLesbar))
 		return caldav.Contact{}, false, false
 	}
 	hits, name := kontaktantwort.Finden(all, in.Name, in.Telefon, in.Mail, f.land), cmp.Or(in.Name, at(in.Telefon), at(in.Mail))
@@ -136,7 +133,7 @@ func (f *fragen) kontakt(w http.ResponseWriter, r *http.Request, sp texte.Sprach
 	case len(hits) == 1:
 		return hits[0], false, true
 	case in.UID != "":
-		sagNein(w, http.StatusNotFound, sp.T(texte.FehltUIDWeg))
+		refuse(w, http.StatusNotFound, sp.T(texte.FehltUIDWeg))
 	case len(hits) > 1:
 		ks := []map[string]string{}
 		for _, ct := range hits {
@@ -151,7 +148,7 @@ func (f *fragen) kontakt(w http.ResponseWriter, r *http.Request, sp texte.Sprach
 			return ct, true, true
 		}
 		log.Printf("homes: kontakte fragen: the new card not written: %v", err)
-		sagNein(w, http.StatusBadGateway, sp.T(texte.FehltNichtAngelegt))
+		refuse(w, http.StatusBadGateway, sp.T(texte.FehltNichtAngelegt))
 	}
 	return caldav.Contact{}, false, false
 }
@@ -161,7 +158,7 @@ func (f *fragen) link(w http.ResponseWriter, sp texte.Sprache, person string, ct
 	link, frage, err := f.store.Link(person, "", kontaktantwort.Haushalt, ct, f.basis)
 	if err != nil {
 		log.Printf("homes: kontakte fragen: the link not made: %v", err)
-		sagNein(w, http.StatusServiceUnavailable, sp.T(texte.PruefenNicht))
+		refuse(w, http.StatusServiceUnavailable, sp.T(texte.PruefenNicht))
 		return
 	}
 	log.Printf("homes: kontakte fragen: link %s made from the app (neu %v)", frage.ID, neu)

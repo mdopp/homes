@@ -29,6 +29,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/mdopp/homes/internal/jsonfile"
+	"github.com/mdopp/homes/internal/namen"
 )
 
 // Datei is the file's name in HOMES_DATA.
@@ -163,12 +164,7 @@ func Normal(kontakt string) string {
 		return lokal + "@" + domain
 	}
 	if strings.Trim(k, "0123456789+-/(). ") == "" && strings.ContainsAny(k, "0123456789") {
-		n := strings.Map(func(r rune) rune {
-			if r >= '0' && r <= '9' {
-				return r
-			}
-			return -1
-		}, k)
+		n := namen.Ziffern(k)
 		if strings.HasPrefix(k, "+") {
 			n = "+" + n
 		}

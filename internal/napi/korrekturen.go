@@ -39,10 +39,7 @@ type korrektur struct {
 
 func (k *korrekturen) person(w http.ResponseWriter, r *http.Request) (string, bool) {
 	w.Header().Set("Cache-Control", "no-store")
-	person := ""
-	if bearer, ok := bearerOf(r); ok && k.whoami != nil {
-		person, _ = k.whoami(bearer)
-	}
+	person := personOf(r, k.whoami)
 	if !validPerson(person) {
 		fehler(w, http.StatusForbidden, saysNoPerson)
 		return "", false

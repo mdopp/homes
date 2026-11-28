@@ -261,7 +261,7 @@ func (d *Dienst) nehmen(id string) (Freigabe, error) {
 	}
 	out := *f
 	if out.Stand = d.stand(f); out.Stand != Wartet {
-		return out, nein(http.StatusConflict, "Darüber ist schon entschieden: "+stehtSatz(out))
+		return out, nein(http.StatusConflict, "Darüber ist schon entschieden: "+out.Satz())
 	}
 	if _, busy := d.laeuft.LoadOrStore(id, true); busy {
 		return out, nein(http.StatusConflict, "Ein anderer Admin antwortet gerade darauf.")
@@ -269,8 +269,8 @@ func (d *Dienst) nehmen(id string) (Freigabe, error) {
 	return out, nil
 }
 
-// stehtSatz is a wish's state in one sentence, for the person and the admins.
-func stehtSatz(f Freigabe) string {
+// Satz is a wish's state in one sentence, for the person and the admins.
+func (f Freigabe) Satz() string {
 	switch f.Stand {
 	case Wartet:
 		return "Wartet auf Freigabe durch einen Admin."
@@ -279,9 +279,6 @@ func stehtSatz(f Freigabe) string {
 	}
 	return f.Ergebnis
 }
-
-// Satz is f's state in one sentence.
-func (f Freigabe) Satz() string { return stehtSatz(f) }
 
 // Pflegen drops what waited past Frist, every tick, telling the person,
 // and forgets what was decided long ago.

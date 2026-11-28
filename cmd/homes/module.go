@@ -94,7 +94,7 @@ func katalog(s site) []modul.Modul {
 			hh.Einkauf != nil, "Auf dieser Box läuft kein Radicale."),
 		bau(modul.Modul{Name: "notizen", Backend: "file-share",
 			Env: []string{"HOMES_NOTES_DIR", "HOMES_QMD_URL", "HOMES_QMD_COLLECTION", "HOMES_LLM_URL", "HOMES_LLM_KEY", "HOMES_LLM_MODEL"},
-			App: modul.Angebot{Teilen: []string{"merken"}}}, // its widget went (owner 2026-11-27)
+			App: modul.Angebot{Teilen: []string{"merken"}}}, // no widget (owner 2026-11-27)
 			hh.Notes != nil, "Auf dieser Box gibt es keinen Ordner für Notizen."),
 		bau(modul.Modul{Name: "dokumente", Backend: "paperless",
 			Env: []string{"HOMES_PAPERLESS_URL", "HOMES_PAPERLESS_TOKEN", "HOMES_PAPERLESS_PUBLIC_URL", "HOMES_PAPERLESS_LAN_ONLY",

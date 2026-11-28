@@ -31,7 +31,7 @@ func (c Config) einrichtung(w http.ResponseWriter, r *http.Request) {
 		}
 		if n, err := c.Einrichtung.Installiert(uid, in.Pakete); err != nil {
 			log.Printf("homes: einrichtung: the apps of %s: %v", uid, err)
-			answer(w, http.StatusInternalServerError, map[string]any{"ok": false, "error": texte.Von(r).T(texte.HakenNicht)})
+			refuse(w, http.StatusInternalServerError, texte.Von(r).T(texte.HakenNicht))
 			return
 		} else if n > 0 {
 			log.Printf("homes: einrichtung: %d of %s's tasks done, their apps are on the phone", n, uid)

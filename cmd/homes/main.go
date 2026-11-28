@@ -22,6 +22,7 @@ import (
 	"time"
 	_ "time/tzdata" // the image is scratch: TZ needs the zone database inside the binary
 
+	"github.com/mdopp/homes/internal/energie"
 	"github.com/mdopp/homes/internal/papierkorb"
 	"github.com/mdopp/homes/internal/plugin"
 
@@ -465,15 +466,14 @@ func main() {
 		d, ok := store.Lookup(b)
 		return d.UID, ok
 	}
-	// only phones paired through Homes; nothing old is carried (laib ADR 0022 §4)
-	cfg.Validate = func(_ context.Context, b string) bool { _, ok := store.Lookup(b); return ok }
+	cfg.Validate = func(_ context.Context, b string) bool { _, ok := store.Lookup(b); return ok } // only phones paired through Homes, nothing old (laib ADR 0022 §4)
 	// one favorites store for the pages' ☆ and the app's start screen
 	cfg.Favorites = favoriten.Open(dataDir)
 	if cfg.HA, err = ha.FromEnv(); err != nil { // the house paths and the event stream from HA; unset, 404
 		log.Fatalf("homes: %v", err)
 	}
 	cfg.Tags = tagDienst(cfg.HA, ops, dataDir) // what a tag does (ADR 0004 §4, §8)
-	if cfg.Energy, err = napi.EnergyFromEnv(); err != nil {
+	if cfg.Energy, err = energie.FromEnv(); err != nil {
 		log.Fatalf("homes: %v", err)
 	}
 	// laib ADR 0017: the Haushalt MCP source; a tool only when its backend is set
