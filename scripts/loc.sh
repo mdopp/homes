@@ -140,7 +140,7 @@ budget() { # budget <name> <cap> <dir…>
 # ergänzen“, verwerfen); the public form's new-person title, hint, name rule and thanks (kontakt_frage.go); antwortFelder split for it
 # 2026-11-28, owner's request 2026-11-28 (Kontakt austauschen), owner approved 2026-11-28 „Passt“ (pages 20,956 -> 21,264; 21,263 used, the minimum): teilen.go: the public page /t/<token> on the kontakt listener,
 # its parts (the card's released fields and .vcf, the guest Wi-Fi with Kopieren, „Und du?“ with the Contact Picker and a .vcf file), the SSE stream, ended and over, the card about Homes
-# 2026-11-28, owner's request 2026-11-28 (öffentliche Kontaktseiten absichern, Dubletten beim Prüfen) — the raise to be OK'd in the PR (pages 21,264 -> 21,367; 21,366 used, the minimum): fixes: the .vcf's Content-Disposition by mime,
+# 2026-11-28, owner's request 2026-11-28 (öffentliche Kontaktseiten absichern, Dubletten beim Prüfen), owner approved 2026-11-28 „Mach das bitte“ (pages 21,264 -> 21,367; 21,366 used, the minimum): fixes: the .vcf's Content-Disposition by mime,
 # Kontakte's tel:/mailto: links holding only the value, the live stream's frame as one function; the review's „Ist das jemand, den du schon hast?“
 # (the candidates with their reasons, „Damit zusammenführen“ before → after against one, the way back), the review message over laib tell
 budget pages 21367 internal/pages     # the family's pages, one per file: 14,684
@@ -270,7 +270,7 @@ budget cmd 1581 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-27, owner's request 2026-11-27 („Deinem Zuhause geht es gut.“), owner approved 2026-11-27 „Bitte umsetzen“ (connectors 16,973 -> 16,979; 16,978 used, the minimum): laib.Gut, one rule for the page and the app
 # 2026-11-28, field failure 2026-11-28 (HA took the phone's registration without os_version and failed to set it up; a touched tag
 # was lost), owner approved 2026-11-28 „Ja zu allen“ (connectors 16,979 -> 17,051; 17,050 used, the minimum): ha.Registrierung's os_version, ha.MobileAppBroken; the fake's failed setup
-# 2026-11-28, owner's request 2026-11-28 (öffentliche Kontaktseiten absichern, Dubletten beim Prüfen) — the raise to be OK'd in the PR (connectors 17,051 -> 17,054; 17,053 used, the minimum): a fix: caldav.Fold, so teilen's .vcf folds its lines
+# 2026-11-28, owner's request 2026-11-28 (öffentliche Kontaktseiten absichern, Dubletten beim Prüfen), owner approved 2026-11-28 „Mach das bitte“ (connectors 17,051 -> 17,054; 17,053 used, the minimum): a fix: caldav.Fold, so teilen's .vcf folds its lines
 budget connectors 17054 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
 # 2026-11-04, internal/jsonfile (47 lines, 50 of cap) from household's cap to shared's: it
 # replaces nine copies of a save, 62 of their lines in household
@@ -352,7 +352,7 @@ budget connectors 17054 $connectors   # one client per service, with its fake: 1
 # Eingetragen, Treffer (number or e-mail), Ergaenzung/Ergaenzen, NeuAnlegen; Store.EntscheidenNeu, Frage.Neu and its Name, Pruefung.Neu
 # 2026-11-28, owner's request 2026-11-28 (Kontakt austauschen), owner approved 2026-11-28 „Passt“ (household 17,373 -> 17,710; 17,709 used, the minimum): internal/teilen: the sessions in memory (30 minutes, 5 open,
 # 20 an hour per person, the token's hash), what they release and wipe at the end, the released card as a vCard 3.0
-# 2026-11-28, owner's request 2026-11-28 (öffentliche Kontaktseiten absichern, Dubletten beim Prüfen) — the raise to be OK'd in the PR (household 17,710 -> 17,818; 17,817 used, the minimum): fixes: teilen's released values without control and
+# 2026-11-28, owner's request 2026-11-28 (öffentliche Kontaktseiten absichern, Dubletten beim Prüfen), owner approved 2026-11-28 „Mach das bitte“ (household 17,710 -> 17,818; 17,817 used, the minimum): fixes: teilen's released values without control and
 # invisible characters, its token hash compared in constant time, the .vcf folded; kontaktantwort.Kandidaten (same mobile, number, e-mail,
 # a similar name; ranked, five at most, with their reasons) instead of Treffer
 budget household 17818 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
@@ -369,7 +369,7 @@ budget household 17818 $household   # the household's own logic: 10,638, 9,176 w
 # name that does not resolve said apart; cards.Row.Warn, a detail drawn as a warning; cards.Action's Path and Laeuft
 # 2026-11-18, owner's decision 2026-11-18 (Homes in the client's language: „ja, baue es so“; shared 1,920 -> 1,960; 1,959 used): texte.Sprache, Von and Waehle,
 # Accept-Language read by its weights (RFC 9110), and In finding the translations
-# 2026-11-28, owner's request 2026-11-28 (öffentliche Kontaktseiten absichern, Dubletten beim Prüfen) — the raise to be OK'd in the PR (shared 1,960 -> 1,980; 1,979 used, the minimum): a fix: namen.Sichtbar, what shows nothing (bidi, zero-width, C1) dropped
+# 2026-11-28, owner's request 2026-11-28 (öffentliche Kontaktseiten absichern, Dubletten beim Prüfen), owner approved 2026-11-28 „Mach das bitte“ (shared 1,960 -> 1,980; 1,979 used, the minimum): a fix: namen.Sichtbar, what shows nothing (bidi, zero-width, C1) dropped
 budget shared 1980 $(echo "$shared" | sed 's#internal/texte ##') internal/texte/texte.go # the card, Markdown, the app's names: 1,019; abruf, namen: 1,287; jsonfile: 1,334
 
 # every package in one area
