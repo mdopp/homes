@@ -253,7 +253,9 @@ budget cmd 1579 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-27, owner approved 2026-11-27 („Alles OK. Go ahead“), ADR 0004 §9 (connectors 16,759 -> 16,973; 16,972 used, the minimum): ha.Laeufe, ha.Spur (traces.go), ha.MobileAppDevices;
 # hafake's trace/list, trace/get and runs on a scanned tag
 # 2026-11-27, owner's request 2026-11-27 („Deinem Zuhause geht es gut.“), owner approved 2026-11-27 „Bitte umsetzen“ (connectors 16,973 -> 16,979; 16,978 used, the minimum): laib.Gut, one rule for the page and the app
-budget connectors 16979 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
+# 2026-11-28, field failure 2026-11-28 (HA took the phone's registration without os_version and failed to set it up; a touched tag
+# was lost) — the raise to be OK'd in the PR (connectors 16,979 -> 17,051; 17,050 used, the minimum): ha.Registrierung's os_version, ha.MobileAppBroken; the fake's failed setup
+budget connectors 17051 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
 # 2026-11-04, internal/jsonfile (47 lines, 50 of cap) from household's cap to shared's: it
 # replaces nine copies of a save, 62 of their lines in household
 # 2026-11-05, owner 2026-11-05 yes: Immich for the contacts (9,583 -> 9,874):
@@ -325,7 +327,9 @@ budget connectors 16979 $connectors   # one client per service, with its fake: 1
 # 2026-11-27, owner's request 2026-11-27 (Rezepte: „werden die mir nicht mehr in der App angezeigt“), owner approved 2026-11-27 („Bau alles“) (household 16,756 -> 16,763; 16,762 used, the minimum): einrichten's rows after a module (Nach), anzahl
 # 2026-11-27, owner approved the app's start screen 2026-11-27 („Bitte umsetzen“, homes-android#290), owner approved 2026-11-27 („Bau alles“) (household 16,763 -> 16,857; 16,856 used, the minimum): einrichten's bereiche, neu and dringend,
 # tagaktion.Stand, drucker.Achtung
-budget household 16857 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-28, field failure 2026-11-28 (HA took the phone's registration without os_version and failed to set it up; a touched tag
+# was lost) — the raise to be OK'd in the PR (household 16,857 -> 16,885; 16,884 used, the minimum): telefon: a registration whose device HA did not set up counts as none; the failed entry removed first
+budget household 16885 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one

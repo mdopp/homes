@@ -130,8 +130,7 @@ func (t *Telefone) webhook(ctx context.Context, g Geraet) (string, bool) {
 		if t.now().Before(t.bisWieder) {
 			return "", false
 		}
-		w, err := t.HA.RegisterMobileApp(ctx, ha.Registrierung{DeviceID: DeviceID(g.ID), AppID: app.Paket, AppName: "Homes", AppVersion: t.Version,
-			DeviceName: Name(g), Manufacturer: "Homes", Model: "Homes-App", OSName: "Android"})
+		w, err := t.registrieren(ctx, g)
 		if err != nil {
 			t.bisWieder = t.now().Add(Pause)
 			if !t.gesagt {
@@ -156,6 +155,35 @@ func (t *Telefone) webhook(ctx context.Context, g Geraet) (string, bool) {
 	m[g.ID] = e
 	t.sichern(m)
 	return e.Webhook, true
+}
+
+// registrieren registers g and checks that HA set its device up: a
+// registration HA takes but cannot set up (seen 2026-11-28: os_version)
+// has a webhook that answers 200 and does nothing, so a scan through it
+// would be lost. Entries of g's name whose setup failed are removed first.
+func (t *Telefone) registrieren(ctx context.Context, g Geraet) (string, error) {
+	if kaputt, err := t.HA.MobileAppBroken(ctx, Name(g)); err == nil {
+		for _, id := range kaputt {
+			if err := t.HA.DeleteConfigEntry(ctx, id); err == nil {
+				log.Printf("homes: telefon: removed a registration of %q Home Assistant could not set up", Name(g))
+			}
+		}
+	}
+	w, err := t.HA.RegisterMobileApp(ctx, ha.Registrierung{DeviceID: DeviceID(g.ID), AppID: app.Paket, AppName: "Homes", AppVersion: t.Version,
+		DeviceName: Name(g), Manufacturer: "Homes", Model: "Homes-App", OSName: "Android", OSVersion: "unbekannt"})
+	if err != nil {
+		return "", err
+	}
+	geraete, err := t.HA.MobileAppDevices(ctx)
+	if err != nil {
+		return "", err
+	}
+	for _, id := range geraete {
+		if id == DeviceID(g.ID) {
+			return w, nil
+		}
+	}
+	return "", errors.New("Home Assistant took the registration but set up no device")
 }
 
 // vergessen drops g's registration once HA said it is gone; the next
