@@ -132,7 +132,9 @@ budget() { # budget <name> <cap> <dir…>
 # all is well, swapped once by StartBoxPath's answer (start.go, start_box.go)
 # 2026-11-27, owner's request 2026-11-27 (Rezepte: „werden die mir nicht mehr in der App angezeigt“), owner approved 2026-11-27 („Bau alles“) (pages 20,439 -> 20,525; 20,524 used, the minimum): /rezepte (rezepte.go: the recipes newest
 # first, the search, the way into Einkauf's choice, empty and failing in words), the link on Notizen
-budget pages 20525 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-28, owner's request 2026-11-28 (Zugangsanfragen ablehnen), owner approved 2026-11-28 „Ja zu allen“ (pages 20,525 -> 20,589; 20,588 used, the minimum):
+# /zugang's Ablehnen beside Erledigt, the outcome said on top, „Abgelehnt: N“ folded with Wieder zulassen, 403 for a non-admin's POST (teaser.go)
+budget pages 20589 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -329,7 +331,9 @@ budget connectors 17051 $connectors   # one client per service, with its fake: 1
 # tagaktion.Stand, drucker.Achtung
 # 2026-11-28, field failure 2026-11-28 (HA took the phone's registration without os_version and failed to set it up; a touched tag
 # was lost), owner approved 2026-11-28 „Ja zu allen“ (household 16,857 -> 16,885; 16,884 used, the minimum): telefon: a registration whose device HA did not set up counts as none; the failed entry removed first
-budget household 16885 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-28, owner's request 2026-11-28 (Zugangsanfragen ablehnen), owner approved 2026-11-28 „Ja zu allen“ (household 16,885 -> 17,021; 17,020 used, the minimum):
+# zugang's refused senders: Normal (an e-mail without +tag, gmail without dots; a phone its digits), Ablehnen, Abgelehnte, Zulassen, a refused sender's request only a throttle trace
+budget household 17021 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one

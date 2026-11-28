@@ -1,6 +1,7 @@
 package zugang
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -113,5 +114,71 @@ func TestBrokenFileIsAnError(t *testing.T) {
 	}
 	if _, err := s.Annehmen(Anfrage{Name: "N", Kontakt: "k"}, "192.0.2.1"); err == nil || err == ErrZuViele {
 		t.Errorf("Annehmen on a broken file: %v", err)
+	}
+}
+
+func TestNormal(t *testing.T) {
+	for in, want := range map[string]string{
+		" Ave.Ye.Koha655@GMAIL.com ":          "aveyekoha655@gmail.com",
+		"ave.ye.koha655+preis@googlemail.com": "aveyekoha655@gmail.com",
+		"mailto:Oma.Hilde+box@Example.org":    "oma.hilde@example.org", // dots stay outside gmail
+		"0711 / 44-55 66":                     "0711445566",
+		"+49 (711) 445566":                    "+49711445566",
+		"  Ruf  mich AN ":                     "ruf mich an",
+	} {
+		if got := Normal(in); got != want {
+			t.Errorf("Normal(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// Ablehnen ticks off every open request from the sender, drops their words
+// from the file and remembers the sender with when and by whom; the
+// sender's next request is ErrAbgelehnt, leaves only the throttle's trace
+// and counts against it; Zulassen forgets the sender.
+func TestAblehnenAndZulassen(t *testing.T) {
+	s, now := store(t)
+	a, _ := s.Annehmen(Anfrage{Name: "Robertcox", Kontakt: "Ave.Ye.Koha655@gmail.com", Nachricht: "Xin chào"}, "203.0.113.7")
+	s.Annehmen(Anfrage{Name: "Robert", Kontakt: "aveyekoha655+2@gmail.com"}, "203.0.113.8")
+	oma, _ := s.Annehmen(Anfrage{Name: "Oma", Kontakt: "0711 1"}, "203.0.113.9")
+	if k, err := s.Ablehnen("niemand", "anna"); k != "" || err != nil {
+		t.Errorf("an unknown id: %q %v", k, err)
+	}
+	*now = now.Add(time.Minute)
+	k, err := s.Ablehnen(a.ID, "clara")
+	if err != nil || k != "aveyekoha655@gmail.com" {
+		t.Fatalf("%q %v", k, err)
+	}
+	if offen, _ := s.Offen(); len(offen) != 1 || offen[0].ID != oma.ID {
+		t.Errorf("open after Ablehnen: %+v", offen)
+	}
+	if g, err := s.Abgelehnte(); err != nil || len(g) != 1 || g[0] != (Sperre{Kontakt: k, Zeit: *now, Von: "clara"}) {
+		t.Errorf("%v %+v", err, g)
+	}
+	b, _ := os.ReadFile(s.Path)
+	if strings.Contains(string(b), "Robert") || strings.Contains(string(b), "Xin") {
+		t.Errorf("the refused words stay:\n%s", b)
+	}
+	_, err = s.Annehmen(Anfrage{Name: "R", Kontakt: "AVEYEKOHA655@googlemail.com"}, "203.0.113.20")
+	if !errors.Is(err, ErrAbgelehnt) || strings.Contains(err.Error(), "koha") {
+		t.Fatalf("a refused sender: %v", err)
+	}
+	if offen, _ := s.Offen(); len(offen) != 1 {
+		t.Errorf("a refused sender was kept: %+v", offen)
+	}
+	if _, err := s.Annehmen(Anfrage{Name: "R", Kontakt: "x@example.org"}, "203.0.113.20"); err != ErrZuViele {
+		t.Errorf("the refused request's address at once: %v, want ErrZuViele", err)
+	}
+	if err := s.Zulassen(" AveYeKoha655@gmail.com"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Zulassen("niemand@example.org"); err != nil {
+		t.Errorf("one not refused: %v", err)
+	}
+	if g, _ := s.Abgelehnte(); len(g) != 0 {
+		t.Errorf("still refused: %+v", g)
+	}
+	if _, err := s.Annehmen(Anfrage{Name: "R", Kontakt: "aveyekoha655@gmail.com"}, "203.0.113.21"); err != nil {
+		t.Errorf("after Zulassen: %v", err)
 	}
 }

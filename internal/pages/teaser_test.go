@@ -1,7 +1,9 @@
 package pages
 
 import (
+	"bytes"
 	"encoding/json"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -216,13 +218,13 @@ func TestZugangAnfragen(t *testing.T) {
 	rec = frag(page, "GET", ZugangPath, "anna", "family,admins", nil)
 	mustContain(t, rec.Body.String(), "<h1>Zugangsanfragen</h1>", "<b>Oma Hilde</b> · 0711 445566", "Ich bin die Oma.<br>Ruft an.", "14.10.2026 10:00", `name=id value="`+offen[0].ID+`"`, ">Erledigt</button>")
 	rec = frag(page, "POST", ZugangPath, "anna", "family,admins", url.Values{"id": {offen[0].ID}})
-	if rec.Code != 303 || rec.Header().Get("Location") != ZugangPath {
+	if rec.Code != 303 || rec.Header().Get("Location") != ZugangPath+"?getan=erledigt" {
 		t.Fatalf("Erledigt: %d %q", rec.Code, rec.Header().Get("Location"))
 	}
 	if offen, _ := cfg.Zugang.Offen(); len(offen) != 0 {
 		t.Errorf("still open: %+v", offen)
 	}
-	mustContain(t, frag(page, "GET", ZugangPath, "anna", "family,admins", nil).Body.String(), "Gerade fragt niemand nach Zugang.")
+	mustContain(t, frag(page, "GET", ZugangPath+"?getan=erledigt", "anna", "family,admins", nil).Body.String(), "Gerade fragt niemand nach Zugang.", `<p class=getan role=status>Erledigt. Die Anfrage ist von der Startseite.</p>`)
 	mustNotContain(t, brauchtDich(req, cfg, laibTeil{}), "Zugangsanfrage")
 }
 
@@ -315,5 +317,139 @@ func TestZugangNurZuhause(t *testing.T) {
 	}
 	if offen, _ := cfg.Zugang.Offen(); len(offen) != 1 || offen[0].Name != "Oma" {
 		t.Errorf("kept %+v", offen)
+	}
+}
+
+// Owner 2026-11-28, after spam („So etwas muss ich ablehnen können.“):
+// Ablehnen goes like Erledigt and remembers the sender (normalised, when,
+// by whom); the sender's next request is thanked exactly as any other and
+// is neither kept nor told nor a task; Wieder zulassen lets it in again.
+// Per viewer: the owner and an admin who is not the owner may, a person
+// without admins gets 403 on every button and no page.
+func TestZugangAblehnen(t *testing.T) {
+	cfg, told := teaserCfg(t)
+	pub, page := KontaktServer(cfg), Zugang(cfg)
+	waitTold := func(n int) {
+		deadline := time.Now().Add(3 * time.Second)
+		for len(told()) < n && time.Now().Before(deadline) {
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+	spam := anfrage("Robertcox", "Ave.Ye.Koha655+x@GoogleMail.com", "Xin chào, tôi muốn biết giá của bạn.")
+	if rec := zugangPost(pub, "192.168.178.30", spam); rec.Code != 200 {
+		t.Fatalf("the spam: %d", rec.Code)
+	}
+	if rec := zugangPost(pub, "192.168.178.31", anfrage("Oma", "0711 445566", "")); rec.Code != 200 {
+		t.Fatalf("Oma: %d", rec.Code)
+	}
+	waitTold(2)
+	offen, _ := cfg.Zugang.Offen()
+	if len(offen) != 2 {
+		t.Fatalf("%+v", offen)
+	}
+	body := frag(page, "GET", ZugangPath, "anna", "family,admins", nil).Body.String()
+	mustContain(t, body, `<form method=post action="/zugang" class=tun><input type=hidden name=id value="`+offen[0].ID+`"><button name=tun value=erledigt data-laeuft="Erledigt …">Erledigt</button><button name=tun value=ablehnen class=leise data-laeuft="Lehnt ab …">Ablehnen</button>`)
+	mustNotContain(t, body, "Abgelehnt:", "role=status") // no data-ganz: homesScript swaps the answer in place
+
+	// a person without admins: 403 on each button, nothing changed; the page is not theirs
+	for _, f := range []url.Values{{"tun": {"ablehnen"}, "id": {offen[0].ID}}, {"tun": {"erledigt"}, "id": {offen[0].ID}}, {"id": {offen[0].ID}}, {"tun": {"zulassen"}, "kontakt": {"x@example.org"}}} {
+		if rec := frag(page, "POST", ZugangPath, "ben", "family", f); rec.Code != 403 || !strings.Contains(rec.Body.String(), "Zugangsanfragen beantworten nur Admins.") {
+			t.Errorf("ben %v: %d %q", f, rec.Code, rec.Body.String())
+		}
+	}
+	if rec := frag(page, "GET", ZugangPath, "ben", "family", nil); rec.Code != 303 || strings.Contains(rec.Body.String(), "Robertcox") {
+		t.Errorf("ben's GET: %d", rec.Code)
+	}
+	if o, _ := cfg.Zugang.Offen(); len(o) != 2 {
+		t.Fatalf("ben changed something: %+v", o)
+	}
+
+	// clara, an admin who is not the owner, refuses the spam
+	rec := frag(page, "POST", ZugangPath, "clara", "family,admins", url.Values{"tun": {"ablehnen"}, "id": {offen[0].ID}})
+	if rec.Code != 303 || rec.Header().Get("Location") != ZugangPath+"?getan=abgelehnt" {
+		t.Fatalf("Ablehnen: %d %q", rec.Code, rec.Header().Get("Location"))
+	}
+	if o, _ := cfg.Zugang.Offen(); len(o) != 1 || o[0].Name != "Oma" {
+		t.Fatalf("after Ablehnen: %+v", o)
+	}
+	b, _ := os.ReadFile(cfg.Zugang.Path)
+	if strings.Contains(string(b), "Xin chào") || strings.Contains(string(b), "Robertcox") {
+		t.Errorf("the refused request's words stay in the file:\n%s", b)
+	}
+	for _, viewer := range []string{"anna", "clara"} {
+		body = frag(page, "GET", ZugangPath+"?getan=abgelehnt", viewer, "family,admins", nil).Body.String()
+		mustContain(t, body, `<p class=getan role=status>Abgelehnt. Neue Anfragen von diesem Absender kommen nicht mehr an; er erfährt davon nichts.</p>`,
+			`<details id=abgelehnt><summary>Abgelehnt: 1</summary>`, "<b>aveyekoha655@gmail.com</b>", "14.10.2026 10:00 · von clara",
+			`<input type=hidden name=kontakt value="aveyekoha655@gmail.com"><button name=tun value=zulassen class=leise data-laeuft="Lässt zu …">Wieder zulassen</button>`, "<b>Oma</b>")
+		mustNotContain(t, body, "Robertcox", "Xin chào")
+	}
+	req := httptest.NewRequest("GET", "/start", nil)
+	req.Header.Set("Remote-User", "anna")
+	req.Header.Set("Remote-Groups", "family,admins")
+	mustNotContain(t, brauchtDich(req, cfg, laibTeil{}), "Robertcox")
+
+	// the sender again, from another address and spelled otherwise: the same answer as anyone's, nothing kept or told
+	want := zugangPost(pub, "192.168.178.40", anfrage("Neu", "neu@example.org", "Hallo")) // a fresh sender, for the answer to compare
+	waitTold(3)
+	n := len(told())
+	var logged bytes.Buffer
+	log.SetOutput(&logged)
+	defer log.SetOutput(os.Stderr)
+	for _, k := range []string{"aveyekoha655@gmail.com", " AVE.YE.KOHA655@gmail.com ", "aveyekoha655+preis@googlemail.com"} {
+		got := zugangPost(pub, "192.168.178."+strconv.Itoa(50+len(k)), anfrage("Robertcox", k, "Xin chào"))
+		if got.Code != want.Code || got.Body.String() != want.Body.String() || got.Header().Get("Retry-After") != want.Header().Get("Retry-After") {
+			t.Errorf("%q: answered otherwise: %d\n%s", k, got.Code, got.Body.String())
+		}
+	}
+	log.SetOutput(os.Stderr)
+	if l := logged.String(); strings.Count(l, "homes: zugang: dropped a request: abgelehnter Absender (") != 3 || strings.Contains(strings.ToLower(l), "koha") || strings.Contains(l, "192.168") {
+		t.Errorf("the log:\n%s", l)
+	}
+	time.Sleep(50 * time.Millisecond)
+	if len(told()) != n {
+		t.Errorf("a refused sender was told: %q", told()[n:])
+	}
+	if o, _ := cfg.Zugang.Offen(); len(o) != 2 || o[0].Name != "Oma" || o[1].Name != "Neu" {
+		t.Errorf("a refused sender was kept: %+v", o)
+	}
+	mustNotContain(t, brauchtDich(req, cfg, laibTeil{}), "Robertcox")
+	// the throttle holds for a refused sender as for anyone: the second within the hour from one address is 429
+	if rec := zugangPost(pub, "192.168.178.40", anfrage("Neu", "neu@example.org", "")); rec.Code != 429 {
+		t.Errorf("the fresh sender again: %d", rec.Code)
+	}
+	if rec := zugangPost(pub, "192.168.178.72", anfrage("Robertcox", "aveyekoha655@gmail.com", "")); rec.Code != 429 {
+		t.Errorf("the refused sender again from one address: %d", rec.Code)
+	}
+
+	// the owner lets the sender in again: the fold open, and the next request kept
+	rec = frag(page, "POST", ZugangPath, "anna", "family,admins", url.Values{"tun": {"zulassen"}, "kontakt": {"aveyekoha655@gmail.com"}})
+	if rec.Code != 303 || rec.Header().Get("Location") != ZugangPath+"?getan=zugelassen" {
+		t.Fatalf("Wieder zulassen: %d %q", rec.Code, rec.Header().Get("Location"))
+	}
+	body = frag(page, "GET", ZugangPath+"?getan=zugelassen", "anna", "family,admins", nil).Body.String()
+	mustContain(t, body, "Wieder zugelassen. Neue Anfragen von diesem Absender kommen wieder an.")
+	mustNotContain(t, body, "Abgelehnt:", "aveyekoha655")
+	if rec := zugangPost(pub, "192.168.178.80", anfrage("Robert", "aveyekoha655@gmail.com", "")); rec.Code != 200 {
+		t.Fatalf("after Wieder zulassen: %d", rec.Code)
+	}
+	if o, _ := cfg.Zugang.Offen(); len(o) != 3 || o[2].Name != "Robert" {
+		t.Errorf("not kept after Wieder zulassen: %+v", o)
+	}
+	// an unknown tun, and a POST from another site
+	if rec := frag(page, "POST", ZugangPath, "anna", "family,admins", url.Values{"tun": {"weg"}}); rec.Code != 400 || rec.Header().Get("Content-Type") != "text/plain; charset=utf-8" {
+		t.Errorf("tun=weg: %d", rec.Code)
+	}
+}
+
+// A store that cannot write says so in a sentence (homesScript shows it at
+// the bottom, the page stays).
+func TestZugangAblehnenFails(t *testing.T) {
+	cfg, _ := teaserCfg(t)
+	if err := os.WriteFile(cfg.Zugang.Path, []byte("{"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	rec := frag(Zugang(cfg), "POST", ZugangPath, "anna", "family,admins", url.Values{"tun": {"ablehnen"}, "id": {"x"}})
+	if rec.Code != 500 || !strings.Contains(rec.Body.String(), "Das ließ sich gerade nicht speichern.") || strings.Contains(rec.Body.String(), "json") {
+		t.Errorf("%d %q", rec.Code, rec.Body.String())
 	}
 }

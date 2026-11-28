@@ -668,6 +668,29 @@ test('a phone access is made and removed on Box → Geräte', async ({ page }) =
   expect(await stays(page)).toBe(true);
 });
 
+// owner 2026-11-28: a spam request is refused in place, its sender folded under
+// „Abgelehnt: 1“ with when and by whom, and let in again from there.
+test('a spam request is refused and its sender let in again on Zugangsanfragen', async ({ page, request }, info) => {
+  await request.get('/demo/zugang');
+  await page.goto('/zugang');
+  await mark(page);
+  const spam = page.locator('li', { hasText: 'Robertcox' });
+  await spam.getByRole('button', { name: 'Ablehnen' }).click();
+  await expect(page.getByRole('status')).toHaveText('Abgelehnt. Neue Anfragen von diesem Absender kommen nicht mehr an; er erfährt davon nichts.');
+  await expect(page.locator('li', { hasText: 'Robertcox' })).toHaveCount(0);
+  await expect(page.locator('li', { hasText: 'Oma Hilde' })).toBeVisible();
+  const fold = page.locator('#abgelehnt');
+  await expect(fold.locator('summary')).toHaveText('Abgelehnt: 1');
+  await fold.locator('summary').click();
+  await expect(fold.locator('li', { hasText: 'aveyekoha655@gmail.com' })).toContainText('von anna');
+  await bild(page, info, 'zugang-abgelehnt.png', { fullPage: true });
+  await fold.getByRole('button', { name: 'Wieder zulassen' }).click();
+  await expect(page.getByRole('status')).toHaveText('Wieder zugelassen. Neue Anfragen von diesem Absender kommen wieder an.');
+  await expect(page.locator('#abgelehnt')).toHaveCount(0);
+  expect(await stays(page)).toBe(true);
+  await request.get('/demo/zugang');
+});
+
 // haus#176: the connection drops while a form is sent: the page says so and sends nothing twice
 test('a dropped connection is said, not sent again', async ({ page }) => {
   await page.goto('/einkauf');
@@ -777,7 +800,7 @@ test('Standortverlauf, connected, leads with the timeline and ends with a quiet 
 const PAGES = ['/start', '/raeume', '/raeume/light.kueche', '/energie', '/energie?zeitraum=jahr', '/kalender', '/kalender/verwalten', '/kontakte', '/kontakte/h3', '/kontakte/privat', '/kontakte/privat/k0', '/kontakte/dieselbe',
   '/notizen', '/notizen?tag=kochen', '/notizen/einkaufsliste.md', '/notizen/markdown.md', '/notizen/einkaufsliste.md?bearbeiten=1', '/mehr', '/musik', '/platte', '/discogs', '/aktivierungswort', '/aufgaben', '/dokumente', '/dokumente/zuordnen', '/dokumente/suche?q=strom', '/dokumente/suche?nur=versicherungen', '/willkommen', '/einrichten/fotos', '/box/geraete', '/pair-device', '/podcasts', '/gesehen', '/standort',
   '/meine-daten', '/aufgaben?nur=box', '/netzlaufwerk', '/box', '/box/auslastung', '/box/haushalt', '/box/personen', '/box/module', '/adresse',
-  '/einkauf', '/einkauf?liste=liste-baumarkt', '/einkauf?liste=liste-musik', '/einkauf/rezepte', '/einkauf/rezepte?n=rezepte%2Flasagne.md', '/notizen/rezepte/lasagne.md', '/tag/homes-b0e70e000001', '/rezepte'];
+  '/einkauf', '/einkauf?liste=liste-baumarkt', '/einkauf?liste=liste-musik', '/einkauf/rezepte', '/einkauf/rezepte?n=rezepte%2Flasagne.md', '/notizen/rezepte/lasagne.md', '/tag/homes-b0e70e000001', '/rezepte', '/zugang'];
 for (const path of PAGES) {
   test(`layout of ${path}`, async ({ page }) => {
     await page.goto(path);
