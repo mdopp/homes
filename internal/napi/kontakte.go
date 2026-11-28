@@ -54,10 +54,7 @@ func (k *kontakte) post(w http.ResponseWriter, r *http.Request) {
 		fehler(w, http.StatusServiceUnavailable, saysNoRadicale)
 		return
 	}
-	person := ""
-	if bearer, ok := bearerOf(r); ok && k.whoami != nil {
-		person, _ = k.whoami(bearer)
-	}
+	person := personOf(r, k.whoami)
 	if !validPerson(person) {
 		fehler(w, http.StatusForbidden, saysNoPerson)
 		return

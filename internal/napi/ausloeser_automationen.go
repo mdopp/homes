@@ -57,13 +57,13 @@ func (a *ausloeser) aendern(art string) http.HandlerFunc {
 		}
 		tag := r.PathValue("tag")
 		if err := json.NewDecoder(io.LimitReader(r.Body, 4<<10)).Decode(&in); err != nil || !tagID.MatchString(tag) {
-			sagNein(w, http.StatusBadRequest, "Das kam nicht lesbar an.")
+			refuse(w, http.StatusBadRequest, "Das kam nicht lesbar an.")
 			return
 		}
 		got, err := a.tag.Aendern(r.Context(), tagaktion.Wunsch{Art: art, Tag: tag, Automation: in.Automation, Satz: in.Satz}, a.wer(r), in.Bestaetigt)
 		if err != nil {
 			n := tagaktion.Als(err)
-			sagNein(w, n.Status, n.Satz)
+			refuse(w, n.Status, n.Satz)
 			return
 		}
 		out := map[string]any{"ok": true, "satz": got.Satz}
@@ -86,7 +86,7 @@ func (a *ausloeser) aendern(art string) http.HandlerFunc {
 func (a *ausloeser) freigabe(w http.ResponseWriter, r *http.Request) {
 	f, ok := a.tag.Freigabe(r.PathValue("id"))
 	if wer := a.wer(r); !ok || f.Von != wer.Login && !wer.Admin {
-		sagNein(w, http.StatusNotFound, "Diesen Wunsch gibt es nicht (mehr).")
+		refuse(w, http.StatusNotFound, "Diesen Wunsch gibt es nicht (mehr).")
 		return
 	}
 	answer(w, http.StatusOK, map[string]any{"ok": true, "stand": f.Stand, "satz": f.Satz(), "wunsch": f.Text})

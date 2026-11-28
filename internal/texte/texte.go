@@ -1,12 +1,10 @@
-// Package texte holds Homes' family-visible words by a stable id, one
-// table per language (owner 2026-11-04: Homes becomes multilingual — de,
-// en, es, fr — after the module work). German holds every word; the other
-// languages hold what has been translated, and a word they lack is German
-// (uebersetzt). Which language a request gets is the client's (owner
-// 2026-11-18): the browser's or the phone's Accept-Language (Von), no
-// picker and no setting per person. Older strings move here in that later
-// project. The words are in katalog.go (not counted by scripts/loc.sh); the
-// logic here is. Standard library only (shared).
+// Package texte holds Homes' family-visible words by a stable id: German
+// holds every word, the other languages (en, es, fr) what has been
+// translated, and a word they lack is German (uebersetzt). Which language a
+// request gets is the client's (owner 2026-11-18): the browser's or the
+// phone's Accept-Language (Von), no picker and no setting per person. The
+// words are in katalog.go (not counted by scripts/loc.sh); the logic here
+// is. Standard library only (shared).
 package texte
 
 import (
@@ -58,19 +56,13 @@ func (s Sprache) Titel(modul string) string { return s.T(ID("modul." + modul)) }
 // ID is a word's stable key: the app and other languages refer to it.
 type ID string
 
-// sprachen are the tables by language; a missing word falls back to German.
-var sprachen = map[string]map[ID]string{"de": de}
-
 // T is a word in German.
 func T(id ID) string { return In("de", id) }
 
 // In is a word in a language; German when that language lacks it, and
 // the id itself when German does too (a test holds every id to German).
 func In(lang string, id ID) string {
-	if s, ok := sprachen[lang][id]; ok {
-		return s
-	}
-	if s, ok := uebersetzt[id][lang]; ok {
+	if s, ok := uebersetzt[id][lang]; ok { // German is de alone
 		return s
 	}
 	if s, ok := de[id]; ok {

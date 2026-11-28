@@ -15,6 +15,7 @@ import (
 
 	"github.com/mdopp/homes/internal/cards"
 	"github.com/mdopp/homes/internal/drucker"
+	"github.com/mdopp/homes/internal/energie"
 	"github.com/mdopp/homes/internal/favoriten"
 	"github.com/mdopp/homes/internal/ha"
 	"github.com/mdopp/homes/internal/schalter"
@@ -46,7 +47,7 @@ func set(xs ...string) map[string]bool {
 // homeAPI serves the HA-backed paths.
 type homeAPI struct {
 	ha      *ha.Client
-	sources EnergyMap                          // which entities the energy picture reads (energy.go)
+	sources energie.Map                        // which entities the energy picture reads (energy.go)
 	witness *schalter.Witness                  // who switched what (haus#89); nil: the log only
 	whoami  func(bearer string) (string, bool) // the person behind the device's bearer
 	favs    *favoriten.Store                   // each person's ☆ things (haus#35); nil: none
@@ -70,6 +71,8 @@ func answer(w http.ResponseWriter, code int, v any) {
 	json.NewEncoder(w).Encode(v)
 }
 
+// refuse is {ok:false, error}: a code the app reads (ha_unavailable) or a
+// sentence it shows as it is.
 func refuse(w http.ResponseWriter, code int, reason string) {
 	answer(w, code, map[string]any{"ok": false, "error": reason})
 }
@@ -90,10 +93,7 @@ func (h *homeAPI) call(w http.ResponseWriter, r *http.Request) {
 	var no *schalter.Refusal
 	switch {
 	case err == nil:
-		person := ""
-		if bearer, ok := bearerOf(r); ok && h.whoami != nil {
-			person, _ = h.whoami(bearer)
-		}
+		person := personOf(r, h.whoami)
 		h.witness.Saw(person, body.Service, body.EntityID, said)
 		answer(w, http.StatusOK, map[string]any{"ok": true})
 	case errors.As(err, &no):
@@ -239,10 +239,7 @@ func (h *homeAPI) history(w http.ResponseWriter, r *http.Request) {
 // Homes draws no card for, is left out; a person with none, or no store, is
 // an empty list. A store that does not read is a 500, never "none".
 func (h *homeAPI) favorites(w http.ResponseWriter, r *http.Request) {
-	person := ""
-	if bearer, ok := bearerOf(r); ok && h.whoami != nil {
-		person, _ = h.whoami(bearer)
-	}
+	person := personOf(r, h.whoami)
 	out := []map[string]any{}
 	if h.favs == nil || person == "" {
 		answer(w, http.StatusOK, map[string]any{"ok": true, "favorites": out})

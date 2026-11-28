@@ -33,6 +33,7 @@ import (
 	"github.com/mdopp/homes/internal/library"
 	"github.com/mdopp/homes/internal/mcpserver"
 	"github.com/mdopp/homes/internal/merken"
+	"github.com/mdopp/homes/internal/namen"
 	"github.com/mdopp/homes/internal/notes"
 	"github.com/mdopp/homes/internal/paperless"
 	"github.com/mdopp/homes/internal/podcasts"
@@ -533,28 +534,30 @@ func ParseWhen(s string, loc *time.Location) (t time.Time, dateOnly bool, err er
 
 var weekday = [...]string{"So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"}
 
-func day(t time.Time) string { return weekday[t.Weekday()] + " " + t.Format("02.01.2006") }
+// Day is a date as the family reads it: "Do 15.10.2026".
+func Day(t time.Time) string { return weekday[t.Weekday()] + " " + t.Format("02.01.2006") }
 
-func dayTime(t time.Time) string { return day(t) + " " + t.Format("15:04") }
+// DayTime is Day with the time: "Do 15.10.2026 18:00".
+func DayTime(t time.Time) string { return Day(t) + " " + t.Format("15:04") }
 
 // eventLine is one appointment in a sentence's worth of text.
 func eventLine(e caldav.Event, loc *time.Location) string {
 	var when string
 	if e.AllDay {
 		last := e.End.AddDate(0, 0, -1)
-		when = day(e.Start) + " ganztägig"
+		when = Day(e.Start) + " ganztägig"
 		if last.After(e.Start) {
-			when = day(e.Start) + " – " + day(last) + " ganztägig"
+			when = Day(e.Start) + " – " + Day(last) + " ganztägig"
 		}
 	} else {
 		s, en := e.Start.In(loc), e.End.In(loc)
 		switch {
 		case !en.After(s):
-			when = dayTime(s)
+			when = DayTime(s)
 		case s.Format("20060102") == en.Format("20060102"):
-			when = dayTime(s) + "–" + en.Format("15:04")
+			when = DayTime(s) + "–" + en.Format("15:04")
 		default:
-			when = dayTime(s) + " – " + dayTime(en)
+			when = DayTime(s) + " – " + DayTime(en)
 		}
 	}
 	line := when + ": " + orDash(e.Summary)
@@ -601,7 +604,7 @@ func termine(ctx context.Context, c *caldav.Client, loc *time.Location, a map[st
 		return "", err
 	}
 	if len(evs) == 0 {
-		return fmt.Sprintf("Keine Termine von %s bis %s.", dayTime(from), dayTime(to)), nil
+		return fmt.Sprintf("Keine Termine von %s bis %s.", DayTime(from), DayTime(to)), nil
 	}
 	var b strings.Builder
 	for i, e := range evs {
@@ -674,7 +677,7 @@ func erinnerungAnlegen(ctx context.Context, c *caldav.Client, loc *time.Location
 	if err != nil {
 		return "", err
 	}
-	return "Erinnerung angelegt im Kalender „" + col.Name + "“: " + dayTime(when.In(loc)) + ": " + orDash(text), nil
+	return "Erinnerung angelegt im Kalender „" + col.Name + "“: " + DayTime(when.In(loc)) + ": " + orDash(text), nil
 }
 
 const maxTodos = 30
@@ -696,9 +699,9 @@ func erinnerungen(ctx context.Context, c *caldav.Client, loc *time.Location) (st
 		when := "ohne Zeitpunkt"
 		switch {
 		case !t.Due.IsZero() && t.DueAllDay: // due on a day: no time to show
-			when = day(t.Due.In(loc))
+			when = Day(t.Due.In(loc))
 		case !t.Due.IsZero():
-			when = dayTime(t.Due.In(loc))
+			when = DayTime(t.Due.In(loc))
 		}
 		b.WriteString(when + ": " + orDash(t.Summary) + "\n")
 	}
@@ -847,15 +850,10 @@ func notizAnlegen(n *notes.Dir, a map[string]any) (string, error) {
 // call, not an export.
 const maxContacts = 10
 
-var (
-	phoneRE  = regexp.MustCompile(`^\+?[0-9 ()./-]{3,40}$`)
-	digitsRE = regexp.MustCompile(`[^0-9]`)
-)
+var phoneRE = regexp.MustCompile(`^\+?[0-9 ()./-]{3,40}$`)
 
-func digits(s string) string { return digitsRE.ReplaceAllString(s, "") }
-
-// birthdayDay shows JJJJ-MM-TT as TT.MM.JJJJ and --MM-TT as TT.MM.
-func birthdayDay(b string) string {
+// BirthdayText shows JJJJ-MM-TT as TT.MM.JJJJ and --MM-TT as TT.MM.
+func BirthdayText(b string) string {
 	if t, err := time.Parse("2006-01-02", b); err == nil {
 		return t.Format("02.01.2006")
 	}
@@ -894,7 +892,7 @@ func contactLine(ct caldav.Contact) string {
 		parts = append(parts, "E-Mail "+e)
 	}
 	if ct.Birthday != "" {
-		parts = append(parts, "Geburtstag "+birthdayDay(ct.Birthday))
+		parts = append(parts, "Geburtstag "+BirthdayText(ct.Birthday))
 	}
 	if len(parts) > 0 {
 		line += " — " + strings.Join(parts, " · ")
@@ -906,7 +904,7 @@ func contactLine(ct caldav.Contact) string {
 // only, however it is written: +49 (0)170 …, 0049 170 …, 0170 … (the
 // house's country cc) all give 49170….
 func International(s, cc string) string {
-	d := digits(s)
+	d := namen.Ziffern(s)
 	if strings.HasPrefix(strings.TrimSpace(s), "+") || strings.HasPrefix(d, "00") {
 		d = strings.TrimPrefix(d, "00")
 		if rest, ok := strings.CutPrefix(d, cc); ok { // another country's code stays as written
@@ -933,11 +931,11 @@ func matches(ct caldav.Contact, q, cc string) bool {
 	if !phoneRE.MatchString(q) {
 		return false
 	}
-	want := strings.TrimLeft(digits(q), "0")
+	want := strings.TrimLeft(namen.Ziffern(q), "0")
 	if len(want) < 3 {
 		return false
 	}
-	if strings.HasPrefix(q, "+") || strings.HasPrefix(digits(q), "00") {
+	if strings.HasPrefix(q, "+") || strings.HasPrefix(namen.Ziffern(q), "00") {
 		want = International(q, cc)
 	}
 	for _, p := range ct.Phones {
@@ -1060,7 +1058,7 @@ func contactCard(ct caldav.Contact, pub string) string {
 	add("Telefon", listAll(ct.Phones, 40, ", "))
 	add("E-Mail", listAll(ct.Emails, 100, ", "))
 	if ct.Birthday != "" {
-		add("Geburtstag", birthdayDay(ct.Birthday))
+		add("Geburtstag", BirthdayText(ct.Birthday))
 	}
 	add("Adresse", listAll(ct.Addresses, MaxField, "; "))
 	if pub != "" && oneLine(ct.UID) != "" { // the UID as the page matches it
@@ -1118,7 +1116,7 @@ func kontaktAnlegen(ctx context.Context, c *caldav.Client, cc string, a map[stri
 		return "", err
 	}
 	if p := mcpserver.Str(a, "telefon"); p != "" {
-		if !phoneRE.MatchString(p) || len(digits(p)) < 3 {
+		if !phoneRE.MatchString(p) || len(namen.Ziffern(p)) < 3 {
 			return "", fmt.Errorf("telefon: %q ist keine Telefonnummer (Ziffern, +, Leerzeichen, -, /)", cut(p, 40))
 		}
 		p, _ = Telefon(p, cc)
@@ -1210,15 +1208,6 @@ func ReminderDone(ctx context.Context, c *caldav.Client, uid string) error {
 	}
 	return c.CompleteTodo(ctx, uid)
 }
-
-// Day is a date as the family reads it: "Do 15.10.2026".
-func Day(t time.Time) string { return day(t) }
-
-// DayTime is Day with the time: "Do 15.10.2026 18:00".
-func DayTime(t time.Time) string { return dayTime(t) }
-
-// BirthdayText shows JJJJ-MM-TT as TT.MM.JJJJ and --MM-TT as TT.MM.
-func BirthdayText(b string) string { return birthdayDay(b) }
 
 // artKeys are the kinds a note can be, for the tool's schema.
 func artKeys() []string {

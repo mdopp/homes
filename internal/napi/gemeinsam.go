@@ -64,10 +64,7 @@ func (g *gemeinsam) routes(gs gruppen) {
 func (g *gemeinsam) person(next personHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-cache")
-		person := ""
-		if bearer, ok := bearerOf(r); ok && g.whoami != nil {
-			person, _ = g.whoami(bearer)
-		}
+		person := personOf(r, g.whoami)
 		if !validPerson(person) {
 			fehler(w, http.StatusForbidden, saysNoPerson)
 			return

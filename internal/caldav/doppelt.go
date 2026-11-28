@@ -5,6 +5,8 @@ import (
 	"context"
 	"path"
 	"strings"
+
+	"github.com/mdopp/homes/internal/namen"
 )
 
 // Doppelte Nummern (owner 2026-11-11: „Viele Kontakte haben mehrfach die gleiche Nummer“): the
@@ -20,7 +22,7 @@ const HandyBuch = "handy-kontakte"
 func TelSchluessel(v, cc string) string {
 	cc = cmp.Or(cc, "49")
 	v = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(v), "tel:"))
-	d := strings.Map(func(r rune) rune { return map[bool]rune{true: r, false: -1}[r >= '0' && r <= '9'] }, v)
+	d := namen.Ziffern(v)
 	intl := strings.HasPrefix(v, "+")
 	if !intl && strings.HasPrefix(d, "00") {
 		d, intl = d[2:], true

@@ -99,10 +99,7 @@ func standortFehler(w http.ResponseWriter, code int, grund, say string) {
 func (s *standort) person(next personHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
-		person := ""
-		if bearer, ok := bearerOf(r); ok && s.whoami != nil {
-			person, _ = s.whoami(bearer)
-		}
+		person := personOf(r, s.whoami)
 		if !validPerson(person) {
 			fehler(w, http.StatusForbidden, saysNoPerson)
 			return

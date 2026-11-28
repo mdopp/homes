@@ -57,3 +57,24 @@ func TestFromEnvTakesTheCharge(t *testing.T) {
 		t.Fatalf("legs %v", flow)
 	}
 }
+
+func TestFromEnvFlowAndTotals(t *testing.T) {
+	t.Setenv("HOMES_ENERGY_FLOW", "")
+	t.Setenv("HOMES_ENERGY_TOTALS", "")
+	if m, err := FromEnv(); err != nil || len(m.Flow) != 0 || len(m.Totals) != 0 {
+		t.Fatalf("unset: %+v %v", m, err)
+	}
+	t.Setenv("HOMES_ENERGY_FLOW", "pv=sensor.a, house=sensor.b,grid=sensor.c,battery=sensor.d")
+	t.Setenv("HOMES_ENERGY_TOTALS", "PV-Erzeugung=sensor.e, Batterie geladen=sensor.f")
+	m, err := FromEnv()
+	if err != nil || m.Flow["pv"] != "sensor.a" || m.Flow["battery"] != "sensor.d" || len(m.Totals) != 2 ||
+		m.Totals[1] != (Total{Label: "Batterie geladen", Entity: "sensor.f"}) {
+		t.Fatalf("set: %+v %v", m, err)
+	}
+	for _, bad := range []string{"sun=sensor.a", "pv", "pv=not an entity"} {
+		t.Setenv("HOMES_ENERGY_FLOW", bad)
+		if _, err := FromEnv(); err == nil {
+			t.Fatalf("%q must refuse to start", bad)
+		}
+	}
+}

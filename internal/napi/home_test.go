@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mdopp/homes/internal/energie"
 	"github.com/mdopp/homes/internal/favoriten"
 	"github.com/mdopp/homes/internal/ha"
 	"github.com/mdopp/homes/internal/ha/hafake"
@@ -924,8 +925,8 @@ func ended(lines <-chan string, d time.Duration) bool {
 // names are only the fallback.
 func TestPortalEnergyFromConfig(t *testing.T) {
 	fake, h := houseWith(t, func(c *Config) {
-		c.Energy = EnergyMap{Flow: map[string]string{"pv": "sensor.inverter", "grid": "sensor.meter"},
-			Totals: []EnergyTotal{{Label: "PV gesamt", Entity: "sensor.pv_kwh"}, {Label: "Bezug", Entity: "sensor.import_kwh"}}}
+		c.Energy = energie.Map{Flow: map[string]string{"pv": "sensor.inverter", "grid": "sensor.meter"},
+			Totals: []energie.Total{{Label: "PV gesamt", Entity: "sensor.pv_kwh"}, {Label: "Bezug", Entity: "sensor.import_kwh"}}}
 	})
 	power := map[string]any{"device_class": "power", "unit_of_measurement": "W"}
 	fake.Set("sensor.inverter", "2500", map[string]any{"friendly_name": "Inverter", "device_class": "power", "unit_of_measurement": "W"})
@@ -959,27 +960,6 @@ func TestPortalEnergyFromConfig(t *testing.T) {
 	}
 	if len(e.Circuits) != 2 {
 		t.Fatalf("circuits: %v", e.Circuits)
-	}
-}
-
-func TestEnergyFromEnv(t *testing.T) {
-	t.Setenv("HOMES_ENERGY_FLOW", "")
-	t.Setenv("HOMES_ENERGY_TOTALS", "")
-	if m, err := EnergyFromEnv(); err != nil || len(m.Flow) != 0 || len(m.Totals) != 0 {
-		t.Fatalf("unset: %+v %v", m, err)
-	}
-	t.Setenv("HOMES_ENERGY_FLOW", "pv=sensor.a, house=sensor.b,grid=sensor.c,battery=sensor.d")
-	t.Setenv("HOMES_ENERGY_TOTALS", "PV-Erzeugung=sensor.e, Batterie geladen=sensor.f")
-	m, err := EnergyFromEnv()
-	if err != nil || m.Flow["pv"] != "sensor.a" || m.Flow["battery"] != "sensor.d" || len(m.Totals) != 2 ||
-		m.Totals[1] != (EnergyTotal{Label: "Batterie geladen", Entity: "sensor.f"}) {
-		t.Fatalf("set: %+v %v", m, err)
-	}
-	for _, bad := range []string{"sun=sensor.a", "pv", "pv=not an entity"} {
-		t.Setenv("HOMES_ENERGY_FLOW", bad)
-		if _, err := EnergyFromEnv(); err == nil {
-			t.Fatalf("%q must refuse to start", bad)
-		}
 	}
 }
 

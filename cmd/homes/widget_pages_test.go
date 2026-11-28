@@ -14,11 +14,11 @@ import (
 
 	"github.com/mdopp/homes/internal/caldav"
 	"github.com/mdopp/homes/internal/caldav/davfake"
+	"github.com/mdopp/homes/internal/energie"
 	"github.com/mdopp/homes/internal/favoriten"
 	"github.com/mdopp/homes/internal/ha"
 	"github.com/mdopp/homes/internal/ha/hafake"
 	"github.com/mdopp/homes/internal/haushalt"
-	"github.com/mdopp/homes/internal/napi"
 	"github.com/mdopp/homes/internal/notes"
 	"github.com/mdopp/homes/internal/pages"
 	"github.com/mdopp/homes/internal/paperless"
@@ -444,7 +444,7 @@ func TestPinAndSwitchThroughTheRoutes(t *testing.T) {
 func TestEnergiePageServedFromTheWidgetsSensors(t *testing.T) {
 	s, fake, _ := fullSite(t)
 	fake.Set("sensor.inverter", "2500", map[string]any{"friendly_name": "Inverter", "device_class": "power", "unit_of_measurement": "W"})
-	s.napi.Energy = napi.EnergyMap{Flow: map[string]string{"pv": "sensor.inverter"}}
+	s.napi.Energy = energie.Map{Flow: map[string]string{"pv": "sensor.inverter"}}
 	rec := page(routes(s), "/energie")
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "<tr><th scope=row>Solar erzeugt</th><td>2,5 kW</td></tr>") {
 		t.Fatalf("/energie → %d:\n%s", rec.Code, rec.Body.String())

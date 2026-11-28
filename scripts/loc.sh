@@ -143,7 +143,8 @@ budget() { # budget <name> <cap> <dir…>
 # 2026-11-28, owner's request 2026-11-28 (öffentliche Kontaktseiten absichern, Dubletten beim Prüfen), owner approved 2026-11-28 „Mach das bitte“ (pages 21,264 -> 21,367; 21,366 used, the minimum): fixes: the .vcf's Content-Disposition by mime,
 # Kontakte's tel:/mailto: links holding only the value, the live stream's frame as one function; the review's „Ist das jemand, den du schon hast?“
 # (the candidates with their reasons, „Damit zusammenführen“ before → after against one, the way back), the review message over laib tell
-budget pages 21367 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-28, clean-up (owner 2026-11-28: „schau auch mal, ob wir nicht mal wieder Code aufräumen können“), lowered, no approval needed (pages 21,367 -> 21,359; 21,358 used, the minimum): gesehen.go's two cards one function (gesehenKarte), history comments
+budget pages 21359 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -170,7 +171,8 @@ budget pages 21367 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-28, owner's request 2026-11-28 (Kontakte fragen auffindbar), owner approved 2026-11-28 „Ja zu allen“ (napi 5,682 -> 5,828; 5,827 used, the minimum): kontakte_fragen.go: POST /napi/kontakte/fragen, the household's card for a shared vCard (number, e-mail, name), the link and message, 404/409, anlegen
 # 2026-11-28, owner's request 2026-11-28 (Kontaktdaten eintragen lassen), owner approved 2026-11-28 „Passt“ (napi 5,828 -> 5,867; 5,866 used, the minimum): kontakte_fragen.go: POST /napi/kontakte/einladen, the admin check shared with /fragen
 # 2026-11-28, owner's request 2026-11-28 (Kontakt austauschen), owner approved 2026-11-28 „Passt“ (napi 5,867 -> 6,075; 6,074 used, the minimum): teilen.go: POST, PUT, GET and DELETE /napi/teilen, the refusals in words, eintragen an admin's
-budget napi 6075 internal/napi        # the app's widgets' and share sheet's API: 4,793
+# 2026-11-28, clean-up (owner 2026-11-28: „schau auch mal, ob wir nicht mal wieder Code aufräumen können“), lowered, no approval needed (napi 6,075 -> 6,045; 6,044 used, the minimum): personOf for the device's person, sagNein folded into refuse, the energy aliases and wrappers gone
+budget napi 6045 internal/napi        # the app's widgets' and share sheet's API: 4,793
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): the module catalog,
 # cmd/homes/module.go, 1,150 with it; plus 5 %. H3–H6 move the routes out of main.go into it
 # 2026-11-04, step H8 (§10, owner: „Keine Funktion soll versteckt werden“): the routes of the traces
@@ -271,7 +273,8 @@ budget cmd 1581 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-28, field failure 2026-11-28 (HA took the phone's registration without os_version and failed to set it up; a touched tag
 # was lost), owner approved 2026-11-28 „Ja zu allen“ (connectors 16,979 -> 17,051; 17,050 used, the minimum): ha.Registrierung's os_version, ha.MobileAppBroken; the fake's failed setup
 # 2026-11-28, owner's request 2026-11-28 (öffentliche Kontaktseiten absichern, Dubletten beim Prüfen), owner approved 2026-11-28 „Mach das bitte“ (connectors 17,051 -> 17,054; 17,053 used, the minimum): a fix: caldav.Fold, so teilen's .vcf folds its lines
-budget connectors 17054 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
+# 2026-11-28, clean-up (owner 2026-11-28: „schau auch mal, ob wir nicht mal wieder Code aufräumen können“), lowered, no approval needed (connectors 17,054 -> 17,047; 17,046 used, the minimum): discogs' digits and caldav.TelSchluessel's as namen.Ziffern
+budget connectors 17047 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
 # 2026-11-04, internal/jsonfile (47 lines, 50 of cap) from household's cap to shared's: it
 # replaces nine copies of a save, 62 of their lines in household
 # 2026-11-05, owner 2026-11-05 yes: Immich for the contacts (9,583 -> 9,874):
@@ -355,7 +358,8 @@ budget connectors 17054 $connectors   # one client per service, with its fake: 1
 # 2026-11-28, owner's request 2026-11-28 (öffentliche Kontaktseiten absichern, Dubletten beim Prüfen), owner approved 2026-11-28 „Mach das bitte“ (household 17,710 -> 17,818; 17,817 used, the minimum): fixes: teilen's released values without control and
 # invisible characters, its token hash compared in constant time, the .vcf folded; kontaktantwort.Kandidaten (same mobile, number, e-mail,
 # a similar name; ranked, five at most, with their reasons) instead of Treffer
-budget household 17818 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-28, clean-up (owner 2026-11-28: „schau auch mal, ob wir nicht mal wieder Code aufräumen können“), lowered, no approval needed (household 17,818 -> 17,793; 17,792 used, the minimum): haushalt's, takeout's and zugang's digits as namen.Ziffern, haushalt.Day/DayTime/BirthdayText without wrappers, Freigabe.Satz, kontaktantwort.Mobil by mobilNummer
+budget household 17793 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one
@@ -370,7 +374,8 @@ budget household 17818 $household   # the household's own logic: 10,638, 9,176 w
 # 2026-11-18, owner's decision 2026-11-18 (Homes in the client's language: „ja, baue es so“; shared 1,920 -> 1,960; 1,959 used): texte.Sprache, Von and Waehle,
 # Accept-Language read by its weights (RFC 9110), and In finding the translations
 # 2026-11-28, owner's request 2026-11-28 (öffentliche Kontaktseiten absichern, Dubletten beim Prüfen), owner approved 2026-11-28 „Mach das bitte“ (shared 1,960 -> 1,980; 1,979 used, the minimum): a fix: namen.Sichtbar, what shows nothing (bidi, zero-width, C1) dropped
-budget shared 1980 $(echo "$shared" | sed 's#internal/texte ##') internal/texte/texte.go # the card, Markdown, the app's names: 1,019; abruf, namen: 1,287; jsonfile: 1,334
+# 2026-11-28, clean-up (owner 2026-11-28: „schau auch mal, ob wir nicht mal wieder Code aufräumen können“), lowered, no approval needed (shared 1,980 -> 1,977; 1,976 used, the minimum): namen.Ziffern (+4), texte.In without the one-language table sprachen, texte's package comment
+budget shared 1977 $(echo "$shared" | sed 's#internal/texte ##') internal/texte/texte.go # the card, Markdown, the app's names: 1,019; abruf, namen: 1,287; jsonfile: 1,334
 
 # every package in one area
 for d in internal/*/; do

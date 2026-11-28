@@ -1,7 +1,7 @@
 // Package namen compares names as a person means them: a song, an artist,
 // a film or a book written one way in Jellyfin, another in MusicBrainz or
-// on the shopping list. It was namen.Plain; the music and the media
-// packages share it, so it is no connector's.
+// on the shopping list; a number by its digits. The music, media, contact
+// and barcode packages share it, so it is no connector's.
 package namen
 
 import (
@@ -21,6 +21,11 @@ func Plain(s string) string {
 		}
 	}
 	return b.String()
+}
+
+// Ziffern is s's digits 0–9 alone: a phone number or a barcode compared however it is written.
+func Ziffern(s string) string {
+	return strings.Map(func(r rune) rune { return map[bool]rune{true: r, false: -1}[r >= '0' && r <= '9'] }, s)
 }
 
 // Sichtbar is s without the characters that change how text shows

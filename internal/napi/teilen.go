@@ -51,15 +51,12 @@ func (t *teilenAPI) routes(gs gruppen) {
 // person is the device's person; false: the refusal is written.
 func (t *teilenAPI) person(w http.ResponseWriter, r *http.Request) (string, bool) {
 	w.Header().Set("Cache-Control", "no-store")
-	person := ""
-	if bearer, ok := bearerOf(r); ok && t.whoami != nil {
-		person, _ = t.whoami(bearer)
-	}
+	person := personOf(r, t.whoami)
 	switch {
 	case !validPerson(person):
-		sagNein(w, http.StatusForbidden, saysNoPerson)
+		refuse(w, http.StatusForbidden, saysNoPerson)
 	case t.basis == "":
-		sagNein(w, http.StatusServiceUnavailable, texte.Von(r).T(texte.TeilenAus))
+		refuse(w, http.StatusServiceUnavailable, texte.Von(r).T(texte.TeilenAus))
 	default:
 		return person, true
 	}
@@ -71,19 +68,19 @@ func teilenNein(w http.ResponseWriter, r *http.Request, err error) {
 	sp := texte.Von(r)
 	switch {
 	case errors.Is(err, teilen.ErrWeg):
-		sagNein(w, http.StatusNotFound, sp.T(texte.TeilenWeg))
+		refuse(w, http.StatusNotFound, sp.T(texte.TeilenWeg))
 	case errors.Is(err, teilen.ErrVorbei):
-		sagNein(w, http.StatusGone, sp.T(texte.TeilenVorbei))
+		refuse(w, http.StatusGone, sp.T(texte.TeilenVorbei))
 	case errors.Is(err, teilen.ErrFeld):
-		sagNein(w, http.StatusBadRequest, sp.T(texte.TeilenFeld))
+		refuse(w, http.StatusBadRequest, sp.T(texte.TeilenFeld))
 	case errors.Is(err, teilen.ErrZuViele):
-		sagNein(w, http.StatusTooManyRequests, sp.T(texte.TeilenZuViele))
+		refuse(w, http.StatusTooManyRequests, sp.T(texte.TeilenZuViele))
 	case errors.Is(err, teilen.ErrZuOft):
 		w.Header().Set("Retry-After", "600")
-		sagNein(w, http.StatusTooManyRequests, sp.T(texte.TeilenZuOft))
+		refuse(w, http.StatusTooManyRequests, sp.T(texte.TeilenZuOft))
 	default:
 		log.Printf("homes: teilen: %v", err)
-		sagNein(w, http.StatusServiceUnavailable, sp.T(texte.TeilenAus))
+		refuse(w, http.StatusServiceUnavailable, sp.T(texte.TeilenAus))
 	}
 }
 
@@ -132,7 +129,7 @@ func (t *teilenAPI) setzen(w http.ResponseWriter, r *http.Request) {
 	sp, id := texte.Von(r), r.PathValue("id")
 	var in teilenAn
 	if json.NewDecoder(http.MaxBytesReader(w, r.Body, 8<<10)).Decode(&in) != nil { // never logged: it holds the password
-		sagNein(w, http.StatusBadRequest, saysUnreadable)
+		refuse(w, http.StatusBadRequest, saysUnreadable)
 		return
 	}
 	if in.Karte != nil && *in.Karte == (teilen.Karte{}) {
@@ -147,16 +144,16 @@ func (t *teilenAPI) setzen(w http.ResponseWriter, r *http.Request) {
 	if in.Eintragen {
 		switch {
 		case t.admin == nil || !t.admin(person):
-			sagNein(w, http.StatusForbidden, sp.T(texte.PruefenNurAdmins))
+			refuse(w, http.StatusForbidden, sp.T(texte.PruefenNurAdmins))
 			return
 		case t.antworten == nil:
-			sagNein(w, http.StatusServiceUnavailable, sp.T(texte.FehltAus))
+			refuse(w, http.StatusServiceUnavailable, sp.T(texte.FehltAus))
 			return
 		case st.Einladung.Token == "":
 			link, f, err := t.antworten.Einladen(person, cmp.Or(strings.TrimSpace(in.Vorname), st.Vorname), t.basis)
 			if err != nil {
 				log.Printf("homes: teilen %s: the form's link not made: %v", id, err)
-				sagNein(w, http.StatusServiceUnavailable, sp.T(texte.PruefenNicht))
+				refuse(w, http.StatusServiceUnavailable, sp.T(texte.PruefenNicht))
 				return
 			}
 			e = teilen.Einladung{Token: link[strings.LastIndex(link, "/")+1:], ID: f.ID}

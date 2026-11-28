@@ -7,15 +7,13 @@ package texte
 // The module titles are "modul.<name>"; Titel finds them.
 const (
 	// Daten sichern (owner 2026-11-08: the one overview; the app keeps only what needs the phone)
-	DatenInDerApp      ID = "daten.in-der-app"    // a phone source with nothing yet: where to switch it on
-	DatenTeilen        ID = "daten.teilen"        // Facebook and LinkedIn with nothing yet: share the export to the app
-	DatenMail          ID = "daten.mail"          // E-Mail's line: Homes cannot see the mailbox, so the way
-	DatenKeinKalender  ID = "daten.kein-kalender" // the person sees no calendar yet, not even the household's
-	DatenTermine       ID = "daten.termine"       // after the count of calendars
-	DatenSchluessel    ID = "daten.schluessel"    // the button into the archive's /tresor
-	DatenWelche        ID = "daten.welche"        // its quiet line: which keys
-	DatenBitwarden     ID = "daten.bitwarden"     // the keys belong in Bitwarden too
-	DatenNieTitel      ID = "daten.nie.titel"     // the <details>: what never reaches the archive
+	DatenInDerApp      ID = "daten.in-der-app" // a phone source with nothing yet: where to switch it on
+	DatenTeilen        ID = "daten.teilen"     // Facebook and LinkedIn with nothing yet: share the export to the app
+	DatenMail          ID = "daten.mail"       // E-Mail's line: Homes cannot see the mailbox, so the way
+	DatenSchluessel    ID = "daten.schluessel" // the button into the archive's /tresor
+	DatenWelche        ID = "daten.welche"     // its quiet line: which keys
+	DatenBitwarden     ID = "daten.bitwarden"  // the keys belong in Bitwarden too
+	DatenNieTitel      ID = "daten.nie.titel"  // the <details>: what never reaches the archive
 	DatenNie           ID = "daten.nie"
 	DatenWechsel       ID = "daten.wechsel" // the phone change (haus#209, homes-android#197): three steps, one a line
 	DatenWechselMedien ID = "daten.wechsel.medien"
@@ -363,7 +361,6 @@ const (
 	ArtNotiz              ID = "art.notiz"
 	AntwortNachricht      ID = "antwort.nachricht" // the message in the review: „%s“ the contact's name
 	AntwortNotiz          ID = "antwort.notiz"     // its tick
-	AntwortHaupt          ID = "antwort.haupt"     // „Haupt-Nummer“ in a number's kind
 	FrageSenden           ID = "frage.senden"
 	FrageStimmt           ID = "frage.stimmt"
 	FrageSendet           ID = "frage.sendet"
@@ -631,8 +628,6 @@ var de = map[ID]string{
 	"daten.in-der-app":           "in der Homes-App einschalten",
 	"daten.teilen":               "Export auf dem Handy teilen → „Ins Archiv“",
 	"daten.mail":                 "Trag dein Postfach einmal im Archiv ein; es holt dann jede Stunde neue Mails.",
-	"daten.kein-kalender":        "noch kein Kalender",
-	"daten.termine":              "das Archiv übernimmt sie, während es offen ist",
 	"daten.schluessel":           "Schlüssel im Archiv eintragen",
 	"daten.welche":               "Signal-Passphrase, WhatsApp-Schlüssel und Postfach",
 	"daten.bitwarden":            "Leg Archiv-Passwort, Signal-Passphrase und WhatsApp-Schlüssel auch in Bitwarden ab: wer einen verliert, kann diese Sicherungen nicht mehr lesen.",
@@ -1135,7 +1130,6 @@ var de = map[ID]string{
 	"art.notiz":                  "Notiz",
 	"antwort.nachricht":          "Nachricht von %s",
 	"antwort.notiz":              "An die Notiz des Kontakts anhängen",
-	"antwort.haupt":              "Haupt-Nummer",
 	"frage.plz":                  "PLZ",
 	"frage.ort":                  "Ort",
 	"frage.land":                 "Land",

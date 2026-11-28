@@ -12,14 +12,12 @@ import (
 	"github.com/mdopp/homes/internal/texte"
 )
 
-// Kontakte fragen auffindbar (owner 2026-11-28): asking a contact for their
-// own data (Kontakt prüfen lassen) was a quiet icon and a button at the
-// end. Now a contact that lacks what the link asks for
-// (kontaktantwort.Fehlt: a mobile number, an e-mail, an address, a
-// birthday) says so at the top of its page with „Anna selbst fragen“, and
-// Kontakte has the chip „Unvollständig (n)“: those contacts, each with
-// „Fragen“ and what it lacks. For whoever may ask (pruefenDarf), nobody
-// else.
+// Kontakte fragen auffindbar (owner 2026-11-28): a contact that lacks what
+// the link asks for (kontaktantwort.Fehlt: a mobile number, an e-mail, an
+// address, a birthday) says so at the top of its page with „Anna selbst
+// fragen“ (Kontakt prüfen lassen), and Kontakte has the chip „Unvollständig
+// (n)“: those contacts, each with „Fragen“ and what it lacks. For whoever
+// may ask (pruefenDarf), nobody else.
 
 // fehltPfad is Kontakte with the contacts that lack something alone.
 const fehltPfad = KontaktePath + "?fehlt=1"

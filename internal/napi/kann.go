@@ -107,7 +107,7 @@ func (c Config) anfordern(w http.ResponseWriter, r *http.Request) {
 	ws := c.wuensche(r.Context())
 	switch {
 	case !ws.Geht:
-		answer(w, http.StatusServiceUnavailable, map[string]any{"ok": false, "error": texte.Von(r).T(texte.AnfordernKeinLaib)})
+		refuse(w, http.StatusServiceUnavailable, texte.Von(r).T(texte.AnfordernKeinLaib))
 		return
 	case m.Anfordern(ws):
 		uid, _ := c.uid(r)
@@ -120,7 +120,7 @@ func (c Config) anfordern(w http.ResponseWriter, r *http.Request) {
 			if errors.Is(err, context.DeadlineExceeded) {
 				say, code = texte.AnfordernStumm, http.StatusGatewayTimeout
 			}
-			answer(w, code, map[string]any{"ok": false, "error": texte.Von(r).T(say)})
+			refuse(w, code, texte.Von(r).T(say))
 			return
 		}
 		log.Printf("homes: anfordern %s for %s", m.Name, uid)

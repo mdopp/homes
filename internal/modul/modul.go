@@ -45,7 +45,7 @@ type Route struct {
 // Angebot is what a module offers the app, in the app's keys
 // (GET /napi/kann "app"; the keys are listed in ADR 0001 §2).
 type Angebot struct {
-	Widgets   []string `json:"widgets"`   // "geraet", "energie", "tool:note"
+	Widgets   []string `json:"widgets"`   // "geraet", "tool:task", "tool:contacts"
 	Teilen    []string `json:"teilen"`    // share targets: "merken", "dokument", "standort-import", "archiv"
 	Konto     []string `json:"konto"`     // the Homes account's parts: "kontakte", "kalender"
 	Sicherung []string `json:"sicherung"` // the backup's parts: "whatsapp", "signal", "sms", "kontakte"

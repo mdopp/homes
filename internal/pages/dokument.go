@@ -11,7 +11,7 @@ import (
 	"github.com/mdopp/homes/internal/cards"
 )
 
-// Dokument is a document's page (haus#28), the page a documents widget row
+// Dokument is a document's page (haus#28), the page a row on Dokumente or a Bote answer
 // opens: Paperless's own, behind its own login. Homes only sends the tap on.
 // Without Paperless's public address there is nowhere to send it, and no
 // row names this page: a 404, like an id that is none. Homes reads nothing
