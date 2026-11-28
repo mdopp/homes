@@ -135,7 +135,7 @@ budget() { # budget <name> <cap> <dir…>
 # 2026-11-28, owner's request 2026-11-28 (Zugangsanfragen ablehnen), owner approved 2026-11-28 „Ja zu allen“ (pages 20,525 -> 20,589; 20,588 used, the minimum):
 # /zugang's Ablehnen beside Erledigt, the outcome said on top, „Abgelehnt: N“ folded with Wieder zulassen, 403 for a non-admin's POST (teaser.go)
 # 2026-11-28, owner's request 2026-11-28 (Kontakte fragen auffindbar), owner approved 2026-11-28 „Ja zu allen“ (pages 20,589 -> 20,720; 20,719 used, the minimum): kontakte_fehlt.go: what a contact lacks at the top of its page with „Anna selbst fragen“, Kontakte's chip Unvollständig (n) with „Fragen“ and the grey line; pruefenForm shared
-# 2026-11-28, owner's request 2026-11-28 (Kontaktdaten eintragen lassen) — the raise to be OK'd in the PR (pages 20,720 -> 20,956; 20,955 used, the minimum): kontakt_neu.go: Kontakte's „Jemanden seine Kontaktdaten
+# 2026-11-28, owner's request 2026-11-28 (Kontaktdaten eintragen lassen), owner approved 2026-11-28 „Passt“ (pages 20,720 -> 20,956; 20,955 used, the minimum): kontakt_neu.go: Kontakte's „Jemanden seine Kontaktdaten
 # eintragen lassen“ and POST /kontakte/einladen, the review of a new person's answer at /kontakte/antworten/<id> (anlegen, „<Name> damit
 # ergänzen“, verwerfen); the public form's new-person title, hint, name rule and thanks (kontakt_frage.go); antwortFelder split for it
 budget pages 20956 internal/pages     # the family's pages, one per file: 14,684
@@ -163,7 +163,7 @@ budget pages 20956 internal/pages     # the family's pages, one per file: 14,684
 # /napi/portal/documents and their catalog entries gone (tools.go)
 # 2026-11-27, owner approved the app's start screen 2026-11-27 („Bitte umsetzen“, homes-android#290), owner approved 2026-11-27 („Bau alles“) (napi 5,656 -> 5,682; 5,681 used, the minimum): achtung on a device's card (home.go)
 # 2026-11-28, owner's request 2026-11-28 (Kontakte fragen auffindbar), owner approved 2026-11-28 „Ja zu allen“ (napi 5,682 -> 5,828; 5,827 used, the minimum): kontakte_fragen.go: POST /napi/kontakte/fragen, the household's card for a shared vCard (number, e-mail, name), the link and message, 404/409, anlegen
-# 2026-11-28, owner's request 2026-11-28 (Kontaktdaten eintragen lassen) — the raise to be OK'd in the PR (napi 5,828 -> 5,867; 5,866 used, the minimum): kontakte_fragen.go: POST /napi/kontakte/einladen, the admin check shared with /fragen
+# 2026-11-28, owner's request 2026-11-28 (Kontaktdaten eintragen lassen), owner approved 2026-11-28 „Passt“ (napi 5,828 -> 5,867; 5,866 used, the minimum): kontakte_fragen.go: POST /napi/kontakte/einladen, the admin check shared with /fragen
 budget napi 5867 internal/napi        # the app's widgets' and share sheet's API: 4,793
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): the module catalog,
 # cmd/homes/module.go, 1,150 with it; plus 5 %. H3–H6 move the routes out of main.go into it
@@ -340,7 +340,7 @@ budget connectors 17051 $connectors   # one client per service, with its fake: 1
 # 2026-11-28, owner's request 2026-11-28 (Zugangsanfragen ablehnen), owner approved 2026-11-28 „Ja zu allen“ (household 16,885 -> 17,021; 17,020 used, the minimum):
 # zugang's refused senders: Normal (an e-mail without +tag, gmail without dots; a phone its digits), Ablehnen, Abgelehnte, Zulassen, a refused sender's request only a throttle trace
 # 2026-11-28, owner's request 2026-11-28 (Kontakte fragen auffindbar), owner approved 2026-11-28 „Ja zu allen“ (household 17,021 -> 17,176; 17,175 used, the minimum): kontaktantwort/fragen.go: Fehlt and FehltWorte, Mobil, Finden, Anlegen, Store.Link
-# 2026-11-28, owner's request 2026-11-28 (Kontaktdaten eintragen lassen) — the raise to be OK'd in the PR (household 17,176 -> 17,373; 17,372 used, the minimum): kontaktantwort/neu.go: Store.Einladen (7 days, several open),
+# 2026-11-28, owner's request 2026-11-28 (Kontaktdaten eintragen lassen), owner approved 2026-11-28 „Passt“ (household 17,176 -> 17,373; 17,372 used, the minimum): kontaktantwort/neu.go: Store.Einladen (7 days, several open),
 # Eingetragen, Treffer (number or e-mail), Ergaenzung/Ergaenzen, NeuAnlegen; Store.EntscheidenNeu, Frage.Neu and its Name, Pruefung.Neu
 budget household 17373 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
