@@ -372,6 +372,15 @@ const (
 	ZugangKeine       ID = "zugang.keine"
 	ZugangErledigt    ID = "zugang.erledigt"
 	ZugangHinweis     ID = "zugang.hinweis"
+	// Ablehnen (owner 2026-11-28, after spam): refuse a request and its sender
+	ZugangAblehnen        ID = "zugang.ablehnen"
+	ZugangZulassen        ID = "zugang.zulassen"
+	ZugangAbgelehnt       ID = "zugang.abgelehnt"     // „Abgelehnt: %d“, the fold's summary
+	ZugangAbgelehntVon    ID = "zugang.abgelehnt-von" // „%s · von %s“: when, which admin
+	ZugangGetanErledigt   ID = "zugang.getan-erledigt"
+	ZugangGetanAbgelehnt  ID = "zugang.getan-abgelehnt"
+	ZugangGetanZugelassen ID = "zugang.getan-zugelassen"
+	ZugangNurAdmins       ID = "zugang.nur-admins"
 	// the frame and Start in the reader's language (owner 2026-11-18): the selection, the head, the blocks
 	NavStart         ID = "nav.start"
 	NavHaushalt      ID = "nav.haushalt"
@@ -986,7 +995,15 @@ var de = map[ID]string{
 	"zugang.anfrage":             "Zugangsanfrage von %s",
 	"zugang.keine":               "Gerade fragt niemand nach Zugang.",
 	"zugang.erledigt":            "Erledigt",
-	"zugang.hinweis":             "Wer die Box ohne Anmeldung aufruft, kann hier um Zugang bitten. Melde dich bei der Person; ein Login legst du direkt an der Box an. „Erledigt“ nimmt die Anfrage von der Startseite.",
+	"zugang.hinweis":             "Wer die Box ohne Anmeldung aufruft, kann hier um Zugang bitten. Melde dich bei der Person; ein Login legst du direkt an der Box an. „Erledigt“ nimmt die Anfrage von der Startseite; „Ablehnen“ auch, und weitere Anfragen von diesem Absender kommen nicht mehr an. Der Absender erfährt davon nichts.",
+	"zugang.ablehnen":            "Ablehnen",
+	"zugang.zulassen":            "Wieder zulassen",
+	"zugang.abgelehnt":           "Abgelehnt: %d",
+	"zugang.abgelehnt-von":       "%s · von %s",
+	"zugang.getan-erledigt":      "Erledigt. Die Anfrage ist von der Startseite.",
+	"zugang.getan-abgelehnt":     "Abgelehnt. Neue Anfragen von diesem Absender kommen nicht mehr an; er erfährt davon nichts.",
+	"zugang.getan-zugelassen":    "Wieder zugelassen. Neue Anfragen von diesem Absender kommen wieder an.",
+	"zugang.nur-admins":          "Zugangsanfragen beantworten nur Admins.",
 	"art.vorname":                "Vorname",
 	"art.nachname":               "Nachname",
 	"art.firma":                  "Firma",

@@ -550,9 +550,26 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     as *Zugangsanfrage von <Name> (<Kontakt>): <Nachricht>*, and the form
     gives way to *Danke, deine Anfrage ist angekommen.* Admins see the
     open ones on Start's *Braucht dich* and on `GET /zugang`
-    (*Zugangsanfragen*: name, contact, time, message, *Erledigt*; `POST
-    id` ticks one off and comes back). Never a registration: a login is
-    made at the box.
+    (*Zugangsanfragen*: name, contact, time, message, *Erledigt* and
+    *Ablehnen*; `POST id tun=erledigt` ticks one off, `tun=ablehnen`
+    (owner 2026-11-28, after spam) does the same for every open request
+    from that sender, drops their words from the file and remembers the
+    sender in `zugang.json` with when and by whom; each comes back to
+    `/zugang?getan=…` with what it did said on top, in place
+    (homesScript)). A sender is remembered normalised (`zugang.Normal`):
+    trimmed, lower case; an e-mail without a `+tag` in its local part, at
+    `gmail.com`/`googlemail.com` (one mailbox) without its dots as well; a
+    phone number its digits, a leading `+` kept. A new request from a
+    refused sender is answered exactly as any other (the thanks, the same
+    throttle: it leaves a trace of time and address hash, nothing else),
+    and is not kept, not told, not a task; the log says
+    `dropped a request: abgelehnter Absender (<8 hex of a salted hash>)`,
+    never the address. At the bottom *Abgelehnt: N* (a closed fold, only
+    while someone is refused) lists each sender with when and by whom and
+    *Wieder zulassen* (`POST tun=zulassen kontakt`; the fold stays open).
+    A POST from a person without `admins` is 403 (*Zugangsanfragen
+    beantworten nur Admins.*), a GET goes to Start. Nothing is ever sent
+    to the requester. Never a registration: a login is made at the box.
   - *Dieselbe Person?* (on the contact of either person, see above; what
     belongs to no contact at `/kontakte/dieselbe`; the key's owner only;
     there one question at a time under one heading, owner 2026-11-11:

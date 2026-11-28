@@ -3,6 +3,7 @@ package pages
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"html"
 	"log"
@@ -98,6 +99,11 @@ func zugangAnfragen(w http.ResponseWriter, r *http.Request, cfg StartConfig) {
 		return
 	}
 	a, err := cfg.Zugang.Annehmen(a, clientIP(r))
+	if errors.Is(err, zugang.ErrAbgelehnt) { // a refused sender: thanked like anyone, nothing kept or told (owner 2026-11-28)
+		log.Printf("homes: zugang: dropped a request: %v", err)
+		teaserSeite(w, http.StatusOK, cfg, teaserDanke())
+		return
+	}
 	if err != nil {
 		code := http.StatusTooManyRequests
 		if err != zugang.ErrZuViele {
@@ -180,9 +186,17 @@ func teaserSeite(w http.ResponseWriter, code int, cfg StartConfig, teil string) 
 }
 
 // Zugang is the admins' page behind the login: the open requests, each
-// with „Erledigt“; POST ticks one off and comes back here.
+// with „Erledigt“ and „Ablehnen“, and at the bottom the refused senders
+// folded, each with „Wieder zulassen“. A POST (tun: erledigt, ablehnen,
+// zulassen; admins only, else 403) comes back here with what it did said
+// on top; homesScript swaps the page in place.
 func Zugang(cfg StartConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		t := texte.Von(r)
+		if r.Method == http.MethodPost && !isAdmin(r) {
+			http.Error(w, t.T(texte.ZugangNurAdmins), http.StatusForbidden)
+			return
+		}
 		if !adminOnly(w, r) {
 			return
 		}
@@ -191,47 +205,97 @@ func Zugang(cfg StartConfig) http.HandlerFunc {
 			return
 		}
 		if r.Method == http.MethodPost {
-			if !fromHomes(r) {
-				http.Error(w, "Das geht nur von Homes' eigener Seite.", http.StatusForbidden)
-				return
-			}
-			r.Body = http.MaxBytesReader(w, r.Body, 4<<10)
-			r.ParseForm()
-			if err := cfg.Zugang.Erledigen(r.PostForm.Get("id")); err != nil {
-				http.Error(w, familySentence("zugang", err, texte.Von(r).T(texte.FrageNicht)), http.StatusInternalServerError)
-				return
-			}
-			http.Redirect(w, r, ZugangPath, http.StatusSeeOther)
+			zugangTun(w, r, cfg)
 			return
 		}
 		offen, err := cfg.Zugang.Offen()
-		b := adminHead(r, cfg, texte.Von(r).T(texte.ZugangAnfragen))
-		b.WriteString("<h1>" + texte.Von(r).T(texte.ZugangAnfragen) + "</h1><p class=k>" + html.EscapeString(texte.Von(r).T(texte.ZugangHinweis)) + "</p>")
+		b := adminHead(r, cfg, t.T(texte.ZugangAnfragen))
+		b.WriteString(zugangStyle + "<h1>" + t.T(texte.ZugangAnfragen) + "</h1><p class=k>" + html.EscapeString(t.T(texte.ZugangHinweis)) + "</p>")
+		if says, ok := map[string]texte.ID{"erledigt": texte.ZugangGetanErledigt, "abgelehnt": texte.ZugangGetanAbgelehnt, "zugelassen": texte.ZugangGetanZugelassen}[r.URL.Query().Get("getan")]; ok {
+			b.WriteString(`<p class=getan role=status>` + html.EscapeString(t.T(says)) + "</p>")
+		}
 		switch {
 		case err != nil:
 			log.Printf("homes: zugang: %v", err)
-			b.WriteString("<p>" + html.EscapeString(texte.Von(r).T(texte.FrageNicht)) + "</p>")
+			b.WriteString("<p>" + html.EscapeString(t.T(texte.FrageNicht)) + "</p>")
 		case len(offen) == 0:
-			b.WriteString("<p>" + html.EscapeString(texte.Von(r).T(texte.ZugangKeine)) + "</p>")
+			b.WriteString("<p>" + html.EscapeString(t.T(texte.ZugangKeine)) + "</p>")
 		}
 		_, loc := cfg.clock()
 		if len(offen) > 0 {
 			b.WriteString("<ul class=zeilen>")
 		}
 		for _, a := range offen {
-			b.WriteString(`<li><div><b>` + html.EscapeString(a.Name) + "</b> · " + html.EscapeString(a.Kontakt) + `<br><span class=k>` + a.Zeit.In(loc).Format("02.01.2006 15:04") + "</span>")
+			b.WriteString(`<li><div class=was><b>` + html.EscapeString(a.Name) + "</b> · " + html.EscapeString(a.Kontakt) + `<br><span class=k>` + a.Zeit.In(loc).Format("02.01.2006 15:04") + "</span>")
 			if a.Nachricht != "" {
 				b.WriteString("<br>" + strings.ReplaceAll(html.EscapeString(a.Nachricht), "\n", "<br>"))
 			}
-			b.WriteString(`</div><form method=post action="` + ZugangPath + `" data-ganz><input type=hidden name=id value="` + html.EscapeString(a.ID) + `"><button data-laeuft="Erledigt …">` + texte.Von(r).T(texte.ZugangErledigt) + "</button></form></li>")
+			b.WriteString(`</div><form method=post action="` + ZugangPath + `" class=tun><input type=hidden name=id value="` + html.EscapeString(a.ID) + `"><button name=tun value=erledigt data-laeuft="Erledigt …">` + t.T(texte.ZugangErledigt) +
+				`</button><button name=tun value=ablehnen class=leise data-laeuft="Lehnt ab …">` + t.T(texte.ZugangAblehnen) + "</button></form></li>")
 		}
 		if len(offen) > 0 {
 			b.WriteString("</ul>")
 		}
+		b.WriteString(zugangAbgelehnt(r, cfg, loc))
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-store")
 		w.Write([]byte(b.String()))
 	}
+}
+
+const zugangStyle = `<style>.zeilen form.tun{display:flex;flex-direction:column;gap:6px;align-items:stretch}.getan{color:var(--ok);font-weight:600}#abgelehnt{margin-top:26px}#abgelehnt summary{min-height:44px;display:flex;align-items:center;font-weight:600;color:var(--muted);cursor:pointer}</style>`
+
+// zugangTun is the page's POST: Erledigt, Ablehnen (by the admin who
+// pressed it) or Wieder zulassen, and back to the page saying it.
+func zugangTun(w http.ResponseWriter, r *http.Request, cfg StartConfig) {
+	if !fromHomes(r) {
+		http.Error(w, "Das geht nur von Homes' eigener Seite.", http.StatusForbidden)
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, 4<<10)
+	r.ParseForm()
+	f, getan, err := r.PostForm, "erledigt", error(nil)
+	switch f.Get("tun") {
+	case "", "erledigt":
+		err = cfg.Zugang.Erledigen(f.Get("id"))
+	case "ablehnen":
+		getan = "abgelehnt"
+		_, err = cfg.Zugang.Ablehnen(f.Get("id"), r.Header.Get("Remote-User"))
+	case "zulassen":
+		getan = "zugelassen"
+		err = cfg.Zugang.Zulassen(f.Get("kontakt"))
+	default:
+		http.Error(w, texte.Von(r).T(texte.FrageNicht), http.StatusBadRequest)
+		return
+	}
+	if err != nil {
+		http.Error(w, familySentence("zugang", err, texte.Von(r).T(texte.FrageNicht)), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, ZugangPath+"?getan="+getan, http.StatusSeeOther)
+}
+
+// zugangAbgelehnt is the fold at the bottom: „Abgelehnt: N“, each sender
+// with when and by whom and „Wieder zulassen“; open after one was let in
+// again, nothing while nobody is refused.
+func zugangAbgelehnt(r *http.Request, cfg StartConfig, loc *time.Location) string {
+	t := texte.Von(r)
+	gesperrt, err := cfg.Zugang.Abgelehnte()
+	if err != nil || len(gesperrt) == 0 {
+		return ""
+	}
+	open := ""
+	if r.URL.Query().Get("getan") == "zugelassen" {
+		open = " open"
+	}
+	var b strings.Builder
+	b.WriteString(`<details id=abgelehnt` + open + `><summary>` + fmt.Sprintf(t.T(texte.ZugangAbgelehnt), len(gesperrt)) + `</summary><ul class=zeilen>`)
+	for _, g := range gesperrt {
+		b.WriteString(`<li><div class=was><b>` + html.EscapeString(g.Kontakt) + `</b><span class=wann>` + html.EscapeString(fmt.Sprintf(t.T(texte.ZugangAbgelehntVon), g.Zeit.In(loc).Format("02.01.2006 15:04"), g.Von)) +
+			`</span></div><form method=post action="` + ZugangPath + `"><input type=hidden name=kontakt value="` + html.EscapeString(g.Kontakt) + `"><button name=tun value=zulassen class=leise data-laeuft="Lässt zu …">` + t.T(texte.ZugangZulassen) + "</button></form></li>")
+	}
+	b.WriteString("</ul></details>")
+	return b.String()
 }
 
 // zugangRows are Braucht dich's rows for an admin: one per open request,

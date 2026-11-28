@@ -60,6 +60,7 @@ import (
 	"github.com/mdopp/homes/internal/reitti"
 	"github.com/mdopp/homes/internal/samba"
 	"github.com/mdopp/homes/internal/texte"
+	"github.com/mdopp/homes/internal/zugang"
 )
 
 func main() {
@@ -241,6 +242,18 @@ func main() {
 	mux.HandleFunc(pages.SpurenPath, pages.Mehr(mehr))
 	mux.HandleFunc(pages.AnfordernPath, pages.Anfordern(mehr))
 	mux.HandleFunc(pages.ModulPages, pages.ModulSeite(mehr))
+	// Zugangsanfragen (owner 2026-11-28): a spam request to refuse and Oma's; /demo/zugang starts over.
+	// Only this page has the store: Start stays as the pictures show it.
+	zug := start
+	zug.Zugang = &zugang.Store{Path: filepath.Join(dir, zugang.Datei)}
+	zugangDemo := func() {
+		os.Remove(zug.Zugang.Path)
+		zug.Zugang.Annehmen(zugang.Anfrage{Name: "Robertcox", Kontakt: "aveyekoha655@gmail.com", Nachricht: "Xin chào, tôi muốn biết giá của bạn."}, "192.168.178.66")
+		zug.Zugang.Annehmen(zugang.Anfrage{Name: "Oma Hilde", Kontakt: "0711 445566", Nachricht: "Ich bin die Oma."}, "192.168.178.67")
+	}
+	zugangDemo()
+	mux.HandleFunc(pages.ZugangPath, pages.Zugang(zug))
+	mux.HandleFunc("/demo/zugang", func(w http.ResponseWriter, r *http.Request) { zugangDemo() })
 	// „So hängt alles zusammen“ on a box with all its threads (owner 2026-11-05: „auch im Bild,
 	// genau wie der Standort“): Standortverlauf on, and Immich for the contacts (no key: Fotos searches)
 	zusammen := mehr
