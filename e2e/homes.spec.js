@@ -797,7 +797,7 @@ test('Standortverlauf, connected, leads with the timeline and ends with a quiet 
 // Felder geprüft?"): with every fold open, the page is no wider than the
 // screen, a field to type in has room, a button is big enough for a
 // finger, and no text runs out of its box.
-const PAGES = ['/start', '/raeume', '/raeume/light.kueche', '/energie', '/energie?zeitraum=jahr', '/kalender', '/kalender/verwalten', '/kontakte', '/kontakte/h3', '/kontakte/privat', '/kontakte/privat/k0', '/kontakte/dieselbe',
+const PAGES = ['/start', '/raeume', '/raeume/light.kueche', '/energie', '/energie?zeitraum=jahr', '/kalender', '/kalender/verwalten', '/kontakte', '/kontakte?fehlt=1', '/kontakte/h2', '/kontakte/h3', '/kontakte/privat', '/kontakte/privat/k0', '/kontakte/dieselbe',
   '/notizen', '/notizen?tag=kochen', '/notizen/einkaufsliste.md', '/notizen/markdown.md', '/notizen/einkaufsliste.md?bearbeiten=1', '/mehr', '/musik', '/platte', '/discogs', '/aktivierungswort', '/aufgaben', '/dokumente', '/dokumente/zuordnen', '/dokumente/suche?q=strom', '/dokumente/suche?nur=versicherungen', '/willkommen', '/einrichten/fotos', '/box/geraete', '/pair-device', '/podcasts', '/gesehen', '/standort',
   '/meine-daten', '/aufgaben?nur=box', '/netzlaufwerk', '/box', '/box/auslastung', '/box/haushalt', '/box/personen', '/box/module', '/adresse',
   '/einkauf', '/einkauf?liste=liste-baumarkt', '/einkauf?liste=liste-musik', '/einkauf/rezepte', '/einkauf/rezepte?n=rezepte%2Flasagne.md', '/notizen/rezepte/lasagne.md', '/tag/homes-b0e70e000001', '/rezepte', '/zugang'];
@@ -945,7 +945,7 @@ test('Kontakte lists the address book, the search filters while typing, a row op
   await expect(page.locator('nav.segmente a[aria-current]')).toHaveText('Haushalt');
   const oben = page.locator('.oben a, .oben button');
   await expect(oben.first()).toBeVisible();
-  await expect(page.locator('.oben').getByRole('button', { name: 'Daten prüfen lassen' })).toBeVisible();
+  await expect(page.locator('section.fehlt').getByRole('button', { name: 'Oma selbst fragen' })).toBeVisible(); // what it lacks, at the top (owner 2026-11-28)
   await expect(page.getByRole('heading', { name: 'Dieselbe Person?' })).toBeVisible(); // its questions on it, under its fields
   expect((await oben.last().boundingBox()).y).toBeLessThan((await page.locator('.karte').first().boundingBox()).y); // its links before its fields
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
@@ -954,6 +954,73 @@ test('Kontakte lists the address book, the search filters while typing, a row op
   await expect(page).toHaveURL(/\/kontakte$/);
   await page.goto('/kalender');
   await expect(page.getByText('Neue Termine und Änderungen machst du auf dem Handy')).toBeVisible();
+});
+
+// owner 2026-11-28 („Kontakte fragen auffindbar“): a contact that lacks what the link asks for says so at
+// the top of its page with „<Vorname> selbst fragen“; a complete one keeps its button; Kontakte's chip
+// „Unvollständig (n)“ lists those alone, each with „Fragen“ and what it lacks. The button's states: running,
+// refused in words, Homes not reached (as a timeout ends), done (the share sheet with the message)
+test('Kontakte fragen: what lacks on top, Unvollständig on Kontakte, every state of Fragen', async ({ page }, info) => {
+  await page.setViewportSize({ width: 411, height: 900 });
+  await page.addInitScript(() => { navigator.share = (d) => { window.geteilt = d.text; return Promise.resolve(); }; });
+  await page.goto('/kontakte/h0'); // Anna: all there
+  await expect(page.locator('section.fehlt')).toHaveCount(0);
+  await expect(page.locator('.oben').getByRole('button', { name: 'Daten prüfen lassen' })).toBeVisible();
+  await page.goto('/kontakte/h2');
+  const karte = page.locator('section.fehlt');
+  await expect(karte.locator('p')).toHaveText('Bei Clara fehlt noch: Mobilnummer.');
+  await expect(page.getByRole('button', { name: 'Daten prüfen lassen' })).toHaveCount(0);
+  expect((await karte.boundingBox()).y).toBeLessThan((await page.locator('.karte').first().boundingBox()).y);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
+  await bild(page, info, 'kontakt-fehlt-411.png', { fullPage: true });
+
+  await page.goto('/kontakte');
+  const chip = page.locator('ul.chips a', { hasText: /^Unvollständig \(\d+\)$/ });
+  await expect(chip).toHaveText('Unvollständig (7)');
+  await chip.click();
+  await expect(page).toHaveURL(/\/kontakte\?fehlt=1$/);
+  await expect(chip).toHaveAttribute('aria-current', 'page');
+  const rows = page.locator('.kontakte li');
+  await expect(rows).toHaveCount(7);
+  await expect(rows.filter({ hasText: 'Anna Beispiel' })).toHaveCount(0);
+  const clara = rows.filter({ hasText: 'Clara Beispiel' });
+  await expect(clara.locator('.fehlt-zeile')).toHaveText('Mobilnummer');
+  await expect(rows.filter({ hasText: 'Oma Hilde' }).locator('.fehlt-zeile')).toHaveText('E-Mail · Adresse · Geburtstag');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
+  await bild(page, info, 'kontakte-unvollstaendig-411.png', { fullPage: true });
+  const fragen = clara.getByRole('button', { name: 'Clara selbst fragen' });
+  await expect(fragen).toHaveText('Fragen');
+
+  // running, then refused: the sentence under the button, the button back
+  let los;
+  const halt = new Promise((r) => { los = r; });
+  await page.route('**/kontakte/pruefen', async (route) => { await halt; await route.fulfill({ status: 503, contentType: 'text/plain; charset=utf-8', body: 'Der Link ließ sich nicht erstellen. Versuch es gleich noch einmal.' }); });
+  await fragen.click();
+  await expect(clara.getByRole('button')).toHaveText('Erstellt den Link …');
+  await expect(clara.getByRole('button')).toBeDisabled();
+  los();
+  await expect(clara.getByRole('alert')).toHaveText('Der Link ließ sich nicht erstellen. Versuch es gleich noch einmal.');
+  await expect(fragen).toBeEnabled();
+  // Homes not reached (as when the 30 s run out): said in words
+  await page.unroute('**/kontakte/pruefen');
+  await page.route('**/kontakte/pruefen', (route) => route.abort());
+  await fragen.click();
+  await expect(clara.getByRole('alert')).toHaveText('Homes ist gerade nicht erreichbar. Versuch es gleich noch einmal.');
+  // done: the share sheet with the message and the link, the page where it was
+  await page.unroute('**/kontakte/pruefen');
+  await fragen.click();
+  await page.waitForFunction(() => window.geteilt);
+  expect(await page.evaluate(() => window.geteilt)).toMatch(/^Hallo Clara, .*http:\/\/127\.0\.0\.1:8652\/[A-Za-z0-9_-]{43}$/);
+  await expect(page).toHaveURL(/\/kontakte\?fehlt=1$/);
+  await expect(fragen).toBeEnabled();
+
+  // a family member: neither the chip nor the card
+  await page.context().addCookies([{ name: 'wer', value: 'ben', url: info.project.use.baseURL }]);
+  await page.goto('/kontakte');
+  await expect(page.locator('ul.chips a', { hasText: 'Unvollständig' })).toHaveCount(0);
+  await page.goto('/kontakte/h2');
+  await expect(page.locator('section.fehlt')).toHaveCount(0);
+  await page.context().clearCookies();
 });
 
 // owner 2026-11-11 (ADR 0002): the contact net lives in the person's archive; Kontakte and a contact's
@@ -1003,7 +1070,7 @@ test('Kontakt prüfen lassen: the form shows no relations', async ({ page, brows
   await page.setViewportSize({ width: 411, height: 900 });
   await page.addInitScript(() => { navigator.share = (d) => { window.geteilt = d.text; return Promise.resolve(); }; });
   await page.goto('/kontakte/h2');
-  await page.locator('.oben').getByRole('button', { name: 'Daten prüfen lassen' }).click();
+  await page.getByRole('button', { name: 'Clara selbst fragen' }).click();
   await page.waitForFunction(() => window.geteilt);
   const link = (await page.evaluate(() => window.geteilt)).match(/http:\/\/127\.0\.0\.1:8652\/[A-Za-z0-9_-]{43}/)[0];
   const ctx = await browser.newContext({ viewport: { width: 411, height: 900 }, colorScheme: 'light' });
@@ -1053,7 +1120,7 @@ test('Meine Kontakte: the own Handy-Kontakte, each with its page and its person 
   await expect(page).toHaveURL(/\/kontakte\/privat\/k1$/);
   await expect(page.locator('nav.pfad')).toHaveText('Kontakte › Meine › Opa Karl');
   await expect(page.locator('.oben').getByRole('link', { name: 'Fotos in Immich' })).toHaveAttribute('href', 'https://photos.example/people/p-karl');
-  await expect(page.locator('.oben').getByRole('button', { name: 'Daten prüfen lassen' })).toBeVisible();
+  await expect(page.locator('section.fehlt').getByRole('button', { name: 'Opa selbst fragen' })).toBeVisible(); // his own: what lacks, and asking
 });
 
 // owner 2026-11-08 („alles auf dem Kontakt, damit weniger Listen“): „Dieselbe Person?“ — faces Immich
@@ -1462,12 +1529,12 @@ test('Kontakt prüfen lassen: link, the public form, the review', async ({ page,
   await page.setViewportSize({ width: 411, height: 900 });
   await page.addInitScript(() => { navigator.share = (d) => { window.geteilt = d.text; return Promise.resolve(); }; });
   await page.goto('/kontakte/h6');
-  await page.locator('.oben').getByRole('button', { name: 'Daten prüfen lassen' }).click();
+  await page.getByRole('button', { name: 'Oma selbst fragen' }).click();
   await page.waitForFunction(() => window.geteilt);
   const text = await page.evaluate(() => window.geteilt);
   expect(text).toContain('Hallo Oma,');
   const link = text.match(/http:\/\/127\.0\.0\.1:8652\/[A-Za-z0-9_-]{43}/)[0];
-  await expect(page.locator('.oben').getByRole('button', { name: 'Daten prüfen lassen' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Oma selbst fragen' })).toBeEnabled();
   await expect(page).toHaveURL(/\/kontakte\/h6$/);
 
   // the contact, without a login, in a browser of their own

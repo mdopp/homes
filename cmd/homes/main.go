@@ -564,12 +564,12 @@ func main() {
 		appSHA: os.Getenv("HOMES_APP_SHA256")}
 	st.zuordnen = openZuordnen(filepath.Join(dataDir, "zuordnen.json"), hh.Token)
 	st.plugins = plugin.Open(plugin.FromEnv(os.Environ()), filepath.Join(dataDir, "plugins.json"))
-	st.napi.Antworten = st.antworten   // the phone's accepted corrections of its own contacts
-	st.hh.Wessen = st.gesichter.Wessen // handy_firmen: the Immich key owner's own phone contacts, nobody else's
-	st.netz = netzVon(st.gesichter)    // the relations after each hourly run, the phone books read once a day (owner 2026-11-09)
-	start := st                        // what the list is built from again once Laib says what runs (dienstePflegen)
-	st.napi.Module = logModule(&st)    // HOMES_MODULE_AUS takes what it switches off out of st
-	st.napi.Eigen = eigenOf(st)        // the app's „Dein Archiv“ and Dokumente-Adresse, once the modules are off as asked
+	st.napi.Antworten, st.napi.KontaktURL = st.antworten, st.kontaktURL // the phone's accepted corrections of its own contacts; the links it asks for
+	st.hh.Wessen = st.gesichter.Wessen                                  // handy_firmen: the Immich key owner's own phone contacts, nobody else's
+	st.netz = netzVon(st.gesichter)                                     // the relations after each hourly run, the phone books read once a day (owner 2026-11-09)
+	start := st                                                         // what the list is built from again once Laib says what runs (dienstePflegen)
+	st.napi.Module = logModule(&st)                                     // HOMES_MODULE_AUS takes what it switches off out of st
+	st.napi.Eigen = eigenOf(st)                                         // the app's „Dein Archiv“ and Dokumente-Adresse, once the modules are off as asked
 	st.napi.Einrichtung = einrichtung(st, devices.Gekoppelt(store), jellyfin.KeyFromEnv())
 	tagsAnschliessen(ctx, st)
 	telefoneAnschliessen(ctx, &st)

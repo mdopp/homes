@@ -94,6 +94,7 @@ type Config struct {
 	// 30 days (haus#174); nil = such a delete answers 503 in words
 	Papierkorb *papierkorb.Korb
 	Antworten  *kontaktantwort.Store // Kontakt prüfen lassen: the phone's accepted corrections (owner 2026-11-07); nil: none
+	KontaktURL string                // its public page (HOMES_KONTAKT_URL), the links /napi/kontakte/fragen makes; "": 503
 	// SharedEvery: how often the live stream looks whether the household's
 	// shared contacts and calendars changed (haus#223); 0 = 30 s
 	SharedEvery time.Duration
@@ -342,7 +343,8 @@ func Gruppen(c Config) map[string][]modul.Route {
 	gs.add("notizen", "POST /napi/merken", c.merken) // Share → Homes (haus#120)
 	// the phone's contacts, mirrored into the person's Handy-Kontakte (laib ADR 0029)
 	gs.add("kontakte", "POST /napi/kontakte", (&kontakte{dav: c.Haushalt.Contacts, whoami: c.Whoami, busy: map[string]bool{}}).post)
-	(&korrekturen{store: c.Antworten, whoami: c.Whoami}).routes(gs) // what the person took of their contacts' answers, for the phone
+	(&korrekturen{store: c.Antworten, whoami: c.Whoami}).routes(gs)                                                                                                         // what the person took of their contacts' answers, for the phone
+	(&fragen{dav: c.Haushalt.Contacts, store: c.Antworten, basis: c.KontaktURL, land: c.Haushalt.PhoneCountry, whoami: c.Whoami, admin: c.Einrichtung.IstAdmin}).routes(gs) // a shared vCard asked (2026-11-28)
 	// the household's shared contacts and calendars for the phone's Homes account (haus#218)
 	(&gemeinsam{dav: c.Konto, korb: c.Papierkorb, whoami: c.Whoami, hh: c.Haushalt, now: c.Now}).routes(gs)
 	// the phone's positions, passed on to the person's Reitti (owner 2026-11-02)

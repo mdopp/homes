@@ -30,6 +30,7 @@ const kontakteBuchstaben = 16
 // it and its „Daten prüfen lassen“.
 type kontaktZeile struct {
 	name, seite, ziel, zielText, suche, knopf string
+	fehlt                                     string // what it lacks, Unvollständig's grey line
 	zahl                                      int
 }
 
@@ -61,14 +62,17 @@ func Kontakte(cfg StartConfig) http.HandlerFunc {
 			writePage(w, http.StatusOK, b)
 			return
 		}
-		leer, gruppe := texte.KontakteLeer, oneLine(r.URL.Query().Get("gruppe"))
-		if gs := haushalt.AlleGruppen(all); len(gs) > 0 { // Gruppen (owner 2026-11-10): one picked, its contacts alone
-			b.WriteString(gruppenStyle + `<ul class=chips aria-label="` + wort(texte.Gruppen) + `">` + gruppenChips(append([]string{""}, gs...), gruppe, false) + "</ul>")
-		}
-		if gruppe != "" {
+		leer, gruppe, offen := texte.KontakteLeer, oneLine(r.URL.Query().Get("gruppe")), unvollstaendig(r, cfg, all)
+		fehlt := r.URL.Query().Has("fehlt") && cfg.pruefenAn() && isAdmin(r)
+		b.WriteString(kontakteChips(haushalt.AlleGruppen(all), gruppe, len(offen), fehlt))
+		zeilen := kontaktZeilen
+		switch {
+		case fehlt: // Unvollständig (owner 2026-11-28): those alone, each with „Fragen“ and what it lacks
+			leer, all, zeilen = texte.FehltAlleVollstaendig, offen, fehltZeilen
+		case gruppe != "": // Gruppen (owner 2026-11-10): one picked, its contacts alone
 			leer, all = texte.GruppenLeer, slices.DeleteFunc(all, func(ct caldav.Contact) bool { return !haushalt.InGruppe(ct, gruppe) })
 		}
-		kontakteListe(b, kontaktZeilen(r, cfg, all, kontaktantwort.Haushalt), leer)
+		kontakteListe(b, zeilen(r, cfg, all, kontaktantwort.Haushalt), leer)
 		b.WriteString(wieDas(texte.KontakteBearbeiten))
 		writePage(w, http.StatusOK, b)
 	}
@@ -135,6 +139,9 @@ func kontakteListe(b *strings.Builder, zeilen []kontaktZeile, leer texte.ID) {
 		}
 		if z.ziel != "" {
 			b.WriteString(` <a class=ruf href="` + html.EscapeString(z.ziel) + `">` + html.EscapeString(z.zielText) + "</a>")
+		}
+		if z.fehlt != "" {
+			b.WriteString(`<small class=fehlt-zeile>` + html.EscapeString(z.fehlt) + `</small>`)
 		}
 		b.WriteString(z.knopf + "</li>")
 	}

@@ -134,7 +134,8 @@ budget() { # budget <name> <cap> <dir…>
 # first, the search, the way into Einkauf's choice, empty and failing in words), the link on Notizen
 # 2026-11-28, owner's request 2026-11-28 (Zugangsanfragen ablehnen), owner approved 2026-11-28 „Ja zu allen“ (pages 20,525 -> 20,589; 20,588 used, the minimum):
 # /zugang's Ablehnen beside Erledigt, the outcome said on top, „Abgelehnt: N“ folded with Wieder zulassen, 403 for a non-admin's POST (teaser.go)
-budget pages 20589 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-28, owner's request 2026-11-28 (Kontakte fragen auffindbar), owner approved 2026-11-28 „Ja zu allen“ (pages 20,589 -> 20,720; 20,719 used, the minimum): kontakte_fehlt.go: what a contact lacks at the top of its page with „Anna selbst fragen“, Kontakte's chip Unvollständig (n) with „Fragen“ and the grey line; pruefenForm shared
+budget pages 20720 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -158,7 +159,8 @@ budget pages 20589 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-27, owner 2026-11-27: Notizen- und Dokumente-Widget ausgebaut (napi 5,716 -> 5,656; 5,655 used): /napi/portal/notes and
 # /napi/portal/documents and their catalog entries gone (tools.go)
 # 2026-11-27, owner approved the app's start screen 2026-11-27 („Bitte umsetzen“, homes-android#290), owner approved 2026-11-27 („Bau alles“) (napi 5,656 -> 5,682; 5,681 used, the minimum): achtung on a device's card (home.go)
-budget napi 5682 internal/napi        # the app's widgets' and share sheet's API: 4,793
+# 2026-11-28, owner's request 2026-11-28 (Kontakte fragen auffindbar), owner approved 2026-11-28 „Ja zu allen“ (napi 5,682 -> 5,828; 5,827 used, the minimum): kontakte_fragen.go: POST /napi/kontakte/fragen, the household's card for a shared vCard (number, e-mail, name), the link and message, 404/409, anlegen
+budget napi 5828 internal/napi        # the app's widgets' and share sheet's API: 4,793
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): the module catalog,
 # cmd/homes/module.go, 1,150 with it; plus 5 %. H3–H6 move the routes out of main.go into it
 # 2026-11-04, step H8 (§10, owner: „Keine Funktion soll versteckt werden“): the routes of the traces
@@ -333,7 +335,8 @@ budget connectors 17051 $connectors   # one client per service, with its fake: 1
 # was lost), owner approved 2026-11-28 „Ja zu allen“ (household 16,857 -> 16,885; 16,884 used, the minimum): telefon: a registration whose device HA did not set up counts as none; the failed entry removed first
 # 2026-11-28, owner's request 2026-11-28 (Zugangsanfragen ablehnen), owner approved 2026-11-28 „Ja zu allen“ (household 16,885 -> 17,021; 17,020 used, the minimum):
 # zugang's refused senders: Normal (an e-mail without +tag, gmail without dots; a phone its digits), Ablehnen, Abgelehnte, Zulassen, a refused sender's request only a throttle trace
-budget household 17021 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-28, owner's request 2026-11-28 (Kontakte fragen auffindbar), owner approved 2026-11-28 „Ja zu allen“ (household 17,021 -> 17,176; 17,175 used, the minimum): kontaktantwort/fragen.go: Fehlt and FehltWorte, Mobil, Finden, Anlegen, Store.Link
+budget household 17176 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one
