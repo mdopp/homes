@@ -182,7 +182,8 @@ budget napi 5682 internal/napi        # the app's widgets' and share sheet's API
 # 2026-11-27, owner's request 2026-11-27 (Rezepte: „werden die mir nicht mehr in der App angezeigt“), owner approved 2026-11-27 („Bau alles“) (cmd 1,530 -> 1,542; 1,541 used, the minimum): the app's Rezepte row after Notizen, with how many;
 # the widgets' Angebot gone
 # 2026-11-27, owner approved the app's start screen 2026-11-27 („Bitte umsetzen“, homes-android#290), owner approved 2026-11-27 („Bau alles“) (cmd 1,542 -> 1,580; 1,579 used, the minimum): bereiche: the tags, the archive's line, Paperless's week
-budget cmd 1580 cmd/homes             # homes' wiring: 1,018 with the demo then
+# 2026-11-28, owner 2026-11-28: Energie-Widget ausgebaut (cmd 1,580 -> 1,579; 1,578 used): the energie module offers no widget
+budget cmd 1579 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-04, the caps moved with the packages, none raised (sum 24,134 as before): abs and
 # musicbrainz (1,227 lines, 1,289 of cap) from household to connectors once merken's fetcher
 # was internal/abruf (235 lines of merken, 247 of cap, to shared) and jellyfin.Plain

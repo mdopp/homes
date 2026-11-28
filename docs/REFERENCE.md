@@ -1281,8 +1281,12 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   one house's German friendly names (`Aktuell erzeugter PV-Strom`, …).
   Each total carries `today`, the kWh it added since the house's midnight
   (`TZ`'s; the Energie page's Heute rule, `energie.Added`), for the
-  app's one energy widget; a history that fails or has nothing since
-  midnight leaves it out.
+  app's energy tile; a history that fails or has nothing since
+  midnight leaves it out. Since 2026-11-28 (owner) there is no Energie
+  widget (`/napi/kann` no longer offers `energie`): the app's tile reads
+  its line from `GET /napi/portal/energy`, which stays, and opens the
+  Energie page, whose address is the `energie` entry's `web` in `GET
+  /napi/einrichtung` (`<HOMES_PUBLIC_URL>/energie`).
 - The realtime pair `POST /napi/portal/watch` + `GET /napi/portal/events`.
   watch is Home Assistant's (`geraete`); the stream is the core's (ADR 0001
   H6): it answers on every box, with the house's frames while `geraete` is

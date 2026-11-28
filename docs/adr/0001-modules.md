@@ -238,7 +238,7 @@ carries an `ETag` and is a 304 on `If-None-Match`.
      "warum": "aus",   "grund": "Auf dieser Box ausgeschaltet."}
   ],
   "app": {
-    "widgets":   ["geraet", "energie", "tool:task", "tool:contacts"],
+    "widgets":   ["geraet", "tool:task", "tool:contacts"],
     "teilen":    ["merken", "dokument"],
     "konto":     ["kontakte", "kalender"],
     "sicherung": ["whatsapp", "signal", "sms", "kontakte"],
@@ -257,7 +257,7 @@ The keys the app knows today are:
 
 | list | keys |
 |---|---|
-| `widgets` | `geraet`, `energie`, and `tool:<id>` for each tool def (`note`, `doc`, `contacts`, `task`) |
+| `widgets` | `geraet`, and `tool:<id>` for each tool def (`contacts`, `task`; `energie`, `note` and `doc` went 2026-11-27/28) |
 | `teilen` | `merken` (text), `dokument` (images), `standort-import` (GPX/GeoJSON), `musik` (songs and ZIPs), `archiv` (a Facebook or LinkedIn export, encrypted on the phone into the person's archive; module `sicherung`) |
 | `konto` | `kontakte`, `kalender` |
 | `sicherung` | `whatsapp`, `signal`, `sms`, `kontakte` |
@@ -384,7 +384,7 @@ module: `LAIB_URL`, `LAIB_TOKEN`, `LAIB_PUBLIC_URL`, `LAIB_DOMAIN`,
 | module | Titel | backend (Laib template) | env | pages · nav | Start | /napi | app |
 |---|---|---|---|---|---|---|---|
 | `geraete` | Geräte | home-assistant | `HOMES_HA_URL`, `HOMES_HA_TOKEN`; opt. `HOMES_HA_PUBLIC_URL`, `HOMES_COVER_INVERTED` | `/raeume`, `/raeume/…`, `/medien`, `/schalten`, `/aktivierungswort`, `/live`, `/tag/<id>`, `/tag/freigabe/<id>` · Leiste | im-haus, meine-geraete | `ha/call`, `portal/{state,active,entity-history,camera/…,start/addable,favorites,watch,events}`, `ausloeser`, `ausloeser/{tag,tags,tag/…/{verbinden,loesen,neu},freigabe/…}`, `automationen` | widgets `geraet`; favourites |
-| `energie` | Energie | home-assistant (needs `geraete`) | opt. `HOMES_ENERGY_FLOW`, `_TOTALS`, `_STATS` | `/energie` · Leiste | – | `portal/energy` | widgets `energie` |
+| `energie` | Energie | home-assistant (needs `geraete`) | opt. `HOMES_ENERGY_FLOW`, `_TOTALS`, `_STATS` | `/energie` · Leiste | – | `portal/energy` | the app's tile: `/energie` (its `web` in `/napi/einrichtung`) and `portal/energy`'s line; no widget since 2026-11-28 |
 | `sprechen` | Sprechen | bote | `HOMES_BOTE_URL`, `HOMES_BOTE_KEY`; opt. `HOMES_STT_PROVIDER`, `HOMES_STT_LANGUAGE` (HA), `HOMES_BOTE_SIGNAL` | `/sprechen`, `/sprechen/hoeren` · none | the field | – | – |
 | `kalender` | Kalender | radicale (CalDAV) | Radicale, `_CALENDAR`, `_PUBLIC_URL` | `/kalender`, `/kalender/{verwalten,hinzufuegen,aendern,erinnerung/…}` · Haushalt | heute | `portal/tasks`, def `task` | widgets `tool:task`; Bote `termine`, `erinnerungen`, … |
 | `kontakte` | Kontakte | radicale (CardDAV) | Radicale, `_ADDRESSBOOK` | `/kontakte/…` · none | – | `portal/contacts`, def `contacts`, `POST kontakte` | widgets `tool:contacts`; sicherung `kontakte` |

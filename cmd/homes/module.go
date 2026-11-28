@@ -74,8 +74,7 @@ func katalog(s site) []modul.Modul {
 			Start: []string{"im-haus", "meine-geraete"}, App: modul.Angebot{Widgets: []string{"geraet"}, Mehr: []string{"ausloeser"}}}, // Mehr → Auslöser: NFC tags and the charger (ADR 0004)
 			n.HA != nil, "Auf dieser Box läuft kein Home Assistant."),
 		bau(modul.Modul{Name: "energie", Backend: "home-assistant", Braucht: []string{"geraete"},
-			Env: []string{"HOMES_ENERGY_FLOW", "HOMES_ENERGY_TOTALS", "HOMES_ENERGY_STATS"},
-			App: modul.Angebot{Widgets: []string{"energie"}}},
+			Env: []string{"HOMES_ENERGY_FLOW", "HOMES_ENERGY_TOTALS", "HOMES_ENERGY_STATS"}}, // no widget since 2026-11-28 (owner): the app's tile opens /energie, reads /napi/portal/energy
 			n.HA != nil, "Auf dieser Box läuft kein Home Assistant."),
 		bau(modul.Modul{Name: "sprechen", Backend: "bote", Einrichtung: einrichten.App("Signal", "org.thoughtcrime.securesms", einrichten.Signal(s.boteSignal), "https://support.signal.org/hc/de/articles/360007318691", "schritt.signal"),
 			Env: []string{"HOMES_BOTE_URL", "HOMES_BOTE_KEY", "HOMES_STT_PROVIDER", "HOMES_STT_LANGUAGE", "HOMES_BOTE_SIGNAL"}},
