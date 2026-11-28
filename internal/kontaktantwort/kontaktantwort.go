@@ -76,10 +76,24 @@ type Frage struct {
 	Hinweise    []string    `json:"hinweise,omitempty"` // about the whole answer
 	Entschieden *time.Time  `json:"entschieden,omitempty"`
 	Handy       *time.Time  `json:"handy,omitempty"` // when the phone said what it wrote
+	Neu         bool        `json:"neu,omitempty"`   // a new person's link (Einladen): no card yet, UID "" until the review writes one
 }
 
-// Name is the contact's name as the link showed it.
-func (f Frage) Name() string { return f.Vorher.Name() }
+// Name is the contact's name as the link showed it; a new person's as the answer gives it, over
+// the card it went into.
+func (f Frage) Name() string {
+	n := f.Vorher
+	for _, a := range f.Aenderungen {
+		switch {
+		case !f.Neu || a.Nachher == "":
+		case a.Art == "vorname":
+			n.Vorname = a.Nachher
+		case a.Art == "nachname":
+			n.Nachname = a.Nachher
+		}
+	}
+	return n.Name()
+}
 
 // ZuPruefen says whether the answer waits for its review.
 func (f Frage) ZuPruefen() bool { return f.Beantwortet != nil && f.Entschieden == nil }
@@ -196,6 +210,11 @@ func hash(token string) []byte {
 // person for the same contact that is not answered yet stops working: the
 // new one replaces it.
 func (s *Store) Neu(wer, von, buch, uid string, vorher Felder) (string, Frage, error) {
+	return s.neu(Frage{Wer: wer, Von: von, Buch: buch, UID: uid, Vorher: vorher}, Frist)
+}
+
+// neu keeps f as a link that works for frist; one for a card replaces the open one of wer for it.
+func (s *Store) neu(f Frage, frist time.Duration) (string, Frage, error) {
 	tok, err := s.random(tokenBytes)
 	if err != nil {
 		return "", Frage{}, err
@@ -206,9 +225,11 @@ func (s *Store) Neu(wer, von, buch, uid string, vorher Felder) (string, Frage, e
 	}
 	token := base64.RawURLEncoding.EncodeToString(tok)
 	now := s.now()
-	f := Frage{ID: hex.EncodeToString(id), Hash: hex.EncodeToString(hash(token)), Wer: wer, Von: von, Buch: buch, UID: uid, Vorher: vorher, Am: now, Bis: now.Add(Frist)}
+	f.ID, f.Hash, f.Am, f.Bis = hex.EncodeToString(id), hex.EncodeToString(hash(token)), now, now.Add(frist)
 	err = s.change(func(all []Frage) ([]Frage, error) {
-		all = slices.DeleteFunc(all, func(o Frage) bool { return o.Beantwortet == nil && o.Wer == wer && o.Buch == buch && o.UID == uid })
+		all = slices.DeleteFunc(all, func(o Frage) bool {
+			return !f.Neu && o.Beantwortet == nil && o.Wer == f.Wer && o.Buch == f.Buch && o.UID == f.UID
+		})
 		return append(all, f), nil
 	})
 	return token, f, err
@@ -309,9 +330,24 @@ func (s *Store) Eine(id, wer string) (Frage, error) {
 // (Angenommen or Abgelehnt, or after a write Uebernommen or
 // Uebersprungen). ErrWeg when it is not there or decided already.
 func (s *Store) Entscheiden(id, wer string, stand []string) (Frage, error) {
+	return s.entscheiden(id, wer, "", Felder{}, nil, stand)
+}
+
+// EntscheidenNeu keeps the review of a new person's answer id as it was
+// written (Ergaenzen, NeuAnlegen): into the card uid whose fields were
+// vorher, as the changes as against it, stand per change. ErrWeg as
+// Entscheiden.
+func (s *Store) EntscheidenNeu(id, wer, uid string, vorher Felder, as []Aenderung, stand []string) (Frage, error) {
+	return s.entscheiden(id, wer, uid, vorher, slices.Clone(as), stand)
+}
+
+func (s *Store) entscheiden(id, wer, uid string, vorher Felder, as []Aenderung, stand []string) (Frage, error) {
 	var f Frage
 	err := s.change(func(all []Frage) ([]Frage, error) {
-		i := slices.IndexFunc(all, func(f Frage) bool { return f.ID == id && f.Wer == wer && f.ZuPruefen() })
+		i := slices.IndexFunc(all, func(f Frage) bool { return f.ID == id && f.Wer == wer && f.ZuPruefen() && (as == nil || f.Neu) })
+		if i >= 0 && as != nil {
+			all[i].UID, all[i].Vorher, all[i].Aenderungen = uid, vorher, as
+		}
 		if i < 0 || len(stand) != len(all[i].Aenderungen) {
 			return nil, ErrWeg
 		}

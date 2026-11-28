@@ -1716,3 +1716,58 @@ test('Dokumente: the person’s own address is copied as <login>+doc+', async ({
   await expect(page.getByRole('button', { name: 'Kopiert' })).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('anna+doc+');
 });
+
+// owner 2026-11-28: „eine URL, in der die Person ihre Kontaktdaten eintragen kann“ — as „Kontakt
+// prüfen lassen“: Kontakte's button makes the link and opens the share sheet; the same public form,
+// empty, on a phone; a name needed; thanks; the link used up; the review on Deine Aufgaben, before →
+// after with nothing before, „Als neuen Kontakt anlegen“
+test('Kontaktdaten eintragen lassen: the link, the empty form, a new contact', async ({ page, browser }, info) => {
+  await page.setViewportSize({ width: 411, height: 900 });
+  await page.addInitScript(() => { navigator.share = (d) => { window.geteilt = d.text; return Promise.resolve(); }; });
+  await page.goto('/kontakte');
+  const knopf = page.getByRole('button', { name: 'Jemanden seine Kontaktdaten eintragen lassen' });
+  await knopf.click();
+  await page.waitForFunction(() => window.geteilt);
+  const text = await page.evaluate(() => window.geteilt);
+  expect(text).toContain('7 Tage und nur einmal');
+  const link = text.match(/http:\/\/127\.0\.0\.1:8652\/[A-Za-z0-9_-]{43}/)[0];
+  await expect(page).toHaveURL(/\/kontakte$/);
+  await expect(knopf).toBeEnabled();
+
+  const ctx = await browser.newContext({ viewport: { width: 360, height: 800 }, colorScheme: 'light' });
+  const person = await ctx.newPage();
+  person.on('pageerror', (e) => errors.push(String(e)));
+  await person.goto(link);
+  await expect(person.getByRole('heading', { name: 'Trag deine Kontaktdaten ein' })).toBeVisible();
+  await expect(person.locator('input[name=vorname]')).toHaveValue('');
+  await expect(person.getByRole('button', { name: 'Alles stimmt so' })).toHaveCount(0);
+  expect(await person.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+  await bild(person, info, 'kontakt-eintragen-360.png', { fullPage: true });
+  // no name: said beside the field, nothing kept
+  await person.locator('input[name=mail]').first().fill('erika@example.org');
+  await person.getByRole('button', { name: 'Angaben senden' }).click();
+  await expect(person.getByText('Trag deinen Vor- oder Nachnamen ein.')).toBeVisible();
+  await expect(person.locator('input[name=mail]').first()).toHaveValue('erika@example.org');
+  await person.locator('input[name=vorname]').fill('Erika');
+  await person.locator('input[name=nachname]').fill('Muster');
+  await person.locator('input[name=tel]').first().fill('0170 9876543');
+  const senden = person.getByRole('button', { name: 'Angaben senden' });
+  await senden.click();
+  await expect(person.getByRole('heading', { name: /Danke – .* sieht deine Angaben und übernimmt sie\./ })).toBeVisible();
+  await person.goto(link);
+  await expect(person.getByRole('heading', { name: 'Link ungültig oder abgelaufen' })).toBeVisible();
+  await ctx.close();
+
+  await page.goto('/aufgaben');
+  await page.getByRole('link', { name: '1 Kontakt-Antwort prüfen' }).first().click();
+  await expect(page).toHaveURL(/\/kontakte\/antworten\/[0-9a-f]+$/);
+  await expect(page.getByRole('heading', { name: 'Neuer Kontakt: Erika Muster' })).toBeVisible();
+  await expect(page.locator('.aenderung')).toHaveCount(4);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
+  await bild(page, info, 'kontakt-neu-411.png', { fullPage: true });
+  await page.getByRole('button', { name: 'Als neuen Kontakt anlegen' }).click();
+  await expect(page.getByText('Angelegt: Erika Muster ist jetzt im Adressbuch des Haushalts.')).toBeVisible();
+  await page.getByRole('link', { name: 'Zum Kontakt ›' }).click();
+  await expect(page.getByRole('heading', { name: 'Erika Muster' })).toBeVisible();
+  await expect(page.locator('body')).toContainText('erika@example.org');
+});

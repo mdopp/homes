@@ -2,12 +2,14 @@ package napi
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mdopp/homes/internal/caldav"
 	"github.com/mdopp/homes/internal/caldav/davfake"
@@ -201,5 +203,45 @@ func TestKontakteFragenRadicaleDown(t *testing.T) {
 		Haushalt: haushalt.Config{Contacts: &caldav.Client{URL: "http://127.0.0.1:1"}}, Antworten: &kontaktantwort.Store{Path: filepath.Join(t.TempDir(), "a.json")}, KontaktURL: "https://k.example.org"})
 	if code, out, _ := frage(t, h, "m1", `{"name":"Anna","anlegen":true}`); code != http.StatusBadGateway || out.OK || out.Error != "Das Haushalts-Adressbuch lässt sich gerade nicht lesen. Versuch es gleich noch einmal." {
 		t.Errorf("down: %d %+v", code, out)
+	}
+}
+
+// owner 2026-11-28 (Kontaktdaten eintragen lassen): a new person's link from the app — an admin
+// gets it with the message and when it ends; anyone else, or a box without the public page, a sentence.
+func TestKontakteEinladen(t *testing.T) {
+	h, fake, store := fragenHandler(t, "https://kontakt.example.org/")
+	send := func(h http.Handler, bearer string) (int, map[string]any) {
+		req := httptest.NewRequest("POST", "/napi/kontakte/einladen", nil)
+		req.Header.Set("Authorization", "Bearer "+bearer)
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		var out map[string]any
+		if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+			t.Fatalf("not JSON (%d): %s", rec.Code, rec.Body.String())
+		}
+		return rec.Code, out
+	}
+	code, out := send(h, "m1")
+	link, _ := out["link"].(string)
+	text, _ := out["text"].(string)
+	bis, err := time.Parse(time.RFC3339, fmt.Sprint(out["gueltig_bis"]))
+	if code != 200 || out["ok"] != true || !fragenLink.MatchString(link) || !strings.HasSuffix(text, ": "+link) || !strings.Contains(text, "7 Tage") ||
+		err != nil || time.Until(bis) < 7*24*time.Hour-time.Minute || time.Until(bis) > 7*24*time.Hour+time.Minute || len(out) != 4 {
+		t.Fatalf("%d %v", code, out)
+	}
+	if f, err := store.Zum(strings.TrimPrefix(link, "https://kontakt.example.org/")); err != nil || !f.Neu || f.Wer != "michael" || f.UID != "" {
+		t.Errorf("the link: %+v %v", f, err)
+	}
+	if n := len(fake.Objects()); n != 4 {
+		t.Errorf("an address book written: %d", n)
+	}
+	for bearer, want := range map[string]int{"a1": 403, "x1": 403} {
+		if code, out := send(h, bearer); code != want || out["ok"] != false || out["error"] == "" {
+			t.Errorf("%s: %d %v", bearer, code, out)
+		}
+	}
+	ohne, _, _ := fragenHandler(t, "")
+	if code, out := send(ohne, "m1"); code != 503 || !strings.Contains(fmt.Sprint(out["error"]), "nicht eingerichtet") {
+		t.Errorf("no public page: %d %v", code, out)
 	}
 }

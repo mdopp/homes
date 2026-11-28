@@ -531,6 +531,38 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     sind Mobilnummer, E-Mail, Adresse und Geburtstag da.* A family member
     gets neither (the parameter is ignored). The app asks from a shared
     vCard with `POST /napi/kontakte/fragen` (below).
+  - *Kontaktdaten eintragen lassen* (owner 2026-11-28: „Wie wir es schon
+    für die Verbesserung von Kontaktdaten haben“): for an admin, Kontakte
+    has *Jemanden seine Kontaktdaten eintragen lassen* under its heading.
+    It makes a link as *Daten prüfen lassen* does (POST
+    `/kontakte/einladen`, the prepared sentence as `text/plain`, a refusal
+    one plain sentence, a GET goes to `/kontakte`) and opens the share
+    sheet the same way; the app's `POST /napi/kontakte/einladen` (below)
+    is the same. The link is for an empty card, works once and for 7 days
+    (`kontaktantwort.FristNeu`), and several may be open. Its public page
+    is the same form, empty and titled *Trag deine Kontaktdaten ein*
+    (*Damit dich <first name of who sent it, else „der Haushalt“> im
+    Adressbuch hat …*), without *Alles stimmt so* and with *Angaben
+    senden*; every field is optional except a first or last name (*Trag
+    deinen Vor- oder Nachnamen ein.* beside it); the same forms, checks,
+    limits and rate brakes apply, except that many fields at once are no
+    finding. Then *Danke – <who> sieht deine Angaben und übernimmt sie.*;
+    a used or expired link is the one page for every link that is none.
+    The answer is a task on Deine Aufgaben like any other answer;
+    `/kontakte/antworten` leads to its review at
+    `/kontakte/antworten/<id>` (only for who made the link; anyone else
+    is sent to `/kontakte`): each field before → after with nothing
+    before, its findings, and *Als neuen Kontakt anlegen* (a new card in
+    the household's book, `kontaktantwort.NeuAnlegen`: the name always,
+    the other ticked fields as the review writes them into a card) or
+    *Verwerfen*. When a household card shares a number (as
+    `caldav.TelSchluessel`) or an e-mail address with the answer (never
+    the name alone; three at most), each follows with *<Name> hat schon
+    dieselbe Nummer oder E-Mail-Adresse. Ist das dieselbe Person?* and its
+    own list, before → after as against that card (what the card has
+    already left out; a value over one of the card's is not ticked), and
+    *<Name> damit ergänzen*. Nothing reaches an address book without this
+    review; the outcome is said on the page, with *Zum Kontakt ›*.
   - *Die Box*, the teaser on the domain itself (owner 2026-11-08: a
     visitor without an account sees what the box is; `www.<domain>` stays
     behind Authelia). The same public listener, told apart by Host
@@ -1727,6 +1759,29 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     gerade nicht lesen. …*) or the new card was not written; `503` when
     the box has no public contact page (`HOMES_KONTAKT_URL` unset) or the
     link could not be stored.
+- Kontaktdaten eintragen lassen, for the app (owner 2026-11-28, from
+  *Teilen per Berührung*; module `kontakte`, not served while it is off):
+  a link for a person the household has no card of, where they enter
+  their own data. `POST /napi/kontakte/einladen`, no body (one is
+  ignored). Answers:
+  - `200 {"ok": true, "link": "https://kontakt.<domain>/<token>",
+    "text": "Hallo, magst du mir deine Kontaktdaten geben? Trag sie hier
+    ein, dann kommen sie in unser Adressbuch. Der Link gilt 7 Tage und nur
+    einmal: <link>", "gueltig_bis": "2026-12-05T09:30:00Z"}` — exactly
+    these four fields. `link` is a link as *Daten prüfen lassen* makes
+    (same token form, same public page), for an empty card; it works once
+    and until `gueltig_bis` (RFC 3339, UTC, 7 days from now); several may
+    be open at once (a new one retires none). `text` is the message for
+    the share sheet, in the request's `Accept-Language` (German where a
+    word has no translation), ending in `": " + link`. The answer waits
+    for the device's person (Deine Aufgaben, `/kontakte/antworten/<id>`);
+    nothing is written into an address book from here.
+  - Refusals, `{"ok": false, "error": <a German sentence>}`, as
+    `/napi/kontakte/fragen`'s: `403` for a device without a person, and
+    for a person who is not an admin (*Kontakte des Hauses lässt nur ein
+    Admin prüfen. …*); `503` when the box has no public contact page
+    (`HOMES_KONTAKT_URL` unset; *Kontakte fragen geht auf dieser Box noch
+    nicht …*) or the link could not be stored.
 - The phone's contacts (laib ADR 0029; optional in the app, behind
   Android's contacts permission): `POST /napi/kontakte`, `text/vcard`,
   all of the phone's contacts as concatenated vCards (≤ 64 MB, else 413),

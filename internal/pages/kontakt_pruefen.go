@@ -147,9 +147,18 @@ fetch(f.action,{method:'POST',body:d,credentials:'same-origin',signal:c?c.signal
 func Antworten(cfg StartConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ziel := KontaktePath
+		if id, ok := strings.CutPrefix(r.URL.Path, AntwortenPath+"/"); ok && cfg.pruefenAn() {
+			if f, err := cfg.Antworten.Eine(id, r.Header.Get("Remote-User")); err == nil && f.Neu { // a new person's: reviewed here (owner 2026-11-28)
+				KontaktNeu(w, r, cfg, f)
+				return
+			}
+		}
 		if cfg.pruefenAn() {
 			if offen := cfg.Antworten.ZuPruefen(r.Header.Get("Remote-User")); len(offen) > 0 {
 				ziel = kontaktPfad(offen[0].Buch, offen[0].UID)
+				if offen[0].Neu {
+					ziel = AntwortenPath + "/" + offen[0].ID
+				}
 			}
 		}
 		http.Redirect(w, r, ziel, http.StatusSeeOther)
@@ -164,14 +173,8 @@ func antwortEntscheiden(r *http.Request, cfg StartConfig, f kontaktantwort.Frage
 	}
 	r.Body = http.MaxBytesReader(nil, r.Body, 8<<10)
 	r.ParseForm()
-	var nimm []int
-	for _, v := range r.PostForm["nimm"] {
-		if n, err := strconv.Atoi(v); err == nil {
-			nimm = append(nimm, n)
-		}
-	}
 	aktion := r.PostFormValue("aktion")
-	stand := kontaktantwort.Stand(f, aktion == "alle", nimm)
+	stand := kontaktantwort.Stand(f, aktion == "alle", nimmVon(r))
 	if aktion == "verwerfen" {
 		stand = kontaktantwort.Stand(f, false, nil)
 	}
@@ -259,6 +262,23 @@ func wertText(a kontaktantwort.Aenderung, v, art string, main bool) string {
 // antwortFelder is one answer: each field before → after, its findings,
 // and while undecided the three ways to end it, posted to action.
 func antwortFelder(b *strings.Builder, f kontaktantwort.Frage, action string) {
+	antwortKopf(b, f)
+	if len(f.Aenderungen) == 0 {
+		b.WriteString("<p>" + html.EscapeString(fmt.Sprintf(texte.T(texte.AntwortNurBestaetigt), f.Name())) + "</p>")
+	}
+	knoepfe := `<button name=aktion value=alle data-laeuft="` + wort(texte.AntwortLaeuft) + `">` + wort(texte.AntwortErledigt) + `</button>`
+	if len(f.Aenderungen) > 0 {
+		knoepfe = `<p class=knoepfe><button name=aktion value=auswahl data-laeuft="` + wort(texte.AntwortLaeuft) + `">` + wort(texte.AntwortAuswahl) + `</button>` +
+			`<button name=aktion value=alle data-laeuft="` + wort(texte.AntwortLaeuft) + `">` + wort(texte.AntwortAlle) + `</button>` + verwerfenKnopf + `</p>`
+	}
+	antwortListe(b, f, action, "", knoepfe)
+}
+
+// verwerfenKnopf ends an answer with nothing taken, asked first.
+var verwerfenKnopf = `<button name=aktion value=verwerfen class=leise data-frage="` + wort(texte.AntwortVerwerfenFrage) + `" data-laeuft="` + wort(texte.AntwortVerwirft) + `">` + wort(texte.AntwortVerwerfen) + `</button>`
+
+// antwortKopf is when the answer came, into which book, and what concerns all of it.
+func antwortKopf(b *strings.Builder, f kontaktantwort.Frage) {
 	buch := texte.T(texte.BuchHandy)
 	if f.Buch == kontaktantwort.Haushalt {
 		buch = texte.T(texte.BuchHaus)
@@ -271,12 +291,16 @@ func antwortFelder(b *strings.Builder, f kontaktantwort.Frage, action string) {
 	for _, h := range f.Hinweise {
 		b.WriteString(`<div class=achtung role=note><p>` + html.EscapeString(h) + `</p></div>`)
 	}
+}
+
+// antwortListe is f's changes, each before → after with its findings; while undecided a form
+// to action with a tick each, the hidden fields felder and the buttons knoepfe. A new person's
+// name on its way into a new card is ticked for good (kontaktantwort.NeuAnlegen); their value
+// over one a card has is ticked only by hand.
+func antwortListe(b *strings.Builder, f kontaktantwort.Frage, action, felder, knoepfe string) {
 	offen := f.ZuPruefen()
-	if len(f.Aenderungen) == 0 {
-		b.WriteString("<p>" + html.EscapeString(fmt.Sprintf(texte.T(texte.AntwortNurBestaetigt), f.Name())) + "</p>")
-	}
 	if offen {
-		b.WriteString(`<form method=post action="` + html.EscapeString(action) + `"><input type=hidden name=id value="` + html.EscapeString(f.ID) + `">`)
+		b.WriteString(`<form method=post action="` + html.EscapeString(action) + `"><input type=hidden name=id value="` + html.EscapeString(f.ID) + `">` + felder)
 	}
 	for i, a := range f.Aenderungen {
 		vorher, nachher := wertText(a, a.Vorher, a.VorherArt, a.VorherHaupt), wertText(a, a.Nachher, a.NachherArt, a.NachherHaupt)
@@ -290,6 +314,12 @@ func antwortFelder(b *strings.Builder, f kontaktantwort.Frage, action string) {
 		if offen {
 			checked := " checked"
 			if len(a.Hinweise) > 0 || a.NurAngekreuzt() {
+				checked = ""
+			}
+			switch {
+			case f.Neu && f.UID == "" && (a.Art == "vorname" || a.Art == "nachname"):
+				checked = ` checked disabled title="` + wort(texte.NeuNameFest) + `"`
+			case f.Neu && a.Vorher != "": // a new person's answer over a card's value: only when ticked
 				checked = ""
 			}
 			b.WriteString(`<input type=checkbox name=nimm value=` + strconv.Itoa(i) + checked + `>`)
@@ -318,12 +348,6 @@ func antwortFelder(b *strings.Builder, f kontaktantwort.Frage, action string) {
 		b.WriteString(`</div>`)
 	}
 	if offen {
-		if len(f.Aenderungen) == 0 {
-			b.WriteString(`<button name=aktion value=alle data-laeuft="` + wort(texte.AntwortLaeuft) + `">` + wort(texte.AntwortErledigt) + `</button></form>`)
-		} else {
-			b.WriteString(`<p class=knoepfe><button name=aktion value=auswahl data-laeuft="` + wort(texte.AntwortLaeuft) + `">` + wort(texte.AntwortAuswahl) + `</button>` +
-				`<button name=aktion value=alle data-laeuft="` + wort(texte.AntwortLaeuft) + `">` + wort(texte.AntwortAlle) + `</button>` +
-				`<button name=aktion value=verwerfen class=leise data-frage="` + wort(texte.AntwortVerwerfenFrage) + `" data-laeuft="` + wort(texte.AntwortVerwirft) + `">` + wort(texte.AntwortVerwerfen) + `</button></p></form>`)
-		}
+		b.WriteString(knoepfe + `</form>`)
 	}
 }
