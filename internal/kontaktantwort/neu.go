@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/mdopp/homes/internal/caldav"
+	"github.com/mdopp/homes/internal/namen"
 )
 
 // Kontaktdaten eintragen lassen (owner 2026-11-28, „Wie wir es schon für
@@ -16,10 +17,11 @@ import (
 // review as „Kontakt prüfen lassen“, for a person the household has no card
 // of yet. The link shows the form empty and works for FristNeu; the answer
 // waits for an admin's review like any other, before → after with nothing
-// before. The review writes it as a new card into the household's book
-// (NeuAnlegen) or, when a household card shares a number or an e-mail
-// address with it (Treffer), adds it to that card (Ergaenzen), before →
-// after as against that card. Nothing is written without that review.
+// before. The review first offers the household cards that may be that
+// person (Kandidaten: the same number, e-mail address or a similar name),
+// and adds the answer to the one picked (Ergaenzen), before → after as
+// against that card; else it writes it as a new card into the household's
+// book (NeuAnlegen). Nothing is written without that review.
 
 // FristNeu is how long a new person's link works.
 const FristNeu = 7 * 24 * time.Hour
@@ -63,22 +65,93 @@ func (f Frage) Eingetragen() Felder {
 	return n
 }
 
-// Treffer are the household's cards that share a number (caldav.TelSchluessel) or an e-mail
-// address with a new person's answer, three at most; none: nil.
-func Treffer(all []caldav.Contact, f Frage, land string) []caldav.Contact {
+// Why a household card may be the person of a new answer (owner 2026-11-28: „mit Vorschlägen,
+// mit wem das gemerged werden soll“), strongest first.
+const (
+	GleicheMobil   = "mobil"   // one of its numbers (caldav.TelSchluessel), a mobile one
+	GleicheNummer  = "telefon" // one of its numbers, another kind
+	GleicheMail    = "mail"    // one of its e-mail addresses, in any case
+	AehnlicherName = "name"    // its name as namen.Plain compares it, in any order of the words
+)
+
+// Kandidat is a household card that may be the person of a new answer, and why (Gleiche…).
+type Kandidat struct {
+	caldav.Contact
+	Gruende []string
+}
+
+// KandidatenHoechstens is how many the review offers.
+const KandidatenHoechstens = 5
+
+// Kandidaten are the household's cards that may be the person of a new answer, the most likely
+// first: the same mobile number, another same number, the same e-mail address, a similar name
+// (namen.Plain, the name Dieselbe Person compares), each counted, at most KandidatenHoechstens;
+// none: nil. A card without a UID is none: it could not be written to.
+func Kandidaten(all []caldav.Contact, f Frage, land string) []Kandidat {
 	n := f.Eingetragen()
-	var tels, mails []string
+	tels := map[string]bool{} // its numbers' keys, true a mobile one
 	for _, t := range n.Telefone {
-		tels = append(tels, t.Nummer)
+		if k := caldav.TelSchluessel(t.Nummer, land); len(k) >= 6 {
+			tels[k] = tels[k] || t.Art == "mobil" || mobilNummer(k)
+		}
 	}
-	for _, m := range n.Mails {
-		mails = append(mails, m.Adresse)
+	name := namenSchluessel(n.Vorname + " " + n.Nachname)
+	gewicht := map[string]int{GleicheMobil: 8, GleicheNummer: 4, GleicheMail: 4, AehnlicherName: 2}
+	var out []Kandidat
+	punkte := map[string]int{}
+	for _, ct := range all {
+		if strings.TrimSpace(ct.UID) == "" {
+			continue
+		}
+		var gs []string
+		nummer := ""
+		for i, p := range ct.Phones {
+			k := caldav.TelSchluessel(p, land)
+			if mobil, da := tels[k]; da && nummer != GleicheMobil {
+				nummer = map[bool]string{true: GleicheMobil, false: GleicheNummer}[mobil || at(ct.PhoneKinds, i) == "mobil"]
+			}
+		}
+		if nummer != "" {
+			gs = append(gs, nummer)
+		}
+		if slices.ContainsFunc(ct.Emails, func(m string) bool {
+			return slices.ContainsFunc(n.Mails, func(x Mail) bool { return x.Adresse != "" && strings.EqualFold(strings.TrimSpace(m), x.Adresse) })
+		}) {
+			gs = append(gs, GleicheMail)
+		}
+		if name != "" && (namenSchluessel(ct.Name) == name || namenSchluessel(ct.Given+" "+ct.Family) == name) {
+			gs = append(gs, AehnlicherName)
+		}
+		if len(gs) == 0 {
+			continue
+		}
+		for _, g := range gs {
+			punkte[ct.UID] += gewicht[g]
+		}
+		out = append(out, Kandidat{ct, gs})
 	}
-	if len(tels)+len(mails) == 0 {
-		return nil
+	slices.SortStableFunc(out, func(a, b Kandidat) int {
+		return cmp.Or(cmp.Compare(punkte[b.UID], punkte[a.UID]), cmp.Compare(namen.Plain(a.Name), namen.Plain(b.Name)))
+	})
+	return out[:min(len(out), KandidatenHoechstens)]
+}
+
+// namenSchluessel is a name as Kandidaten compares it: each word as namen.Plain has it, sorted, so
+// „Muster Erika“ is „Erika Muster“; "" no letters.
+func namenSchluessel(name string) string {
+	var ws []string
+	for _, w := range strings.Fields(name) {
+		if p := namen.Plain(w); p != "" {
+			ws = append(ws, p)
+		}
 	}
-	hits := Finden(all, "", tels, mails, land)
-	return hits[:min(len(hits), 3)]
+	slices.Sort(ws)
+	return strings.Join(ws, " ")
+}
+
+// mobilNummer says whether a TelSchluessel is a German mobile's (+49 15…, 16…, 17…).
+func mobilNummer(k string) bool {
+	return len(k) >= 12 && (strings.HasPrefix(k, "4915") || strings.HasPrefix(k, "4916") || strings.HasPrefix(k, "4917"))
 }
 
 // Ergaenzung is a new person's answer as changes of the card ct: the names it gives, the

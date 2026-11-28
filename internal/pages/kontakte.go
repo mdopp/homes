@@ -6,6 +6,7 @@ import (
 	"html"
 	"log"
 	"net/http"
+	"net/url"
 	"slices"
 	"strings"
 	"unicode"
@@ -93,13 +94,13 @@ func kontaktZeilen(r *http.Request, cfg StartConfig, all []caldav.Contact, buch 
 		hay := []string{z.name, ct.Org}
 		for _, p := range ct.Phones {
 			if p = oneLine(p); p != "" && z.ziel == "" {
-				z.ziel, z.zielText = "tel:"+strings.ReplaceAll(p, " ", ""), p
+				z.ziel, z.zielText = telHref(p), p
 			}
 			hay = append(hay, p)
 		}
 		for _, m := range ct.Emails {
 			if m = oneLine(m); m != "" && z.ziel == "" {
-				z.ziel, z.zielText = "mailto:"+m, m
+				z.ziel, z.zielText = mailHref(m), m
 			}
 			hay = append(hay, m)
 		}
@@ -169,3 +170,14 @@ document.addEventListener('input',function(e){if(e.target.id!=='kontakte-suche')
 document.querySelectorAll('.kontakte li').forEach(function(li){li.hidden=li.dataset.suche.indexOf(q)<0;if(!li.hidden)n++});
 document.querySelectorAll('section.kontakte').forEach(function(s){s.hidden=!s.querySelector('li:not([hidden])')});
 var k=document.getElementById('kontakte-keiner');if(k){k.hidden=n>0;k.textContent=n?'':k.dataset.vorlage.replace('%s',e.target.value)}})})()</script>`
+
+// telHref is a card's number as a link: tel: and its digits, + and * alone, so nothing a contact
+// typed adds to it. mailHref is an address as one: mailto: and the address percent-encoded where
+// RFC 6068 wants it (a ? or # in it starts no cc, subject or body).
+func telHref(p string) string {
+	return "tel:" + strings.Map(func(r rune) rune {
+		return map[bool]rune{true: r, false: -1}[r == '+' || r == '*' || r >= '0' && r <= '9']
+	}, p)
+}
+
+func mailHref(m string) string { return "mailto:" + url.PathEscape(strings.TrimPrefix(m, "mailto:")) }

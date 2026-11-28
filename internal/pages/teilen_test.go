@@ -52,7 +52,8 @@ func TestTeilenWaiting(t *testing.T) {
 	mustNotContain(t, body, "<form", "Gast-WLAN")
 	cfg.TeaserHost = ""
 	mustContain(t, teilenGet(cfg, "/t/"+token).Body.String(), `<a href="https://github.com/mdopp/homes"`)
-	for _, p := range []string{"/t/" + token[:42] + "A", "/t/" + token + "/karte.vcf", "/t/" + token + "/sonst", "/t/" + token + "?x=1"} {
+	anders := map[bool]string{true: "B", false: "A"}[token[42] == 'A'] // one character off, never the token itself (it ends in A one time in 64)
+	for _, p := range []string{"/t/" + token[:42] + anders, "/t/" + token + "/karte.vcf", "/t/" + token + "/sonst", "/t/" + token + "?x=1"} {
 		if rec := teilenGet(cfg, p); rec.Code != 404 || !strings.Contains(rec.Body.String(), "Link ungültig oder abgelaufen") {
 			t.Errorf("%s: %d", p, rec.Code)
 		}
