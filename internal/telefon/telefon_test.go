@@ -191,3 +191,33 @@ func TestUnpairedIsRemovedInHA(t *testing.T) {
 		t.Fatal("ben's phone not registered again")
 	}
 }
+
+// Seen 2026-11-28: HA took a registration without os_version and then
+// failed to set its entry up; the webhook answered 200 and did nothing, so
+// a touched tag was lost. Now a registration whose device does not appear
+// counts as none (the caller fires the raw tag_scanned), and the entry
+// that failed is removed before the next one.
+func TestARegistrationHACannotSetUpIsNoneAndIsCleanedUp(t *testing.T) {
+	fake, tel, now := rig(t)
+	ctx := context.Background()
+	fake.MobileAppSetupFails(true)
+	if tel.Tag(ctx, annasPixel, "homes-aaaaaaaaaaaa") {
+		t.Fatal("a scan through a registration HA could not set up counted as sent")
+	}
+	if b := fake.BrokenEntries(); len(b) != 1 || b[0] != Name(annasPixel) {
+		t.Fatalf("broken entries: %v", b)
+	}
+	fake.MobileAppSetupFails(false)
+	*now = now.Add(Pause + time.Second)
+	if !tel.Tag(ctx, annasPixel, "homes-aaaaaaaaaaaa") {
+		t.Fatal("not registered again once HA can set it up")
+	}
+	if b := fake.BrokenEntries(); len(b) != 0 {
+		t.Fatalf("the failed entry stayed: %v", b)
+	}
+	for _, r := range fake.Registrations() {
+		if r["os_version"] == "" || r["os_version"] == nil {
+			t.Fatalf("registered without os_version: %v", r)
+		}
+	}
+}

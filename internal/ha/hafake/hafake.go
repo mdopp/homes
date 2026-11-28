@@ -172,6 +172,29 @@ type mobileApp struct {
 	deleted map[string]bool      // webhook ids of removed registrations: 410, as HA says
 	calls   []Webhook
 	next    int
+	// kaputt: registrations are taken (201, a webhook) but their entry's
+	// setup fails, as HA did without os_version: no device, a webhook
+	// that answers an empty 200 and does nothing
+	kaputt bool
+	broken map[string]string // entry id → title of entries whose setup failed
+}
+
+// MobileAppSetupFails makes registrations be taken but not set up.
+func (h *HA) MobileAppSetupFails(fails bool) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.mobile.kaputt = fails
+}
+
+// BrokenEntries is the titles of mobile_app entries whose setup failed.
+func (h *HA) BrokenEntries() []string {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	var out []string
+	for _, t := range h.mobile.broken {
+		out = append(out, t)
+	}
+	return out
 }
 
 // Webhook is one command a registration's webhook received.
@@ -211,7 +234,7 @@ func (h *HA) register(w http.ResponseWriter, r *http.Request) {
 	}
 	var reg map[string]any
 	json.NewDecoder(r.Body).Decode(&reg)
-	for _, k := range []string{"app_id", "app_name", "app_version", "device_name", "manufacturer", "model", "os_name"} {
+	for _, k := range []string{"app_id", "app_name", "app_version", "device_name", "manufacturer", "model", "os_name", "os_version"} {
 		if s, _ := reg[k].(string); s == "" {
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(map[string]any{"message": "Message format incorrect: required key not provided @ data['" + k + "']"})
@@ -230,8 +253,17 @@ func (h *HA) register(w http.ResponseWriter, r *http.Request) {
 	if h.mobile.hooks == nil {
 		h.mobile.hooks, h.mobile.deleted = map[string][2]string{}, map[string]bool{}
 	}
-	h.mobile.hooks[hook] = [2]string{entry, dev}
 	h.mobile.regs = append(h.mobile.regs, reg)
+	if h.mobile.kaputt {
+		if h.mobile.broken == nil {
+			h.mobile.broken = map[string]string{}
+		}
+		h.mobile.broken[entry], _ = reg["device_name"].(string)
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(map[string]any{"webhook_id": hook})
+		return
+	}
+	h.mobile.hooks[hook] = [2]string{entry, dev}
 	h.devices = append(slices.Clone(h.devices), map[string]any{"id": "dev-" + entry, "name": reg["device_name"],
 		"identifiers": []any{[]any{"mobile_app", dev}}, "config_entries": []any{entry}})
 	w.WriteHeader(http.StatusCreated)
@@ -853,8 +885,22 @@ func (h *HA) serve(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(s)
 	case r.Method == "POST" && r.URL.Path == "/api/mobile_app/registrations":
 		h.register(w, r)
+	case r.Method == "GET" && r.URL.Path == "/api/config/config_entries/entry":
+		out := []map[string]any{}
+		for _, hk := range h.mobile.hooks {
+			out = append(out, map[string]any{"entry_id": hk[0], "domain": "mobile_app", "title": hk[1], "state": "loaded"})
+		}
+		for e, t := range h.mobile.broken {
+			out = append(out, map[string]any{"entry_id": e, "domain": "mobile_app", "title": t, "state": "setup_error"})
+		}
+		json.NewEncoder(w).Encode(out)
 	case r.Method == "DELETE" && strings.HasPrefix(r.URL.Path, "/api/config/config_entries/entry/"):
 		entry := strings.TrimPrefix(r.URL.Path, "/api/config/config_entries/entry/")
+		if _, ok := h.mobile.broken[entry]; ok {
+			delete(h.mobile.broken, entry)
+			w.Write([]byte(`{"require_restart":false}`))
+			return
+		}
 		if !h.removeEntry(entry) {
 			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte(`{"message":"Invalid entry specified"}`))

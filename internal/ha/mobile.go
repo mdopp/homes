@@ -20,6 +20,10 @@ var ErrGone = errors.New("ha: the mobile_app registration is gone")
 // Registrierung is what HA's registration asks of a device.
 type Registrierung struct {
 	DeviceID, AppID, AppName, AppVersion, DeviceName, Manufacturer, Model, OSName string
+	// OSVersion: HA reads it when it sets the entry up (its device's
+	// sw_version) though its schema calls it optional; without it the
+	// registration is taken and the entry fails (seen 2026-11-28).
+	OSVersion string
 }
 
 // RegisterMobileApp registers a device (POST /api/mobile_app/registrations)
@@ -32,7 +36,7 @@ func (c *Client) RegisterMobileApp(ctx context.Context, r Registrierung) (string
 	err := c.do(ctx, "POST", "/api/mobile_app/registrations", nil, map[string]any{
 		"device_id": r.DeviceID, "app_id": r.AppID, "app_name": r.AppName, "app_version": r.AppVersion,
 		"device_name": r.DeviceName, "manufacturer": r.Manufacturer, "model": r.Model, "os_name": r.OSName,
-		"supports_encryption": false, "app_data": map[string]any{}}, &out)
+		"os_version": r.OSVersion, "supports_encryption": false, "app_data": map[string]any{}}, &out)
 	var he *Error
 	if errors.As(err, &he) && he.Status == http.StatusNotFound {
 		return "", ErrNotFound
@@ -103,4 +107,26 @@ func (c *Client) DeleteConfigEntry(ctx context.Context, entryID string) error {
 		return ErrNotFound
 	}
 	return err
+}
+
+// MobileAppBroken is the config entries of mobile_app whose setup failed
+// under title (a registration HA took but could not set up): its entry
+// ids, for removal before the device registers again.
+func (c *Client) MobileAppBroken(ctx context.Context, title string) ([]string, error) {
+	var entries []struct {
+		EntryID string `json:"entry_id"`
+		Domain  string `json:"domain"`
+		Title   string `json:"title"`
+		State   string `json:"state"`
+	}
+	if err := c.do(ctx, "GET", "/api/config/config_entries/entry", nil, nil, &entries); err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, e := range entries {
+		if e.Domain == MobileApp && e.Title == title && e.State == "setup_error" {
+			out = append(out, e.EntryID)
+		}
+	}
+	return out, nil
 }
