@@ -32,8 +32,6 @@ var (
 	controlAttrs = []string{"supported_features", "brightness", "color_temp", "rgb_color", "color_mode", "supported_color_modes",
 		"current_position", "temperature", "current_temperature", "hvac_action", "target_temp_step", "min_temp", "max_temp",
 		"hvac_modes", "volume_level", "media_title", "media_artist"}
-
-	historyRanges = map[string]time.Duration{"24h": 24 * time.Hour, "48h": 48 * time.Hour, "7d": 168 * time.Hour}
 )
 
 func set(xs ...string) map[string]bool {
@@ -58,9 +56,7 @@ type homeAPI struct {
 func (h *homeAPI) routes(gs gruppen) {
 	gs.add("geraete", "POST /napi/ha/call", h.call)
 	gs.add("geraete", "GET /napi/portal/state", h.state)
-	gs.add("geraete", "GET /napi/portal/entity-history", h.history)
 	gs.add("geraete", "GET /napi/portal/active", h.active)
-	gs.add("geraete", "GET /napi/portal/camera/{entity_id}/snapshot", h.snapshot)
 	gs.add("geraete", "GET /napi/portal/start/addable", h.addable)
 	gs.add("geraete", "GET /napi/portal/favorites", h.favorites)
 }
@@ -202,35 +198,6 @@ func (h *homeAPI) state(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	answer(w, http.StatusOK, map[string]any{"ok": true, "card": c})
-}
-
-// GET /napi/portal/entity-history?entity_id=&range=24h|48h|7d → {ok, history:[{t,state}]}
-func (h *homeAPI) history(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("entity_id")
-	if !ha.EntityRE.MatchString(id) {
-		refuse(w, http.StatusBadRequest, "invalid entity_id")
-		return
-	}
-	rng := cmp.Or(r.URL.Query().Get("range"), "24h")
-	span, ok := historyRanges[rng]
-	if !ok {
-		refuse(w, http.StatusBadRequest, "invalid range")
-		return
-	}
-	end := time.Now().UTC().Truncate(time.Second)
-	pts, err := h.ha.History(r.Context(), id, end.Add(-span), end)
-	if err != nil {
-		refuse(w, http.StatusBadGateway, "ha_unavailable")
-		return
-	}
-	out := []map[string]any{}
-	for _, p := range pts {
-		t := cmp.Or(p.LastChanged, p.LastUpdated)
-		if t != "" {
-			out = append(out, map[string]any{"t": t, "state": p.State})
-		}
-	}
-	answer(w, http.StatusOK, map[string]any{"ok": true, "history": out})
 }
 
 // GET /napi/portal/favorites → {ok, favorites:[card]}: the things the

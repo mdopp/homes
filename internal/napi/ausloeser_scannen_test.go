@@ -68,7 +68,7 @@ func scanTags(t *testing.T) (*hafake.HA, *scanLaib, *tagaktion.Store, http.Handl
 
 func TestATagOffersTheScanAndKeepsWhatItDoes(t *testing.T) {
 	_, _, store, h := scanTags(t)
-	code, body := raw(t, h, "POST", "/napi/ausloeser/tag", "dev1", `{"name":"Scanner","tag":"homes-5ca11e000001","aktion":"scannen-ich"}`)
+	code, body := raw(t, h, "POST", "/napi/ausloeser/tag", "dev1", `{"name":"Scanner","tag":"homes-5ca11e000001","aktion":"scanner-ich"}`)
 	if code != http.StatusOK || reply(t, body)["aktion"] != "scanner-ich" || store.Von("homes-5ca11e000001") != "scanner-ich" {
 		t.Fatalf("%d %s", code, body)
 	}

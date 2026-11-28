@@ -16,8 +16,7 @@ import (
 
 // The calendars Haushalt/Kalender lists and makes (haus#66, laib#495). They
 // all live in Radicale, named by where they come from (homes is the
-// household's Radicale/LLDAP account, HOMES_RADICALE_USER; it was haus
-// before laib#1021, see LegacyAccountPath):
+// household's Radicale/LLDAP account, HOMES_RADICALE_USER):
 //
 //	homes/haushalt           the household's, Homes' account's
 //	homes/familie-<name>     a calendar "für die Familie", made by Homes

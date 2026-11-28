@@ -95,10 +95,9 @@ func (s *Store) Gibt(id string) bool {
 
 // Lookup returns the device behind a bearer and notes the sighting.
 // A bearer without app.TokenPrefix is no device, whatever devices.json holds
-// (laib ADR 0022 §4) — except a token of the old Haus app
-// (app.LegacyTokenPrefix), which keeps working until every phone runs Homes.
+// (laib ADR 0022 §4).
 func (s *Store) Lookup(bearer string) (Device, bool) {
-	if !strings.HasPrefix(bearer, app.TokenPrefix) && !strings.HasPrefix(bearer, app.LegacyTokenPrefix) {
+	if !strings.HasPrefix(bearer, app.TokenPrefix) {
 		return Device{}, false
 	}
 	h := hash(bearer)

@@ -72,63 +72,31 @@ func get(t *testing.T, h http.Handler, method, path, bearer, body string) (int, 
 	return rec.Code, out
 }
 
-// The Box keys the app's widgets read, under their one name /napi/box
-// (haus#26, laib ADR 0022 §4).
-func TestBoxKeysFromLaib(t *testing.T) {
-	const prefix = "/napi/box"
-	var calls []string
-	srv := fakeLaib(t, &calls)
-	defer srv.Close()
-	ops := &laib.Client{URL: srv.URL, Token: "ops"}
-	h := Handler(Config{Laib: ops, Validate: StaticValidator([]string{"dev1"})})
-
-	if code, _ := get(t, h, "GET", prefix+"/home", "", ""); code != 401 {
-		t.Fatalf("no token → %d", code)
-	}
-	if code, _ := get(t, h, "GET", prefix+"/home", "wrong", ""); code != 401 {
-		t.Fatalf("wrong token → %d", code)
-	}
-	code, home := get(t, h, "GET", prefix+"/home", "dev1", "")
-	if code != 200 || home["servicesUp"] != 1.0 || home["servicesFailed"] != 1.0 || home["pendingApprovals"] != 1.0 || home["operator"] != "stumm" {
-		t.Fatalf("home: %d %v", code, home)
-	}
-	_, svcs := get(t, h, "GET", prefix+"/services", "dev1", "")
-	rows := svcs["services"].([]any)
-	if len(rows) != 2 || rows[1].(map[string]any)["activeState"] != "failed" || rows[0].(map[string]any)["health"] != "ok" {
-		t.Fatalf("services: %v", rows)
-	}
-	_, aps := get(t, h, "GET", prefix+"/approvals", "dev1", "")
-	a := aps["approvals"].([]any)[0].(map[string]any)
-	if a["id"] != "7" || a["service"] != "immich" || a["title"] != "immich: neue Version" || a["status"] != "pending" || a["created_at"] != "2026-10-10T19:00:00Z" {
-		t.Fatalf("approvals: %v", a)
-	}
-	_, ups := get(t, h, "GET", prefix+"/upgrades", "dev1", "")
-	if len(ups["upgrades"].([]any)) != 0 {
-		t.Fatalf("upgrades: %v", ups)
-	}
-	// haus#1: a phone cannot approve, whoever it belongs to — Laib's page is the one place
-	if code, _ := get(t, h, "POST", prefix+"/approvals/7/approve", "dev1", ""); code != 403 {
-		t.Fatalf("approve from a phone → %d, want 403", code)
-	}
-	if code, _ := get(t, h, "POST", prefix+"/services/media/operate", "dev1", `{"action":"start"}`); code != 400 {
-		t.Fatalf("start must be refused, got %d", code)
-	}
-	if code, _ := get(t, h, "POST", prefix+"/services/media/operate", "dev1", `{"action":"restart"}`); code != 200 {
-		t.Fatalf("restart → %d", code)
-	}
-	joined := strings.Join(calls, "\n")
-	if strings.Contains(joined, "laib_approve") || !strings.Contains(joined, "laib_restart media as ops") {
-		t.Fatalf("calls:\n%s", joined)
-	}
-}
-
-func TestDenyIsNotHomesEither(t *testing.T) {
+// The one Box key the app reads, /napi/box/home's gut, behind a paired
+// device's token; the old Box screen's keys and the verdicts are gone
+// (owner 2026-11-28), 404 as every path Homes does not serve.
+func TestBoxHomeFromLaib(t *testing.T) {
 	var calls []string
 	srv := fakeLaib(t, &calls)
 	defer srv.Close()
 	h := Handler(Config{Laib: &laib.Client{URL: srv.URL, Token: "ops"}, Validate: StaticValidator([]string{"dev1"})})
-	if code, _ := get(t, h, "POST", "/napi/box/approvals/7/deny", "dev1", ""); code != 403 {
-		t.Fatalf("deny from a phone → %d, want 403", code)
+	if code, _ := get(t, h, "GET", "/napi/box/home", "", ""); code != 401 {
+		t.Fatalf("no token → %d", code)
+	}
+	if code, _ := get(t, h, "GET", "/napi/box/home", "wrong", ""); code != 401 {
+		t.Fatalf("wrong token → %d", code)
+	}
+	if code, home := get(t, h, "GET", "/napi/box/home", "dev1", ""); code != 200 || len(home) != 1 || home["gut"] != false {
+		t.Fatalf("home: %d %v", code, home)
+	}
+	for _, p := range []string{"GET /napi/box/services", "GET /napi/box/approvals", "GET /napi/box/upgrades", "POST /napi/box/services/media/operate",
+		"POST /napi/box/approvals/7/approve", "POST /napi/box/approvals/7/deny", "GET /napi/persona", "GET /napi/app"} {
+		m, path, _ := strings.Cut(p, " ")
+		code, body := raw(t, h, m, path, "dev1", `{"action":"restart"}`)
+		notFound(t, p, code, body)
+	}
+	if joined := strings.Join(calls, "\n"); strings.Contains(joined, "laib_approve") || strings.Contains(joined, "laib_restart") {
+		t.Fatalf("calls:\n%s", joined)
 	}
 }
 
@@ -178,35 +146,6 @@ func TestWhoamiFromHomesDevices(t *testing.T) {
 	}
 }
 
-// laib#1021: the old Haus app (cloud.dopp.haus) asks which app this box
-// speaks to and, as paket is not its own, tells the person to install
-// Homes. Behind a paired device's token, the old app's haus_device_ one too.
-func TestTheOldAppLearnsAboutHomes(t *testing.T) {
-	var calls []string
-	lb := fakeLaib(t, &calls)
-	defer lb.Close()
-	h := Handler(Config{Laib: &laib.Client{URL: lb.URL, Token: "ops"}, Validate: StaticValidator([]string{"haus_device_alt"})})
-	code, p := get(t, h, "GET", "/napi/app", "haus_device_alt", "")
-	want := map[string]any{"name": "Homes", "paket": "cloud.dopp.homes", "quelle": "https://github.com/mdopp/homes-android"}
-	if code != 200 || len(p) != len(want) {
-		t.Fatalf("/napi/app: %d %v", code, p)
-	}
-	for k, v := range want {
-		if p[k] != v {
-			t.Errorf("/napi/app %s = %v, want %v", k, p[k], v)
-		}
-	}
-	if code, _ := get(t, h, "GET", "/napi/app", "", ""); code != 401 {
-		t.Fatalf("without a token: %d", code)
-	}
-	if code, _ := get(t, h, "GET", "/napi/app", "haus_device_fremd", ""); code != 401 {
-		t.Fatalf("an unknown token: %d", code)
-	}
-	if code, _ := get(t, h, "POST", "/napi/app", "haus_device_alt", ""); code == 200 {
-		t.Fatalf("POST /napi/app: %d", code)
-	}
-}
-
 // The app takes the assistant's name from Homes, behind a paired device's
 // token; nothing else (its colours are fixed in the app, its icon is its
 // launcher icon). Laib sets the name once (HOMES_ASSISTANT), "Homes" without it.
@@ -226,16 +165,6 @@ func TestTheAppReadsTheAssistantsName(t *testing.T) {
 	if code, _ := get(t, h, "GET", "/napi/assistent", "", ""); code != 401 {
 		t.Fatalf("without a token: %d", code)
 	}
-	// an app from before (dev.249) still asks /napi/persona: it gets the same name, the fixed look, no icon
-	assistent.Set("")
-	if code, p := get(t, h, "GET", "/napi/persona", "dev1", ""); code != 200 || p["display"] != "Homes" || p["accent"] != "#3ddc84" || p["ground"] != "#0c120e" || p["icon"] != "" {
-		t.Fatalf("/napi/persona for an older app: %d %v", code, p)
-	}
-	if code, _ := get(t, h, "GET", "/napi/persona", "", ""); code != 401 {
-		t.Fatalf("/napi/persona without a token: %d", code)
-	}
-	code, body := raw(t, h, "GET", "/napi/persona/icon.png", "dev1", "")
-	notFound(t, "/napi/persona/icon.png", code, body)
 }
 
 // laibAnswering is a Laib whose tools answer the given text; any other
@@ -254,42 +183,6 @@ func laibAnswering(t *testing.T, texts map[string]string) *laib.Client {
 	}))
 	t.Cleanup(srv.Close)
 	return &laib.Client{URL: srv.URL, Token: "ops"}
-}
-
-// haus#28: pendingUpdates is Laib's count of template updates waiting:
-// `laib template sync --propose` files each as a proposal whose kind is
-// template-update, whatever class the dial gave it (a public route makes
-// it human). An update is counted and listed as an update only, never as
-// an approval too: three updates and one other proposal are one approval
-// and three updates. Homes decides none of them (haus#1).
-func TestPendingUpdatesAreLaibsTemplateUpdates(t *testing.T) {
-	lb := laibAnswering(t, map[string]string{
-		"laib_status": `{"ready":{"state":"bereit"},"services":[{"name":"immich","state":"grün"}]}`,
-		"laib_inbox": `[{"id":7,"actor":"pi","reason":"immich: mehr Speicher","tier":"apply","status":"open","created":"2026-10-10T19:00:00Z","files":["services/immich/values.yml"],"class":"values","kind":"values"},
-{"id":8,"actor":"laib","reason":"immich: Vorlage 1.2 → 1.3","tier":"apply","status":"open","created":"2026-10-11T04:00:00Z","files":["services/immich/template.yml"],"class":"template-update","kind":"template-update"},
-{"id":9,"actor":"laib","reason":"caddy: Vorlage 2.0 → 2.1","tier":"apply","status":"open","created":"2026-10-11T04:00:01Z","files":["services/caddy/template.yml"],"class":"human","kind":"template-update","reasons":["eine öffentliche Route"]},
-{"id":10,"actor":"laib","reason":"paperless: Vorlage 3.0 → 3.1","tier":"apply","status":"open","created":"2026-10-11T04:00:02Z","files":["services/paperless/template.yml"],"class":"template-update","kind":"template-update"}]`,
-	})
-	h := Handler(Config{Laib: lb, Validate: StaticValidator([]string{"dev1"})})
-	code, home := get(t, h, "GET", "/napi/box/home", "dev1", "")
-	if code != 200 || home["pendingUpdates"] != 3.0 || home["pendingApprovals"] != 1.0 {
-		t.Fatalf("home: %d %v, want 1 approval and 3 updates", code, home)
-	}
-	_, aps := get(t, h, "GET", "/napi/box/approvals", "dev1", "")
-	if rows, _ := aps["approvals"].([]any); len(rows) != 1 || rows[0].(map[string]any)["id"] != "7" {
-		t.Fatalf("approvals, the updates left out: %v", aps)
-	}
-	_, ups := get(t, h, "GET", "/napi/box/upgrades", "dev1", "")
-	rows, _ := ups["upgrades"].([]any)
-	if len(rows) != 3 {
-		t.Fatalf("upgrades: %v", ups)
-	}
-	if u := rows[0].(map[string]any); u["id"] != "8" || u["service"] != "immich" || u["title"] != "immich: Vorlage 1.2 → 1.3" || u["created_at"] != "2026-10-11T04:00:00Z" {
-		t.Fatalf("first upgrade: %v", u)
-	}
-	if u := rows[1].(map[string]any); u["id"] != "9" || u["service"] != "caddy" {
-		t.Fatalf("second upgrade: %v", u)
-	}
 }
 
 // notFound: an unknown or unconfigured /napi path answers the one JSON 404
@@ -363,11 +256,9 @@ func TestEveryNapiRouteWantsADevice(t *testing.T) {
 		Haushalt:  haushalt.Config{Calendar: dav, Contacts: dav, Documents: &paperless.Client{URL: dead, Token: "pl"}, Notes: nd},
 		UploadDir: t.TempDir(), MusicInbox: t.TempDir(), Sicherung: NewSicherung(t.TempDir(), t.TempDir()), Reitti: &reitti.Reitti{URL: dead, Dir: t.TempDir()}})
 	routes := map[string]bool{"POST /napi/musik": true,
-		"GET /napi/assistent": true, "GET /napi/persona": true, "GET /napi/whoami": true,
-		"GET /napi/box/home": true, "GET /napi/box/services": true, "GET /napi/box/approvals": true, "GET /napi/box/upgrades": true,
-		"POST /napi/box/services/{name}/operate": true, "POST /napi/box/approvals/{id}/approve": true, "POST /napi/box/approvals/{id}/deny": true,
-		"POST /napi/ha/call": true, "GET /napi/portal/state": true, "GET /napi/portal/energy": true, "GET /napi/portal/entity-history": true,
-		"GET /napi/portal/active": true, "GET /napi/portal/camera/{entity_id}/snapshot": true, "GET /napi/portal/start/addable": true, "GET /napi/portal/favorites": true,
+		"GET /napi/assistent": true, "GET /napi/whoami": true, "GET /napi/box/home": true,
+		"POST /napi/ha/call": true, "GET /napi/portal/state": true, "GET /napi/portal/energy": true,
+		"GET /napi/portal/active": true, "GET /napi/portal/start/addable": true, "GET /napi/portal/favorites": true,
 		"POST /napi/portal/watch": true, "GET /napi/portal/events": true,
 		"GET /napi/defs/tool": true, "POST /napi/action-callback": true, "GET /napi/portal/tasks": true, "GET /napi/portal/contacts": true,
 		"POST /napi/upload": true, "POST /napi/merken": true,
@@ -376,11 +267,11 @@ func TestEveryNapiRouteWantsADevice(t *testing.T) {
 		"GET /napi/sicherung/schluessel": true, "POST /napi/kontakte": true,
 		"GET /napi/sicherung/letzte": true, "GET /napi/sicherung/letzte/{quelle}/{pfad...}": true,
 		"GET /napi/gemeinsam/kontakte": true, "GET /napi/gemeinsam/kalender": true,
-		"GET /napi/standort": true, "POST /napi/standort": true, "GET /napi/app": true, "GET /napi/kann": true, "POST /napi/kann/anfordern": true, "GET /napi/einrichtung": true, "POST /napi/einrichtung/apps": true,
+		"GET /napi/standort": true, "POST /napi/standort": true, "GET /napi/kann": true, "POST /napi/kann/anfordern": true, "GET /napi/einrichtung": true, "POST /napi/einrichtung/apps": true,
 		"POST /napi/standort/import": true, "HEAD /napi/standort/import/{id}": true, "PATCH /napi/standort/import/{id}": true, "GET /napi/standort/import/{id}": true,
 	}
-	// what the source registers: "METHOD /napi/…" and "METHOD "+prefix+"/…" (prefix is /napi/box)
-	re := regexp.MustCompile(`HandleFunc\("([A-Z]+) (?:(/napi/[^"]*)"|"\+prefix\+"([^"]*)")`)
+	// what the source registers: "METHOD /napi/…" and "METHOD "+app.BoxPrefix+"/…"
+	re := regexp.MustCompile(`HandleFunc\("([A-Z]+) (?:(/napi/[^"]*)"|"\+app\.BoxPrefix\+"([^"]*)")`)
 	files, _ := filepath.Glob("*.go")
 	for _, f := range files {
 		if strings.HasSuffix(f, "_test.go") {

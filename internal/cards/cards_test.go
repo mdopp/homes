@@ -1,7 +1,6 @@
 package cards
 
 import (
-	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -43,23 +42,6 @@ func TestCardIDs(t *testing.T) {
 	}
 }
 
-// The same card goes to the widgets as JSON (haus#12): no null anywhere,
-// Android reads it as "null".
-func TestCardJSONHasNoNull(t *testing.T) {
-	for _, c := range []Card{{Title: "Jetzt"}, {Title: "Haushalt", Rows: []Row{{Text: "Müll"}}}} {
-		b, err := json.Marshal(c)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if strings.Contains(string(b), "null") {
-			t.Fatalf("null in %s", b)
-		}
-		if !strings.Contains(string(b), `"rows":[`) || !strings.Contains(string(b), `"title":`) {
-			t.Fatalf("shape: %s", b)
-		}
-	}
-}
-
 // haus#12: a row may lead somewhere (a note, the calendar); its text stays
 // text and its address is escaped. A row without one is no link.
 func TestRowLinks(t *testing.T) {
@@ -69,10 +51,6 @@ func TestRowLinks(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Errorf("%q missing:\n%s", want, got)
 		}
-	}
-	b, _ := json.Marshal(Card{Title: "x", Rows: []Row{{Text: "Müll"}, {Text: "a", Href: "/kalender"}}})
-	if strings.Contains(string(b), "null") || !strings.Contains(string(b), `"href":"/kalender"`) {
-		t.Fatalf("json: %s", b)
 	}
 }
 

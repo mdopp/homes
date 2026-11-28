@@ -144,7 +144,8 @@ budget() { # budget <name> <cap> <dir…>
 # Kontakte's tel:/mailto: links holding only the value, the live stream's frame as one function; the review's „Ist das jemand, den du schon hast?“
 # (the candidates with their reasons, „Damit zusammenführen“ before → after against one, the way back), the review message over laib tell
 # 2026-11-28, clean-up (owner 2026-11-28: „schau auch mal, ob wir nicht mal wieder Code aufräumen können“), lowered, no approval needed (pages 21,367 -> 21,359; 21,358 used, the minimum): gesehen.go's two cards one function (gesehenKarte), history comments
-budget pages 21359 internal/pages     # the family's pages, one per file: 14,684
+# 2026-11-28, owner 2026-11-28: „Alles alte kann weg. Keine Rückwärtskompatibilität notwendig.“, lowered, no approval needed (pages 21,359 -> 21,343; 21,342 used, the minimum): the redirects /nachrichten-sichern, /box/dienste, /box/operator, the Aufgaben' befund and haus: fallbacks, the widget names and counted routes no app has
+budget pages 21343 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-05, owner 2026-11-05: writable Homes-Konto (5,033 -> 5,121): PUT and DELETE of one shared
 # appointment or card for the phones, the Papierkorb on delete, the feed for a phone that writes back
 # 2026-11-07, owner approved 2026-11-07: Kontakt prüfen lassen (5,114 -> 5,224): the phone's accepted
@@ -172,7 +173,8 @@ budget pages 21359 internal/pages     # the family's pages, one per file: 14,684
 # 2026-11-28, owner's request 2026-11-28 (Kontaktdaten eintragen lassen), owner approved 2026-11-28 „Passt“ (napi 5,828 -> 5,867; 5,866 used, the minimum): kontakte_fragen.go: POST /napi/kontakte/einladen, the admin check shared with /fragen
 # 2026-11-28, owner's request 2026-11-28 (Kontakt austauschen), owner approved 2026-11-28 „Passt“ (napi 5,867 -> 6,075; 6,074 used, the minimum): teilen.go: POST, PUT, GET and DELETE /napi/teilen, the refusals in words, eintragen an admin's
 # 2026-11-28, clean-up (owner 2026-11-28: „schau auch mal, ob wir nicht mal wieder Code aufräumen können“), lowered, no approval needed (napi 6,075 -> 6,045; 6,044 used, the minimum): personOf for the device's person, sagNein folded into refuse, the energy aliases and wrappers gone
-budget napi 6045 internal/napi        # the app's widgets' and share sheet's API: 4,793
+# 2026-11-28, owner 2026-11-28: „Alles alte kann weg. Keine Rückwärtskompatibilität notwendig.“, lowered, no approval needed (napi 6,045 -> 5,828; 5,827 used, the minimum): the old Box screen's keys (services, approvals, upgrades, operate, the 403 verdicts), /napi/app, /napi/persona, the entity history, the camera snapshot, the ._haus- staging
+budget napi 5828 internal/napi        # the app's widgets' and share sheet's API: 4,793
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): the module catalog,
 # cmd/homes/module.go, 1,150 with it; plus 5 %. H3–H6 move the routes out of main.go into it
 # 2026-11-04, step H8 (§10, owner: „Keine Funktion soll versteckt werden“): the routes of the traces
@@ -200,7 +202,8 @@ budget napi 6045 internal/napi        # the app's widgets' and share sheet's API
 # 2026-11-27, owner approved the app's start screen 2026-11-27 („Bitte umsetzen“, homes-android#290), owner approved 2026-11-27 („Bau alles“) (cmd 1,542 -> 1,580; 1,579 used, the minimum): bereiche: the tags, the archive's line, Paperless's week
 # 2026-11-28, owner 2026-11-28: Energie-Widget ausgebaut (cmd 1,580 -> 1,579; 1,578 used): the energie module offers no widget
 # 2026-11-28, owner's request 2026-11-28 (Kontakt austauschen), owner approved 2026-11-28 „Passt“ (cmd 1,579 -> 1,581; 1,580 used, the minimum): the in-memory sessions, shared by /napi/teilen and the kontakt listener
-budget cmd 1581 cmd/homes             # homes' wiring: 1,018 with the demo then
+# 2026-11-28, owner 2026-11-28: „Alles alte kann weg. Keine Rückwärtskompatibilität notwendig.“, RAISED, needs the owner's yes (cmd 1,581 -> 1,748; 1,747 used, the minimum): umbenennen.go, the one-time migration of what is stored under Haus' names (ansicht and Papierkorb paths, the cards' PRODID, usage-metrics' counts); it goes in a follow-up once the box ran it (its markers in HOMES_DATA/umbenannt/), and cmd falls to ~1,585
+budget cmd 1748 cmd/homes             # homes' wiring: 1,018 with the demo then
 # 2026-11-04, the caps moved with the packages, none raised (sum 24,134 as before): abs and
 # musicbrainz (1,227 lines, 1,289 of cap) from household to connectors once merken's fetcher
 # was internal/abruf (235 lines of merken, 247 of cap, to shared) and jellyfin.Plain
@@ -274,7 +277,8 @@ budget cmd 1581 cmd/homes             # homes' wiring: 1,018 with the demo then
 # was lost), owner approved 2026-11-28 „Ja zu allen“ (connectors 16,979 -> 17,051; 17,050 used, the minimum): ha.Registrierung's os_version, ha.MobileAppBroken; the fake's failed setup
 # 2026-11-28, owner's request 2026-11-28 (öffentliche Kontaktseiten absichern, Dubletten beim Prüfen), owner approved 2026-11-28 „Mach das bitte“ (connectors 17,051 -> 17,054; 17,053 used, the minimum): a fix: caldav.Fold, so teilen's .vcf folds its lines
 # 2026-11-28, clean-up (owner 2026-11-28: „schau auch mal, ob wir nicht mal wieder Code aufräumen können“), lowered, no approval needed (connectors 17,054 -> 17,047; 17,046 used, the minimum): discogs' digits and caldav.TelSchluessel's as namen.Ziffern
-budget connectors 17047 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
+# 2026-11-28, owner 2026-11-28: „Alles alte kann weg. Keine Rückwärtskompatibilität notwendig.“, lowered, no approval needed (connectors 17,047 -> 16,967; 16,966 used, the minimum): ha.Camera, the fake's camera, laib.Restart, caldav.LegacyAccountPath; caldav.Telefon (from haushalt.International and TelSchluessel) and ProdIDErsetzen (the migration's, +20)
+budget connectors 16967 $connectors   # one client per service, with its fake: 11,327, 12,543 with abs and musicbrainz
 # 2026-11-04, internal/jsonfile (47 lines, 50 of cap) from household's cap to shared's: it
 # replaces nine copies of a save, 62 of their lines in household
 # 2026-11-05, owner 2026-11-05 yes: Immich for the contacts (9,583 -> 9,874):
@@ -359,7 +363,8 @@ budget connectors 17047 $connectors   # one client per service, with its fake: 1
 # invisible characters, its token hash compared in constant time, the .vcf folded; kontaktantwort.Kandidaten (same mobile, number, e-mail,
 # a similar name; ranked, five at most, with their reasons) instead of Treffer
 # 2026-11-28, clean-up (owner 2026-11-28: „schau auch mal, ob wir nicht mal wieder Code aufräumen können“), lowered, no approval needed (household 17,818 -> 17,793; 17,792 used, the minimum): haushalt's, takeout's and zugang's digits as namen.Ziffern, haushalt.Day/DayTime/BirthdayText without wrappers, Freigabe.Satz, kontaktantwort.Mobil by mobilNummer
-budget household 17793 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
+# 2026-11-28, owner 2026-11-28: „Alles alte kann weg. Keine Rückwärtskompatibilität notwendig.“, RAISED, needs the owner's yes (household 17,793 -> 17,847; 17,846 used, the minimum): the migration's halves in their packages (usage.Umziehen, ansicht.Umschreiben, papierkorb.Umschreiben, tagaktion's rewrite on open, +88) against kontaktantwort's old-shape reads, haushalt.International and devices' old prefix (-35); falls under the old cap with the follow-up that drops the migration
+budget household 17847 $household   # the household's own logic: 10,638, 9,176 without them and the fetcher
 # 2026-11-04, homes ADR 0001 step H1 (owner: „ganz durchziehen“): internal/modul, what an area
 # says about itself and the list Homes builds from them, 1,472 with it; plus 5 %
 # 2026-11-04, step H8 (§10): the traces and wishes in internal/modul, and internal/texte, the one
@@ -375,7 +380,8 @@ budget household 17793 $household   # the household's own logic: 10,638, 9,176 w
 # Accept-Language read by its weights (RFC 9110), and In finding the translations
 # 2026-11-28, owner's request 2026-11-28 (öffentliche Kontaktseiten absichern, Dubletten beim Prüfen), owner approved 2026-11-28 „Mach das bitte“ (shared 1,960 -> 1,980; 1,979 used, the minimum): a fix: namen.Sichtbar, what shows nothing (bidi, zero-width, C1) dropped
 # 2026-11-28, clean-up (owner 2026-11-28: „schau auch mal, ob wir nicht mal wieder Code aufräumen können“), lowered, no approval needed (shared 1,980 -> 1,977; 1,976 used, the minimum): namen.Ziffern (+4), texte.In without the one-language table sprachen, texte's package comment
-budget shared 1977 $(echo "$shared" | sed 's#internal/texte ##') internal/texte/texte.go # the card, Markdown, the app's names: 1,019; abruf, namen: 1,287; jsonfile: 1,334
+# 2026-11-28, owner 2026-11-28: „Alles alte kann weg. Keine Rückwärtskompatibilität notwendig.“, lowered, no approval needed (shared 1,977 -> 1,960; 1,959 used, the minimum): cards.Card.MarshalJSON, app.LegacyTokenPrefix
+budget shared 1960 $(echo "$shared" | sed 's#internal/texte ##') internal/texte/texte.go # the card, Markdown, the app's names: 1,019; abruf, namen: 1,287; jsonfile: 1,334
 
 # every package in one area
 for d in internal/*/; do

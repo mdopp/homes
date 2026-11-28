@@ -28,15 +28,12 @@ func TestMintLookupRevoke(t *testing.T) {
 		t.Fatal("a token without homes_device_ accepted")
 	}
 	s.list = s.list[:len(s.list)-1]
-	// laib#1021: a phone paired with the old Haus app keeps its token; the
-	// stored hash is the one minted then
+	// owner 2026-11-28: the old Haus app's haus_device_ tokens are no
+	// device any more, whatever hash devices.json holds
 	legacy := "haus_device_" + strings.Repeat("y", 43)
 	s.list = append(s.list, Device{ID: "haus", Name: "Telefon mit der Haus-App", UID: "mdopp", Hash: hash(legacy)})
-	if got, ok := s.Lookup(legacy); !ok || got.ID != "haus" {
-		t.Fatalf("a haus_device_ token of a paired phone refused: %v %+v", ok, got)
-	}
-	if _, ok := s.Lookup("haus_device_nope"); ok {
-		t.Fatal("unknown legacy token accepted")
+	if _, ok := s.Lookup(legacy); ok {
+		t.Fatal("a haus_device_ token accepted")
 	}
 	s.list = s.list[:len(s.list)-1]
 	// the file holds the hash, never the token

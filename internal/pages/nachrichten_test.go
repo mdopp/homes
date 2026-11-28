@@ -23,7 +23,7 @@ func TestDatenSichernIsOnMeineDaten(t *testing.T) {
 	os.WriteFile(filepath.Join(data, "sicherung", "anna", "signal.jsonl"), []byte(`{"pfad":"s.backup","groesse":2048,"zeit":"2026-11-04T02:00:00Z"}`+"\n"), 0o600)
 	now := time.Date(2026, 11, 4, 12, 0, 0, 0, time.UTC)
 	cfg := StartConfig{Sicherung: napi.NewSicherung(inbox, data), Module: modulListe(t, "sicherung"), Loc: berlin(t), Now: func() time.Time { return now }}
-	for _, old := range []string{DatenPath, NachrichtenPath} {
+	for _, old := range []string{DatenPath} {
 		if code, _, hdr := familyPage(t, Nachrichten, cfg, "GET", old, "family"); code != 301 || hdr.Get("Location") != MeineDatenPath {
 			t.Errorf("%s → %d %q", old, code, hdr.Get("Location"))
 		}

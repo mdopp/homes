@@ -68,7 +68,7 @@ func (f Frage) Eingetragen() Felder {
 // Why a household card may be the person of a new answer (owner 2026-11-28: „mit Vorschlägen,
 // mit wem das gemerged werden soll“), strongest first.
 const (
-	GleicheMobil   = "mobil"   // one of its numbers (caldav.TelSchluessel), a mobile one
+	GleicheMobil   = "mobil"   // one of its numbers (caldav.Telefon), a mobile one
 	GleicheNummer  = "telefon" // one of its numbers, another kind
 	GleicheMail    = "mail"    // one of its e-mail addresses, in any case
 	AehnlicherName = "name"    // its name as namen.Plain compares it, in any order of the words
@@ -91,7 +91,7 @@ func Kandidaten(all []caldav.Contact, f Frage, land string) []Kandidat {
 	n := f.Eingetragen()
 	tels := map[string]bool{} // its numbers' keys, true a mobile one
 	for _, t := range n.Telefone {
-		if k := caldav.TelSchluessel(t.Nummer, land); len(k) >= 6 {
+		if k := caldav.Telefon(t.Nummer, land); len(k) >= 6 {
 			tels[k] = tels[k] || t.Art == "mobil" || mobilNummer(k)
 		}
 	}
@@ -106,7 +106,7 @@ func Kandidaten(all []caldav.Contact, f Frage, land string) []Kandidat {
 		var gs []string
 		nummer := ""
 		for i, p := range ct.Phones {
-			k := caldav.TelSchluessel(p, land)
+			k := caldav.Telefon(p, land)
 			if mobil, da := tels[k]; da && nummer != GleicheMobil {
 				nummer = map[bool]string{true: GleicheMobil, false: GleicheNummer}[mobil || at(ct.PhoneKinds, i) == "mobil"]
 			}
@@ -149,7 +149,7 @@ func namenSchluessel(name string) string {
 	return strings.Join(ws, " ")
 }
 
-// mobilNummer says whether a number's digits (TelSchluessel, International) are a German mobile's (+49 15…, 16…, 17…).
+// mobilNummer says whether a number's digits (caldav.Telefon) are a German mobile's (+49 15…, 16…, 17…).
 func mobilNummer(k string) bool {
 	return len(k) >= 12 && (strings.HasPrefix(k, "4915") || strings.HasPrefix(k, "4916") || strings.HasPrefix(k, "4917"))
 }

@@ -166,7 +166,7 @@ func archivSuche(cfg StartConfig, ct caldav.Contact) string {
 		}
 	}
 	for _, p := range ct.Phones {
-		if d := haushalt.International(p, cmp.Or(cfg.PhoneCountry, haushalt.DefaultCountry)); len(d) > 4 {
+		if d := caldav.Telefon(p, cmp.Or(cfg.PhoneCountry, haushalt.DefaultCountry)); len(d) > 4 {
 			add("+" + d)
 		}
 	}

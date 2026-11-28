@@ -8,7 +8,7 @@ a count per event and **UTC day**, nothing else. Never who: no
 `Remote-User`, no device token, no IP, no content, no search words, no
 entity — a request's query is read only for the widget source tag below.
 The counts go to **usage-metrics** (mdopp/usage-metrics, a Laib built-in,
-`POST /ingest`, app `haus`: the counted history's key, kept) with `HOMES_USAGE_URL` and `HOMES_USAGE_TOKEN`
+`POST /ingest`, app `homes`; the counts made under the old app `haus` are copied to it day by day once at start, `cmd/homes/umbenennen.go`) with `HOMES_USAGE_URL` and `HOMES_USAGE_TOKEN`
 (laib's `templates/homes` wires both; unset, Homes counts nothing and the
 Box card is absent). Counting is a map increment in memory; a flush every
 five minutes sends one increment per counter, and SIGTERM sends what is
@@ -25,7 +25,7 @@ says so once in the log; a page never waits for it.
 | `sprechen.mikrofon` | speech turned into words for the field (never what) | *Ins Mikrofon gesprochen* |
 | `gestoert.<page>.<line>` | a page showed a plain line because something did not answer: `licht`, `raeume`, `kalender`, `kontakte`, `notizen`, `bedeutung`, `dokumente`, `favoriten`, `favoriten-verdeckt`, `strom`, `strom-heute`, `verlauf`, `lautsprecher`, `schalten`, `bote`, `bote-langsam`, `box`, `laib`, `github`, `dienste` | the line itself and where: *„Licht und Geräte antworten gerade nicht.“ auf Start* |
 | `napi.<path>` | a paired phone's `/napi` request, by path without wildcards (`napi.portal.state`, `napi.box.home`, `napi.ha.call`, …) | *Geräte-Widget aktualisiert*, … |
-| `von.widget.<kind>` | a page opened from a widget, `?von=widget.<kind>` (homes-android#181): `device`, `devices`, `active`, `energy`, `energy-stats`, `energy-totals`, `box-overview`, `box-services`, `tool`; any other value counts nothing | *Vom Widget „Gerät“ aus geöffnet* |
+| `von.widget.<kind>` | a page opened from a widget, `?von=widget.<kind>` (homes-android#181): `device`, `tool` (the app's two widgets; the others are gone, 2026-11-28); any other value counts nothing | *Vom Widget „Gerät“ aus geöffnet* |
 
 **The voice control** (Home Assistant Assist), app `stimme`, when HA is
 configured: HA keeps the last ten runs of each Assist pipeline in memory

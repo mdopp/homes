@@ -50,7 +50,7 @@ func TestRoutesCountPageViews(t *testing.T) {
 		got[k.App+" "+k.Event] += n
 	}
 	// testSite's Laib does not answer: the family is told nothing (owner 2026-11-07), so nothing degraded is counted
-	if want := map[string]int64{"haus seite.start": 2, "haus von.widget.device": 1}; !reflect.DeepEqual(got, want) {
+	if want := map[string]int64{"homes seite.start": 2, "homes von.widget.device": 1}; !reflect.DeepEqual(got, want) {
 		t.Errorf("counted %v, want %v", got, want)
 	}
 	for _, b := range fake.Bodies() {
@@ -116,7 +116,7 @@ func TestSIGTERMFlushes(t *testing.T) {
 	case <-time.After(10 * time.Second):
 		t.Fatalf("homes did not stop on SIGTERM\n%s", logs.String())
 	}
-	if n := fake.Counts()[usagefake.Count{App: "haus", Event: "seite.start", Day: time.Now().UTC().Format(time.DateOnly)}]; n != 1 {
+	if n := fake.Counts()[usagefake.Count{App: "homes", Event: "seite.start", Day: time.Now().UTC().Format(time.DateOnly)}]; n != 1 {
 		t.Errorf("seite.start %d after SIGTERM, want 1: %v\n%s", n, fake.Counts(), logs.String())
 	}
 }

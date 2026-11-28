@@ -315,8 +315,8 @@ func hasPrefixFold(s, prefix string) bool {
 	return len(s) >= len(prefix) && strings.EqualFold(s[:len(prefix)], prefix)
 }
 
-// prodID keeps the old name: stored data, on every entry already in Radicale (laib#1021).
-const prodID = "-//mdopp//Haus Takeout-Import//DE"
+// prodID is the import's PRODID; nothing reads it back.
+const prodID = "-//mdopp//Homes Takeout-Import//DE"
 
 // calName is a calendar's name: X-WR-CALNAME, else its file's.
 func calName(file string, own []string) string {
@@ -376,7 +376,8 @@ func calendar(ctx context.Context, a *archive, file string, t Target, rep *Repor
 			case "VEVENT", "VTODO":
 				uid := c.prop("UID")
 				if uid == "" {
-					// "@haus" stays (stored data, laib#1021): a second import finds the same UID
+					// "@haus" is part of the id the imported entries carry in Radicale: a
+					// second import finds the same UID (owner 2026-11-28: kept, see the PR)
 					uid = "takeout-" + id(c.prop("SUMMARY"), c.prop("DTSTART"), c.prop("DTEND"), c.prop("DUE")) + "@haus"
 					c.lines = append([]string{c.lines[0], "UID:" + uid}, c.lines[1:]...)
 				}

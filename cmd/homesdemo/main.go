@@ -162,7 +162,7 @@ func main() {
 	seen := &gesehen.Service{Filme: demoFilme{}, Buecher: &abs.Client{URL: absFake.URL, Token: "demo"}, DAV: cal}
 	live := &pages.Live{}
 	cfg := pages.StartConfig{Gesehen: seen, Einkauf: list, Wuensche: wishes, Discogs: shelves, Podcasts: pods, HA: &ha.Client{URL: fake.URL, Token: "demo"}, Notes: nd, Favorites: favoriten.Open(dir), MusicInbox: inbox,
-		Calendar: cal, Views: ansicht.Open(dir, "homes"),
+		Calendar: cal, Views: ansicht.Open(dir),
 		RadicalePublicURL: "https://caldav.example", Fetcher: abruf.Fetcher{AllowPrivate: true}}
 	// what the box lacks (ADR 0001 §10): Standortverlauf missing, Netzlaufwerk switched off, a wish to Laib
 	cfg.Module = demoModule(false)

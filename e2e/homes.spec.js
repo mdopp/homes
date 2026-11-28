@@ -885,8 +885,6 @@ test('Box: three tabs fit a phone, the Übersicht says what needs me, Haushalt l
   await rows.filter({ hasText: 'Personen' }).locator('a').click();
   await expect(page).toHaveURL(/\/box\/personen$/);
   await expect(page.locator('nav.unter a[aria-current=page]')).toHaveText('Haushalt');
-  await page.goto('/box/operator');
-  await expect(page).toHaveURL(/\/box#operator$/);
 });
 
 // owner 2026-11-06: Box → Auslastung, the box's values; only they come again,

@@ -2,54 +2,16 @@ package napi
 
 import (
 	"context"
-	"errors"
-	"log"
 	"net/http"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/mdopp/homes/internal/ha"
 )
 
-// The camera widget (haus#10): its picker reads /napi/portal/start/addable
-// and keeps domain == camera (CameraWidgetConfigActivity.kt); the device
-// picker and the app-icon menu read the same list for the actuators. The
-// widget then polls a frame (ApiClient.getCameraSnapshot).
-
-// snapshotMax caps one camera frame; the widget downscales to 640 px anyway.
-var snapshotMax int64 = 8 << 20
-
-// what a picker offers: the actuators a device widget switches, and cameras
-var addableDomains = set("light", "switch", "cover", "climate", "media_player", "lock", "camera")
-
-// GET /napi/portal/camera/{entity_id}/snapshot → the frame's bytes, camera.* only.
-func (h *homeAPI) snapshot(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("entity_id")
-	if !ha.EntityRE.MatchString(id) || !strings.HasPrefix(id, "camera.") {
-		refuse(w, http.StatusBadRequest, "invalid entity_id")
-		return
-	}
-	ctx, cancel := context.WithTimeout(r.Context(), rowsTimeout)
-	defer cancel()
-	img, ctype, err := h.ha.Camera(ctx, id, snapshotMax)
-	switch {
-	case errors.Is(err, ha.ErrNotFound):
-		refuse(w, http.StatusNotFound, "unknown_entity")
-		return
-	case err != nil:
-		log.Printf("homes: camera %s: %v", id, err)
-		refuse(w, http.StatusBadGateway, "ha_unavailable")
-		return
-	}
-	w.Header().Set("Content-Type", ctype)
-	w.Header().Set("Content-Length", strconv.Itoa(len(img)))
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	// the widget polls; a burst of refreshes may share a frame, nobody else may keep it
-	w.Header().Set("Cache-Control", "private, max-age=5")
-	w.Write(img)
-}
+// The device picker and the app-icon menu read /napi/portal/start/addable:
+// the actuators a device widget switches (actuatorDomains).
 
 // GET /napi/portal/start/addable → {ok, rooms:[{room, cards:[{entity_id, name,
 // domain, state, device_class?}]}], automations:[]}: rooms by name, the
@@ -68,7 +30,7 @@ func (h *homeAPI) addable(w http.ResponseWriter, r *http.Request) {
 	rooms := map[string][]map[string]any{}
 	for _, s := range states {
 		domain, _, _ := strings.Cut(s.EntityID, ".")
-		if !addableDomains[domain] || !ha.EntityRE.MatchString(s.EntityID) {
+		if !actuatorDomains[domain] || !ha.EntityRE.MatchString(s.EntityID) {
 			continue
 		}
 		name, _ := s.Attributes["friendly_name"].(string)

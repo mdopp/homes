@@ -72,17 +72,14 @@ type stageFile interface {
 // stagePrefix names a part written aside; Paperless ignores ._* files.
 const stagePrefix = "._homes-"
 
-// legacyStagePrefix: what Haus staged as before the rename, swept too; ends with laib#1021 step 9.
-const legacyStagePrefix = "._haus-"
-
-// SweepUploads removes parts a stopped Homes (or Haus) left staged in dir.
+// SweepUploads removes parts a stopped Homes left staged in dir.
 func SweepUploads(dir string) error {
 	es, err := os.ReadDir(dir)
 	if err != nil {
 		return err
 	}
 	for _, e := range es {
-		if n := e.Name(); e.Type().IsRegular() && (strings.HasPrefix(n, stagePrefix) || strings.HasPrefix(n, legacyStagePrefix)) && strings.HasSuffix(n, ".part") {
+		if n := e.Name(); e.Type().IsRegular() && strings.HasPrefix(n, stagePrefix) && strings.HasSuffix(n, ".part") {
 			if err := os.Remove(dir + "/" + n); err != nil {
 				return err
 			}

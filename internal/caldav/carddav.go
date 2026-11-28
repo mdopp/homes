@@ -225,6 +225,27 @@ func (c *Client) AmendCard(ctx context.Context, cd Card, add []string, note stri
 	return err
 }
 
+// ProdIDErsetzen writes the card back with Homes' PRODID where it carries
+// PRODID:alt, over the ETag it read (If-Match), every other line as it is;
+// false and no write when it carries none (the rename's migration, cmd/homes).
+func (c *Client) ProdIDErsetzen(ctx context.Context, cd Card, alt string) (bool, error) {
+	lines := strings.SplitAfter(cd.data, "\n")
+	i := slices.IndexFunc(lines, func(l string) bool { return strings.TrimRight(l, "\r\n") == "PRODID:"+alt })
+	if i < 0 {
+		return false, nil
+	}
+	lines[i] = "PRODID:" + prodID + "\r\n"
+	if cd.etag == "" || cd.href == "" {
+		return false, errors.New("Adressbuch: Radicale nennt für die Karte kein ETag; ohne schreibt Homes nicht zurück")
+	}
+	u, err := c.resolve(cd.href)
+	if err != nil {
+		return false, err
+	}
+	_, err = c.rewrite(ctx, u, "text/vcard", cd.etag, strings.Join(lines, ""))
+	return err == nil, err
+}
+
 // AsWritten says whether the card is still as Homes wrote it: Homes' PRODID
 // (a phone that edits a card writes its own).
 func (cd Card) AsWritten() bool { return slices.Contains(unfold(cd.data), "PRODID:"+prodID) }

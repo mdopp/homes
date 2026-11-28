@@ -11,4 +11,3 @@ internal/pages/kontakt_frage.go #fff  # a photo with transparency is flattened o
 internal/pages/symbol/icon.svg #3ddc84 #0c120e  # the Homes icon (owner 2026-11-02), the same mark as homes-android's: an image, not the pages' look
 internal/pages/symbol/favicon.svg #3ddc84 #0c120e  # rendered from icon.svg by tools/icons
 internal/pages/symbol.go #0c120e  # the manifest's splash ground is the icon's
-internal/napi/napi.go #3ddc84 #0c120e  # /napi/persona: the icon's colours for app builds before dev.249, a bridge to remove with it

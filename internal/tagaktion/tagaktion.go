@@ -13,6 +13,7 @@ package tagaktion
 
 import (
 	"encoding/json"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -27,16 +28,9 @@ const (
 	ScannerHaushalt = "scanner-haushalt" // a stack for the household
 )
 
-// alt are the names §4 stored, read as §8's (ADR 0004 amendment).
-var alt = map[string]string{"scannen-ich": ScannerIch, "scannen-haushalt": ScannerHaushalt}
-
-// Aktuell is a, under its current name: an old one as §8's, any other as it is.
-func Aktuell(a string) string {
-	if n, ok := alt[a]; ok {
-		return n
-	}
-	return a
-}
+// umbenannt are the names §4 stored and §8 renamed (ADR 0004 amendment):
+// Open rewrites a file that still holds one, once (owner 2026-11-28).
+var umbenannt = map[string]string{"scannen-ich": ScannerIch, "scannen-haushalt": ScannerHaushalt}
 
 // Titel is each action in the family's words, in the order offered.
 var Titel = []struct{ ID, Titel string }{
@@ -46,11 +40,10 @@ var Titel = []struct{ ID, Titel string }{
 	{ScannerHaushalt, "Scanner – direkt für den Haushalt"},
 }
 
-// Gibt says whether a is an action a tag can carry ("" included, an old
-// name too).
+// Gibt says whether a is an action a tag can carry ("" included).
 func Gibt(a string) bool {
 	for _, t := range Titel {
-		if t.ID == Aktuell(a) {
+		if t.ID == a {
 			return true
 		}
 	}
@@ -75,8 +68,8 @@ type Store struct {
 }
 
 // Open reads dir/tag-aktionen.json; a missing file is no action anywhere.
-// An action stored under its old name is read under its new one (the
-// file keeps the old until the next write).
+// An action stored under its §4 name is rewritten to its §8 one and the
+// file saved, once.
 func Open(dir string) (*Store, error) {
 	s := &Store{path: filepath.Join(dir, "tag-aktionen.json"), m: map[string]string{}}
 	b, err := os.ReadFile(s.path)
@@ -89,8 +82,17 @@ func Open(dir string) (*Store, error) {
 	if err := json.Unmarshal(b, &s.m); err != nil {
 		return nil, err
 	}
+	n := 0
 	for tag, a := range s.m {
-		s.m[tag] = Aktuell(a)
+		if neu, ok := umbenannt[a]; ok {
+			s.m[tag], n = neu, n+1
+		}
+	}
+	if n > 0 {
+		if err := jsonfile.Save(s.path, s.m); err != nil {
+			return nil, err
+		}
+		log.Printf("homes: tag-aktionen: %d action(s) renamed from scannen-* to scanner-* (ADR 0004 §8), once", n)
 	}
 	return s, nil
 }
@@ -104,7 +106,6 @@ func (s *Store) Von(tag string) string {
 
 // Setze gives tag the action a ("" takes it away) and writes the file.
 func (s *Store) Setze(tag, a string) error {
-	a = Aktuell(a)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	alt, had := s.m[tag]

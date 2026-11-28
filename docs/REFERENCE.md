@@ -15,7 +15,7 @@ and messages to people go through their chat channel, not the app (laib ADR
 Laib (box.yml `assistant:`, reaching Homes as `HOMES_ASSISTANT`; *Homes*
 without it). The
 app's names (scheme `cloud.dopp.homes`, token prefix
-`homes_device_`, the Box keys under `/napi/box`) live in `internal/app`; a
+`homes_device_`, the Box key under `/napi/box`) live in `internal/app`; a
 `/napi` path wants a paired device (`Authorization: Bearer homes_device_…`,
 else 401, the unknown paths too); one Homes does not serve, or whose backend
 is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
@@ -560,7 +560,7 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     jemand, den du schon hast?* (owner 2026-11-28): the household's cards
     that may be that person (`kontaktantwort.Kandidaten`), the most likely
     first, five at most, each with its reasons — *gleiche Mobilnummer*
-    (one of its numbers as `caldav.TelSchluessel`, a mobile one), *gleiche
+    (one of its numbers as `caldav.Telefon`, a mobile one), *gleiche
     Telefonnummer*, *gleiche E-Mail* (any case), *ähnlicher Name*
     (`namen.Plain` per word, in any order: *Muster, Erika* is *Erika
     Muster*) — and *Damit zusammenführen*, a link to
@@ -1165,8 +1165,7 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   zählt seit …*, where counted) — each opening its page
   (`/box/personen`, `/box/geraete`, `/adresse`, `/box/module`,
   `/box/nutzung`), which keep their content and are not in the tab bar.
-  `/box/dienste` and `/box/operator` redirect (302) to `/box` and
-  `/box#operator`. It comes at once
+  It comes at once
   (haus#81): the frame and each part's place with „lädt …“; its script
   fetches every part at the same time from `GET /box/teil?was=<part>`
   (`stand`, `operator`, `werkstatt`, `auslastung`, `haushalt`, `einladen`, `module`, `genutzt`: JSON,
@@ -1184,18 +1183,14 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   carry `X-Homes-Proxy: <HOMES_PROXY_SECRET>`, which only Caddy adds; the
   loopback port is shared with every host-network container, so without
   the secret nobody is anybody.
-- `/napi/box/{home,services,approvals,upgrades}` — the four Box keys the
-  widgets read, from `laib status`, `laib inbox`. `pendingUpdates` and
-  `upgrades` are the open proposals of kind `template-update` (`laib
-  template sync --propose` files one per update); `pendingApprovals` and
-  `approvals` are the others. An update is counted once, as an update. `home`'s
-  `gut` (bool, owner 2026-11-27) is whether the start screen may say *Deinem
-  Zuhause geht es gut.*: Laib's readiness `bereit`, no `problems`, every
-  service green (yellow is not well; `laib.Gut`, the page's rule too);
-  false, the neutral *Dein Zuhause, klar im Blick.*; `home` failing (Laib
-  silent), neutral as well. `POST …/services/{name}/operate`
-  (restart). `POST …/approvals/{id}/approve|deny` answers 403: Homes decides
-  nothing (haus#1); approvals reach the admin through the relay (laib ADR 0012).
+- `GET /napi/box/home` — `{"gut": bool}` (owner 2026-11-27), from `laib
+  status`: whether the app's start screen may say *Deinem Zuhause geht es
+  gut.*: Laib's readiness `bereit`, no `problems`, every service green
+  (yellow is not well; `laib.Gut`, the page's rule too); false, the neutral
+  *Dein Zuhause, klar im Blick.*; Laib silent, 502, neutral as well. The
+  old Box screen's keys (`services`, `approvals`, `upgrades`, `operate`, the
+  403 verdicts) are gone (owner 2026-11-28): 404 as every path Homes does
+  not serve. Homes decides nothing (haus#1).
 
 - Pairing: in the app, enter Homes' address, `https://www.<domain>`. The app opens
   `/pair-device` in a Custom Tab, Authelia logs the person in, they confirm,
@@ -1205,13 +1200,9 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   (`cloud.dopp.homes://setup?server=…&token=…`) goes into a QR code the app
   scans. That URI is QR content, not a link: the app only opens `…://pair`.
   Tokens live hashed in `HOMES_DATA/devices.json`; `/napi/whoami` answers for
-  them. Only a bearer with `homes_device_` is a device — and, until every
-  phone runs the Homes app (laib#1021), one with the old Haus app's
-  `haus_device_` whose hash is stored: a phone paired with Haus keeps
-  working. `GET /napi/app` (a device token) answers
-  `{"name":"Homes","paket":"cloud.dopp.homes","quelle":"https://github.com/mdopp/homes-android"}`:
-  the old app (`cloud.dopp.haus`) sees the package is not its own and tells
-  the person to install Homes and remove Haus afterwards.
+  them. Only a bearer with `homes_device_` is a device (owner 2026-11-28:
+  the old Haus app's `haus_device_` and its `GET /napi/app` are gone; the
+  box's one paired phone was paired with Homes, 2026-11-08).
 
 - Homes' address is `HOMES_PUBLIC_URL`, `https://www.<domain>` on the box
   (laib ADR 0031 amendment, owner 2026-11-07); every link Homes makes uses
@@ -1384,7 +1375,7 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   `stop_cover_tilt`, answers **403 `sensitive_action`** without
   `confirmed:true`; HA refusing the call is 400, HA in trouble is 502
   `ha_unavailable`, HA's detail stays in Homes' log) and
-  `GET /napi/portal/{state,energy,entity-history,active}`. Every one wants
+  `GET /napi/portal/{state,energy,active}`. Every one wants
   a paired device. The shapes are the ones the app's `data/ApiClient.kt` parses; no JSON `null` goes out
   (Android reads it as `"null"`). Every card names its thing's page
   (`page`, `/raeume/<entity_id>`).
@@ -1466,14 +1457,10 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   another. `: ping` every 90s, at
   most three streams per device; watch answers 503 while HA does not. The
   app holds it only while the screen is on.
-- The camera widget, from Home Assistant too (haus#10):
-  `GET /napi/portal/camera/{entity_id}/snapshot` passes HA's
-  `camera_proxy` frame for a `camera.*` entity only (anything else 400,
-  an unknown camera 404), and only a JPEG, PNG, GIF or WebP of at most
-  8 MB (else 502), `Cache-Control: private, max-age=5`.
-  `GET /napi/portal/start/addable` is what both pickers read: the device
-  picker the actuators (`light|switch|cover|climate|media_player|lock`),
-  the camera picker the cameras; `{ok, rooms:[{room, cards:[{entity_id,
+- `GET /napi/portal/start/addable` is what the device picker and the
+  app-icon menu read: the actuators (`light|switch|cover|climate|media_player|lock`;
+  the camera widget, its snapshot route and the entity history are gone,
+  owner 2026-11-28); `{ok, rooms:[{room, cards:[{entity_id,
   name, domain, state, device_class?}]}], automations:[]}`, rooms by
   name, the room-less last.
 - The app's start screen (owner, 2026-11-02): `GET /napi/portal/favorites`
@@ -1554,8 +1541,8 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   answer or refuses (HA's detail stays in the log). Without HA, 404 as
   every house path. A tag's own action (ADR 0004 §4, §8): `"aktion"` in
   `POST /napi/ausloeser/tag` (`""` HA, `scanner-fragen`, `scanner-ich`,
-  `scanner-haushalt`; §4's `scannen-ich`/`scannen-haushalt` are taken and
-  stored files read under the new names; absent: unchanged; one this box
+  `scanner-haushalt`; a file that still holds §4's `scannen-ich`/`scannen-haushalt`
+  is rewritten to the new names once at start; absent: unchanged; one this box
   cannot do, 400) is kept in `HOMES_DATA/tag-aktionen.json`; `GET …/tags`
   gives each tag its `aktion` and the box's `aktionen` `[{"id","titel"}]`
   (the app renders these, ids and titles: „Home Assistant melden“,
@@ -1661,7 +1648,7 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   and 20 files a request. The name is the phone's, made plain (no
   folder, no hidden file, letters, digits, umlauts (decomposed ones
   composed), ` ._-`, anything else `_`), plus `-<8 hex>` and the type's
-  extension. A file is written aside as `._haus-….part` (Paperless
+  extension. A file is written aside as `._homes-….part` (Paperless
   ignores `._*`; stale ones are swept at start) and renamed into place
   with `renameat2(RENAME_NOREPLACE)`, which Paperless's inotify consumer
   sees as `MOVED_TO`; without it (kernel, file system) a hard link. Either
@@ -1716,7 +1703,7 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   eingerichtet.*). A piece may stall 45 s; parts untouched for seven days
   go (at start and daily). *Daten sichern* is one page with *Meine Daten*
   since homes#362 (owner 2026-11-12: one entry in Mehr): `/daten-sichern`
-  and the old `/nachrichten-sichern` redirect (301) to *Meine Daten*
+  (the app's link) redirects (301) to *Meine Daten*
   (`/meine-daten`, homes#342, under Mehr for everyone signed in), which says where each source of the
   signed-in person stands, once: per source a dot and one line — current
   (*zuletzt …* with how much), quiet past its threshold (*still seit …* and
@@ -1811,7 +1798,7 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   and 12 addresses at most; more are ignored). Homes reads the
   household's shared address book (`HOMES_RADICALE_USER`'s, the one
   Kontakte lists) and finds the card: by a number first (compared as
-  `caldav.TelSchluessel`, so `0151 …`, `+49 151 …` and `0049 (0)151 …`
+  `caldav.Telefon`, so `0151 …`, `+49 151 …` and `0049 (0)151 …`
   are one), else by an e-mail address (any case), else by the name
   (`namen.Plain`: case, accents and punctuation aside); several found
   are narrowed by the later of these while some stay. `uid` picks the
@@ -1939,7 +1926,8 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   book `/<person>/handy-kontakte/` ("Handy-Kontakte", made when missing):
   each card at `<sha256(UID)[:32 hex]>.vcf`, written only when its text
   changed (Homes notes a hash of the phone's text on the card as
-  `X-HAUS-INHALT`), and every card in the book the upload lacks deleted —
+  `X-HOMES-INHALT`; a card stored under the old `X-HAUS-INHALT` is written
+  once more on the next upload), and every card in the book the upload lacks deleted —
   the book is a mirror; an edit there is overwritten by the next upload.
   → 200 `{kontakte, neu, geaendert, entfernt}`. Refusals `{fehler}`: 403 a
   device of nobody, 409 an upload with no cards (a permission taken back
@@ -1953,7 +1941,8 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   person's own — as `GET /napi/gemeinsam/kontakte` (`text/vcard`, every
   card) and `GET /napi/gemeinsam/kalender` (`text/calendar`, one VCALENDAR
   per calendar named by `X-WR-CALNAME`, `X-HAUS-KALENDER` (its id, the last
-  part of its path) and `X-HAUS-ART`, a month back and a year ahead, series
+  part of its path) and `X-HAUS-ART` (names the current app's parser reads:
+  a rename goes app first), a month back and a year ahead, series
   expanded, and last `erinnerungen`, the open reminders as entries that
   ring), each with an ETag of its body (`If-None-Match` → 304). Writable
   since the owner's call of 2026-11-05: with `?schreibbar=1` the calendars
@@ -1987,7 +1976,7 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   a phone shows — an appointment's SUMMARY, LOCATION, DESCRIPTION,
   DTSTART, DTEND, DURATION, RRULE, EXDATE and VALARMs; a card's FN, N,
   TEL, EMAIL, ADR, ORG, TITLE, BDAY, NOTE, URL — in place of the stored
-  ones; everything else stored stays (attendees, Homes' `X-HAUS-*`, a
+  ones; everything else stored stays (attendees, Homes' `X-HOMES-*`, a
   series' changed instances, a card's photo and IBANs), and Homes writes
   DTSTAMP and LAST-MODIFIED (REV) itself. DELETE with `If-Match` puts it
   into the Papierkorb (30 days; *Rückgängig* under „Gelöscht, noch 30 Tage
@@ -2185,7 +2174,7 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     not be written under „Nicht geschrieben:“. `kontakt_anlegen`,
     `kontakt_ergaenzen` and an accepted number of „Kontakt prüfen lassen“
     on a household card write the same form; numbers are compared by their
-    digits (`International`), so a new form never makes a second line.
+    digits (`caldav.Telefon`), so a new form never makes a second line.
     No other tool changes a contact: until identity per person (below), the
     Bote writes with one account over every address book it can read, and a
     changed card on someone's phone cannot be taken back the way a new one
@@ -2197,6 +2186,15 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     its place in Radicale, or import it on a phone), and
     `HOMES_DATA/kontakte-quelle/fertig` marks it done; the log says how
     many cards changed.
+    Once, at start too (owner 2026-11-28, the rename from Haus): the
+    cards whose PRODID is still `-//mdopp//Haus Haushalt//DE` get Homes'
+    `-//mdopp//Homes Haushalt//DE` over the ETag read, every other line
+    kept, so `von_hand` stays as it was; with them `ansicht.json`'s and the
+    Papierkorb's `/haus/…` calendar paths become `/<HOMES_RADICALE_USER>/…`
+    and usage-metrics' counts under app `haus` are copied to `homes` day by
+    day (`cmd/homes/umbenennen.go`; `HOMES_DATA/umbenannt/<step>` marks a
+    step done, the log says how much changed; a step that fails is tried
+    again with a growing pause, the local ones at the next start).
     Reads cover every address book of the account; writes go to
     `HOMES_RADICALE_ADDRESSBOOK` when set, else the address book named
     `Haushalt`, made on the first write at `/<user>/haushalt-kontakte/`.

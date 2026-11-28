@@ -108,14 +108,13 @@ func TestBoxAufgaben(t *testing.T) {
 	past := now.AddDate(0, 0, -2).Format("2006-01-02")
 	future := now.AddDate(0, 0, 9).Format("2006-01-02")
 	fake := &aufgabenLaib{tasks: []map[string]any{
-		{"id": 1, "titel": "Sicherung außer Haus einrichten", "warum": "Das Backup liegt nur auf der Datenplatte.", "seit": "2026-10-25", "von": "claude", "befund": "backup offsite"},
+		{"id": 1, "titel": "Sicherung außer Haus einrichten", "warum": "Das Backup liegt nur auf der Datenplatte.", "seit": "2026-10-25", "von": "claude", "fertig_wenn": "backup offsite"},
 		{"id": 2, "titel": "Später erst", "seit": "2026-10-25", "von": "claude", "erinnern": future},
 		{"id": 3, "titel": "Voice PE flashen", "seit": "2026-10-25", "von": "claude", "erinnern": past},
 		{"id": 5, "titel": "Netzlaufwerk einrichten", "seit": "2026-10-28", "von": "claude", "fuer": "alle", "weg": map[string]any{"seite": "/netzlaufwerk"}},
 		{"id": 6, "titel": "Signal verbinden", "seit": "2026-10-28", "von": "claude", "fuer": "person:anna"},
-		{"id": 4, "titel": "/boot aufräumen", "seit": "2026-10-20", "von": "claude", "befund": "boot", "erledigt": map[string]any{"am": today, "von": "laib", "wie": "von Laib erledigt: Befund weg"}},
-		// laib#1021: done before the rename, the actor stored as "haus:<uid>"
-		{"id": 7, "titel": "Drucker tauschen", "seit": "2026-10-19", "von": "claude", "erledigt": map[string]any{"am": today, "von": "haus:ben"}},
+		{"id": 4, "titel": "/boot aufräumen", "seit": "2026-10-20", "von": "claude", "fertig_wenn": "boot", "erledigt": map[string]any{"am": today, "von": "laib", "wie": "von Laib erledigt: Befund weg"}},
+		{"id": 7, "titel": "Drucker tauschen", "seit": "2026-10-19", "von": "claude", "erledigt": map[string]any{"am": today, "von": "homes:ben"}},
 	}}
 	cfg := BoxConfig{Laib: fake.client(t), LaibURL: "https://laib.box.test"}
 
@@ -124,7 +123,7 @@ func TestBoxAufgaben(t *testing.T) {
 		"<li id=aufgabe-3><b>Voice PE flashen</b>", "fällig seit ", "erinnert am ", "Laib hakt sie selbst ab, wenn der Befund (backup offsite) weg ist",
 		`<input type=hidden name=tun value=erledigt><input type=hidden name=id value=1><button data-laeuft="Hakt ab …">Erledigt</button>`,
 		`<input type=date name=erinnern value=`+now.AddDate(0, 0, 7).Format("2006-01-02"), "Zuletzt erledigt (2)", "Laib: erledigt, der Befund ist weg", "von ben")
-	mustNotContain(t, card, "haus:ben")
+	mustNotContain(t, card, "homes:ben")
 	mustNotContain(t, card, "Netzlaufwerk einrichten", "Signal verbinden") // laib#878: the household's and a person's are under Einrichtung
 	if i3, i1, i2 := strings.Index(card, "aufgabe-3"), strings.Index(card, "aufgabe-1>"), strings.Index(card, "aufgabe-2>"); !(i3 < i1 && i1 < i2) {
 		t.Errorf("order: due %d, none %d, deferred %d", i3, i1, i2)

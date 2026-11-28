@@ -28,7 +28,7 @@ func Telefon(s, cc string) (string, bool) {
 	if !phoneRE.MatchString(v) || !strings.HasPrefix(v, "+") && !strings.HasPrefix(namen.Ziffern(v), "0") {
 		return s, false
 	}
-	n, ok := strings.CutPrefix(International(v, cc), "49")
+	n, ok := strings.CutPrefix(caldav.Telefon(v, cc), "49")
 	if !ok || len(n) < 6 || len(n) > 13 {
 		return s, false
 	}

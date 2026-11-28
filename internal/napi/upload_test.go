@@ -22,6 +22,9 @@ import (
 	"github.com/mdopp/homes/internal/laib"
 )
 
+// jpeg is a picture's first bytes.
+var jpeg = append([]byte{0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 'J', 'F', 'I', 'F', 0}, bytes.Repeat([]byte{0x42}, 64)...)
+
 // haus#10, slice 2: the camera capture (CameraCaptureActivity.kt, ApiClient.uploadFile)
 // lands in the share's consume folder: multipart, a "filename" part and a "file"
 // part, JPEG or PDF. Homes writes a request whole or not at all, and never over
@@ -453,7 +456,7 @@ func TestUploadReadDeadline(t *testing.T) {
 
 func TestSweepUploads(t *testing.T) {
 	dir := t.TempDir()
-	for _, n := range []string{"._homes-0123456789abcdef.part", "._haus-fedcba9876543210.part", "._andere", "rechnung.pdf"} {
+	for _, n := range []string{"._homes-0123456789abcdef.part", "._andere", "rechnung.pdf"} {
 		os.WriteFile(filepath.Join(dir, n), []byte("x"), 0o644)
 	}
 	if err := SweepUploads(dir); err != nil {

@@ -293,6 +293,12 @@ unpaired is a registration removed. The app's requests do not change.
   unknown webhook with an empty 200); the next report registers again.
 - *Goes later.* `homes_laden` is fired alongside the sensors until no
   automation triggers on it; then it goes (a step of its own, told here).
+  Looked at 2026-11-28 (owner: „Alles alte kann weg“): no automation on the
+  box triggers on `homes_laden`, but the box's phone has no charger sensors
+  in HA yet (its `mobile_app` registration is set up and dropped again,
+  Homes' log), so the event and the raw `tag_scanned` are still the only
+  way the charger and a tag reach HA there. They go once the registration
+  holds, not before.
   An automation that read `person` from `tag_scanned` reads `device_id`
   now; HA's tag trigger is unchanged.
 - *Unverified against a live HA.* The registration's fields, the 410 and
@@ -343,8 +349,9 @@ After naming, „Was soll ‚<Name>‘ tun?“:
   Laib's `homes` route lets that path through (`bypass`, as `/napi/`); the
   tag's page stays behind the login.
 - *The scanner's modes* are `scanner-fragen`, `scanner-ich`,
-  `scanner-haushalt` (§4's `scannen-ich`, `scannen-haushalt` are read
-  under these names). `scanner-fragen` starts nothing: the app gets
+  `scanner-haushalt` (§4's `scannen-ich`, `scannen-haushalt`: superseded
+  2026-11-28 — a file that still holds them is rewritten once at start,
+  and the old names are no action any more). `scanner-fragen` starts nothing: the app gets
   `"oeffnen":"<HOMES_PUBLIC_URL>/dokumente#scannen"` and a line, the page
   leads there. The direct ones press HA's button by `unique_id`
   (`laib-scan-person-<login>`, `laib-scan-haushalt`, `button.press`) and,
@@ -368,7 +375,8 @@ After naming, „Was soll ‚<Name>‘ tun?“:
 - *Not a verdict.* Homes approving a change to the household's own HA
   automation is the household's decision, made by its admins; Homes'
   rule that it decides nothing (haus#1) is about Laib's inbox, which
-  stays Laib's page alone (`/napi/…/approve|deny` still answer 403).
+  stays Laib's page alone (`/napi` has no approve or deny; since
+  2026-11-28 not even the 403 of the old Box screen).
 
 ### 9. What came of it: HA's traces, in the family's words
 

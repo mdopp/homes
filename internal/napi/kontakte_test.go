@@ -89,7 +89,7 @@ func TestKontakteMirror(t *testing.T) {
 		if len(name) != 36 || strings.Trim(strings.TrimSuffix(name, ".vcf"), "0123456789abcdef") != "" {
 			t.Errorf("href %q is not a hash of the UID", name)
 		}
-		if !strings.Contains(v, "X-HAUS-INHALT:") {
+		if !strings.Contains(v, "X-HOMES-INHALT:") {
 			t.Errorf("card without Homes' note: %q", v)
 		}
 	}

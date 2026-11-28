@@ -11,7 +11,7 @@ import (
 // never written over.
 func TestEachPersonsViewAlone(t *testing.T) {
 	dir := t.TempDir()
-	s := Open(dir, "homes")
+	s := Open(dir)
 	yes, no := true, false
 	if err := s.Set("anna", "/homes/haushalt/", &yes, "#2f6fdf"); err != nil {
 		t.Fatal(err)
@@ -45,17 +45,26 @@ func TestEachPersonsViewAlone(t *testing.T) {
 	}
 }
 
-// laib#1021: a view stored while Homes' account was haus is read as the
-// account's now; a colour already under the new path wins, and the next
-// Set writes the new paths.
-func TestLegacyAccountPaths(t *testing.T) {
+// Umschreiben (the rename's migration, owner 2026-11-28): every path
+// through the mapping, once; a colour already under the new path wins, a
+// path hidden twice is once, and a second run writes nothing.
+func TestUmschreiben(t *testing.T) {
 	dir := t.TempDir()
 	old := `{"anna": {"aus": ["/haus/abo-feiertage-ni/", "/lea/abo-muell/", "/homes/abo-feiertage-ni/"],
 	  "farben": {"/haus/haushalt/": "#2f6fdf", "/haus/familie-urlaub/": "#c92a2a", "/homes/familie-urlaub/": "#2b8a3e"}}}`
 	if err := os.WriteFile(filepath.Join(dir, File), []byte(old), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	s := Open(dir, "homes")
+	neu := func(p string) string {
+		if rest, ok := strings.CutPrefix(p, "/haus/"); ok {
+			return "/homes/" + rest
+		}
+		return p
+	}
+	s := Open(dir)
+	if n, err := s.Umschreiben(neu); err != nil || n != 3 {
+		t.Fatalf("%d %v", n, err)
+	}
 	a, err := s.For("anna")
 	if err != nil {
 		t.Fatal(err)
@@ -66,14 +75,13 @@ func TestLegacyAccountPaths(t *testing.T) {
 	if a.Color("/homes/haushalt/") != "#2f6fdf" || a.Color("/homes/familie-urlaub/") != "#2b8a3e" || a.Color("/haus/haushalt/") != "" || len(a.Colors) != 2 {
 		t.Fatalf("colours: %v", a.Colors)
 	}
-	yes := true
-	if err := s.Set("anna", "/homes/haushalt/", &yes, ""); err != nil {
-		t.Fatal(err)
-	}
 	if got, _ := os.ReadFile(filepath.Join(dir, File)); strings.Contains(string(got), "/haus/") {
-		t.Fatalf("old paths written back: %s", got)
+		t.Fatalf("old paths still in the file: %s", got)
 	}
-	if a, _ := Open(dir, "haus").For("anna"); a.Color("/haus/haushalt/") != "" {
-		t.Fatal("the mapping ran backwards")
+	if n, err := s.Umschreiben(neu); err != nil || n != 0 {
+		t.Fatalf("a second run: %d %v", n, err)
+	}
+	if n, err := Open(t.TempDir()).Umschreiben(neu); err != nil || n != 0 {
+		t.Fatalf("no file: %d %v", n, err)
 	}
 }

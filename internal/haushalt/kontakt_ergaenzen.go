@@ -419,7 +419,7 @@ func ergaenzenOne(ctx context.Context, c *caldav.Client, cc string, v ergaenzenA
 	if l := noteValue(cd.Note, "ansprechpartner", v.ansprechpartner, firm, stErgaenzt, &e); l != "" {
 		note = append(note, l)
 	}
-	samePhone := func(p string) bool { return International(p, cc) == International(v.telefon, cc) }
+	samePhone := func(p string) bool { return caldav.Telefon(p, cc) == caldav.Telefon(v.telefon, cc) }
 	if v.telefon != "" && fill(&e, "telefon", slices.ContainsFunc(cd.Phones, samePhone), "", firm, stErgaenzt) {
 		add = append(add, "TEL:"+caldav.EscapeText(v.telefon))
 	}

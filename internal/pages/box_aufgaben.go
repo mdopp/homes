@@ -207,8 +207,8 @@ func aufgabenCard(ctx context.Context, c *laib.Client, now time.Time, homes, sai
 		case 2:
 			meta += " · erinnert am " + day(a.Erinnern)
 		}
-		if a.Wann() != "" {
-			meta += " · Laib hakt sie selbst ab, wenn der Befund (" + html.EscapeString(a.Wann()) + ") weg ist"
+		if a.FertigWenn != "" {
+			meta += " · Laib hakt sie selbst ab, wenn der Befund (" + html.EscapeString(a.FertigWenn) + ") weg ist"
 		}
 		b.WriteString("<span class=wann>" + meta + "</span><div class=aufgabe-tun>")
 		b.WriteString(`<form method=post action=` + AufgabenPath + `><input type=hidden name=tun value=erledigt><input type=hidden name=id value=` + id +
@@ -221,9 +221,8 @@ func aufgabenCard(ctx context.Context, c *laib.Client, now time.Time, homes, sai
 	if len(done) > 0 {
 		b.WriteString("<details><summary>Zuletzt erledigt (" + strconv.Itoa(len(done)) + ")</summary><ul class=zeilen>")
 		for _, a := range done {
-			// Laib prefixes the actor with the hand's name: "homes:", and "haus:"
-			// on the tasks done before the rename (laib#1021; stored as they are)
-			who := "von " + html.EscapeString(strings.TrimPrefix(strings.TrimPrefix(a.Erledigt.Von, "homes:"), "haus:"))
+			// Laib prefixes the actor with the hand's name: "homes:"
+			who := "von " + html.EscapeString(strings.TrimPrefix(a.Erledigt.Von, "homes:"))
 			if a.Erledigt.Von == "laib" {
 				who = "Laib: erledigt, der Befund ist weg"
 			}

@@ -125,3 +125,22 @@ func (k *Korb) Raus(id string) {
 		os.Remove(filepath.Join(k.dir(), id+".json"))
 	}
 }
+
+// Umschreiben passes each entry of a kind still there through neu and
+// saves the ones it changed, id and time kept (the rename's migration,
+// cmd/homes); how many it changed.
+func (k *Korb) Umschreiben(art string, neu func(json.RawMessage) (json.RawMessage, bool)) (int, error) {
+	n := 0
+	for _, e := range k.Liste(art) {
+		d, ok := neu(e.Daten)
+		if !ok {
+			continue
+		}
+		e.Daten = d
+		if err := jsonfile.Save(filepath.Join(k.dir(), e.ID+".json"), e); err != nil {
+			return n, err
+		}
+		n++
+	}
+	return n, nil
+}

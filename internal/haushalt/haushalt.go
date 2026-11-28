@@ -900,21 +900,6 @@ func contactLine(ct caldav.Contact) string {
 	return line
 }
 
-// International is a number as country code and national number, digits
-// only, however it is written: +49 (0)170 …, 0049 170 …, 0170 … (the
-// house's country cc) all give 49170….
-func International(s, cc string) string {
-	d := namen.Ziffern(s)
-	if strings.HasPrefix(strings.TrimSpace(s), "+") || strings.HasPrefix(d, "00") {
-		d = strings.TrimPrefix(d, "00")
-		if rest, ok := strings.CutPrefix(d, cc); ok { // another country's code stays as written
-			return cc + strings.TrimLeft(rest, "0") // +49 (0)711: the trunk 0 goes
-		}
-		return d
-	}
-	return cc + strings.TrimLeft(d, "0")
-}
-
 // matches says whether a contact fits the search: name, nickname,
 // organisation or email contain it, any case. A number (three digits or
 // more) matches a phone by its digits, however either side is written:
@@ -936,10 +921,10 @@ func matches(ct caldav.Contact, q, cc string) bool {
 		return false
 	}
 	if strings.HasPrefix(q, "+") || strings.HasPrefix(namen.Ziffern(q), "00") {
-		want = International(q, cc)
+		want = caldav.Telefon(q, cc)
 	}
 	for _, p := range ct.Phones {
-		if strings.Contains(International(p, cc), want) {
+		if strings.Contains(caldav.Telefon(p, cc), want) {
 			return true
 		}
 	}

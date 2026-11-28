@@ -1,7 +1,6 @@
 package kontaktantwort
 
 import (
-	"encoding/json"
 	"slices"
 	"strings"
 
@@ -84,20 +83,11 @@ type Telefon struct {
 }
 
 // Mail is an e-mail address, its kind (one of MailArten) and whether it is
-// the main one. An answer kept before 2026-11-08 holds the address alone.
+// the main one.
 type Mail struct {
 	Adresse string `json:"adresse"`
 	Art     string `json:"art,omitempty"`
 	Haupt   bool   `json:"haupt,omitempty"`
-}
-
-// UnmarshalJSON reads a Mail, or an address alone as answers kept it before.
-func (m *Mail) UnmarshalJSON(b []byte) error {
-	if len(b) > 0 && b[0] == '"' {
-		return json.Unmarshal(b, &m.Adresse)
-	}
-	type plain Mail
-	return json.Unmarshal(b, (*plain)(m))
 }
 
 // Arten are the kinds of numbers, MailArten of e-mail addresses (owner
@@ -385,7 +375,7 @@ func ziffern(s string) string {
 }
 
 // nummer is a number as compared: 0171 … and +49 171 … are one, an autofill's other form no new one (owner 2026-11-11).
-func nummer(s string) string { return caldav.TelSchluessel(s, "") }
+func nummer(s string) string { return caldav.Telefon(s, "") }
 
 // davProp is each kind's vCard property.
 var davProp = map[string]string{"vorname": "N-GIVEN", "nachname": "N-FAMILY", "telefon": "TEL", "mail": "EMAIL", "adresse": "ADR",
