@@ -378,28 +378,40 @@ const (
 	FrageDatum            ID = "frage.datum"
 	FrageNicht            ID = "frage.nicht"
 	// Kontaktdaten eintragen lassen (owner 2026-11-28): the same link and form for a new person
-	EinladenText      ID = "einladen.text"      // the prepared message: „%s“ the link
-	EinladenKnopf     ID = "einladen.knopf"     // Kontakte's button
-	EinladenWozu      ID = "einladen.wozu"      // under it
-	FrageNeuTitel     ID = "frage.neu"          // the public page of such a link
-	FrageNeuHinweis   ID = "frage.neu.hinweis"  // „%s“ who sent it
-	FrageNeuHaushalt  ID = "frage.neu.haushalt" // who, when the link names nobody
-	FrageNeuOhneName  ID = "frage.neu.ohne-name"
-	FrageNeuSenden    ID = "frage.neu.senden"
-	FrageNeuDanke     ID = "frage.neu.danke" // „%s“ who sent it
-	FrageNeuDankeText ID = "frage.neu.danke.text"
-	NeuAntwortTitel   ID = "neu.antwort" // its review: the heading
-	NeuAntwortWarum   ID = "neu.antwort.warum"
-	NeuAnlegen        ID = "neu.anlegen" // the button, pressed, done
-	NeuAnlegenLaeuft  ID = "neu.anlegen.laeuft"
-	NeuAngelegt       ID = "neu.angelegt"
-	NeuNameFest       ID = "neu.name-fest"    // beside the name: a new card always gets it
-	NeuTreffer        ID = "neu.treffer"      // a household card shares a number or e-mail: „%s“ its name
-	NeuErgaenzen      ID = "neu.ergaenzen"    // „%s“ its name
-	NeuErgaenzt       ID = "neu.ergaenzt"     // „%s“ the name
-	NeuNichtsNeues    ID = "neu.nichts-neues" // the card has all of it already: „%s“ its name
-	NeuZumKontakt     ID = "neu.zum-kontakt"
-	NeuNichtAngelegt  ID = "neu.nicht-angelegt"
+	EinladenText         ID = "einladen.text"      // the prepared message: „%s“ the link
+	EinladenKnopf        ID = "einladen.knopf"     // Kontakte's button
+	EinladenWozu         ID = "einladen.wozu"      // under it
+	FrageNeuTitel        ID = "frage.neu"          // the public page of such a link
+	FrageNeuHinweis      ID = "frage.neu.hinweis"  // „%s“ who sent it
+	FrageNeuHaushalt     ID = "frage.neu.haushalt" // who, when the link names nobody
+	FrageNeuOhneName     ID = "frage.neu.ohne-name"
+	FrageNeuSenden       ID = "frage.neu.senden"
+	FrageNeuDanke        ID = "frage.neu.danke" // „%s“ who sent it
+	FrageNeuDankeText    ID = "frage.neu.danke.text"
+	NeuAntwortTitel      ID = "neu.antwort" // its review: the heading
+	NeuAntwortWarum      ID = "neu.antwort.warum"
+	NeuAnlegen           ID = "neu.anlegen" // the button, pressed, done
+	NeuAnlegenLaeuft     ID = "neu.anlegen.laeuft"
+	NeuAngelegt          ID = "neu.angelegt"
+	NeuNameFest          ID = "neu.name-fest"   // beside the name: a new card always gets it
+	NeuWer               ID = "neu.wer"         // the review's first question (owner 2026-11-28): the household cards that may be that person
+	NeuWerKeiner         ID = "neu.wer.keiner"  // none may be
+	NeuGrundMobil        ID = "neu.grund.mobil" // why a card may be that person (kontaktantwort.Gleiche…)
+	NeuGrundNummer       ID = "neu.grund.telefon"
+	NeuGrundMail         ID = "neu.grund.mail"
+	NeuGrundName         ID = "neu.grund.name"
+	NeuZusammen          ID = "neu.zusammen"           // a candidate's button
+	NeuZusammenTitel     ID = "neu.zusammen.titel"     // its before → after: „%s“ the card's name
+	NeuZurueck           ID = "neu.zurueck"            // back to the candidates
+	NeuNeuTitel          ID = "neu.neu"                // the answer as a new card, after the candidates
+	NeuNeuKeinerTitel    ID = "neu.neu.keiner"         // the same, when there was none
+	AntwortMeldung       ID = "antwort.meldung"        // laib tell to the link's owner: „%s“ the first name, „%s“ the review's address
+	AntwortMeldungJemand ID = "antwort.meldung.jemand" // the name when the answer has none
+	NeuErgaenzen         ID = "neu.ergaenzen"          // „%s“ its name
+	NeuErgaenzt          ID = "neu.ergaenzt"           // „%s“ the name
+	NeuNichtsNeues       ID = "neu.nichts-neues"       // the card has all of it already: „%s“ its name
+	NeuZumKontakt        ID = "neu.zum-kontakt"
+	NeuNichtAngelegt     ID = "neu.nicht-angelegt"
 	// Kontakt austauschen (owner 2026-11-28): the app's session and the public page /t/<token> that follows it live
 	TeilenAus            ID = "teilen.aus" // the app's refusals
 	TeilenWeg            ID = "teilen.weg"
@@ -497,11 +509,23 @@ var de = map[ID]string{
 	"frage.neu.danke.text":       "Du kannst die Seite jetzt schließen.",
 	"neu.antwort":                "Neuer Kontakt: %s",
 	"neu.antwort.warum":          "Hat seine Kontaktdaten selbst eingetragen. Nichts kommt ins Adressbuch, bevor du es übernimmst.",
-	"neu.anlegen":                "Als neuen Kontakt anlegen",
+	"neu.anlegen":                "Ins Adressbuch übernehmen",
 	"neu.anlegen.laeuft":         "Legt an …",
 	"neu.angelegt":               "Angelegt: %s ist jetzt im Adressbuch des Haushalts.",
 	"neu.name-fest":              "Der Name kommt immer mit.",
-	"neu.treffer":                "%s hat schon dieselbe Nummer oder E-Mail-Adresse. Ist das dieselbe Person?",
+	"neu.wer":                    "Ist das jemand, den du schon hast?",
+	"neu.wer.keiner":             "Im Adressbuch hat niemand dieselbe Nummer, dieselbe E-Mail-Adresse oder einen ähnlichen Namen.",
+	"neu.grund.mobil":            "gleiche Mobilnummer",
+	"neu.grund.telefon":          "gleiche Telefonnummer",
+	"neu.grund.mail":             "gleiche E-Mail",
+	"neu.grund.name":             "ähnlicher Name",
+	"neu.zusammen":               "Damit zusammenführen",
+	"neu.zusammen.titel":         "Mit %s zusammenführen",
+	"neu.zurueck":                "Doch nicht – zurück zur Auswahl",
+	"neu.neu":                    "Keiner davon? Dann neu ins Adressbuch",
+	"neu.neu.keiner":             "Neu ins Adressbuch",
+	"antwort.meldung":            "%s hat seine Kontaktdaten eingetragen – prüfen: %s",
+	"antwort.meldung.jemand":     "Jemand",
 	"neu.ergaenzen":              "%s damit ergänzen",
 	"neu.ergaenzt":               "%s ergänzt.",
 	"neu.nichts-neues":           "%s hat das alles schon.",

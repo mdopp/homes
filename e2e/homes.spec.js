@@ -1720,7 +1720,7 @@ test('Dokumente: the person’s own address is copied as <login>+doc+', async ({
 // owner 2026-11-28: „eine URL, in der die Person ihre Kontaktdaten eintragen kann“ — as „Kontakt
 // prüfen lassen“: Kontakte's button makes the link and opens the share sheet; the same public form,
 // empty, on a phone; a name needed; thanks; the link used up; the review on Deine Aufgaben, before →
-// after with nothing before, „Als neuen Kontakt anlegen“
+// after with nothing before, „Ins Adressbuch übernehmen“ when nobody in the book may be that person
 test('Kontaktdaten eintragen lassen: the link, the empty form, a new contact', async ({ page, browser }, info) => {
   await page.setViewportSize({ width: 411, height: 900 });
   await page.addInitScript(() => { navigator.share = (d) => { window.geteilt = d.text; return Promise.resolve(); }; });
@@ -1764,12 +1764,63 @@ test('Kontaktdaten eintragen lassen: the link, the empty form, a new contact', a
   await expect(page.getByRole('heading', { name: 'Neuer Kontakt: Erika Muster' })).toBeVisible();
   await expect(page.locator('.aenderung')).toHaveCount(4);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
+  await expect(page.getByRole('heading', { name: 'Ist das jemand, den du schon hast?' })).toBeVisible();
+  await expect(page.getByText('Im Adressbuch hat niemand dieselbe Nummer, dieselbe E-Mail-Adresse oder einen ähnlichen Namen.')).toBeVisible();
   await bild(page, info, 'kontakt-neu-411.png', { fullPage: true });
-  await page.getByRole('button', { name: 'Als neuen Kontakt anlegen' }).click();
+  await page.getByRole('button', { name: 'Ins Adressbuch übernehmen' }).click();
   await expect(page.getByText('Angelegt: Erika Muster ist jetzt im Adressbuch des Haushalts.')).toBeVisible();
   await page.getByRole('link', { name: 'Zum Kontakt ›' }).click();
   await expect(page.getByRole('heading', { name: 'Erika Muster' })).toBeVisible();
   await expect(page.locator('body')).toContainText('erika@example.org');
+});
+
+// owner 2026-11-28: „Was machen wir, wenn der Kontakt die Daten eines vorhandenen Kontakts einträgt?“ —
+// the review asks first whether it is someone already in the book: Ben Beispiel, by his mobile
+// number; „Damit zusammenführen“ shows before → after against his card, the way back works, and
+// „Ben Beispiel damit ergänzen“ writes the ticked into it.
+test('Kontaktdaten eintragen lassen: a person already in the book is offered to merge', async ({ page, browser }, info) => {
+  await page.setViewportSize({ width: 411, height: 900 });
+  await page.addInitScript(() => { navigator.share = (d) => { window.geteilt = d.text; return Promise.resolve(); }; });
+  await page.goto('/kontakte');
+  await page.getByRole('button', { name: 'Jemanden seine Kontaktdaten eintragen lassen' }).click();
+  await page.waitForFunction(() => window.geteilt);
+  const link = (await page.evaluate(() => window.geteilt)).match(/http:\/\/127\.0\.0\.1:8652\/[A-Za-z0-9_-]{43}/)[0];
+  const ctx = await browser.newContext({ viewport: { width: 360, height: 800 } });
+  const person = await ctx.newPage();
+  person.on('pageerror', (e) => errors.push(String(e)));
+  await person.goto(link);
+  await person.locator('input[name=vorname]').fill('Ben');
+  await person.locator('input[name=nachname]').fill('Beispiel');
+  await person.locator('input[name=tel]').first().fill('0160 9876543');
+  await person.locator('input[name=firma]').fill('Kicker GmbH');
+  await person.getByRole('button', { name: 'Angaben senden' }).click();
+  await expect(person.getByRole('heading', { name: /Danke/ })).toBeVisible();
+  await ctx.close();
+
+  await page.goto('/aufgaben');
+  await page.getByRole('link', { name: '1 Kontakt-Antwort prüfen' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Neuer Kontakt: Ben Beispiel' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Ist das jemand, den du schon hast?' })).toBeVisible();
+  const kandidat = page.locator('.kandidaten li').first();
+  await expect(kandidat).toContainText('Ben Beispiel');
+  await expect(kandidat).toContainText('gleiche Mobilnummer');
+  await expect(kandidat).toContainText('ähnlicher Name');
+  await expect(page.getByRole('heading', { name: 'Keiner davon? Dann neu ins Adressbuch' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(411);
+  await bild(page, info, 'kontakt-neu-kandidaten-411.png', { fullPage: true });
+
+  await kandidat.getByRole('link', { name: 'Damit zusammenführen' }).click();
+  await expect(page.getByRole('heading', { name: 'Mit Ben Beispiel zusammenführen' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Ins Adressbuch übernehmen' })).toHaveCount(0);
+  await page.getByRole('link', { name: '‹ Doch nicht – zurück zur Auswahl' }).click();
+  await expect(page.getByRole('heading', { name: 'Ist das jemand, den du schon hast?' })).toBeVisible();
+  await page.locator('.kandidaten li').first().getByRole('link', { name: 'Damit zusammenführen' }).click();
+  const ergaenzen = page.getByRole('button', { name: 'Ben Beispiel damit ergänzen' });
+  await ergaenzen.click();
+  await expect(page.getByText('Ben Beispiel ergänzt.')).toBeVisible();
+  await page.getByRole('link', { name: 'Zum Kontakt ›' }).click();
+  await expect(page.getByRole('heading', { name: 'Ben Beispiel' })).toBeVisible();
+  await expect(page.locator('body')).toContainText('Kicker GmbH');
 });
 
 // owner 2026-11-28 („Kontakt austauschen“): the other phone opens the link at once and sees the

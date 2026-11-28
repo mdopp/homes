@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/mdopp/homes/internal/caldav"
+	"github.com/mdopp/homes/internal/namen"
 )
 
 // Adresse is a postal address as the page asks for it: street and house
@@ -181,15 +182,15 @@ func FelderVon(ct caldav.Contact) Felder {
 	return f
 }
 
-// eineZeile is s on one line, trimmed, without control characters, at
-// most GrenzeWert characters.
+// eineZeile is s on one line, trimmed, without control characters and
+// what shows nothing (namen.Sichtbar), at most GrenzeWert characters.
 func eineZeile(s string) string {
 	s = strings.Map(func(r rune) rune {
 		if r < 0x20 || r == 0x7f {
 			return ' '
 		}
 		return r
-	}, s)
+	}, namen.Sichtbar(s))
 	s = strings.Join(strings.Fields(s), " ")
 	if r := []rune(s); len(r) > GrenzeWert {
 		s = string(r[:GrenzeWert])
@@ -225,14 +226,15 @@ func Sauber(f Felder) Felder {
 	return out
 }
 
-// nachricht is the message with its lines, without control characters, cut to GrenzeNachricht.
+// nachricht is the message with its lines, without control characters and what shows nothing
+// (namen.Sichtbar), cut to GrenzeNachricht.
 func nachricht(s string) string {
 	s = strings.Map(func(r rune) rune {
 		if (r < 0x20 && r != '\n') || r == 0x7f {
 			return -1
 		}
 		return r
-	}, strings.ReplaceAll(s, "\r\n", "\n"))
+	}, namen.Sichtbar(strings.ReplaceAll(s, "\r\n", "\n")))
 	if r := []rune(strings.TrimSpace(s)); len(r) > GrenzeNachricht {
 		return string(r[:GrenzeNachricht])
 	}

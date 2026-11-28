@@ -3,6 +3,7 @@ package kontaktantwort
 import (
 	"context"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -48,35 +49,48 @@ func TestEinladen(t *testing.T) {
 	}
 }
 
-// What the answer holds, which household cards share a number or an e-mail address with it (never
-// the name alone), and the answer as changes of such a card.
-func TestTrefferUndErgaenzung(t *testing.T) {
+// What the answer holds, which household cards may be that person — the same mobile number, another
+// same number, the same e-mail address, a similar name, the strongest first, five at most, each
+// with its reasons — and the answer as changes of such a card.
+func TestKandidatenUndErgaenzung(t *testing.T) {
 	s := &Store{Path: filepath.Join(t.TempDir(), Datei)}
-	f := neuAntwort(t, s, Felder{Vorname: "Erika", Nachname: "Muster", Telefone: []Telefon{{"0151 2345 6789", "mobil", false}},
+	f := neuAntwort(t, s, Felder{Vorname: "Erika", Nachname: "Muster", Telefone: []Telefon{{"0151 2345 6789", "mobil", false}, {"0711 445566", "privat", false}},
 		Mails: []Mail{{"erika@example.org", "privat", false}}, Geburtstag: "--04-12"})
-	if n := f.Eingetragen(); n.Name() != "Erika Muster" || len(n.Telefone) != 1 || n.Mails[0].Adresse != "erika@example.org" || n.Geburtstag != "--04-12" {
+	if n := f.Eingetragen(); n.Name() != "Erika Muster" || len(n.Telefone) != 2 || n.Mails[0].Adresse != "erika@example.org" || n.Geburtstag != "--04-12" {
 		t.Fatalf("Eingetragen: %+v", n)
 	}
 	all := []caldav.Contact{
-		{UID: "a", Name: "Erika Beispiel", Phones: []string{"+49 151 23456789"}},
-		{UID: "b", Name: "Erika Muster"},
+		{UID: "b", Name: "Muster, Erika"},
 		{UID: "c", Name: "Ben", Emails: []string{"ERIKA@example.org"}},
+		{UID: "a", Name: "Erika Beispiel", Phones: []string{"+49 151 23456789"}},
+		{UID: "d", Name: "Oma", Phones: []string{"+49 711 445566"}},
+		{UID: "e", Name: "Erika Mustermann"},
+		{Name: "Erika Muster", Phones: []string{"+49 151 23456789"}}, // no UID: nothing to write to
+		{UID: "f", Given: "Erika", Family: "Müster", Name: "E. M.", Emails: []string{"erika@example.org"}},
 	}
-	if got := Treffer(all, f, "49"); len(got) != 1 || got[0].UID != "a" {
-		t.Errorf("by number first: %v", got)
+	got := Kandidaten(all, f, "49")
+	var ks []string
+	for _, k := range got {
+		ks = append(ks, k.UID+":"+strings.Join(k.Gruende, "+"))
 	}
-	if got := Treffer(all[1:], f, "49"); len(got) != 1 || got[0].UID != "c" {
-		t.Errorf("by e-mail, never by name: %v", got)
+	if s := strings.Join(ks, " "); s != "a:mobil f:mail+name c:mail d:telefon b:name" {
+		t.Errorf("Kandidaten: %s", s)
 	}
-	if got := Treffer(all[1:2], f, "49"); got != nil {
-		t.Errorf("by name alone: %v", got)
+	for i := range 9 {
+		all = append(all, caldav.Contact{UID: strconv.Itoa(i), Name: "Erika Muster"})
 	}
-	as := Ergaenzung(f, all[0])
+	if got := Kandidaten(all, f, "49"); len(got) != KandidatenHoechstens || got[0].UID != "a" {
+		t.Errorf("at most five, the strongest kept: %v", got)
+	}
+	if got := Kandidaten(all[4:5], f, "49"); got != nil {
+		t.Errorf("another name: %v", got)
+	}
+	as := Ergaenzung(f, all[2])
 	var arten []string
 	for _, a := range as {
 		arten = append(arten, a.Art+":"+a.Vorher+">"+a.Nachher)
 	}
-	if got := strings.Join(arten, " "); got != "nachname:Beispiel>Muster mail:>erika@example.org geburtstag:>--04-12" {
+	if got := strings.Join(arten, " "); got != "nachname:Beispiel>Muster telefon:>0711 445566 mail:>erika@example.org geburtstag:>--04-12" {
 		t.Errorf("the changes of Erika Beispiel: %s", got)
 	}
 }
@@ -121,7 +135,7 @@ func TestNeuAnlegenUndErgaenzen(t *testing.T) {
 	}
 
 	g := neuAntwort(t, s, Felder{Vorname: "Erika", Nachname: "Beispiel", Telefone: []Telefon{{"0151 2345 6789", "mobil", false}}, Mails: []Mail{{"erika@example.org", "privat", false}}})
-	ct := Treffer([]caldav.Contact{{UID: "a", Name: "Erika Beispiel", Given: "Erika", Family: "Beispiel", Phones: []string{"+49 151 23456789"}}}, g, "49")[0]
+	ct := Kandidaten([]caldav.Contact{{UID: "a", Name: "Erika Beispiel", Given: "Erika", Family: "Beispiel", Phones: []string{"+49 151 23456789"}}}, g, "49")[0].Contact
 	as, stand, err := Ergaenzen(context.Background(), dav, g, ct, []int{0}, "49")
 	if err != nil || len(as) != 1 || as[0].Art != "mail" || stand[0] != Uebernommen {
 		t.Fatalf("%+v %v %v", as, stand, err)

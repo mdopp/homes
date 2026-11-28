@@ -1,12 +1,13 @@
 package pages
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"html"
+	"mime"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -76,12 +77,27 @@ func Teilen(cfg StartConfig) http.HandlerFunc {
 			teilenLive(w, r, cfg, token)
 		case was == "karte.vcf" && !a.Vorbei() && a.Karte != nil:
 			h.Set("Content-Type", "text/vcard; charset=utf-8")
-			h.Set("Content-Disposition", `attachment; filename="kontakt.vcf"; filename*=UTF-8''`+url.PathEscape(a.Vorname)+".vcf")
+			h.Set("Content-Disposition", teilenDatei(a.Vorname))
 			w.Write([]byte(a.Karte.VCard(a.Vorname)))
 		default:
 			ungueltig(http.StatusNotFound)
 		}
 	}
+}
+
+// teilenDatei is the .vcf's Content-Disposition: the sharer's first name as its file name, quoted or
+// RFC 2231-encoded by mime (no value can end the header or add a parameter), else kontakt.vcf.
+func teilenDatei(vorname string) string {
+	name := strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f || strings.ContainsRune(`/\"`, r) {
+			return -1
+		}
+		return r
+	}, strings.TrimSpace(vorname))
+	if v := mime.FormatMediaType("attachment", map[string]string{"filename": cmp.Or(name, "kontakt") + ".vcf"}); v != "" {
+		return v
+	}
+	return `attachment; filename="kontakt.vcf"`
 }
 
 // teilenTeile is the page's parts as the live stream sends them: each one's HTML, "" none.
@@ -236,8 +252,7 @@ func teilenLive(w http.ResponseWriter, r *http.Request, cfg StartConfig, token s
 		if err != nil {
 			return
 		}
-		b, _ := json.Marshal(teilenStand(r, cfg, token, a))
-		if !send("data: "+string(b)+"\n\n") || a.Vorbei() {
+		if !send(teilenFrame(teilenStand(r, cfg, token, a))) || a.Vorbei() {
 			return
 		}
 		ende := time.NewTimer(max(a.Bis.Sub(now()), 0) + 50*time.Millisecond)
@@ -259,6 +274,13 @@ func teilenLive(w http.ResponseWriter, r *http.Request, cfg StartConfig, token s
 		}
 		ende.Stop()
 	}
+}
+
+// teilenFrame is one event of the live stream: the parts as one line of JSON (it escapes every
+// newline, < > & and U+2028), so no value ends the frame or starts a field of its own.
+func teilenFrame(p teilenTeile) string {
+	b, _ := json.Marshal(p)
+	return "data: " + string(b) + "\n\n"
 }
 
 // teilenScript follows the live stream (a part replaced in place; the form only by a reload, as

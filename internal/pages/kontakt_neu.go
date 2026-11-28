@@ -8,6 +8,7 @@ import (
 	"html"
 	"log"
 	"net/http"
+	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -71,6 +72,10 @@ func KontaktEinladen(cfg StartConfig) http.HandlerFunc {
 
 // KontaktNeu is the review of the viewer's new person's answer f (Antworten finds it): GET
 // shows it, POST decides it (aktion anlegen | ergaenzen with ziel, a card's UID | verwerfen).
+// Open, it asks first „Ist das jemand, den du schon hast?“ (owner 2026-11-28): the household's
+// cards that may be that person, each with its reasons and „Damit zusammenführen“, which shows
+// the answer before → after against that card (?ziel=<uid>); below them the answer as a new
+// card, „Ins Adressbuch übernehmen“.
 func KontaktNeu(w http.ResponseWriter, r *http.Request, cfg StartConfig, f kontaktantwort.Frage) {
 	w.Header().Set("Cache-Control", "no-store")
 	said, problem := "", ""
@@ -81,33 +86,76 @@ func KontaktNeu(w http.ResponseWriter, r *http.Request, cfg StartConfig, f konta
 		}
 		f, said, problem = neuEntscheiden(r, cfg, f)
 	}
-	treffer := neuTreffer(r, cfg, f)
 	titel, action := fmt.Sprintf(texte.T(texte.NeuAntwortTitel), cmp.Or(f.Name(), "(ohne Namen)")), AntwortenPath+"/"+f.ID
 	b := kontakteHead(r, cfg, titel, "", titel)
-	b.WriteString(kontakteStyle + pruefenStyle + "<h1>" + html.EscapeString(titel) + "</h1>" + gesagt(said, problem))
-	if f.ZuPruefen() {
-		b.WriteString("<p class=k>" + wort(texte.NeuAntwortWarum) + "</p>")
-	} else if f.UID != "" {
-		b.WriteString(`<p><a href="` + html.EscapeString(cards.ContactPage(f.UID)) + `">` + wort(texte.NeuZumKontakt) + ` ›</a></p>`)
-	}
-	antwortKopf(b, f)
-	antwortListe(b, f, action, "", `<p class=knoepfe><button name=aktion value=anlegen data-laeuft="`+wort(texte.NeuAnlegenLaeuft)+`">`+wort(texte.NeuAnlegen)+`</button>`+verwerfenKnopf+`</p>`)
-	for _, ct := range treffer {
-		name := kontaktName(ct)
-		b.WriteString("<h2>" + html.EscapeString(fmt.Sprintf(texte.T(texte.NeuTreffer), name)) + "</h2>")
-		g := f
-		if g.UID, g.Aenderungen = ct.UID, kontaktantwort.Ergaenzung(f, ct); len(g.Aenderungen) == 0 {
-			b.WriteString("<p class=k>" + html.EscapeString(fmt.Sprintf(texte.T(texte.NeuNichtsNeues), name)) + "</p>")
-			continue
+	b.WriteString(kontakteStyle + pruefenStyle + neuStyle + "<h1>" + html.EscapeString(titel) + "</h1>" + gesagt(said, problem))
+	if !f.ZuPruefen() {
+		if f.UID != "" {
+			b.WriteString(`<p><a href="` + html.EscapeString(cards.ContactPage(f.UID)) + `">` + wort(texte.NeuZumKontakt) + ` ›</a></p>`)
 		}
-		antwortListe(b, g, action, `<input type=hidden name=ziel value="`+html.EscapeString(ct.UID)+`">`,
-			`<p class=knoepfe><button name=aktion value=ergaenzen data-laeuft="`+wort(texte.AntwortLaeuft)+`">`+html.EscapeString(fmt.Sprintf(texte.T(texte.NeuErgaenzen), name))+`</button></p>`)
+		antwortKopf(b, f)
+		antwortListe(b, f, action, "", "")
+		writePage(w, http.StatusOK, b)
+		return
+	}
+	b.WriteString("<p class=k>" + wort(texte.NeuAntwortWarum) + "</p>")
+	ks := neuKandidaten(r, cfg, f)
+	ziel := cmp.Or(r.PostFormValue("ziel"), r.URL.Query().Get("ziel"))
+	if i := slices.IndexFunc(ks, func(k kontaktantwort.Kandidat) bool { return k.UID == ziel }); i >= 0 {
+		neuZusammen(b, f, ks[i], action)
+	} else {
+		neuAuswahl(b, f, ks, action)
 	}
 	writePage(w, http.StatusOK, b)
 }
 
-// neuTreffer are the household's cards an open answer f may complete; Radicale not answering: none.
-func neuTreffer(r *http.Request, cfg StartConfig, f kontaktantwort.Frage) []caldav.Contact {
+// grundText is why a card may be the person, as the review says it.
+var grundText = map[string]texte.ID{kontaktantwort.GleicheMobil: texte.NeuGrundMobil, kontaktantwort.GleicheNummer: texte.NeuGrundNummer,
+	kontaktantwort.GleicheMail: texte.NeuGrundMail, kontaktantwort.AehnlicherName: texte.NeuGrundName}
+
+// neuAuswahl is „Ist das jemand, den du schon hast?“ with the candidates ks, then the answer f as a new card.
+func neuAuswahl(b *strings.Builder, f kontaktantwort.Frage, ks []kontaktantwort.Kandidat, action string) {
+	b.WriteString("<h2>" + wort(texte.NeuWer) + "</h2>")
+	if len(ks) == 0 {
+		b.WriteString("<p class=k>" + wort(texte.NeuWerKeiner) + "</p>")
+	} else {
+		b.WriteString("<ul class=kandidaten>")
+		for _, k := range ks {
+			var gs []string
+			for _, g := range k.Gruende {
+				gs = append(gs, texte.T(grundText[g]))
+			}
+			b.WriteString(`<li><span><b>` + html.EscapeString(kontaktName(k.Contact)) + `</b><br><span class=k>` + html.EscapeString(strings.Join(gs, " · ")) + `</span></span>` +
+				`<a class=knopf href="` + html.EscapeString(action+"?ziel="+url.QueryEscape(k.UID)) + `">` + wort(texte.NeuZusammen) + `</a></li>`)
+		}
+		b.WriteString("</ul>")
+	}
+	b.WriteString("<h2>" + wort(map[bool]texte.ID{true: texte.NeuNeuKeinerTitel, false: texte.NeuNeuTitel}[len(ks) == 0]) + "</h2>")
+	antwortKopf(b, f)
+	antwortListe(b, f, action, "", `<p class=knoepfe><button name=aktion value=anlegen data-laeuft="`+wort(texte.NeuAnlegenLaeuft)+`">`+wort(texte.NeuAnlegen)+`</button>`+verwerfenKnopf+`</p>`)
+}
+
+// neuZusammen is the answer f before → after against the candidate k, „<Name> damit ergänzen“, and the way back.
+func neuZusammen(b *strings.Builder, f kontaktantwort.Frage, k kontaktantwort.Kandidat, action string) {
+	name := kontaktName(k.Contact)
+	b.WriteString("<h2>" + html.EscapeString(fmt.Sprintf(texte.T(texte.NeuZusammenTitel), name)) + "</h2>")
+	antwortKopf(b, f)
+	g := f
+	if g.UID, g.Aenderungen = k.UID, kontaktantwort.Ergaenzung(f, k.Contact); len(g.Aenderungen) == 0 {
+		b.WriteString("<p class=k>" + html.EscapeString(fmt.Sprintf(texte.T(texte.NeuNichtsNeues), name)) + "</p>")
+	} else {
+		antwortListe(b, g, action, `<input type=hidden name=ziel value="`+html.EscapeString(k.UID)+`">`,
+			`<p class=knoepfe><button name=aktion value=ergaenzen data-laeuft="`+wort(texte.AntwortLaeuft)+`">`+html.EscapeString(fmt.Sprintf(texte.T(texte.NeuErgaenzen), name))+`</button></p>`)
+	}
+	b.WriteString(`<p><a href="` + html.EscapeString(action) + `">‹ ` + wort(texte.NeuZurueck) + `</a></p>`)
+}
+
+// neuStyle is the candidates' list: each a row, its button at the end.
+const neuStyle = `<style>.kandidaten{list-style:none;margin:0 0 18px;padding:0}.kandidaten li{display:flex;gap:12px;align-items:center;justify-content:space-between;margin:0 0 10px;padding:12px 14px;border-radius:16px;background:var(--card)}` +
+	`.kandidaten .knopf{flex:none;display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:600;text-decoration:none}</style>`
+
+// neuKandidaten are the household's cards that may be the person of an open answer f; Radicale not answering: none.
+func neuKandidaten(r *http.Request, cfg StartConfig, f kontaktantwort.Frage) []kontaktantwort.Kandidat {
 	if !f.ZuPruefen() {
 		return nil
 	}
@@ -117,7 +165,7 @@ func neuTreffer(r *http.Request, cfg StartConfig, f kontaktantwort.Frage) []cald
 	if err != nil {
 		log.Printf("homes: kontakt-antwort %s: no cards to match: %v", f.ID, err)
 	}
-	return kontaktantwort.Treffer(all, f, cfg.PhoneCountry)
+	return kontaktantwort.Kandidaten(all, f, cfg.PhoneCountry)
 }
 
 // nimmVon are the ticked changes' numbers of a review's form.
@@ -155,11 +203,12 @@ func neuEntscheiden(r *http.Request, cfg StartConfig, f kontaktantwort.Frage) (k
 			return f, "", sp.T(texte.NeuNichtAngelegt)
 		}
 	case "ergaenzen":
-		i := slices.IndexFunc(neuTreffer(r, cfg, f), func(ct caldav.Contact) bool { return ct.UID == r.PostFormValue("ziel") })
+		ks := neuKandidaten(r, cfg, f)
+		i := slices.IndexFunc(ks, func(k kontaktantwort.Kandidat) bool { return k.UID == r.PostFormValue("ziel") })
 		if i < 0 {
 			return f, "", sp.T(texte.AntwortKontaktWeg)
 		}
-		ct := neuTreffer(r, cfg, f)[i]
+		ct := ks[i].Contact
 		fetch(r, func(ctx context.Context) {
 			as, stand, err = kontaktantwort.Ergaenzen(ctx, cfg.Contacts, f, ct, nimm, cfg.PhoneCountry)
 		})

@@ -551,18 +551,53 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     The answer is a task on Deine Aufgaben like any other answer;
     `/kontakte/antworten` leads to its review at
     `/kontakte/antworten/<id>` (only for who made the link; anyone else
-    is sent to `/kontakte`): each field before → after with nothing
-    before, its findings, and *Als neuen Kontakt anlegen* (a new card in
-    the household's book, `kontaktantwort.NeuAnlegen`: the name always,
-    the other ticked fields as the review writes them into a card) or
-    *Verwerfen*. When a household card shares a number (as
-    `caldav.TelSchluessel`) or an e-mail address with the answer (never
-    the name alone; three at most), each follows with *<Name> hat schon
-    dieselbe Nummer oder E-Mail-Adresse. Ist das dieselbe Person?* and its
-    own list, before → after as against that card (what the card has
-    already left out; a value over one of the card's is not ticked), and
-    *<Name> damit ergänzen*. Nothing reaches an address book without this
-    review; the outcome is said on the page, with *Zum Kontakt ›*.
+    is sent to `/kontakte`). Its owner is also told over Laib (`laib
+    tell`, owner 2026-11-28), as every answer's owner is: *<Vorname> hat
+    seine Kontaktdaten eingetragen – prüfen: <HOMES_PUBLIC_URL>/kontakte/antworten/<id>*
+    (a card's answer links its contact page instead; without Laib or
+    `HOMES_PUBLIC_URL` nothing is sent, a failure is logged without the
+    name; the task stays either way). The review asks first *Ist das
+    jemand, den du schon hast?* (owner 2026-11-28): the household's cards
+    that may be that person (`kontaktantwort.Kandidaten`), the most likely
+    first, five at most, each with its reasons — *gleiche Mobilnummer*
+    (one of its numbers as `caldav.TelSchluessel`, a mobile one), *gleiche
+    Telefonnummer*, *gleiche E-Mail* (any case), *ähnlicher Name*
+    (`namen.Plain` per word, in any order: *Muster, Erika* is *Erika
+    Muster*) — and *Damit zusammenführen*, a link to
+    `/kontakte/antworten/<id>?ziel=<uid>`: *Mit <Name> zusammenführen*,
+    the answer before → after as against that card (what the card has
+    already left out; a value over one of the card's is not ticked),
+    *<Name> damit ergänzen* and *‹ Doch nicht – zurück zur Auswahl*; a
+    `ziel` that is no candidate shows the choice again, and only a
+    candidate is ever written to. None: *Im Adressbuch hat niemand
+    dieselbe Nummer, dieselbe E-Mail-Adresse oder einen ähnlichen
+    Namen.* Below the candidates (*Keiner davon? Dann neu ins Adressbuch*,
+    or *Neu ins Adressbuch* without any) each field before → after with
+    nothing before, its findings, and *Ins Adressbuch übernehmen* (a new
+    card in the household's book, `kontaktantwort.NeuAnlegen`: the name
+    always, the other ticked fields as the review writes them into a
+    card) or *Verwerfen*. There is no per-person book to choose instead:
+    a person's *Handy-Kontakte* are their phone's mirror, written only by
+    the phone. Nothing reaches an address book without this review; the
+    outcome is said on the page, with *Zum Kontakt ›*.
+  - What a stranger sends to the public pages is held to it (owner
+    2026-11-28: „Injektionen-Schutz ist gegeben, richtig?“, tested in
+    `kontakt_sicher_test.go`): every value is HTML-escaped for its place
+    (text, attribute, the message's quote), the live stream sends each
+    event as one line of JSON whose HTML parts are escaped before the
+    page's script sets them; every value is kept on one line (the
+    message keeps its newlines) without control characters and without
+    what shows nothing (`namen.Sichtbar`: bidi controls, zero-width and
+    other format characters, C1 controls; a line separator is a space),
+    at most 200 characters (the message 1000, 12 of each kind, the body
+    32 KB, the photo 5 MB, re-encoded); written into a card each value is
+    TEXT-escaped (RFC 6350: `\\`, `\;`, `\,`, `\n`) so no field adds a
+    property or ends the card; a POST from another site is refused
+    (`Sec-Fetch-Site`, else `Origin`), on the public form as on the
+    review; tokens are compared in constant time by their hash and never
+    logged. Kontakte's links are `tel:` with the number's digits, `+` and
+    `*` only, and `mailto:` with the address percent-encoded (a `?` in it
+    starts no `cc`).
   - *Kontakt austauschen* (owner 2026-11-28): the page the other phone
     opens when two phones touch or a QR code is shown, `/t/<token>` on
     the same public listener (`pages.Teilen`; the session is the app's,
@@ -583,7 +618,9 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
       the released fields (`teilen.Karte.VCard`; `FN`/`N` the released
       name, else the first name, as FN needs one; `TEL;TYPE=CELL`,
       `TEL;TYPE=VOICE`, `EMAIL;TYPE=INTERNET`, `ADR` with the address as
-      its street, `BDAY`, `ORG`), `Content-Disposition: attachment`;
+      its street, `BDAY`, `ORG`; every value TEXT-escaped, each line
+      folded at 75 octets), `Content-Disposition: attachment` with the
+      first name as the file name (`mime.FormatMediaType`, `<Vorname>.vcf`);
       404 while no card is released and once the session is over.
     - *Gast-WLAN*: the network's name and its password, each with
       *Kopieren* (the clipboard, *Kopiert ✓*; without one the text is

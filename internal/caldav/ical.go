@@ -190,6 +190,9 @@ func UnescapeText(s string) string {
 	return b.String()
 }
 
+// Fold writes one content line as fold does, for a card built elsewhere (teilen's .vcf).
+func Fold(b *strings.Builder, line string) { fold(b, line) }
+
 // fold writes one content line, folded at 75 octets without splitting a
 // UTF-8 sequence, terminated by CRLF.
 func fold(b *strings.Builder, line string) {

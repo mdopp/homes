@@ -257,11 +257,31 @@ func KontaktFrage(cfg StartConfig) http.HandlerFunc {
 			return
 		}
 		log.Printf("homes: kontakt-frage %s answered: %d changes", f.ID, len(as))
+		if cfg.Laib != nil && cfg.PublicURL != "" {
+			go antwortMelden(cfg, f, nachher)
+		}
 		if f.Neu {
 			frageSeite(w, http.StatusOK, nonce, html.EscapeString(fmt.Sprintf(texte.T(texte.FrageNeuDanke), frageVon(f))), "<p>"+wort(texte.FrageNeuDankeText)+"</p>")
 			return
 		}
 		frageSeite(w, http.StatusOK, nonce, wort(texte.FrageDanke), "<p>"+wort(texte.FrageDankeText)+"</p>")
+	}
+}
+
+// antwortMelden tells the link's owner over Laib that the answer to f waits (owner 2026-11-28: „Ich
+// glaube ich sollte eine Review-Nachricht bekommen“), with the review's address: a new person's own
+// page, else the contact's; it stays on Deine Aufgaben either way. The name is the answer's first
+// name, kept as Sauber keeps it (one line, nothing invisible); a failure is logged, never the name.
+func antwortMelden(cfg StartConfig, f kontaktantwort.Frage, nachher kontaktantwort.Felder) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	pfad := kontaktPfad(f.Buch, f.UID)
+	if f.Neu {
+		pfad = AntwortenPath + "/" + f.ID
+	}
+	name := cmp.Or(nachher.Vorname, f.Vorher.Vorname, nachher.Name(), f.Name(), texte.T(texte.AntwortMeldungJemand))
+	if err := cfg.Laib.Tell(ctx, f.Wer, fmt.Sprintf(texte.T(texte.AntwortMeldung), name, strings.TrimRight(cfg.PublicURL, "/")+pfad)); err != nil {
+		log.Printf("homes: kontakt-frage %s: telling its owner: %v", f.ID, err)
 	}
 }
 

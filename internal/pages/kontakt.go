@@ -105,12 +105,12 @@ func kontaktSeite(w http.ResponseWriter, r *http.Request, cfg StartConfig, ct ca
 	}
 	for _, p := range ct.Phones {
 		if p = oneLine(p); p != "" {
-			c.AddLink(p, "Telefon", "tel:"+strings.ReplaceAll(p, " ", ""))
+			c.AddLink(p, "Telefon", telHref(p))
 		}
 	}
 	for _, m := range ct.Emails {
 		if m = oneLine(m); m != "" {
-			c.AddLink(m, "E-Mail", "mailto:"+m)
+			c.AddLink(m, "E-Mail", mailHref(m))
 		}
 	}
 	if ct.Birthday != "" {

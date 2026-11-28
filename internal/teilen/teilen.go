@@ -17,6 +17,7 @@ package teilen
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
@@ -27,6 +28,7 @@ import (
 	"time"
 
 	"github.com/mdopp/homes/internal/caldav"
+	"github.com/mdopp/homes/internal/namen"
 )
 
 const (
@@ -187,7 +189,7 @@ func (s *Store) Neu(wer, vorname string) (string, string, time.Time, error) {
 		return "", "", time.Time{}, err
 	}
 	id = id[:16]
-	x := &sitzung{Ansicht: Ansicht{ID: id, Vorname: vorname, Bis: now.Add(Dauer)}, wer: wer, hash: hash(token), wechsel: make(chan struct{})}
+	x := &sitzung{Ansicht: Ansicht{ID: id, Vorname: zeile(vorname), Bis: now.Add(Dauer)}, wer: wer, hash: hash(token), wechsel: make(chan struct{})}
 	s.alle[id], s.neu[wer] = x, append(s.neu[wer], now)
 	return id, token, x.Bis, nil
 }
@@ -207,6 +209,7 @@ func (s *Store) Setzen(id, wer, vorname string, f Freigabe, e Einladung) error {
 	if err := f.pruefen(); err != nil {
 		return err
 	}
+	f, vorname = f.sauber(), zeile(vorname)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	x, err := s.eine(id, wer)
@@ -263,15 +266,42 @@ func (s *Store) Zum(token string, geoeffnet bool) (Ansicht, <-chan struct{}, err
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.fegen(s.now())
-	for _, x := range s.alle {
-		if x.hash == h {
-			if geoeffnet && !x.Vorbei() && !x.Geoeffnet {
-				x.Geoeffnet = true
-			}
-			return x.Ansicht, x.wechsel, nil
+	var x *sitzung
+	for _, y := range s.alle { // every hash compared in constant time, none skipped
+		if subtle.ConstantTimeCompare([]byte(y.hash), []byte(h)) == 1 {
+			x = y
 		}
 	}
-	return Ansicht{}, nil, ErrWeg
+	if x == nil {
+		return Ansicht{}, nil, ErrWeg
+	}
+	if geoeffnet && !x.Vorbei() && !x.Geoeffnet {
+		x.Geoeffnet = true
+	}
+	return x.Ansicht, x.wechsel, nil
+}
+
+// zeile is a released value as the guest's page shows it: what shows nothing (namen.Sichtbar)
+// and the control characters gone, trimmed; the newlines of an address kept.
+func zeile(v string) string {
+	return strings.TrimSpace(strings.Map(func(r rune) rune {
+		if (r < 0x20 && r != '\n') || r == 0x7f {
+			return -1
+		}
+		return r
+	}, namen.Sichtbar(strings.ReplaceAll(v, "\r\n", "\n"))))
+}
+
+// sauber is f with each released value as zeile keeps it.
+func (f Freigabe) sauber() Freigabe {
+	if k := f.Karte; k != nil {
+		f.Karte = &Karte{Name: zeile(k.Name), Mobil: zeile(k.Mobil), Telefon: zeile(k.Telefon), Mail: zeile(k.Mail), Adresse: zeile(k.Adresse),
+			Geburtstag: k.Geburtstag, Firma: zeile(k.Firma)}
+	}
+	if w := f.WLAN; w != nil {
+		f.WLAN = &WLAN{SSID: zeile(w.SSID), Kennwort: w.Kennwort, Offen: w.Offen} // a password is as it is: a space in it is its own
+	}
+	return f
 }
 
 // pruefen holds the released fields to their limits.
