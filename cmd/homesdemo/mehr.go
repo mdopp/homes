@@ -114,6 +114,7 @@ func mehrSeiten(mux *http.ServeMux, cfg pages.StartConfig, dav *davfake.Server, 
 	// Kontakt prüfen lassen (owner 2026-11-07): the review pages here, the page without a login on a listener of its own, as on the box
 	cfg.DNS, cfg.KontaktURL = demoDNS{}, "http://"+*kontaktAddr // the store is main's, shared with Deine Aufgaben
 	mux.HandleFunc(pages.PruefenPath, pages.Pruefen(cfg))
+	mux.HandleFunc(pages.KontaktEinladenPath, pages.KontaktEinladen(cfg))
 	mux.HandleFunc(pages.AntwortenPath, pages.Antworten(cfg))
 	mux.HandleFunc(pages.AntwortenPath+"/", pages.Antworten(cfg))
 	go func() { log.Print(http.ListenAndServe(*kontaktAddr, pages.KontaktServer(cfg))) }()

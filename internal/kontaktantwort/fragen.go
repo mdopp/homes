@@ -143,6 +143,12 @@ func Anlegen(ctx context.Context, dav *caldav.Client, name string, tels, mails [
 // Link makes the link for the contact ct of buch, started by wer: von their first name (""
 // the one they last signed a link with, as the app has none), the address basis/<token>.
 func (s *Store) Link(wer, von, buch string, ct caldav.Contact, basis string) (string, Frage, error) {
+	token, f, err := s.Neu(wer, s.von(wer, von), buch, ct.UID, FelderVon(ct))
+	return strings.TrimRight(basis, "/") + "/" + token, f, err
+}
+
+// von is von, else the first name wer last signed a link with.
+func (s *Store) von(wer, von string) string {
 	if von == "" {
 		for _, f := range s.read() {
 			if f.Wer == wer && f.Von != "" {
@@ -150,6 +156,5 @@ func (s *Store) Link(wer, von, buch string, ct caldav.Contact, basis string) (st
 			}
 		}
 	}
-	token, f, err := s.Neu(wer, von, buch, ct.UID, FelderVon(ct))
-	return strings.TrimRight(basis, "/") + "/" + token, f, err
+	return von
 }

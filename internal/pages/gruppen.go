@@ -51,6 +51,7 @@ func Gruppen(cfg StartConfig) map[string][]modul.Route {
 	gs.add("kontakte", MeineKontaktePath+"/", MeineKontakte(cfg)) // …/<uid>/fotos
 	gs.add("kontakte", DieselbePath, Dieselbe(cfg))               // „Dieselbe Person?“: faces Immich holds close, for the key's owner
 	gs.add("kontakte", PruefenPath, Pruefen(cfg))                 // Kontakt prüfen lassen: the link to a contact (owner 2026-11-07)
+	gs.add("kontakte", KontaktEinladenPath, KontaktEinladen(cfg)) // Kontaktdaten eintragen lassen: a new person's link (owner 2026-11-28)
 	gs.add("kontakte", AntwortenPath, Antworten(cfg))             // its answers, before → after, taken or not
 	gs.add("kontakte", AntwortenPath+"/", Antworten(cfg))
 	if cfg.Einkauf != nil || cfg.Wuensche != nil { // haus#118; with einkauf off, the music wish list only (ADR 0001 H4)

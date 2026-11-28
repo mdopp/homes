@@ -377,6 +377,29 @@ const (
 	FrageZuGross          ID = "frage.zu-gross"
 	FrageDatum            ID = "frage.datum"
 	FrageNicht            ID = "frage.nicht"
+	// Kontaktdaten eintragen lassen (owner 2026-11-28): the same link and form for a new person
+	EinladenText      ID = "einladen.text"      // the prepared message: „%s“ the link
+	EinladenKnopf     ID = "einladen.knopf"     // Kontakte's button
+	EinladenWozu      ID = "einladen.wozu"      // under it
+	FrageNeuTitel     ID = "frage.neu"          // the public page of such a link
+	FrageNeuHinweis   ID = "frage.neu.hinweis"  // „%s“ who sent it
+	FrageNeuHaushalt  ID = "frage.neu.haushalt" // who, when the link names nobody
+	FrageNeuOhneName  ID = "frage.neu.ohne-name"
+	FrageNeuSenden    ID = "frage.neu.senden"
+	FrageNeuDanke     ID = "frage.neu.danke" // „%s“ who sent it
+	FrageNeuDankeText ID = "frage.neu.danke.text"
+	NeuAntwortTitel   ID = "neu.antwort" // its review: the heading
+	NeuAntwortWarum   ID = "neu.antwort.warum"
+	NeuAnlegen        ID = "neu.anlegen" // the button, pressed, done
+	NeuAnlegenLaeuft  ID = "neu.anlegen.laeuft"
+	NeuAngelegt       ID = "neu.angelegt"
+	NeuNameFest       ID = "neu.name-fest"    // beside the name: a new card always gets it
+	NeuTreffer        ID = "neu.treffer"      // a household card shares a number or e-mail: „%s“ its name
+	NeuErgaenzen      ID = "neu.ergaenzen"    // „%s“ its name
+	NeuErgaenzt       ID = "neu.ergaenzt"     // „%s“ the name
+	NeuNichtsNeues    ID = "neu.nichts-neues" // the card has all of it already: „%s“ its name
+	NeuZumKontakt     ID = "neu.zum-kontakt"
+	NeuNichtAngelegt  ID = "neu.nicht-angelegt"
 	// Zugang anfragen (owner 2026-11-08): the public teaser's form on the domain itself
 	ZugangOhneName    ID = "zugang.ohne-name"
 	ZugangOhneKontakt ID = "zugang.ohne-kontakt"
@@ -429,6 +452,28 @@ const (
 )
 
 var de = map[ID]string{
+	"einladen.text":              "Hallo, magst du mir deine Kontaktdaten geben? Trag sie hier ein, dann kommen sie in unser Adressbuch. Der Link gilt 7 Tage und nur einmal: %s",
+	"einladen.knopf":             "Jemanden seine Kontaktdaten eintragen lassen",
+	"einladen.wozu":              "Die Person bekommt einen Link und trägt Name, Telefon, Adresse und Co. selbst ein. Du siehst es dir an, bevor es ins Adressbuch kommt.",
+	"frage.neu":                  "Trag deine Kontaktdaten ein",
+	"frage.neu.hinweis":          "Damit dich %s im Adressbuch hat: trag ein, was du teilen magst – nur dein Name ist nötig. Du siehst hier nur, was du selbst einträgst.",
+	"frage.neu.haushalt":         "der Haushalt",
+	"frage.neu.senden":           "Angaben senden",
+	"frage.neu.ohne-name":        "Trag deinen Vor- oder Nachnamen ein.",
+	"frage.neu.danke":            "Danke – %s sieht deine Angaben und übernimmt sie.",
+	"frage.neu.danke.text":       "Du kannst die Seite jetzt schließen.",
+	"neu.antwort":                "Neuer Kontakt: %s",
+	"neu.antwort.warum":          "Hat seine Kontaktdaten selbst eingetragen. Nichts kommt ins Adressbuch, bevor du es übernimmst.",
+	"neu.anlegen":                "Als neuen Kontakt anlegen",
+	"neu.anlegen.laeuft":         "Legt an …",
+	"neu.angelegt":               "Angelegt: %s ist jetzt im Adressbuch des Haushalts.",
+	"neu.name-fest":              "Der Name kommt immer mit.",
+	"neu.treffer":                "%s hat schon dieselbe Nummer oder E-Mail-Adresse. Ist das dieselbe Person?",
+	"neu.ergaenzen":              "%s damit ergänzen",
+	"neu.ergaenzt":               "%s ergänzt.",
+	"neu.nichts-neues":           "%s hat das alles schon.",
+	"neu.zum-kontakt":            "Zum Kontakt",
+	"neu.nicht-angelegt":         "Der Kontakt ließ sich gerade nicht anlegen. Versuch es gleich noch einmal.",
 	NavStart:                     "Start",
 	NavHaushalt:                  "Haushalt",
 	NavMehr:                      "Mehr",

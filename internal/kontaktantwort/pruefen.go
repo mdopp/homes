@@ -39,6 +39,7 @@ type Pruefung struct {
 	Land string // calling code without +, haushalt.DefaultCountry by default
 	DNS  Resolver
 	Now  time.Time
+	Neu  bool // a new person's answer (Einladen): every field is new, many at once are no finding
 }
 
 // Pruefen sets each change's findings and says what concerns the whole
@@ -66,7 +67,7 @@ func (p Pruefung) Pruefen(ctx context.Context, vorher, nachher Felder, as []Aend
 	if h := Name(vorher.Name(), nachher.Name()); h != "" && (vorher.Vorname != nachher.Vorname || vorher.Nachname != nachher.Nachname) {
 		out = append(out, h)
 	}
-	if len(as) >= VieleAb {
+	if len(as) >= VieleAb && !p.Neu {
 		out = append(out, fmt.Sprintf("Viele Änderungen auf einmal (%d): sieh sie dir einzeln an, bevor du alle übernimmst.", len(as)))
 	}
 	return out

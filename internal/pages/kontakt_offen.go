@@ -25,7 +25,9 @@ func offenFuer(r *http.Request, cfg StartConfig) wartet {
 	o := wartet{map[string]kontaktantwort.Frage{}, map[string][]gesichter.Frage{}, map[string][]gesichter.Paar{}}
 	if cfg.pruefenAn() {
 		for _, f := range slices.Backward(cfg.Antworten.ZuPruefen(r.Header.Get("Remote-User"))) {
-			o.antworten[f.Buch+"/"+f.UID] = f
+			if !f.Neu { // a new person's has no card yet: AntwortenPath/<id>
+				o.antworten[f.Buch+"/"+f.UID] = f
+			}
 		}
 	}
 	if privatEigen(r, cfg) {

@@ -40,7 +40,9 @@ import (
 // 14 days. A token that is no link, one answered, one over and one never
 // made all get the same page; requests are limited per address and in
 // all here too; the answer goes into kontaktantwort's store, never into
-// an address book. No secret and no Remote-User is read here.
+// an address book. No secret and no Remote-User is read here. A new
+// person's link (kontaktantwort.Einladen, owner 2026-11-28) is the same
+// page with the form empty, a name required and 7 days.
 
 // KontaktServer is everything the public listener serves: the page at
 // /<token>, and a robots.txt and a favicon that say nothing. With a
@@ -217,8 +219,9 @@ func KontaktFrage(cfg StartConfig) http.HandlerFunc {
 			return
 		}
 		form := func(st frageStand, problem string) string { return frageForm(token, f, st, problem) }
+		titel := wort(map[bool]texte.ID{false: texte.FrageTitel, true: texte.FrageNeuTitel}[f.Neu]) // a new person's (owner 2026-11-28)
 		if r.Method != http.MethodPost {
-			frageSeite(w, http.StatusOK, nonce, wort(texte.FrageTitel), form(frageStand{f: kontaktantwort.Sauber(f.Vorher)}, ""))
+			frageSeite(w, http.StatusOK, nonce, titel, form(frageStand{f: kontaktantwort.Sauber(f.Vorher)}, ""))
 			return
 		}
 		if fremd(r) {
@@ -226,14 +229,17 @@ func KontaktFrage(cfg StartConfig) http.HandlerFunc {
 			return
 		}
 		st, nachher, code, problem := frageGeprueft(w, r, f.Vorher, cfg.PhoneCountry, d.now())
+		if code == 0 && f.Neu && strings.TrimSpace(nachher.Vorname+nachher.Nachname) == "" { // a new card needs a name
+			st.fehler["vorname"], code, problem = texte.T(texte.FrageNeuOhneName), http.StatusOK, texte.Von(r).T(texte.FrageFehler)
+		}
 		if code != 0 {
-			frageSeite(w, code, nonce, wort(texte.FrageTitel), form(st, problem))
+			frageSeite(w, code, nonce, titel, form(st, problem))
 			return
 		}
 		as := kontaktantwort.Vergleich(f.Vorher, nachher)
 		var hinweise []string
 		fetch(r, func(ctx context.Context) {
-			hinweise = kontaktantwort.Pruefung{Land: cfg.PhoneCountry, DNS: cfg.DNS, Now: time.Now()}.Pruefen(ctx, f.Vorher, nachher, as)
+			hinweise = kontaktantwort.Pruefung{Land: cfg.PhoneCountry, DNS: cfg.DNS, Now: time.Now(), Neu: f.Neu}.Pruefen(ctx, f.Vorher, nachher, as)
 		})
 		_, err = cfg.Antworten.Beantworten(token, kontaktantwort.Antwort{Bestaetigt: len(as) == 0, Aenderungen: as, Hinweise: hinweise})
 		switch {
@@ -242,10 +248,14 @@ func KontaktFrage(cfg StartConfig) http.HandlerFunc {
 			return
 		case err != nil:
 			log.Printf("homes: kontakt-frage %s: not kept: %v", f.ID, err)
-			frageSeite(w, http.StatusOK, nonce, wort(texte.FrageTitel), form(st, texte.Von(r).T(texte.FrageNicht)))
+			frageSeite(w, http.StatusOK, nonce, titel, form(st, texte.Von(r).T(texte.FrageNicht)))
 			return
 		}
 		log.Printf("homes: kontakt-frage %s answered: %d changes", f.ID, len(as))
+		if f.Neu {
+			frageSeite(w, http.StatusOK, nonce, html.EscapeString(fmt.Sprintf(texte.T(texte.FrageNeuDanke), frageVon(f))), "<p>"+wort(texte.FrageNeuDankeText)+"</p>")
+			return
+		}
 		frageSeite(w, http.StatusOK, nonce, wort(texte.FrageDanke), "<p>"+wort(texte.FrageDankeText)+"</p>")
 	}
 }
@@ -484,7 +494,11 @@ func frageForm(token string, fr kontaktantwort.Frage, st frageStand, problem str
 	}
 	auf := func(legend string) { b.WriteString(`<fieldset><legend>` + html.EscapeString(legend) + `</legend>`) }
 	zu := func() { b.WriteString(`</fieldset>`) }
-	b.WriteString(`<p>` + wort(texte.FrageHinweis) + `</p>` + gesagt("", problem))
+	hinweis := wort(texte.FrageHinweis)
+	if fr.Neu {
+		hinweis = html.EscapeString(fmt.Sprintf(texte.T(texte.FrageNeuHinweis), frageVon(fr)))
+	}
+	b.WriteString(`<p>` + hinweis + `</p>` + gesagt("", problem))
 	b.WriteString(`<form method=post enctype=multipart/form-data action="/` + html.EscapeString(token) + `" data-plz="` + html.EscapeString(plzMuster()) + `">`)
 	auf(texte.T(texte.ArtName))
 	in("vorname", "vorname", texte.T(texte.ArtVorname), f.Vorname, `maxlength=200 autocomplete=given-name `+muster(kontaktantwort.MusterName, texte.FrageNameForm))
@@ -585,11 +599,17 @@ func frageForm(token string, fr kontaktantwort.Frage, st frageStand, problem str
 	b.WriteString(`<label>` + html.EscapeString(fmt.Sprintf(texte.T(texte.FrageNachrichtAn), cmp.Or(fr.Von, texte.T(texte.FrageDir)))) +
 		`<textarea name=nachricht rows=4 maxlength=` + strconv.Itoa(kontaktantwort.GrenzeNachricht) + `>` + html.EscapeString(f.Nachricht) + `</textarea></label>`)
 	zu()
-	b.WriteString(`<p class=knoepfe><button name=aktion value=senden data-laeuft="` + wort(texte.FrageSendet) + `">` + wort(texte.FrageSenden) + `</button>` +
-		`<button name=aktion value=stimmt class=zweit data-laeuft="` + wort(texte.FrageSendet) + `">` + wort(texte.FrageStimmt) + `</button></p></form>`)
+	b.WriteString(`<p class=knoepfe><button name=aktion value=senden data-laeuft="` + wort(texte.FrageSendet) + `">` + wort(map[bool]texte.ID{false: texte.FrageSenden, true: texte.FrageNeuSenden}[fr.Neu]) + `</button>`)
+	if !fr.Neu { // nothing to confirm on an empty card
+		b.WriteString(`<button name=aktion value=stimmt class=zweit data-laeuft="` + wort(texte.FrageSendet) + `">` + wort(texte.FrageStimmt) + `</button>`)
+	}
+	b.WriteString(`</p></form>`)
 	b.WriteString(`<p class=k>` + html.EscapeString(fmt.Sprintf(texte.T(texte.FrageBis), fr.Bis.Local().Format("02.01.2006"))) + `</p>`)
 	return b.String()
 }
+
+// frageVon is who sent a new person's link, as its page names them: their first name, else the household.
+func frageVon(f kontaktantwort.Frage) string { return cmp.Or(f.Von, texte.T(texte.FrageNeuHaushalt)) }
 
 // liste is the rows of a list as the form shows them: the card's n, the
 // new ones the contact filled, and one empty to add.

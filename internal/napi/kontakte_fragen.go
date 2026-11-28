@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"slices"
+	"time"
 
 	"github.com/mdopp/homes/internal/caldav"
 	"github.com/mdopp/homes/internal/kontaktantwort"
@@ -25,6 +26,12 @@ import (
 //	POST /napi/kontakte/fragen {"name","telefon":[…],"mail":[…],"anlegen"?:bool,"uid"?}
 //	  → {"ok":true,"kontakt","vorname","link","text","fehlt":[…],"telefon","neu"?:true}
 //	  404 {"ok":false,"error","anlegen":true} · 409 {"ok":false,"error","kandidaten":[{"kontakt","uid"}]}
+//
+// Kontaktdaten eintragen lassen (owner 2026-11-28): a link for a person
+// the household has no card of, the same public form empty, 7 days, once;
+// the answer is reviewed on the page (kontaktantwort.Einladen).
+//
+//	POST /napi/kontakte/einladen (no body) → {"ok":true,"link","text","gueltig_bis"}
 
 type fragen struct {
 	dav    *caldav.Client // the household's address book (Haushalt.Contacts); nil: no route
@@ -40,6 +47,7 @@ func (f *fragen) routes(gs gruppen) {
 		return
 	}
 	gs.add("kontakte", "POST /napi/kontakte/fragen", f.post)
+	gs.add("kontakte", "POST /napi/kontakte/einladen", f.einladen)
 }
 
 // fragenAn is what the app sends: the shared vCard's name, numbers and e-mail addresses.
@@ -51,13 +59,13 @@ type fragenAn struct {
 	UID     string   `json:"uid"`
 }
 
-func (f *fragen) post(w http.ResponseWriter, r *http.Request) {
+// darf is the device's person when they may ask (an admin, the public page there); false: the refusal is written.
+func (f *fragen) darf(w http.ResponseWriter, r *http.Request, sp texte.Sprache) (string, bool) {
 	w.Header().Set("Cache-Control", "no-store")
-	sp, person := texte.Von(r), ""
+	person := ""
 	if bearer, ok := bearerOf(r); ok && f.whoami != nil {
 		person, _ = f.whoami(bearer)
 	}
-	var in fragenAn
 	switch {
 	case !validPerson(person):
 		sagNein(w, http.StatusForbidden, saysNoPerson)
@@ -65,6 +73,37 @@ func (f *fragen) post(w http.ResponseWriter, r *http.Request) {
 		sagNein(w, http.StatusForbidden, sp.T(texte.PruefenNurAdmins))
 	case f.store == nil || f.basis == "":
 		sagNein(w, http.StatusServiceUnavailable, sp.T(texte.FehltAus))
+	default:
+		return person, true
+	}
+	return "", false
+}
+
+// einladen makes a new person's link and answers it with the message the share sheet gets.
+func (f *fragen) einladen(w http.ResponseWriter, r *http.Request) {
+	sp := texte.Von(r)
+	person, ok := f.darf(w, r, sp)
+	if !ok {
+		return
+	}
+	link, frage, err := f.store.Einladen(person, "", f.basis)
+	if err != nil {
+		log.Printf("homes: kontakt einladen: the link not made: %v", err)
+		sagNein(w, http.StatusServiceUnavailable, sp.T(texte.PruefenNicht))
+		return
+	}
+	log.Printf("homes: kontakt einladen: link %s made from the app", frage.ID)
+	answer(w, http.StatusOK, map[string]any{"ok": true, "link": link, "text": fmt.Sprintf(sp.T(texte.EinladenText), link), "gueltig_bis": frage.Bis.UTC().Format(time.RFC3339)})
+}
+
+func (f *fragen) post(w http.ResponseWriter, r *http.Request) {
+	sp := texte.Von(r)
+	person, ok := f.darf(w, r, sp)
+	if !ok {
+		return
+	}
+	var in fragenAn
+	switch {
 	case json.NewDecoder(http.MaxBytesReader(w, r.Body, 16<<10)).Decode(&in) != nil:
 		sagNein(w, http.StatusBadRequest, saysUnreadable)
 	case in.Name == "" && len(in.Telefon) == 0 && len(in.Mail) == 0 && in.UID == "":
