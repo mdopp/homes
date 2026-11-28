@@ -400,6 +400,39 @@ const (
 	NeuNichtsNeues    ID = "neu.nichts-neues" // the card has all of it already: „%s“ its name
 	NeuZumKontakt     ID = "neu.zum-kontakt"
 	NeuNichtAngelegt  ID = "neu.nicht-angelegt"
+	// Kontakt austauschen (owner 2026-11-28): the app's session and the public page /t/<token> that follows it live
+	TeilenAus            ID = "teilen.aus" // the app's refusals
+	TeilenWeg            ID = "teilen.weg"
+	TeilenVorbei         ID = "teilen.vorbei"
+	TeilenFeld           ID = "teilen.feld"
+	TeilenZuViele        ID = "teilen.zu-viele"
+	TeilenZuOft          ID = "teilen.zu-oft"
+	TeilenTitel          ID = "teilen.titel"  // the page's heading: „%s“ the first name
+	TeilenWartet         ID = "teilen.wartet" // nothing released yet: „%s“ the first name
+	TeilenKarte          ID = "teilen.karte"  // „%s“ the first name's genitive („Michaels“)
+	TeilenKarteKnopf     ID = "teilen.karte.knopf"
+	TeilenKarteWie       ID = "teilen.karte.wie"
+	TeilenMobil          ID = "teilen.mobil"
+	TeilenWLAN           ID = "teilen.wlan"
+	TeilenWLANName       ID = "teilen.wlan.name"
+	TeilenKennwort       ID = "teilen.kennwort"
+	TeilenOffen          ID = "teilen.offen"
+	TeilenKopieren       ID = "teilen.kopieren"
+	TeilenKopiert        ID = "teilen.kopiert"
+	TeilenMarkiert       ID = "teilen.markiert" // no clipboard: the text is selected
+	TeilenDu             ID = "teilen.du"
+	TeilenPicker         ID = "teilen.picker" // the Contact Picker (Android's Chrome)
+	TeilenDatei          ID = "teilen.datei"  // a vCard file (iPhones)
+	TeilenQuelleWie      ID = "teilen.quelle.wie"
+	TeilenUebernommen    ID = "teilen.uebernommen"
+	TeilenKeineKarte     ID = "teilen.keine-karte"
+	TeilenDuDanke        ID = "teilen.du.danke" // „%s“ the first name
+	TeilenBeendet        ID = "teilen.beendet"  // „%s“ the first name
+	TeilenBeendetText    ID = "teilen.beendet.text"
+	TeilenAbgelaufen     ID = "teilen.abgelaufen"
+	TeilenAbgelaufenText ID = "teilen.abgelaufen.text" // „%[1]s“ the first name
+	TeilenWerbung        ID = "teilen.werbung"         // the footer's card about Homes (owner: „Mach übrigens auch gleich Werbung für Homes ;)“)
+	TeilenMehr           ID = "teilen.mehr"
 	// Zugang anfragen (owner 2026-11-08): the public teaser's form on the domain itself
 	ZugangOhneName    ID = "zugang.ohne-name"
 	ZugangOhneKontakt ID = "zugang.ohne-kontakt"
@@ -474,6 +507,38 @@ var de = map[ID]string{
 	"neu.nichts-neues":           "%s hat das alles schon.",
 	"neu.zum-kontakt":            "Zum Kontakt",
 	"neu.nicht-angelegt":         "Der Kontakt ließ sich gerade nicht anlegen. Versuch es gleich noch einmal.",
+	"teilen.aus":                 "Teilen ist auf dieser Box gerade nicht eingerichtet: es fehlt die öffentliche Kontaktseite.",
+	"teilen.weg":                 "Dieses Teilen gibt es nicht (mehr).",
+	"teilen.vorbei":              "Dieses Teilen ist schon vorbei. Starte ein neues.",
+	"teilen.feld":                "Ein Feld passt nicht: der Geburtstag als JJJJ-MM-TT, jedes Feld höchstens 300 Zeichen, beim WLAN der Name.",
+	"teilen.zu-viele":            "Du teilst gerade schon fünfmal. Beende eins davon, dann geht es wieder.",
+	"teilen.zu-oft":              "Du hast in der letzten Stunde sehr oft geteilt. Versuch es in ein paar Minuten noch einmal.",
+	"teilen.titel":               "%s möchte etwas mit dir teilen …",
+	"teilen.wartet":              "%s wählt gerade aus, was geteilt wird. Lass die Seite offen – sie zeigt es, sobald es da ist.",
+	"teilen.karte":               "%s Kontakt speichern",
+	"teilen.karte.knopf":         "Kontakt speichern (.vcf)",
+	"teilen.karte.wie":           "Dein Telefon öffnet die Visitenkarte und fragt, ob sie in deine Kontakte soll.",
+	"teilen.mobil":               "Mobil",
+	"teilen.wlan":                "Gast-WLAN",
+	"teilen.wlan.name":           "WLAN-Name",
+	"teilen.kennwort":            "Kennwort",
+	"teilen.offen":               "Offenes Netz – kein Kennwort nötig.",
+	"teilen.kopieren":            "Kopieren",
+	"teilen.kopiert":             "Kopiert ✓",
+	"teilen.markiert":            "Markiert – jetzt kopieren",
+	"teilen.du":                  "Und du?",
+	"teilen.picker":              "Aus deinen Kontakten wählen",
+	"teilen.datei":               "Visitenkarte (.vcf) wählen",
+	"teilen.quelle.wie":          "Füllt das Formular aus deiner eigenen Karte. Du siehst alles, bevor du es sendest.",
+	"teilen.uebernommen":         "Übernommen – schau kurz drüber, dann „Angaben senden“.",
+	"teilen.keine-karte":         "In der Datei steht keine Visitenkarte.",
+	"teilen.du.danke":            "Danke – %s hat deine Angaben bekommen.",
+	"teilen.beendet":             "%s hat das Teilen beendet.",
+	"teilen.beendet.text":        "Was geteilt war, ist hier nicht mehr zu sehen. Hast du den Kontakt gespeichert, bleibt er in deinem Telefon.",
+	"teilen.abgelaufen":          "Das Teilen ist abgelaufen.",
+	"teilen.abgelaufen.text":     "%[1]s hat 30 Minuten lang geteilt, die Zeit ist um. Brauchst du noch etwas, bitte %[1]s, es noch einmal zu teilen.",
+	"teilen.werbung":             "Geteilt mit Homes – das Zuhause der ganzen Familie, auf eurer eigenen Box statt in fremden Clouds.",
+	"teilen.mehr":                "Mehr erfahren →",
 	NavStart:                     "Start",
 	NavHaushalt:                  "Haushalt",
 	NavMehr:                      "Mehr",

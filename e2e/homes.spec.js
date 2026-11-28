@@ -1771,3 +1771,61 @@ test('Kontaktdaten eintragen lassen: the link, the empty form, a new contact', a
   await expect(page.getByRole('heading', { name: 'Erika Muster' })).toBeVisible();
   await expect(page.locator('body')).toContainText('erika@example.org');
 });
+
+// owner 2026-11-28 („Kontakt austauschen“): the other phone opens the link at once and sees the
+// sharer's first name; the page follows what the sharer releases in the app, live and without a
+// reload; the Wi-Fi password is copied; „Und du?“ is filled from a .vcf; ended, it says so.
+test('Kontakt austauschen: the shared page follows the app live', async ({ browser, request }, info) => {
+  const app = { headers: { Authorization: 'Bearer demo' } };
+  const neu = await request.post('/napi/teilen', { ...app, data: { vorname: 'Michael' } });
+  expect(neu.status()).toBe(201);
+  const { id, link } = await neu.json();
+  expect(link).toMatch(/^http:\/\/127\.0\.0\.1:8652\/t\/[A-Za-z0-9_-]{43}$/);
+
+  const ctx = await browser.newContext({ viewport: { width: 360, height: 800 }, colorScheme: 'light' });
+  await ctx.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: 'http://127.0.0.1:8652' });
+  const gast = await ctx.newPage();
+  gast.on('pageerror', (e) => errors.push(String(e)));
+  await gast.goto(link);
+  await expect(gast.getByRole('heading', { name: 'Michael möchte etwas mit dir teilen …' })).toBeVisible();
+  await expect(gast.getByText('Michael wählt gerade aus, was geteilt wird.')).toBeVisible();
+  await bild(gast, info, 'teilen-wartet-360.png', { fullPage: true });
+  expect((await (await request.get(`/napi/teilen/${id}`, app)).json()).geoeffnet).toBe(true);
+  await mark(gast);
+
+  // released in the app: the card's mobile number and the guest Wi-Fi, on the page at once
+  const put = await request.put(`/napi/teilen/${id}`, { ...app, data: { vorname: 'Michael', karte: { name: 'Michael Dopp', mobil: '+49 170 1234567' }, wlan: { ssid: 'Gast', kennwort: 'Sommer-2026', offen: false }, eintragen: false } });
+  expect(put.status()).toBe(200);
+  await expect(gast.getByRole('heading', { name: 'Michaels Kontakt speichern' })).toBeVisible({ timeout: 5000 });
+  await expect(gast.getByText('+49 170 1234567')).toBeVisible();
+  await expect(gast.getByText('Michael wählt gerade aus, was geteilt wird.')).toBeHidden();
+  expect(await stays(gast), 'the page was not reloaded').toBe(true);
+  const vcf = await (await request.get(`${link}/karte.vcf`)).text();
+  expect(vcf).toContain('TEL;TYPE=CELL:+49 170 1234567');
+  expect(vcf).not.toContain('EMAIL');
+  await gast.locator('.kopie', { hasText: 'Kennwort' }).getByRole('button', { name: 'Kopieren' }).click();
+  await expect(gast.getByRole('button', { name: 'Kopiert ✓' })).toBeVisible();
+  expect(await gast.evaluate(() => navigator.clipboard.readText())).toBe('Sommer-2026');
+
+  // „Und du?“: the intake form, filled from a .vcf (the iPhone's way)
+  await request.put(`/napi/teilen/${id}`, { ...app, data: { vorname: 'Michael', karte: { name: 'Michael Dopp', mobil: '+49 170 1234567' }, wlan: null, eintragen: true } });
+  await expect(gast.getByRole('heading', { name: 'Und du?' })).toBeVisible({ timeout: 5000 });
+  await expect(gast.getByRole('heading', { name: 'Gast-WLAN' })).toBeHidden();
+  await gast.locator('#t-vcf').setInputFiles({ name: 'ich.vcf', mimeType: 'text/vcard',
+    buffer: Buffer.from('BEGIN:VCARD\r\nVERSION:3.0\r\nN:Muster;Erika;;;\r\nFN:Erika Muster\r\nTEL;TYPE=CELL:0170 9876543\r\nEMAIL:erika@example.org\r\nBDAY:1990-04-01\r\nEND:VCARD\r\n') });
+  await expect(gast.locator('input[name=vorname]')).toHaveValue('Erika');
+  await expect(gast.locator('input[name=nachname]')).toHaveValue('Muster');
+  await expect(gast.locator('input[name=tel]').first()).toHaveValue('0170 9876543');
+  await expect(gast.locator('input[name=geb-jahr]')).toHaveValue('1990');
+  await expect(gast.getByText('Übernommen – schau kurz drüber')).toBeVisible();
+  await expect(gast.getByText('Geteilt mit Homes – das Zuhause der ganzen Familie')).toBeVisible();
+  expect(await gast.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+  await bild(gast, info, 'teilen-360.png', { fullPage: true });
+
+  // ended in the app: said on the page, the card gone
+  expect((await request.delete(`/napi/teilen/${id}`, app)).status()).toBe(200);
+  await expect(gast.getByRole('heading', { name: 'Michael hat das Teilen beendet.' })).toBeVisible({ timeout: 5000 });
+  await expect(gast.getByText('+49 170 1234567')).toBeHidden();
+  expect((await request.get(`${link}/karte.vcf`)).status()).toBe(404);
+  await ctx.close();
+});
