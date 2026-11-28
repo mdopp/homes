@@ -511,6 +511,26 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
     alone and said so); a Handy-Kontakt's wait for the phone
     (`/napi/kontakte/korrekturen`). Decided answers go after 30 days,
     unanswered links after their 14.
+  - *Kontakte fragen* (owner 2026-11-28, „auffindbar“; `kontakte_fehlt.go`,
+    `kontaktantwort.Fehlt`): what a contact lacks of what the link asks
+    for, four fields in this order: *Mobilnummer* (a number of kind
+    mobil, else a German 015x/016x/017x), *E-Mail*, *Adresse*,
+    *Geburtstag*. A firm's card (Homes' `Firma` marker, or a card named as
+    its company) lacks nothing. For whoever may have the contact checked
+    (an admin for a house contact, the person for their own
+    Handy-Kontakt) a contact's page that lacks something has, right under
+    its name, *Bei Anna fehlen Adresse und Geburtstag.* (one field: *Bei
+    Clara fehlt noch: Mobilnummer.*) and the button *Anna selbst fragen*,
+    the same link and share sheet as *Daten prüfen lassen*, which then
+    is not shown; a complete contact keeps *Daten prüfen lassen* where it
+    was. Kontakte has, for an admin, the chip *Unvollständig (n)* after
+    the groups while any lacks something: `?fehlt=1` lists those alone,
+    each row with a labelled *Fragen* (named *Anna selbst fragen* for a
+    screen reader) instead of the share icon and what it lacks in one
+    grey line (*Adresse · Geburtstag*); nobody left: *Bei allen Kontakten
+    sind Mobilnummer, E-Mail, Adresse und Geburtstag da.* A family member
+    gets neither (the parameter is ignored). The app asks from a shared
+    vCard with `POST /napi/kontakte/fragen` (below).
   - *Die Box*, the teaser on the domain itself (owner 2026-11-08: a
     visitor without an account sees what the box is; `www.<domain>` stays
     behind Authelia). The same public listener, told apart by Host
@@ -1653,6 +1673,60 @@ is not set, then answers 404 `{"ok":false,"reason":"not_found"}`.
   makes it in the owner's phone and reports it like any; the next
   upload brings it, and the hourly run links it. Each person is asked
   for once (`bekannt`; the names given before Homes first looked never).
+- Kontakte fragen, for the app (owner 2026-11-28; module `kontakte`, not
+  served while it is off): a contact the person shared to the app from
+  the phone's contacts (Android's share sheet, a vCard) is asked for its
+  own data as *Anna selbst fragen* does on its page. `POST
+  /napi/kontakte/fragen`, `application/json` (≤ 16 KB):
+  `{"name": "Anna Beispiel", "telefon": ["0151 23456789", …], "mail":
+  ["anna@example.org", …], "anlegen"?: false, "uid"?: "…"}` (12 numbers
+  and 12 addresses at most; more are ignored). Homes reads the
+  household's shared address book (`HOMES_RADICALE_USER`'s, the one
+  Kontakte lists) and finds the card: by a number first (compared as
+  `caldav.TelSchluessel`, so `0151 …`, `+49 151 …` and `0049 (0)151 …`
+  are one), else by an e-mail address (any case), else by the name
+  (`namen.Plain`: case, accents and punctuation aside); several found
+  are narrowed by the later of these while some stay. `uid` picks the
+  card instead (the answer to a 409). Answers:
+  - `200 {"ok": true, "kontakt": "Anna Beispiel", "vorname": "Anna",
+    "link": "https://kontakt.<domain>/<token>", "text": "Hallo Anna, ich
+    möchte deine Kontaktdaten … Der Link gilt 14 Tage und nur einmal:
+    <link>", "fehlt": ["Adresse", "Geburtstag"], "telefon":
+    "+4915123456789"}` — `link` is the one *Daten prüfen lassen* makes
+    (it retires the person's open link for that card; the answer comes
+    back to the contact's page and Deine Aufgaben of the device's
+    person), `text` the message the page's share sheet gets, in the
+    request's `Accept-Language` (German where a word has no translation),
+    `fehlt` what the card lacks as above (`[]` when nothing; the words,
+    in this order: Mobilnummer, E-Mail, Adresse, Geburtstag), `telefon`
+    the card's mobile number as E.164 with `+` for a WhatsApp
+    (`https://wa.me/<digits>`) or SMS (`sms:`) link, `""` when it has
+    none; with `"neu": true` when Homes has just made the card (else no
+    `neu`).
+  - `404 {"ok": false, "error": "Anna Beispiel steht nicht im
+    Haushalts-Adressbuch.", "anlegen": true}` — nothing found; `anlegen`
+    is `true` when a `name` came, so the app can offer to add it. Sent
+    again with `"anlegen": true`, Homes writes a new card into that book
+    (`kontaktantwort.Anlegen`, `caldav.PutContact` as the Bote's
+    `kontakt_anlegen`): FN the name, each number that parses
+    (`kontaktantwort.Nummer`) in the household's form (`+49 151
+    23456789`), each e-mail address whose syntax holds; and answers `200`
+    as found, with `"neu": true`. Asked again later, it is found.
+  - `409 {"ok": false, "error": "Zu Anna passen mehrere Kontakte im
+    Haushalts-Adressbuch. Wähle den richtigen.", "kandidaten": [{"kontakt":
+    "Anna Beispiel", "uid": "…"}, …]}` — send the same with the chosen
+    `uid`; a `uid` no longer there is `404` *Diesen Kontakt gibt es im
+    Haushalts-Adressbuch nicht mehr.* (no `anlegen`).
+  - Refusals, `{"ok": false, "error": <a German sentence>}`: `403` for a
+    device without a person, and for a person who is not an admin
+    (*Kontakte des Hauses lässt nur ein Admin prüfen. …*; the device's
+    person as Homes last saw them on a page, `HOMES_DATA/admins.json`,
+    as Deine Aufgaben and a tag's wishes know admins); `400` for a body
+    that does not parse, or one without name, number and e-mail; `502`
+    when Radicale does not answer (*Das Haushalts-Adressbuch lässt sich
+    gerade nicht lesen. …*) or the new card was not written; `503` when
+    the box has no public contact page (`HOMES_KONTAKT_URL` unset) or the
+    link could not be stored.
 - The phone's contacts (laib ADR 0029; optional in the app, behind
   Android's contacts permission): `POST /napi/kontakte`, `text/vcard`,
   all of the phone's contacts as concatenated vCards (≤ 64 MB, else 413),

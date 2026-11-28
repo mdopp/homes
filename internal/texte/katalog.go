@@ -260,7 +260,25 @@ const (
 	PruefenWeg            ID = "pruefen.weg"
 	PruefenNicht          ID = "pruefen.nicht"
 	PruefenNurAdmins      ID = "pruefen.nur-admins"
-	AntwortenAufgabe      ID = "antworten.aufgabe" // the task: „%s“ how many, „2 Kontakt-Antworten“
+	// Kontakte fragen auffindbar (owner 2026-11-28): what a contact lacks, and asking them
+	FehltMobil            ID = "fehlt.mobil" // the fields, as a sentence names them
+	FehltMail             ID = "fehlt.mail"
+	FehltAdresse          ID = "fehlt.adresse"
+	FehltGeburtstag       ID = "fehlt.geburtstag"
+	FehltEines            ID = "fehlt.eines"             // the card on a contact: „%s“ the first name, „%s“ the one field
+	FehltMehrere          ID = "fehlt.mehrere"           // „%s“ the first name, „%s“ the fields, „A, B und C“
+	FehltFragen           ID = "fehlt.fragen"            // its button: „%s“ the first name
+	FehltFragenKurz       ID = "fehlt.fragen.kurz"       // a row's button on Kontakte
+	FehltUnvollstaendig   ID = "fehlt.unvollstaendig"    // the chip: „%d“ how many
+	FehltAlleVollstaendig ID = "fehlt.alle-vollstaendig" // the chip picked, and nobody lacks anything
+	FehltNichtImBuch      ID = "fehlt.nicht-im-buch"     // the app's contact not found: „%s“ its name
+	FehltMehrdeutig       ID = "fehlt.mehrdeutig"        // several cards fit: „%s“ the name
+	FehltUIDWeg           ID = "fehlt.uid-weg"           // the card the app chose is gone
+	FehltOhneAngaben      ID = "fehlt.ohne-angaben"      // the app sent neither a name, nor a number, nor an e-mail
+	FehltNichtAngelegt    ID = "fehlt.nicht-angelegt"    // writing the new card failed
+	FehltNichtLesbar      ID = "fehlt.nicht-lesbar"      // Radicale not answering
+	FehltAus              ID = "fehlt.aus"               // the app asks, but the box has no public contact page
+	AntwortenAufgabe      ID = "antworten.aufgabe"       // the task: „%s“ how many, „2 Kontakt-Antworten“
 	AntwortenAufgabeWarum ID = "antworten.aufgabe.warum"
 	AntwortWeg            ID = "antwort.weg"
 	AntwortVon            ID = "antwort.von" // the date, the book
@@ -889,6 +907,23 @@ var de = map[ID]string{
 	"pruefen.teilen-fuer":        "Daten von %s prüfen lassen",
 	"pruefen.nochmal":            "Jetzt teilen",
 	"kontakt.antwort":            "Antwort auf deinen Link",
+	"fehlt.mobil":                "Mobilnummer",
+	"fehlt.mail":                 "E-Mail",
+	"fehlt.adresse":              "Adresse",
+	"fehlt.geburtstag":           "Geburtstag",
+	"fehlt.eines":                "Bei %s fehlt noch: %s.",
+	"fehlt.mehrere":              "Bei %s fehlen %s.",
+	"fehlt.fragen":               "%s selbst fragen",
+	"fehlt.fragen.kurz":          "Fragen",
+	"fehlt.unvollstaendig":       "Unvollständig (%d)",
+	"fehlt.alle-vollstaendig":    "Bei allen Kontakten sind Mobilnummer, E-Mail, Adresse und Geburtstag da.",
+	"fehlt.nicht-im-buch":        "%s steht nicht im Haushalts-Adressbuch.",
+	"fehlt.mehrdeutig":           "Zu %s passen mehrere Kontakte im Haushalts-Adressbuch. Wähle den richtigen.",
+	"fehlt.uid-weg":              "Diesen Kontakt gibt es im Haushalts-Adressbuch nicht mehr.",
+	"fehlt.ohne-angaben":         "Der Kontakt kam ohne Namen, Nummer und E-Mail an. Teile ihn noch einmal aus den Kontakten.",
+	"fehlt.nicht-lesbar":         "Das Haushalts-Adressbuch lässt sich gerade nicht lesen. Versuch es gleich noch einmal.",
+	"fehlt.aus":                  "Kontakte fragen geht auf dieser Box noch nicht: die Seite für die Antworten ist nicht eingerichtet. Sag dem Admin Bescheid.",
+	"fehlt.nicht-angelegt":       "Der Kontakt ließ sich nicht im Haushalts-Adressbuch anlegen. Versuch es gleich noch einmal; hilft das nicht, sag dem Admin Bescheid.",
 	"pruefen.text":               "Hallo %s, ich möchte deine Kontaktdaten in unserem Adressbuch aktuell halten. Magst du kurz prüfen, ob alles stimmt? Der Link gilt 14 Tage und nur einmal: %s",
 	"pruefen.teilen":             "Daten prüfen lassen",
 	"pruefen.wozu":               "%s bekommt einen Link und bestätigt Telefon, Adresse und Co. selbst.",

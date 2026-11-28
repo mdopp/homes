@@ -83,7 +83,8 @@ func kontaktPfad(buch, uid string) string {
 }
 
 // kontaktSeite is a contact of buch: its links and „Daten prüfen lassen“ at the
-// top, what waits about it (kontaktOffen), its fields and gruppenTeil (kontaktGruppen); seg its list.
+// top, what waits about it (kontaktOffen), its fields and gruppenTeil (kontaktGruppen); seg its list
+// ("" a contact no longer in its book). What it lacks comes first (fehltKarte), its button instead.
 func kontaktSeite(w http.ResponseWriter, r *http.Request, cfg StartConfig, ct caldav.Contact, buch, seg, spruenge, gruppenTeil string, e entschieden) {
 	name := kontaktName(ct)
 	weg := []string{name}
@@ -91,7 +92,13 @@ func kontaktSeite(w http.ResponseWriter, r *http.Request, cfg StartConfig, ct ca
 		weg = []string{texte.Von(r).T(texte.KontakteMeine), MeineKontaktePath, name}
 	}
 	b := kontakteHead(r, cfg, name, seg, weg...)
-	b.WriteString(kontakteStyle + "<h1>" + html.EscapeString(name) + "</h1><div class=oben>" + spruenge + pruefenKnopf(r, cfg, buch, ct.UID, name, false) + "</div>")
+	knopf, karte := pruefenKnopf(r, cfg, buch, ct.UID, name, false), ""
+	if seg != "" { // a contact still in its book: what it lacks at the top, the one way to ask (owner 2026-11-28)
+		if karte = fehltKarte(r, cfg, buch, ct); karte != "" {
+			knopf = ""
+		}
+	}
+	b.WriteString(kontakteStyle + fehltStyle + "<h1>" + html.EscapeString(name) + "</h1>" + karte + "<div class=oben>" + spruenge + knopf + "</div>")
 	c := cards.Card{Title: "Kontakt"}
 	if org := trimRunes(oneLine(ct.Org), 120); org != "" && org != name {
 		c.Add(org, "")

@@ -375,8 +375,8 @@ func TestWhoMayStartAndWhereAHandyKontaktGoes(t *testing.T) {
 	list := frag(MeineKontakte(cfg), "GET", MeineKontaktePath, "anna", "family", nil).Body.String()
 	mustContain(t, list, `<a href=/kontakte/privat aria-current=page>Meine</a>`, `<a href="/kontakte/privat/3789r1-2B4D">Oma &lt;b&gt;Hilde&lt;/b&gt;</a>`,
 		`<form method=post action=/kontakte/pruefen class=teilen data-teilen><input type=hidden name=buch value=privat><input type=hidden name=uid value="3789r1-2B4D"><button aria-label="Daten von Oma &lt;b&gt;Hilde&lt;/b&gt; prüfen lassen"`)
-	seite := frag(MeineKontakte(cfg), "GET", "/kontakte/privat/3789r1-2B4D", "anna", "family", nil).Body.String()
-	mustContain(t, seite, `<a href=/kontakte>Kontakte</a> › <a href="/kontakte/privat">Meine</a> › <span>Oma &lt;b&gt;Hilde&lt;/b&gt;</span></nav>`, ">Daten prüfen lassen</button>", "0711 445566")
+	seite := frag(MeineKontakte(cfg), "GET", "/kontakte/privat/3789r1-2B4D", "anna", "family", nil).Body.String() // her own: what it lacks, and asking (owner 2026-11-28)
+	mustContain(t, seite, `<a href=/kontakte>Kontakte</a> › <a href="/kontakte/privat">Meine</a> › <span>Oma &lt;b&gt;Hilde&lt;/b&gt;</span></nav>`, ">Oma selbst fragen</button>", "0711 445566")
 	mustNotContain(t, seite, "Fotos") // not the Immich key's owner
 	token := startLink(t, cfg, "privat", "3789r1-2B4D", "family")
 	frag(KontaktServer(cfg), "POST", "/"+token, "", "", url.Values{"vorname": {"Hilde"}, "nachname": {"Oma"}, "tel": {"0711 445577"}, "tel-art": {"privat"}, "aktion": {"senden"}})
@@ -399,7 +399,8 @@ func TestWhoMayStartAndWhereAHandyKontaktGoes(t *testing.T) {
 // search at its top and an icon per row, the same form; no family member
 // sees one on a house contact.
 func TestKontakteActionsAtTheTop(t *testing.T) {
-	cfg, _ := pruefenCfg(t)
+	cfg, dav := pruefenCfg(t)
+	dav.Put("/homes/haushalt-kontakte/h1.vcf", strings.Replace(pruefenKarte, "END:VCARD", "ADR:;;Hauptstraße 5;Stadt;;12345;\r\nBDAY:1990-04-01\r\nEND:VCARD", 1)) // nothing lacks: no card (kontakte_fehlt_test.go)
 	body := frag(Kontakt(cfg), "GET", "/kontakte/h1", "anna", "family,admins", nil).Body.String()
 	mustContain(t, body, `<a href=/kontakte>Kontakte</a> › <span>Anna Beispiel</span></nav>`, `data-laeuft="Erstellt den Link …" data-kopiert="Link kopiert" data-nochmal="Jetzt teilen">Daten prüfen lassen</button>`)
 	before(t, body, "<h1>Anna Beispiel</h1><div class=oben>", `>Daten prüfen lassen</button>`)

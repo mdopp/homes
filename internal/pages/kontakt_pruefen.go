@@ -38,16 +38,25 @@ func (cfg StartConfig) pruefenAn() bool {
 // pruefenKnopf is „Link teilen“ for the contact uid of buch (pruefenScript);
 // klein: the row's icon.
 func pruefenKnopf(r *http.Request, cfg StartConfig, buch, uid, name string, klein bool) string {
-	if !cfg.pruefenAn() || uid == "" || buch == kontaktantwort.Haushalt && !isAdmin(r) {
+	if !pruefenDarf(r, cfg, buch, uid) {
 		return ""
 	}
-	innen, label, wozu := wort(texte.PruefenTeilen), "", `<small class=wozu>`+html.EscapeString(fmt.Sprintf(texte.Von(r).T(texte.PruefenWozu), name))+`</small>`
 	if klein {
 		fuer := html.EscapeString(fmt.Sprintf(texte.Von(r).T(texte.PruefenTeilenFuer), name))
-		innen, label, wozu = teilenSymbol, ` aria-label="`+fuer+`" title="`+fuer+`"`, ""
+		return pruefenForm("teilen", buch, uid, ` aria-label="`+fuer+`" title="`+fuer+`"`, teilenSymbol, "")
 	}
-	return `<form method=post action=` + PruefenPath + ` class=teilen data-teilen><input type=hidden name=buch value=` + buch + `><input type=hidden name=uid value="` + html.EscapeString(uid) +
-		`"><button` + label + ` data-laeuft="` + wort(texte.PruefenErstelltLaeuft) + `" data-kopiert="` + wort(texte.PruefenKopiert) + `" data-nochmal="` + wort(texte.PruefenNochmal) + `">` + innen + `</button>` + wozu + `</form>`
+	return pruefenForm("teilen", buch, uid, "", wort(texte.PruefenTeilen), `<small class=wozu>`+html.EscapeString(fmt.Sprintf(texte.Von(r).T(texte.PruefenWozu), name))+`</small>`)
+}
+
+// pruefenDarf: the viewer may have the contact uid of buch checked (a house's: an admin).
+func pruefenDarf(r *http.Request, cfg StartConfig, buch, uid string) bool {
+	return cfg.pruefenAn() && uid != "" && (buch != kontaktantwort.Haushalt || isAdmin(r))
+}
+
+// pruefenForm is the form pruefenScript sends: class, the button's attributes and words, wozu below.
+func pruefenForm(class, buch, uid, attr, innen, wozu string) string {
+	return `<form method=post action=` + PruefenPath + ` class=` + class + ` data-teilen><input type=hidden name=buch value=` + buch + `><input type=hidden name=uid value="` + html.EscapeString(uid) +
+		`"><button` + attr + ` data-laeuft="` + wort(texte.PruefenErstelltLaeuft) + `" data-kopiert="` + wort(texte.PruefenKopiert) + `" data-nochmal="` + wort(texte.PruefenNochmal) + `">` + innen + `</button>` + wozu + `</form>`
 }
 
 const teilenSymbol = `<svg viewBox="0 0 24 24" width=20 height=20 aria-hidden=true fill=none stroke=currentColor stroke-width=2 stroke-linecap=round><circle cx=18 cy=5 r=3 /><circle cx=6 cy=12 r=3 /><circle cx=18 cy=19 r=3 /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>`
@@ -109,9 +118,8 @@ func Pruefen(cfg StartConfig) http.HandlerFunc {
 			http.Error(w, texte.Von(r).T(texte.PruefenWeg), http.StatusNotFound)
 			return
 		}
-		f := kontaktantwort.FelderVon(all[i])
 		von, _, _ := strings.Cut(strings.TrimSpace(r.Header.Get("Remote-Name")), " ")
-		token, frage, err := cfg.Antworten.Neu(r.Header.Get("Remote-User"), von, buch, uid, f)
+		link, frage, err := cfg.Antworten.Link(r.Header.Get("Remote-User"), von, buch, all[i], cfg.KontaktURL)
 		if err != nil {
 			log.Printf("homes: kontakt prüfen: the link not made: %v", err)
 			http.Error(w, texte.Von(r).T(texte.PruefenNicht), http.StatusServiceUnavailable)
@@ -119,7 +127,7 @@ func Pruefen(cfg StartConfig) http.HandlerFunc {
 		}
 		log.Printf("homes: kontakt prüfen: link %s made (%s)", frage.ID, buch)
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		fmt.Fprintf(w, texte.Von(r).T(texte.PruefenText), cmp.Or(f.Vorname, f.Name()), strings.TrimRight(cfg.KontaktURL, "/")+"/"+token)
+		fmt.Fprintf(w, texte.Von(r).T(texte.PruefenText), cmp.Or(frage.Vorher.Vorname, frage.Name()), link)
 	}
 }
 
