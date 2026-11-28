@@ -288,8 +288,9 @@ func (t Todo) Open() bool {
 	return s != "COMPLETED" && s != "CANCELLED"
 }
 
-// prodID keeps the old name: stored data, on every entry already in Radicale (laib#1021).
-const prodID = "-//mdopp//Haus Haushalt//DE"
+// prodID is Homes' PRODID on what it writes; a card that still carries it
+// is as Homes wrote it (Card.AsWritten).
+const prodID = "-//mdopp//Homes Haushalt//DE"
 
 // ICS renders the event as a calendar object; times in UTC, a whole day as DATE.
 func (e Event) ICS(now time.Time) string {

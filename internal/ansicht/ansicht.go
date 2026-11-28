@@ -18,7 +18,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/mdopp/homes/internal/caldav"
 	"github.com/mdopp/homes/internal/jsonfile"
 )
 
@@ -50,16 +49,13 @@ func (o One) Color(path string) string { return o.Colors[path] }
 
 // Store is the file.
 type Store struct {
-	path    string
-	account string // Homes' Radicale account (HOMES_RADICALE_USER), for the legacy paths
-	mu      sync.Mutex
+	path string
+	mu   sync.Mutex
 }
 
-// Open names the store in dir; the file need not be there. account is
-// Homes' Radicale account: a calendar stored under the old account's path
-// is read as its path now (caldav.LegacyAccountPath).
-func Open(dir, account string) *Store {
-	return &Store{path: filepath.Join(dir, File), account: account}
+// Open names the store in dir; the file need not be there.
+func Open(dir string) *Store {
+	return &Store{path: filepath.Join(dir, File)}
 }
 
 // For is one person's view; no file, or nothing for them, is the default.
@@ -91,33 +87,48 @@ func (s *Store) read() (map[string]One, error) {
 	if err := json.Unmarshal(b, &all); err != nil {
 		return nil, fmt.Errorf("%s: %w", s.path, err)
 	}
-	for person, o := range all {
-		all[person] = s.legacy(o)
-	}
 	return all, nil
 }
 
-// legacy is legacy: a view stored while Homes' account was haus names
-// /haus/… calendars; read, they are the account's now, and the next Set
-// writes them so. A colour stored under the new path wins over the old
-// one. Ends with laib#1021 step 9.
-func (s *Store) legacy(o One) One {
-	var hidden []string
-	for _, p := range o.Hidden {
-		if p = caldav.LegacyAccountPath(p, s.account); !slices.Contains(hidden, p) {
-			hidden = append(hidden, p)
-		}
+// Umschreiben rewrites every calendar path in the file through neu, once
+// (the rename's migration, cmd/homes): a path neu leaves is kept, a hidden
+// one twice is once, and a colour already under the new path wins. The
+// paths it changed; nothing changed is no write.
+func (s *Store) Umschreiben(neu func(string) string) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	all, err := s.read()
+	if err != nil {
+		return 0, err
 	}
-	o.Hidden = hidden
-	for p, c := range o.Colors {
-		if q := caldav.LegacyAccountPath(p, s.account); q != p {
-			delete(o.Colors, p)
-			if _, ok := o.Colors[q]; !ok {
-				o.Colors[q] = c
+	n := 0
+	for person, o := range all {
+		var hidden []string
+		for _, p := range o.Hidden {
+			q := neu(p)
+			if q != p {
+				n++
+			}
+			if !slices.Contains(hidden, q) {
+				hidden = append(hidden, q)
 			}
 		}
+		o.Hidden = hidden
+		for p, c := range o.Colors {
+			if q := neu(p); q != p {
+				n++
+				delete(o.Colors, p)
+				if _, ok := o.Colors[q]; !ok {
+					o.Colors[q] = c
+				}
+			}
+		}
+		all[person] = o
 	}
-	return o
+	if n == 0 {
+		return 0, nil
+	}
+	return n, jsonfile.Save(s.path, all)
 }
 
 // Set changes one calendar in one person's view: hidden or shown, and its

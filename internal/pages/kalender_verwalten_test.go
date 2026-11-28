@@ -89,7 +89,7 @@ func kalenderBox(t *testing.T) (*davfake.Server, StartConfig, *calLaib) {
 	l := &calLaib{abos: []map[string]any{{"person": "anna", "name": "familie", "kind": "google", "title": "Familie", "since": "2026-10-12T08:00:00Z"},
 		{"person": "anna", "name": "muell", "kind": "abo", "title": "Müllabfuhr", "since": "2026-10-01T08:00:00Z"}}}
 	cfg := StartConfig{Calendar: &caldav.Client{URL: fake.URL, User: "homes", Password: "pw", Loc: berlin(t)}, Laib: l.client(t),
-		RadicalePublicURL: "https://caldav.box.test", Views: ansicht.Open(t.TempDir(), "homes")}
+		RadicalePublicURL: "https://caldav.box.test", Views: ansicht.Open(t.TempDir())}
 	return fake, cfg, l
 }
 
@@ -323,27 +323,6 @@ func TestKalenderRueckgaengig(t *testing.T) {
 	}
 	if rec := post(t, KalenderAendern(cfg), kalenderChange, url.Values{"kalender": {"/homes/familie-urlaub/"}, "name": {"Urlaub"}, "tu": {"zurueckholen"}, "id": {id}}, "anna", nil); rec.Code != http.StatusConflict {
 		t.Errorf("twice → %d", rec.Code)
-	}
-}
-
-// laib#1021: a calendar deleted while Homes' account was haus is listed and
-// taken back under the account it is now.
-func TestKalenderRueckgaengigAltesKonto(t *testing.T) {
-	fake, cfg, _ := kalenderBox(t)
-	now := time.Date(2026, 11, 3, 9, 0, 0, 0, time.UTC)
-	cfg.Papierkorb = &papierkorb.Korb{Dir: t.TempDir(), Now: func() time.Time { return now }}
-	e, err := cfg.Papierkorb.Rein("kalender", "Urlaub", "anna", kalenderImKorb{Path: "/haus/familie-urlaub/", Name: "Urlaub",
-		Abzug: caldav.Abzug{Objekte: []caldav.AbzugObjekt{{Name: "a.ics", ICS: event("a", "20261108T090000Z", "20261108T100000Z", "Flug")}}}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, body, _ := familyPage(t, KalenderVerwalten, cfg, "GET", kalenderVerwalten, "family")
-	mustContain(t, body, "„Urlaub“ <small class=k>1 Termin · bis", `value="/homes/familie-urlaub/"`)
-	if rec := post(t, KalenderAendern(cfg), kalenderChange, url.Values{"kalender": {"/homes/familie-urlaub/"}, "name": {"Urlaub"}, "tu": {"zurueckholen"}, "id": {e.ID}}, "ben", nil); rec.Header().Get("Location") != kalenderVerwalten+"?gesagt=zurueck" {
-		t.Fatalf("zurueckholen → %d %v %s", rec.Code, rec.Header(), rec.Body)
-	}
-	if fake.DisplayName("/homes/familie-urlaub/") != "Urlaub" || fake.Objects()["/homes/familie-urlaub/a.ics"] == "" {
-		t.Fatalf("not made again under homes: %v", fake.Calendars())
 	}
 }
 

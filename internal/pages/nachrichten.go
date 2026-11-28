@@ -14,12 +14,9 @@ import (
 )
 
 // DatenPath is the page „Daten sichern“'s address (haus#207): one with
-// Meine Daten since homes#362 (owner 2026-11-12), it leads there, as its
-// old address NachrichtenPath does, so a bookmark or an older app lands.
+// Meine Daten since homes#362 (owner 2026-11-12), it leads there: the
+// app's Daten sichern still opens it (homes-android HomesPages.DATEN).
 const DatenPath = "/daten-sichern"
-
-// NachrichtenPath is the page's oldest address, „Nachrichten sichern“.
-const NachrichtenPath = "/nachrichten-sichern"
 
 // What Meine Daten says when Homes' ledger cannot be read.
 const saysStandFehlt = "Der Stand lässt sich gerade nicht lesen. Später noch einmal versuchen."

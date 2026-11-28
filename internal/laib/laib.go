@@ -308,12 +308,6 @@ func (c *Client) JournalLatest(ctx context.Context, n int, kind string) ([]Entry
 	return out, err
 }
 
-// Restart passes the action on. There is no Approve or Reject: the homes
-// hand may not decide, deciding is Laib's page's (ADR 0012, haus#157).
-func (c *Client) Restart(ctx context.Context, service string) (string, error) {
-	return c.Call(ctx, "restart", service)
-}
-
 // Invite is one person to invite (laib#360): an LLDAP account without a
 // password, in its group; Authelia mails the set-password link, or Laib
 // hands it back when the box has no mail.
@@ -783,7 +777,6 @@ type Aufgabe struct {
 	Seit     string `json:"seit"`
 	Von      string `json:"von"`
 	Erinnern string `json:"erinnern,omitempty"`
-	Befund   string `json:"befund,omitempty"` // an older Laib's name of FertigWenn
 	// laib#878: for whom (admins, alle, person:<login>), the way through it
 	// (a Homes page, or a conversation with the Bote), and the finding whose
 	// going closes it ("<probe> [<topic>]")
@@ -799,14 +792,6 @@ type Aufgabe struct {
 		Von string `json:"von"`
 		Wie string `json:"wie,omitempty"`
 	} `json:"erledigt,omitempty"`
-}
-
-// Wann is the finding whose going closes it, from either Laib.
-func (a Aufgabe) Wann() string {
-	if a.FertigWenn != "" {
-		return a.FertigWenn
-	}
-	return a.Befund
 }
 
 // Aufgaben is the box's to-do list: how many are open, how many due.

@@ -1,6 +1,6 @@
 // Package hafake is a fake Home Assistant for tests: the REST calls Homes
 // makes (/api/states, /api/services, /api/history/period,
-// /api/camera_proxy, /api/stt, /api/config/automation/config,
+// /api/stt, /api/config/automation/config,
 // /api/mobile_app/registrations, /api/webhook, /api/config/config_entries) and the WebSocket
 // (/api/websocket: auth, subscribe_events, the three registries, the Assist pipelines' debug store,
 // the recorder's long-term statistics). Its frame
@@ -57,7 +57,6 @@ type HA struct {
 	regsDown bool
 	tempUnit string // /api/config's unit_system.temperature; "" makes /api/config fail
 	subs     []*conn
-	cameras  map[string]camera
 	assist   []Pipeline
 	notAdmin bool
 	stt      map[string]string // provider → the words it hears
@@ -614,21 +613,6 @@ func (h *HA) assistCmd(m map[string]any) (result any, code string, handled bool)
 	return nil, "not_found", true
 }
 
-type camera struct {
-	ctype string
-	body  []byte
-}
-
-// SetCamera makes GET /api/camera_proxy/<entityID> answer body as ctype.
-func (h *HA) SetCamera(entityID, ctype string, body []byte) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	if h.cameras == nil {
-		h.cameras = map[string]camera{}
-	}
-	h.cameras[entityID] = camera{ctype, body}
-}
-
 // New starts a fake HA that accepts Bearer token.
 func New(token string) *HA {
 	h := &HA{Token: token, states: map[string]map[string]any{}, history: map[string][]map[string]any{}, tempUnit: "°C"}
@@ -991,15 +975,6 @@ func (h *HA) serve(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]any{"text": words, "result": "success"})
-	case r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/api/camera_proxy/"):
-		c, ok := h.cameras[strings.TrimPrefix(r.URL.Path, "/api/camera_proxy/")]
-		if !ok {
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte(`{"message":"Entity not found."}`))
-			return
-		}
-		w.Header().Set("Content-Type", c.ctype)
-		w.Write(c.body)
 	case r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/api/history/period/"):
 		h.starts = append(h.starts, strings.TrimPrefix(r.URL.Path, "/api/history/period/"))
 		h.queries = append(h.queries, r.URL.Query())

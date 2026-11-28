@@ -43,9 +43,9 @@ func TestCountsAggregateAndFlush(t *testing.T) {
 	c.CountIn("stimme", "erkannt")
 	c.Flush(context.Background())
 	want := map[usagefake.Count]int64{
-		{App: "haus", Event: "seite.start", Day: "2026-10-16"}:             2,
-		{App: "haus", Event: "schalten.light.turn_off", Day: "2026-10-16"}: 1,
-		{App: "stimme", Event: "erkannt", Day: "2026-10-16"}:               1,
+		{App: "homes", Event: "seite.start", Day: "2026-10-16"}:             2,
+		{App: "homes", Event: "schalten.light.turn_off", Day: "2026-10-16"}: 1,
+		{App: "stimme", Event: "erkannt", Day: "2026-10-16"}:                1,
 	}
 	if got := fake.Counts(); !reflect.DeepEqual(got, want) {
 		t.Fatalf("counts %v, want %v", got, want)
@@ -59,7 +59,7 @@ func TestCountsAggregateAndFlush(t *testing.T) {
 	}
 	c.Count("seite.start")
 	c.Flush(context.Background())
-	if got := fake.Counts()[usagefake.Count{App: "haus", Event: "seite.start", Day: "2026-10-16"}]; got != 3 {
+	if got := fake.Counts()[usagefake.Count{App: "homes", Event: "seite.start", Day: "2026-10-16"}]; got != 3 {
 		t.Errorf("seite.start %d after a third view, want 3", got)
 	}
 }
@@ -76,7 +76,7 @@ func TestCountsByUTCDay(t *testing.T) {
 	c.Count("seite.start")
 	c.Flush(context.Background())
 	got := fake.Counts()
-	if got[usagefake.Count{App: "haus", Event: "seite.start", Day: "2026-10-16"}] != 1 || got[usagefake.Count{App: "haus", Event: "seite.start", Day: "2026-10-17"}] != 1 {
+	if got[usagefake.Count{App: "homes", Event: "seite.start", Day: "2026-10-16"}] != 1 || got[usagefake.Count{App: "homes", Event: "seite.start", Day: "2026-10-17"}] != 1 {
 		t.Errorf("counts %v, want one on the 16th and one on the 17th (UTC)", got)
 	}
 }
@@ -151,7 +151,7 @@ func TestDownDropsAndLogsOnce(t *testing.T) {
 	fake.Down(false)
 	c.Count("seite.kalender")
 	c.Flush(context.Background())
-	want := map[usagefake.Count]int64{{App: "haus", Event: "seite.kalender", Day: "2026-10-16"}: 1}
+	want := map[usagefake.Count]int64{{App: "homes", Event: "seite.kalender", Day: "2026-10-16"}: 1}
 	if got := fake.Counts(); !reflect.DeepEqual(got, want) {
 		t.Errorf("after the outage %v, want only the new count (the old batch is dropped)", got)
 	}
@@ -210,7 +210,7 @@ func TestRunFlushesAndOnStop(t *testing.T) {
 	c.Count("seite.box")
 	cancel()
 	<-done
-	if fake.Counts()[usagefake.Count{App: "haus", Event: "seite.box", Day: "2026-10-16"}] != 1 {
+	if fake.Counts()[usagefake.Count{App: "homes", Event: "seite.box", Day: "2026-10-16"}] != 1 {
 		t.Errorf("stopping did not flush: %v", fake.Counts())
 	}
 }
@@ -254,15 +254,15 @@ func TestFromEnv(t *testing.T) {
 // The card's reads: /summary and /misses for 30 days, with the token.
 func TestReads(t *testing.T) {
 	fake, c, _ := counter(t)
-	fake.SetSummary(map[string]any{"days": 30, "from": "2026-09-17", "total": 5, "knownApps": []string{"haus"},
-		"apps": []any{map[string]any{"app": "haus", "total": 5, "events": []any{map[string]any{"event": "seite.start", "count": 5}}}}})
+	fake.SetSummary(map[string]any{"days": 30, "from": "2026-09-17", "total": 5, "knownApps": []string{"homes"},
+		"apps": []any{map[string]any{"app": "homes", "total": 5, "events": []any{map[string]any{"event": "seite.start", "count": 5}}}}})
 	fake.SetMisses(map[string]any{"days": 30, "from": "2026-09-17", "total": 9,
 		"misses": []any{map[string]any{"source": "bote", "text": "Wann kommt der Müll?", "count": 9, "lastDay": "2026-10-16"}}})
 	s, err := c.Summary(context.Background(), 30)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s.Count("haus", "seite.start") != 5 || s.Count("haus", "seite.box") != 0 || !s.Known("haus") || s.Known("bote") {
+	if s.Count("homes", "seite.start") != 5 || s.Count("homes", "seite.box") != 0 || !s.Known("homes") || s.Known("bote") {
 		t.Errorf("summary %+v", s)
 	}
 	m, err := c.Misses(context.Background(), 30)

@@ -13,14 +13,20 @@ and the cards) and `docs/adr/README.md` before changing shape. The app's
 contract is the Homes app in `mdopp/homes-android` (laib ADR 0022): its
 `data/*.kt` parsers' field names are the law. Its names (deep-link scheme,
 token prefix, `/napi/box`) live in `internal/app`, one set; nothing old is
-carried (ADR 0022 §4) except what the rename from Haus keeps until every phone
-runs Homes (laib#1021): the `haus_device_` tokens and `GET /napi/app`
-(the address `haus.<domain>` is gone since 2026-11-07: Homes is
-`www.<domain>`, `HOMES_PUBLIC_URL`, and no host is written in the code). Names stored in other apps keep the
-old name (the iCal `X-HAUS-*` and PRODIDs, usage-metrics' app `haus`); each
-is marked where it is defined. The program's own logins are `homes` (owner,
-2026-11-03): a collection path Homes stored under `/haus/` is read as
-`/<HOMES_RADICALE_USER>/` (`caldav.LegacyAccountPath`, ends laib#1021 step 9).
+carried (ADR 0022 §4; owner 2026-11-28: „Alles alte kann weg. Keine
+Rückwärtskompatibilität notwendig.“): no route, token prefix, file name or
+property of Haus' is read or served any more. Homes is `www.<domain>`
+(`HOMES_PUBLIC_URL`, no host written in the code), its logins are `homes`
+(owner, 2026-11-03), usage-metrics' app is `homes`. What was stored under
+Haus' names (`/haus/…` paths in `ansicht.json` and the Papierkorb, the cards'
+PRODID, the counts under app `haus`, the mirrored cards' hash) is rewritten
+once at start (`cmd/homes/umbenennen.go`, markers in `HOMES_DATA/umbenannt/`;
+the mirror's hash by the phone's next sync) — the one Go file that names
+them (`internal/app/names_test.go`). Two names stay on purpose, not as
+compatibility: the iCal `X-HAUS-KALENDER`/`X-HAUS-ART` of the shared
+calendars, which the current app's parser reads (a rename goes app first,
+then here), and the takeout import's `@haus` UID suffix, part of the id of
+every imported entry.
 
 Homes' own decisions are in `docs/adr/` (Laib's stay in laib's): read
 ADR 0001 (modules: the list of areas, `GET /napi/kann`, `HOMES_MODULE_AUS`)
@@ -30,7 +36,7 @@ before adding an area, a page, a `/napi` route or a `HOMES_*` variable.
 
 No framework, one page per file, every Laib call is one MCP tool call
 (`internal/laib`), Homes never decides — there is no verdict in Homes at all (haus#1): the
-Box page links to Laib's inbox, `/napi/…/approve|deny` answer 403, and Homes
+Box page links to Laib's inbox, `/napi` has no approve or deny at all, and Homes
 holds only the `homes` hand's token. Tests use fakes for Laib, Home Assistant,
 Radicale and Paperless; never a live box.
 
@@ -189,9 +195,12 @@ npx playwright install chromium && npx playwright test`; `go run
 - **The app's parsers are the contract.** A field renamed in `/napi` breaks
   phones in the field. homes-android's `NapiContractTest` pins a copy of the
   handlers; change both sides, the server first, additively.
-- **Old names stay where data was stored under them** (`haus_device_`
-  tokens, the iCal `X-HAUS-*` properties, usage-metrics'
-  app `haus`). They are marked where defined; do not "clean them up".
+- **No compatibility paths** (owner 2026-11-28). A rename of something
+  stored (a file's name or shape, a property in Radicale, a counted name)
+  comes with a one-time migration at start, idempotent, logged and tested
+  with the fakes; it is not read under both names. What only a phone holds
+  (a device token, stored here as its hash) cannot be migrated: such a
+  change says who must do what (re-pair) before it ships.
 - **No secret in the repo**, not even in a test: tokens reach Homes as
   `HOMES_*` from Laib's secrets.
 - **The pages are German, for the family; the code, commits and docs are

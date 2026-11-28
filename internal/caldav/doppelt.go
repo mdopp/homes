@@ -1,7 +1,6 @@
 package caldav
 
 import (
-	"cmp"
 	"context"
 	"path"
 	"strings"
@@ -17,23 +16,28 @@ import (
 // HandyBuch is the address book in each person's home that mirrors the phone (/<person>/handy-kontakte/).
 const HandyBuch = "handy-kontakte"
 
-// TelSchluessel is a number as two are compared: its international digits, a national one (0171 …)
-// in the calling code cc ("" is 49), a trunk 0 after the code dropped (+49 (0)171 …); "" no digits.
-func TelSchluessel(v, cc string) string {
-	cc = cmp.Or(cc, "49")
-	v = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(v), "tel:"))
-	d := namen.Ziffern(v)
-	intl := strings.HasPrefix(v, "+")
-	if !intl && strings.HasPrefix(d, "00") {
-		d, intl = d[2:], true
+// Telefon is a number as two are compared: country code and national
+// number, digits only, however it is written — +49 (0)170 …, 0049 170 …,
+// tel:+49170…, 0170 … (a national one in the calling code cc, "" is 49) all
+// give 49170…; another country's code stays as written, a trunk 0 after the
+// code goes; "" for no digits.
+func Telefon(s, cc string) string {
+	if cc == "" {
+		cc = "49"
 	}
-	if rest, ok := strings.CutPrefix(d, cc); ok && intl {
+	s = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(s), "tel:"))
+	d := namen.Ziffern(s)
+	if d == "" {
+		return ""
+	}
+	if !strings.HasPrefix(s, "+") && !strings.HasPrefix(d, "00") {
+		return cc + strings.TrimLeft(d, "0")
+	}
+	d = strings.TrimPrefix(d, "00")
+	if rest, ok := strings.CutPrefix(d, cc); ok {
 		return cc + strings.TrimLeft(rest, "0")
 	}
-	if intl || d == "" {
-		return d
-	}
-	return cc + strings.TrimLeft(d, "0")
+	return d
 }
 
 // telRang is how much a number's line says: the main one first, then the more kinds, then +….
@@ -48,12 +52,12 @@ func telRang(p Prop) int {
 	return r
 }
 
-// ohneDoppelteTel is body (a card's lines, unfolded) with each number (TelSchluessel) once: its
+// ohneDoppelteTel is body (a card's lines, unfolded) with each number (namen.Telefon) once: its
 // line telRang ranks first stays where it is, the first of equals; removed is how many went.
 func ohneDoppelteTel(body []string, cc string) (out []string, removed int) {
 	key := func(l string) (string, Prop) {
 		if p, ok := parseLine(l); ok && propName(p.Name) == "TEL" {
-			return TelSchluessel(UnescapeText(p.Value), cc), p
+			return Telefon(UnescapeText(p.Value), cc), p
 		}
 		return "", Prop{}
 	}
@@ -115,7 +119,7 @@ func (c *Client) HaushaltsBuecher(ctx context.Context) (out []string, err error)
 type Bereinigt struct{ Karten, Doppelt, Zeilen, Geschrieben int }
 
 // NummernBereinigen takes the extra lines of a number out of each card in the address book at book
-// (OhneDoppelteNummern; every other line stays, X-HAUS-INHALT too); without apply it only counts.
+// (OhneDoppelteNummern; every other line stays, X-HOMES-INHALT too); without apply it only counts.
 // It stops at the first write that fails (a card changed meanwhile); a book not there counts nothing.
 func (c *Client) NummernBereinigen(ctx context.Context, book, cc string, apply bool) (r Bereinigt, err error) {
 	cards, _, err := c.BookCards(ctx, book)

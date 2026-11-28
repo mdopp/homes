@@ -1,6 +1,6 @@
 # scripts/ratchet.py gocognit: functions over 30, the number is the score
 # written by `scripts/ratchet.py --update`; lowered in the PR that fixes one, raised only with --accept
-# total 56
+# total 55
 32 cmd/homes/main.go: main.main
 36 internal/bote/bote.go: bote.(*Client).Stream
 37 internal/caldav/carddav.go: caldav.(*Client).cards
@@ -22,7 +22,6 @@
 62 internal/merken/notiz.go: merken.(Seite).Notiz
 31 internal/merken/seite.go: merken.(*Seite).take
 53 internal/musicbrainz/musicbrainz.go: musicbrainz.(*Client).Suchen
-41 internal/napi/napi.go: napi.Handler
 46 internal/napi/sicherung_letzte.go: napi.(*Sicherung).Letzte
 37 internal/napi/standort_import.go: napi.(*importer).run
 45 internal/napi/upload.go: napi.(*uploads).store

@@ -6,18 +6,20 @@ import (
 	"testing"
 )
 
-// One number however written: national, international, 00, a trunk (0).
-func TestTelSchluessel(t *testing.T) {
-	for _, same := range []string{"0171 1234567", "+49 171 1234567", "+49171-1234567", "0049 171 1234567", "+49 (0)171 1234567", "tel:+491711234567"} {
-		if got := TelSchluessel(same, ""); got != "491711234567" {
-			t.Errorf("TelSchluessel(%q) = %q", same, got)
+// One number however written: national, international, 00, a trunk (0),
+// tel:, +00 (owner 2026-11-28: haushalt.International and
+// caldav.TelSchluessel are this one).
+func TestTelefon(t *testing.T) {
+	for _, same := range []string{"0171 1234567", "+49 171 1234567", "+49171-1234567", "0049 171 1234567", "+49 (0)171 1234567", "tel:+491711234567", "+0049 171 1234567"} {
+		if got := Telefon(same, ""); got != "491711234567" {
+			t.Errorf("Telefon(%q) = %q", same, got)
 		}
 	}
-	if TelSchluessel("+43 660 1234567", "") == TelSchluessel("0660 1234567", "") {
+	if Telefon("+43 660 1234567", "") == Telefon("0660 1234567", "") || Telefon("+43 660 1234567", "49") != "436601234567" {
 		t.Error("another country's number is not ours")
 	}
-	if TelSchluessel("0660 1234567", "43") != TelSchluessel("+43 660 1234567", "43") || TelSchluessel("", "") != "" {
-		t.Error("the household's own country")
+	if Telefon("0660 1234567", "43") != Telefon("+43 660 1234567", "43") || Telefon("", "") != "" || Telefon("keine", "49") != "" {
+		t.Error("the household's own country, no digits")
 	}
 }
 
@@ -48,9 +50,9 @@ func TestCorrectedChangesNoNumberIntoASecondCopy(t *testing.T) {
 // main one, then the more kinds) where it is; every other line stays.
 func TestOhneDoppelteNummern(t *testing.T) {
 	card := "BEGIN:VCARD\r\nVERSION:3.0\r\nUID:a\r\nFN:A\r\nTEL;TYPE=cell:+49 171 1234567\r\nTEL;TYPE=CELL,VOICE,PREF:0171 1234567\r\n" +
-		"item1.TEL:+49 171 1234567\r\nTEL;TYPE=home:0711 123\r\nTEL;TYPE=home:0711 123\r\nTEL:+43 711 123\r\nX-HAUS-INHALT:abc\r\nEND:VCARD\r\n"
+		"item1.TEL:+49 171 1234567\r\nTEL;TYPE=home:0711 123\r\nTEL;TYPE=home:0711 123\r\nTEL:+43 711 123\r\nX-HOMES-INHALT:abc\r\nEND:VCARD\r\n"
 	got, n := OhneDoppelteNummern(card, "")
-	want := "BEGIN:VCARD\r\nVERSION:3.0\r\nUID:a\r\nFN:A\r\nTEL;TYPE=CELL,VOICE,PREF:0171 1234567\r\nTEL;TYPE=home:0711 123\r\nTEL:+43 711 123\r\nX-HAUS-INHALT:abc\r\nEND:VCARD\r\n"
+	want := "BEGIN:VCARD\r\nVERSION:3.0\r\nUID:a\r\nFN:A\r\nTEL;TYPE=CELL,VOICE,PREF:0171 1234567\r\nTEL;TYPE=home:0711 123\r\nTEL:+43 711 123\r\nX-HOMES-INHALT:abc\r\nEND:VCARD\r\n"
 	if n != 3 || got != want {
 		t.Fatalf("%d removed:\n%s\nwant\n%s", n, got, want)
 	}
@@ -80,5 +82,32 @@ func TestMirrorStoresANumberOnce(t *testing.T) {
 	}
 	if m, err := c.Mirror(ctx, "/anna/handy-kontakte/", "Handy-Kontakte", cards); err != nil || m.Neu+m.Geaendert != 0 {
 		t.Fatalf("the same text again wrote: %+v %v", m, err)
+	}
+}
+
+// owner 2026-11-28: the hash's old name is read no more; a card Homes
+// stored under it is written again on the phone's next sync, once, with the
+// new name, and the sync after writes nothing.
+func TestMirrorRewritesTheOldHashOnce(t *testing.T) {
+	fake, c := schreibFake(t)
+	ctx := context.Background()
+	cards, err := SplitCards("BEGIN:VCARD\r\nVERSION:3.0\r\nUID:h1\r\nFN:Ben\r\nTEL:+49 171 1234567\r\nEND:VCARD\r\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Mirror(ctx, "/anna/handy-kontakte/", "Handy-Kontakte", cards); err != nil {
+		t.Fatal(err)
+	}
+	href := "/anna/handy-kontakte/" + CardHref("h1")
+	fake.Put(href, strings.Replace(fake.Objects()[href], "X-HOMES-INHALT:", "X-HAUS-INHALT:", 1))
+	m, err := c.Mirror(ctx, "/anna/handy-kontakte/", "Handy-Kontakte", cards)
+	if err != nil || m.Geaendert != 1 {
+		t.Fatalf("the old name: %+v %v", m, err)
+	}
+	if st := fake.Objects()[href]; strings.Contains(st, "X-HAUS-") || !strings.Contains(st, "X-HOMES-INHALT:") {
+		t.Fatalf("stored:\n%s", st)
+	}
+	if m, err := c.Mirror(ctx, "/anna/handy-kontakte/", "Handy-Kontakte", cards); err != nil || m.Neu+m.Geaendert != 0 {
+		t.Fatalf("again: %+v %v", m, err)
 	}
 }

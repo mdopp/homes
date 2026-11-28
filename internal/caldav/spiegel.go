@@ -18,12 +18,14 @@ import (
 // address book of the person's (/<person>/handy-kontakte/) the same, as
 // its own account: each card at a place its UID names, written only when
 // its text changed, and every card the phone no longer has removed. What
-// Homes wrote is noted on the card itself (X-HAUS-INHALT, a hash of the
+// Homes wrote is noted on the card itself (X-HOMES-INHALT, a hash of the
 // phone's text), so "unchanged" holds whatever way Radicale stores it.
 
-// inhaltProp carries the hash of the phone's text of a mirrored card. It
-// keeps the old name: stored data, on every mirrored card (laib#1021).
-const inhaltProp = "X-HAUS-INHALT"
+// inhaltProp carries the hash of the phone's text of a mirrored card. A
+// card stored under the property's old name (before 2026-11-28) has no
+// hash under this one: the phone's next sync writes it again, once, with
+// it (TestMirrorRewritesTheOldHashOnce).
+const inhaltProp = "X-HOMES-INHALT"
 
 // maxMirrorBytes caps the read of a mirrored address book: past it the
 // read fails, as a mirror must not judge by half its cards.

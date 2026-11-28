@@ -1,8 +1,7 @@
 // Package napi is the API the Homes app's widgets speak (mdopp/homes-android,
-// its data/*.kt parsers; laib ADR 0022): the four Box keys under
-// app.BoxPrefix served from Laib, operate and verdicts behind the right
-// token, the house paths, the event stream and the camera from Home
-// Assistant (home.go, live.go, camera.go), the phone as a trigger
+// its data/*.kt parsers; laib ADR 0022): whether all is well on the box
+// (app.BoxPrefix/home, from Laib), the house paths and the event stream from Home
+// Assistant (home.go, live.go, addable.go), the phone as a trigger
 // (ausloeser.go, ADR 0004), the tool widgets from the
 // Haushalt source (tools.go), the capture upload (upload.go), the phone's
 // message backups (sicherung.go), the phone's contacts mirrored
@@ -17,7 +16,6 @@ import (
 	"maps"
 	"net/http"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -47,7 +45,7 @@ type Validator func(ctx context.Context, bearer string) bool
 
 // Config wires the handler.
 type Config struct {
-	Laib     *laib.Client // the homes hand: status, inbox, journal, restart — nothing else
+	Laib     *laib.Client // the homes hand: the box's status for /napi/box/home, wishes for /napi/kann
 	Validate Validator
 	Whoami   func(bearer string) (string, bool) // the paired devices: uid behind a bearer
 	Witness  *schalter.Witness                  // who switched what (haus#89); nil: the log only
@@ -112,8 +110,8 @@ type Config struct {
 }
 
 // refreshed is the event a /napi request counts as: its pattern's path,
-// the wildcards left out ("GET /napi/portal/camera/{entity_id}/snapshot"
-// is napi.portal.camera.snapshot), so no entity or name rides along.
+// the wildcards left out ("GET /napi/ausloeser/tag/{tag}/neu" is
+// napi.ausloeser.tag.neu), so no entity or name rides along.
 func refreshed(pattern string) string {
 	_, path, _ := strings.Cut(pattern, " ")
 	var parts []string
@@ -151,118 +149,16 @@ func Handler(c Config) http.Handler {
 	mux.HandleFunc("GET /napi/assistent", auth(func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, map[string]string{"name": assistent.Name()})
 	}))
-	// which app this box's Homes speaks to (laib#1021): the old Haus app
-	// (cloud.dopp.haus) compares paket with its own package and, when they
-	// differ, tells the person in German to install Homes from quelle and
-	// to remove Homes once Homes is set up.
-	mux.HandleFunc("GET /napi/app", auth(func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, map[string]string{"name": "Homes", "paket": app.Paket, "quelle": app.Quelle})
-	}))
-	// Bridge for app builds before homes-android's assistent change (dev.249 and older), which read
-	// the name from /napi/persona: the same name in that shape, the fixed colours, no icon. Remove
-	// once every paired phone runs an app that reads /napi/assistent.
-	mux.HandleFunc("GET /napi/persona", auth(func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, map[string]string{"name": "haus", "display": assistent.Name(), "greeting": "",
-			"accent": "#3ddc84", "ground": "#0c120e", "icon": ""})
-	}))
-	// the Box keys (laib ADR 0022 §4: one name, app.BoxPrefix)
-	prefix := app.BoxPrefix
-	mux.HandleFunc("GET "+prefix+"/home", auth(func(w http.ResponseWriter, r *http.Request) {
+	// whether all is well on the box, the app's start screen claim „Deinem
+	// Zuhause geht es gut.“ (owner 2026-11-27): the one Box key the app reads
+	mux.HandleFunc("GET "+app.BoxPrefix+"/home", auth(func(w http.ResponseWriter, r *http.Request) {
 		ready, rows, err := c.Laib.Status(r.Context())
 		if err != nil {
 			fail(w, err)
 			return
 		}
-		open, _ := c.Laib.Inbox(r.Context())
-		up, failed, down := 0, 0, 0
-		for _, s := range rows {
-			switch s.State {
-			case "grün":
-				up++
-			case "rot":
-				failed++
-			default:
-				down++
-			}
-		}
-		writeJSON(w, map[string]any{
-			"servicesUp": up, "servicesFailed": failed, "servicesDown": down,
-			"pendingApprovals": len(open) - len(updates(open)), "pendingUpdates": len(updates(open)),
-			"state": ready.State, "drift": ready.Drift, "lastHeard": ready.LastHeard, "operator": ready.Operator, "gut": laib.Gut(ready, rows), // „Deinem Zuhause geht es gut.“ (owner 2026-11-27)
-		})
+		writeJSON(w, map[string]any{"gut": laib.Gut(ready, rows)})
 	}))
-	mux.HandleFunc("GET "+prefix+"/services", auth(func(w http.ResponseWriter, r *http.Request) {
-		_, rows, err := c.Laib.Status(r.Context())
-		if err != nil {
-			fail(w, err)
-			return
-		}
-		out := []map[string]string{}
-		for _, s := range rows {
-			active, sub, health := "active", "running", "ok"
-			switch s.State {
-			case "rot":
-				active, sub, health = "failed", "failed", "failed"
-			case "gelb":
-				health = "degraded"
-			}
-			out = append(out, map[string]string{"name": s.Name, "title": s.Titel(), "beschreibung": s.Beschreibung, "activeState": active, "subState": sub, "health": health, "detail": s.Detail})
-		}
-		writeJSON(w, map[string]any{"services": out})
-	}))
-	mux.HandleFunc("GET "+prefix+"/approvals", auth(func(w http.ResponseWriter, r *http.Request) {
-		ps, err := c.Laib.Inbox(r.Context())
-		if err != nil {
-			fail(w, err)
-			return
-		}
-		out := []map[string]any{}
-		for _, p := range ps {
-			if isUpdate(p) {
-				continue // listed under upgrades
-			}
-			row := proposalRow(p)
-			row["status"] = "pending"
-			out = append(out, row)
-		}
-		writeJSON(w, map[string]any{"approvals": out})
-	}))
-	mux.HandleFunc("GET "+prefix+"/upgrades", auth(func(w http.ResponseWriter, r *http.Request) {
-		ps, err := c.Laib.Inbox(r.Context())
-		if err != nil {
-			fail(w, err)
-			return
-		}
-		out := []map[string]any{}
-		for _, p := range updates(ps) {
-			out = append(out, proposalRow(p))
-		}
-		writeJSON(w, map[string]any{"upgrades": out})
-	}))
-	mux.HandleFunc("POST "+prefix+"/services/{name}/operate", auth(func(w http.ResponseWriter, r *http.Request) {
-		var body struct {
-			Action string `json:"action"`
-		}
-		json.NewDecoder(r.Body).Decode(&body)
-		name := r.PathValue("name")
-		if body.Action != "restart" {
-			http.Error(w, `{"error":"Laib knows restart only; start and stop are state changes that go through a proposal"}`, http.StatusBadRequest)
-			return
-		}
-		if _, err := c.Laib.Restart(r.Context(), name); err != nil {
-			fail(w, err)
-			return
-		}
-		writeJSON(w, map[string]any{"ok": true, "name": name, "action": "restart"})
-	}))
-	// Verdicts are not Homes' (haus#1, ADR 0012): the one approval surface is
-	// Laib's own page behind Authelia; phones decide, if ever, through the
-	// relay. The app's buttons get a plain answer.
-	verdict := auth(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, `{"error":"Homes entscheidet nichts: Freigeben und Ablehnen gibt es nur auf der Laib-Seite (laib.<domain>/inbox)"}`, http.StatusForbidden)
-	})
-	mux.HandleFunc("POST "+prefix+"/approvals/{id}/approve", verdict)
-	mux.HandleFunc("POST "+prefix+"/approvals/{id}/deny", verdict)
 	mux.HandleFunc("GET /napi/kann", auth(c.kann))                     // what this box can do, for the app (ADR 0001 §2)
 	mux.HandleFunc("POST /napi/kann/anfordern", auth(c.anfordern))     // a wish for what it cannot yet (§10)
 	mux.HandleFunc("GET /napi/einrichtung", auth(c.einrichtung))       // the person's modules and their setup tasks
@@ -383,45 +279,6 @@ func (c Config) uid(r *http.Request) (string, bool) {
 // backend is not set. JSON, as every refusal the app parses.
 func noSuchPath(w http.ResponseWriter, r *http.Request) {
 	answer(w, http.StatusNotFound, map[string]any{"ok": false, "reason": "not_found"})
-}
-
-// isUpdate: a template update (haus#28). `laib template sync --propose`
-// files one proposal per update, its kind template-update whatever class
-// the dial gave it. It waits in Laib's inbox like any proposal, but the Box
-// counts and lists it as an update only, never as an approval too; Homes
-// decides neither (haus#1).
-func isUpdate(p laib.Proposal) bool { return p.Kind == "template-update" }
-
-// updates are the template updates among the open proposals.
-func updates(ps []laib.Proposal) []laib.Proposal {
-	var out []laib.Proposal
-	for _, p := range ps {
-		if isUpdate(p) {
-			out = append(out, p)
-		}
-	}
-	return out
-}
-
-// proposalRow is one inbox entry as the Box keys list it.
-func proposalRow(p laib.Proposal) map[string]any {
-	return map[string]any{
-		"id": strconv.Itoa(p.ID), "service": serviceOf(p.Files), "title": p.Reason,
-		"description": p.Tier + " · " + p.Class + " · " + strings.Join(p.Files, ", ") + " · von " + p.Actor,
-		"created_at":  p.Created.UTC().Format(time.RFC3339),
-	}
-}
-
-func serviceOf(files []string) string {
-	for _, f := range files {
-		if strings.HasPrefix(f, "services/") {
-			parts := strings.Split(f, "/")
-			if len(parts) > 1 {
-				return parts[1]
-			}
-		}
-	}
-	return ""
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

@@ -33,7 +33,7 @@ func TestWidgetRefreshesAreCounted(t *testing.T) {
 	c.Flush(context.Background())
 	got := map[string]int64{}
 	for k, n := range fake.Counts() {
-		if k.App != "haus" {
+		if k.App != "homes" {
 			t.Errorf("app %q", k.App)
 		}
 		got[k.Event] += n

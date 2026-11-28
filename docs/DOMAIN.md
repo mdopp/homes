@@ -57,7 +57,7 @@ The owner, 2026-11-07: „Rigoros einfach. Wir haben so viele Funktionen, dass d
 | **Papierkorb** | What the family deleted, kept for 30 days with *Rückgängig*. | `internal/papierkorb`; kinds `liste`, `kalender`, `termin`, `kontakt`, `musik` | Homes |
 | **Mitteilung** | A message to one person, on their chat channel. | HA `rest_command.mitteilung`; Bote `POST /mitteilung` | Bote |
 | **Bote** | The household's assistant in the chat (Signal). | Laib template `bote`; it calls Homes' `/mcp/haushalt` | Laib |
-| **Koppeln** | Pairing a phone with Homes, which gives it a device token. | `homes_device_` tokens (old: `haus_device_`) | Homes |
+| **Koppeln** | Pairing a phone with Homes, which gives it a device token. | `homes_device_` tokens | Homes |
 | **Modul** | An area of Homes (Kalender, Dokumente, Standortverlauf, …), on or off depending on what the box runs. | `internal/modul`; `cmd/homes/module.go`; `GET /napi/kann`; `HOMES_MODULE_AUS` | Homes (from Laib's wiring) |
 | **Spur** | The quiet line a missing Modul leaves under „Gibt es hier noch nicht“; one switched off on purpose (`aus`) leaves none (ADR 0001 §12). | `spur_id`, `spur` in `/napi/kann`; `/mehr/spuren` | Homes |
 | **Anfrage** | A request for a missing Modul („Hier anfordern“). | `laib_wish` (Laib's verb keeps its name); `wunsch.stand` in `/napi/kann` | Laib |

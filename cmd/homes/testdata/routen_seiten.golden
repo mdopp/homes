@@ -53,7 +53,7 @@ GET /platte/bild → /
 GET /podcasts → /podcasts
 GET /gesehen → /gesehen
 GET /daten-sichern → /daten-sichern
-GET /nachrichten-sichern → /nachrichten-sichern
+GET /nachrichten-sichern → /
 GET /standort → /standort
 GET /netzlaufwerk → /netzlaufwerk
 GET /sprechen → /sprechen
@@ -116,7 +116,7 @@ GET /platte/bild → /
 GET /podcasts → /podcasts
 GET /gesehen → /gesehen
 GET /daten-sichern → /daten-sichern
-GET /nachrichten-sichern → /nachrichten-sichern
+GET /nachrichten-sichern → /
 GET /standort → /standort
 GET /netzlaufwerk → /netzlaufwerk
 GET /sprechen → /sprechen
@@ -179,7 +179,7 @@ GET /platte/bild → /
 GET /podcasts → /podcasts
 GET /gesehen → /gesehen
 GET /daten-sichern → /daten-sichern
-GET /nachrichten-sichern → /nachrichten-sichern
+GET /nachrichten-sichern → /
 GET /standort → /standort
 GET /netzlaufwerk → /netzlaufwerk
 GET /sprechen → /sprechen
@@ -242,7 +242,7 @@ GET /platte/bild → /platte/bild
 GET /podcasts → /podcasts
 GET /gesehen → /gesehen
 GET /daten-sichern → /daten-sichern
-GET /nachrichten-sichern → /nachrichten-sichern
+GET /nachrichten-sichern → /
 GET /standort → /standort
 GET /netzlaufwerk → /netzlaufwerk
 GET /sprechen → /sprechen
@@ -305,7 +305,7 @@ GET /platte/bild → /
 GET /podcasts → /podcasts
 GET /gesehen → /gesehen
 GET /daten-sichern → /daten-sichern
-GET /nachrichten-sichern → /nachrichten-sichern
+GET /nachrichten-sichern → /
 GET /standort → /standort
 GET /netzlaufwerk → /netzlaufwerk
 GET /sprechen → /sprechen
@@ -368,7 +368,7 @@ GET /platte/bild → /
 GET /podcasts → /podcasts
 GET /gesehen → /gesehen
 GET /daten-sichern → /daten-sichern
-GET /nachrichten-sichern → /nachrichten-sichern
+GET /nachrichten-sichern → /
 GET /standort → /standort
 GET /netzlaufwerk → /netzlaufwerk
 GET /sprechen → /sprechen
@@ -431,7 +431,7 @@ GET /platte/bild → /
 GET /podcasts → /podcasts
 GET /gesehen → /gesehen
 GET /daten-sichern → /daten-sichern
-GET /nachrichten-sichern → /nachrichten-sichern
+GET /nachrichten-sichern → /
 GET /standort → /standort
 GET /netzlaufwerk → /netzlaufwerk
 GET /sprechen → /sprechen
@@ -494,7 +494,7 @@ GET /platte/bild → /
 GET /podcasts → /podcasts
 GET /gesehen → /gesehen
 GET /daten-sichern → /daten-sichern
-GET /nachrichten-sichern → /nachrichten-sichern
+GET /nachrichten-sichern → /
 GET /standort → /standort
 GET /netzlaufwerk → /netzlaufwerk
 GET /sprechen → /sprechen
@@ -557,7 +557,7 @@ GET /platte/bild → /
 GET /podcasts → /podcasts
 GET /gesehen → /gesehen
 GET /daten-sichern → /daten-sichern
-GET /nachrichten-sichern → /nachrichten-sichern
+GET /nachrichten-sichern → /
 GET /standort → /standort
 GET /netzlaufwerk → /netzlaufwerk
 GET /sprechen → /sprechen
@@ -620,7 +620,7 @@ GET /platte/bild → /
 GET /podcasts → /podcasts
 GET /gesehen → /gesehen
 GET /daten-sichern → /daten-sichern
-GET /nachrichten-sichern → /nachrichten-sichern
+GET /nachrichten-sichern → /
 GET /standort → /standort
 GET /netzlaufwerk → /netzlaufwerk
 GET /sprechen → /sprechen
@@ -683,7 +683,7 @@ GET /platte/bild → /
 GET /podcasts → /podcasts
 GET /gesehen → /gesehen
 GET /daten-sichern → /daten-sichern
-GET /nachrichten-sichern → /nachrichten-sichern
+GET /nachrichten-sichern → /
 GET /standort → /standort
 GET /netzlaufwerk → /netzlaufwerk
 GET /sprechen → /sprechen
@@ -746,7 +746,7 @@ GET /platte/bild → /
 GET /podcasts → /podcasts
 GET /gesehen → /gesehen
 GET /daten-sichern → /daten-sichern
-GET /nachrichten-sichern → /nachrichten-sichern
+GET /nachrichten-sichern → /
 GET /standort → /standort
 GET /netzlaufwerk → /netzlaufwerk
 GET /sprechen → /sprechen
@@ -809,7 +809,7 @@ GET /platte/bild → /
 GET /podcasts → /podcasts
 GET /gesehen → /gesehen
 GET /daten-sichern → /daten-sichern
-GET /nachrichten-sichern → /nachrichten-sichern
+GET /nachrichten-sichern → /
 GET /standort → /standort
 GET /netzlaufwerk → /netzlaufwerk
 GET /sprechen → /sprechen
@@ -872,7 +872,7 @@ GET /platte/bild → /
 GET /podcasts → /podcasts
 GET /gesehen → /gesehen
 GET /daten-sichern → /daten-sichern
-GET /nachrichten-sichern → /nachrichten-sichern
+GET /nachrichten-sichern → /
 GET /standort → /standort
 GET /netzlaufwerk → /netzlaufwerk
 GET /sprechen → /sprechen
@@ -935,7 +935,7 @@ GET /platte/bild → /
 GET /podcasts → /podcasts
 GET /gesehen → /gesehen
 GET /daten-sichern → /daten-sichern
-GET /nachrichten-sichern → /nachrichten-sichern
+GET /nachrichten-sichern → /
 GET /standort → /standort
 GET /netzlaufwerk → /netzlaufwerk
 GET /sprechen → /sprechen
@@ -998,7 +998,7 @@ GET /platte/bild → /
 GET /podcasts → /podcasts
 GET /gesehen → /gesehen
 GET /daten-sichern → /daten-sichern
-GET /nachrichten-sichern → /nachrichten-sichern
+GET /nachrichten-sichern → /
 GET /standort → /standort
 GET /netzlaufwerk → /netzlaufwerk
 GET /sprechen → /sprechen
@@ -1061,7 +1061,7 @@ GET /platte/bild → /
 GET /podcasts → /podcasts
 GET /gesehen → /gesehen
 GET /daten-sichern → /daten-sichern
-GET /nachrichten-sichern → /nachrichten-sichern
+GET /nachrichten-sichern → /
 GET /standort → /standort
 GET /netzlaufwerk → /netzlaufwerk
 GET /sprechen → /sprechen
@@ -1124,7 +1124,7 @@ GET /platte/bild → /
 GET /podcasts → /podcasts
 GET /gesehen → /gesehen
 GET /daten-sichern → /daten-sichern
-GET /nachrichten-sichern → /nachrichten-sichern
+GET /nachrichten-sichern → /
 GET /standort → /standort
 GET /netzlaufwerk → /netzlaufwerk
 GET /sprechen → /sprechen
@@ -1187,7 +1187,7 @@ GET /platte/bild → /
 GET /podcasts → /podcasts
 GET /gesehen → /gesehen
 GET /daten-sichern → /daten-sichern
-GET /nachrichten-sichern → /nachrichten-sichern
+GET /nachrichten-sichern → /
 GET /standort → /standort
 GET /netzlaufwerk → /netzlaufwerk
 GET /sprechen → /sprechen
@@ -1250,7 +1250,7 @@ GET /platte/bild → /
 GET /podcasts → /podcasts
 GET /gesehen → /gesehen
 GET /daten-sichern → /daten-sichern
-GET /nachrichten-sichern → /nachrichten-sichern
+GET /nachrichten-sichern → /
 GET /standort → /standort
 GET /netzlaufwerk → /netzlaufwerk
 GET /sprechen → /sprechen
@@ -1313,7 +1313,7 @@ GET /platte/bild → /
 GET /podcasts → /podcasts
 GET /gesehen → /gesehen
 GET /daten-sichern → /daten-sichern
-GET /nachrichten-sichern → /nachrichten-sichern
+GET /nachrichten-sichern → /
 GET /standort → /standort
 GET /netzlaufwerk → /netzlaufwerk
 GET /sprechen → /sprechen
@@ -1376,7 +1376,7 @@ GET /platte/bild → /
 GET /podcasts → /podcasts
 GET /gesehen → /gesehen
 GET /daten-sichern → /daten-sichern
-GET /nachrichten-sichern → /nachrichten-sichern
+GET /nachrichten-sichern → /
 GET /standort → /standort
 GET /netzlaufwerk → /netzlaufwerk
 GET /sprechen → /sprechen
@@ -1439,7 +1439,7 @@ GET /platte/bild → /
 GET /podcasts → /podcasts
 GET /gesehen → /gesehen
 GET /daten-sichern → /daten-sichern
-GET /nachrichten-sichern → /nachrichten-sichern
+GET /nachrichten-sichern → /
 GET /standort → /standort
 GET /netzlaufwerk → /netzlaufwerk
 GET /sprechen → /sprechen
@@ -1502,7 +1502,7 @@ GET /platte/bild → /
 GET /podcasts → /podcasts
 GET /gesehen → /gesehen
 GET /daten-sichern → /daten-sichern
-GET /nachrichten-sichern → /nachrichten-sichern
+GET /nachrichten-sichern → /
 GET /standort → /standort
 GET /netzlaufwerk → /netzlaufwerk
 GET /sprechen → /sprechen
@@ -1565,7 +1565,7 @@ GET /platte/bild → /
 GET /podcasts → /podcasts
 GET /gesehen → /gesehen
 GET /daten-sichern → /daten-sichern
-GET /nachrichten-sichern → /nachrichten-sichern
+GET /nachrichten-sichern → /
 GET /standort → /standort
 GET /netzlaufwerk → /netzlaufwerk
 GET /sprechen → /sprechen

@@ -1,14 +1,14 @@
 == alles
 GET /napi/assistent → GET /napi/assistent
-GET /napi/app → GET /napi/app
-GET /napi/persona → GET /napi/persona
+GET /napi/app → /napi/
+GET /napi/persona → /napi/
 GET /napi/box/home → GET /napi/box/home
-GET /napi/box/services → GET /napi/box/services
-GET /napi/box/approvals → GET /napi/box/approvals
-GET /napi/box/upgrades → GET /napi/box/upgrades
-POST /napi/box/services/homes/operate → POST /napi/box/services/{name}/operate
-POST /napi/box/approvals/1/approve → POST /napi/box/approvals/{id}/approve
-POST /napi/box/approvals/1/deny → POST /napi/box/approvals/{id}/deny
+GET /napi/box/services → /napi/
+GET /napi/box/approvals → /napi/
+GET /napi/box/upgrades → /napi/
+POST /napi/box/services/homes/operate → /napi/
+POST /napi/box/approvals/1/approve → /napi/
+POST /napi/box/approvals/1/deny → /napi/
 GET /napi/kann → GET /napi/kann
 POST /napi/kann/anfordern → POST /napi/kann/anfordern
 GET /napi/whoami → GET /napi/whoami
@@ -16,9 +16,9 @@ GET /napi/portal/events → GET /napi/portal/events
 POST /napi/portal/watch → POST /napi/portal/watch
 POST /napi/ha/call → POST /napi/ha/call
 GET /napi/portal/state → GET /napi/portal/state
-GET /napi/portal/entity-history → GET /napi/portal/entity-history
+GET /napi/portal/entity-history → /napi/
 GET /napi/portal/active → GET /napi/portal/active
-GET /napi/portal/camera/camera.tuer/snapshot → GET /napi/portal/camera/{entity_id}/snapshot
+GET /napi/portal/camera/camera.tuer/snapshot → /napi/
 GET /napi/portal/start/addable → GET /napi/portal/start/addable
 GET /napi/portal/favorites → GET /napi/portal/favorites
 GET /napi/portal/energy → GET /napi/portal/energy
@@ -53,15 +53,15 @@ GET /napi/upload → /napi/
 GET /napi/ha/call → /napi/
 == fullSite
 GET /napi/assistent → GET /napi/assistent
-GET /napi/app → GET /napi/app
-GET /napi/persona → GET /napi/persona
+GET /napi/app → /napi/
+GET /napi/persona → /napi/
 GET /napi/box/home → GET /napi/box/home
-GET /napi/box/services → GET /napi/box/services
-GET /napi/box/approvals → GET /napi/box/approvals
-GET /napi/box/upgrades → GET /napi/box/upgrades
-POST /napi/box/services/homes/operate → POST /napi/box/services/{name}/operate
-POST /napi/box/approvals/1/approve → POST /napi/box/approvals/{id}/approve
-POST /napi/box/approvals/1/deny → POST /napi/box/approvals/{id}/deny
+GET /napi/box/services → /napi/
+GET /napi/box/approvals → /napi/
+GET /napi/box/upgrades → /napi/
+POST /napi/box/services/homes/operate → /napi/
+POST /napi/box/approvals/1/approve → /napi/
+POST /napi/box/approvals/1/deny → /napi/
 GET /napi/kann → GET /napi/kann
 POST /napi/kann/anfordern → POST /napi/kann/anfordern
 GET /napi/whoami → GET /napi/whoami
@@ -69,9 +69,9 @@ GET /napi/portal/events → GET /napi/portal/events
 POST /napi/portal/watch → POST /napi/portal/watch
 POST /napi/ha/call → POST /napi/ha/call
 GET /napi/portal/state → GET /napi/portal/state
-GET /napi/portal/entity-history → GET /napi/portal/entity-history
+GET /napi/portal/entity-history → /napi/
 GET /napi/portal/active → GET /napi/portal/active
-GET /napi/portal/camera/camera.tuer/snapshot → GET /napi/portal/camera/{entity_id}/snapshot
+GET /napi/portal/camera/camera.tuer/snapshot → /napi/
 GET /napi/portal/start/addable → GET /napi/portal/start/addable
 GET /napi/portal/favorites → GET /napi/portal/favorites
 GET /napi/portal/energy → GET /napi/portal/energy
@@ -106,15 +106,15 @@ GET /napi/upload → /napi/
 GET /napi/ha/call → /napi/
 == nichts
 GET /napi/assistent → GET /napi/assistent
-GET /napi/app → GET /napi/app
-GET /napi/persona → GET /napi/persona
+GET /napi/app → /napi/
+GET /napi/persona → /napi/
 GET /napi/box/home → GET /napi/box/home
-GET /napi/box/services → GET /napi/box/services
-GET /napi/box/approvals → GET /napi/box/approvals
-GET /napi/box/upgrades → GET /napi/box/upgrades
-POST /napi/box/services/homes/operate → POST /napi/box/services/{name}/operate
-POST /napi/box/approvals/1/approve → POST /napi/box/approvals/{id}/approve
-POST /napi/box/approvals/1/deny → POST /napi/box/approvals/{id}/deny
+GET /napi/box/services → /napi/
+GET /napi/box/approvals → /napi/
+GET /napi/box/upgrades → /napi/
+POST /napi/box/services/homes/operate → /napi/
+POST /napi/box/approvals/1/approve → /napi/
+POST /napi/box/approvals/1/deny → /napi/
 GET /napi/kann → GET /napi/kann
 POST /napi/kann/anfordern → POST /napi/kann/anfordern
 GET /napi/whoami → GET /napi/whoami
@@ -159,15 +159,15 @@ GET /napi/upload → /napi/
 GET /napi/ha/call → /napi/
 == ohne-eingang
 GET /napi/assistent → GET /napi/assistent
-GET /napi/app → GET /napi/app
-GET /napi/persona → GET /napi/persona
+GET /napi/app → /napi/
+GET /napi/persona → /napi/
 GET /napi/box/home → GET /napi/box/home
-GET /napi/box/services → GET /napi/box/services
-GET /napi/box/approvals → GET /napi/box/approvals
-GET /napi/box/upgrades → GET /napi/box/upgrades
-POST /napi/box/services/homes/operate → POST /napi/box/services/{name}/operate
-POST /napi/box/approvals/1/approve → POST /napi/box/approvals/{id}/approve
-POST /napi/box/approvals/1/deny → POST /napi/box/approvals/{id}/deny
+GET /napi/box/services → /napi/
+GET /napi/box/approvals → /napi/
+GET /napi/box/upgrades → /napi/
+POST /napi/box/services/homes/operate → /napi/
+POST /napi/box/approvals/1/approve → /napi/
+POST /napi/box/approvals/1/deny → /napi/
 GET /napi/kann → GET /napi/kann
 POST /napi/kann/anfordern → POST /napi/kann/anfordern
 GET /napi/whoami → GET /napi/whoami
@@ -175,9 +175,9 @@ GET /napi/portal/events → GET /napi/portal/events
 POST /napi/portal/watch → POST /napi/portal/watch
 POST /napi/ha/call → POST /napi/ha/call
 GET /napi/portal/state → GET /napi/portal/state
-GET /napi/portal/entity-history → GET /napi/portal/entity-history
+GET /napi/portal/entity-history → /napi/
 GET /napi/portal/active → GET /napi/portal/active
-GET /napi/portal/camera/camera.tuer/snapshot → GET /napi/portal/camera/{entity_id}/snapshot
+GET /napi/portal/camera/camera.tuer/snapshot → /napi/
 GET /napi/portal/start/addable → GET /napi/portal/start/addable
 GET /napi/portal/favorites → GET /napi/portal/favorites
 GET /napi/portal/energy → GET /napi/portal/energy
@@ -212,15 +212,15 @@ GET /napi/upload → /napi/
 GET /napi/ha/call → /napi/
 == ohne geraete
 GET /napi/assistent → GET /napi/assistent
-GET /napi/app → GET /napi/app
-GET /napi/persona → GET /napi/persona
+GET /napi/app → /napi/
+GET /napi/persona → /napi/
 GET /napi/box/home → GET /napi/box/home
-GET /napi/box/services → GET /napi/box/services
-GET /napi/box/approvals → GET /napi/box/approvals
-GET /napi/box/upgrades → GET /napi/box/upgrades
-POST /napi/box/services/homes/operate → POST /napi/box/services/{name}/operate
-POST /napi/box/approvals/1/approve → POST /napi/box/approvals/{id}/approve
-POST /napi/box/approvals/1/deny → POST /napi/box/approvals/{id}/deny
+GET /napi/box/services → /napi/
+GET /napi/box/approvals → /napi/
+GET /napi/box/upgrades → /napi/
+POST /napi/box/services/homes/operate → /napi/
+POST /napi/box/approvals/1/approve → /napi/
+POST /napi/box/approvals/1/deny → /napi/
 GET /napi/kann → GET /napi/kann
 POST /napi/kann/anfordern → POST /napi/kann/anfordern
 GET /napi/whoami → GET /napi/whoami
@@ -265,15 +265,15 @@ GET /napi/upload → /napi/
 GET /napi/ha/call → /napi/
 == ohne energie
 GET /napi/assistent → GET /napi/assistent
-GET /napi/app → GET /napi/app
-GET /napi/persona → GET /napi/persona
+GET /napi/app → /napi/
+GET /napi/persona → /napi/
 GET /napi/box/home → GET /napi/box/home
-GET /napi/box/services → GET /napi/box/services
-GET /napi/box/approvals → GET /napi/box/approvals
-GET /napi/box/upgrades → GET /napi/box/upgrades
-POST /napi/box/services/homes/operate → POST /napi/box/services/{name}/operate
-POST /napi/box/approvals/1/approve → POST /napi/box/approvals/{id}/approve
-POST /napi/box/approvals/1/deny → POST /napi/box/approvals/{id}/deny
+GET /napi/box/services → /napi/
+GET /napi/box/approvals → /napi/
+GET /napi/box/upgrades → /napi/
+POST /napi/box/services/homes/operate → /napi/
+POST /napi/box/approvals/1/approve → /napi/
+POST /napi/box/approvals/1/deny → /napi/
 GET /napi/kann → GET /napi/kann
 POST /napi/kann/anfordern → POST /napi/kann/anfordern
 GET /napi/whoami → GET /napi/whoami
@@ -281,9 +281,9 @@ GET /napi/portal/events → GET /napi/portal/events
 POST /napi/portal/watch → POST /napi/portal/watch
 POST /napi/ha/call → POST /napi/ha/call
 GET /napi/portal/state → GET /napi/portal/state
-GET /napi/portal/entity-history → GET /napi/portal/entity-history
+GET /napi/portal/entity-history → /napi/
 GET /napi/portal/active → GET /napi/portal/active
-GET /napi/portal/camera/camera.tuer/snapshot → GET /napi/portal/camera/{entity_id}/snapshot
+GET /napi/portal/camera/camera.tuer/snapshot → /napi/
 GET /napi/portal/start/addable → GET /napi/portal/start/addable
 GET /napi/portal/favorites → GET /napi/portal/favorites
 GET /napi/portal/energy → /napi/
@@ -318,15 +318,15 @@ GET /napi/upload → /napi/
 GET /napi/ha/call → /napi/
 == ohne sprechen
 GET /napi/assistent → GET /napi/assistent
-GET /napi/app → GET /napi/app
-GET /napi/persona → GET /napi/persona
+GET /napi/app → /napi/
+GET /napi/persona → /napi/
 GET /napi/box/home → GET /napi/box/home
-GET /napi/box/services → GET /napi/box/services
-GET /napi/box/approvals → GET /napi/box/approvals
-GET /napi/box/upgrades → GET /napi/box/upgrades
-POST /napi/box/services/homes/operate → POST /napi/box/services/{name}/operate
-POST /napi/box/approvals/1/approve → POST /napi/box/approvals/{id}/approve
-POST /napi/box/approvals/1/deny → POST /napi/box/approvals/{id}/deny
+GET /napi/box/services → /napi/
+GET /napi/box/approvals → /napi/
+GET /napi/box/upgrades → /napi/
+POST /napi/box/services/homes/operate → /napi/
+POST /napi/box/approvals/1/approve → /napi/
+POST /napi/box/approvals/1/deny → /napi/
 GET /napi/kann → GET /napi/kann
 POST /napi/kann/anfordern → POST /napi/kann/anfordern
 GET /napi/whoami → GET /napi/whoami
@@ -334,9 +334,9 @@ GET /napi/portal/events → GET /napi/portal/events
 POST /napi/portal/watch → POST /napi/portal/watch
 POST /napi/ha/call → POST /napi/ha/call
 GET /napi/portal/state → GET /napi/portal/state
-GET /napi/portal/entity-history → GET /napi/portal/entity-history
+GET /napi/portal/entity-history → /napi/
 GET /napi/portal/active → GET /napi/portal/active
-GET /napi/portal/camera/camera.tuer/snapshot → GET /napi/portal/camera/{entity_id}/snapshot
+GET /napi/portal/camera/camera.tuer/snapshot → /napi/
 GET /napi/portal/start/addable → GET /napi/portal/start/addable
 GET /napi/portal/favorites → GET /napi/portal/favorites
 GET /napi/portal/energy → GET /napi/portal/energy
@@ -371,15 +371,15 @@ GET /napi/upload → /napi/
 GET /napi/ha/call → /napi/
 == ohne kalender
 GET /napi/assistent → GET /napi/assistent
-GET /napi/app → GET /napi/app
-GET /napi/persona → GET /napi/persona
+GET /napi/app → /napi/
+GET /napi/persona → /napi/
 GET /napi/box/home → GET /napi/box/home
-GET /napi/box/services → GET /napi/box/services
-GET /napi/box/approvals → GET /napi/box/approvals
-GET /napi/box/upgrades → GET /napi/box/upgrades
-POST /napi/box/services/homes/operate → POST /napi/box/services/{name}/operate
-POST /napi/box/approvals/1/approve → POST /napi/box/approvals/{id}/approve
-POST /napi/box/approvals/1/deny → POST /napi/box/approvals/{id}/deny
+GET /napi/box/services → /napi/
+GET /napi/box/approvals → /napi/
+GET /napi/box/upgrades → /napi/
+POST /napi/box/services/homes/operate → /napi/
+POST /napi/box/approvals/1/approve → /napi/
+POST /napi/box/approvals/1/deny → /napi/
 GET /napi/kann → GET /napi/kann
 POST /napi/kann/anfordern → POST /napi/kann/anfordern
 GET /napi/whoami → GET /napi/whoami
@@ -387,9 +387,9 @@ GET /napi/portal/events → GET /napi/portal/events
 POST /napi/portal/watch → POST /napi/portal/watch
 POST /napi/ha/call → POST /napi/ha/call
 GET /napi/portal/state → GET /napi/portal/state
-GET /napi/portal/entity-history → GET /napi/portal/entity-history
+GET /napi/portal/entity-history → /napi/
 GET /napi/portal/active → GET /napi/portal/active
-GET /napi/portal/camera/camera.tuer/snapshot → GET /napi/portal/camera/{entity_id}/snapshot
+GET /napi/portal/camera/camera.tuer/snapshot → /napi/
 GET /napi/portal/start/addable → GET /napi/portal/start/addable
 GET /napi/portal/favorites → GET /napi/portal/favorites
 GET /napi/portal/energy → GET /napi/portal/energy
@@ -424,15 +424,15 @@ GET /napi/upload → /napi/
 GET /napi/ha/call → /napi/
 == ohne kontakte
 GET /napi/assistent → GET /napi/assistent
-GET /napi/app → GET /napi/app
-GET /napi/persona → GET /napi/persona
+GET /napi/app → /napi/
+GET /napi/persona → /napi/
 GET /napi/box/home → GET /napi/box/home
-GET /napi/box/services → GET /napi/box/services
-GET /napi/box/approvals → GET /napi/box/approvals
-GET /napi/box/upgrades → GET /napi/box/upgrades
-POST /napi/box/services/homes/operate → POST /napi/box/services/{name}/operate
-POST /napi/box/approvals/1/approve → POST /napi/box/approvals/{id}/approve
-POST /napi/box/approvals/1/deny → POST /napi/box/approvals/{id}/deny
+GET /napi/box/services → /napi/
+GET /napi/box/approvals → /napi/
+GET /napi/box/upgrades → /napi/
+POST /napi/box/services/homes/operate → /napi/
+POST /napi/box/approvals/1/approve → /napi/
+POST /napi/box/approvals/1/deny → /napi/
 GET /napi/kann → GET /napi/kann
 POST /napi/kann/anfordern → POST /napi/kann/anfordern
 GET /napi/whoami → GET /napi/whoami
@@ -440,9 +440,9 @@ GET /napi/portal/events → GET /napi/portal/events
 POST /napi/portal/watch → POST /napi/portal/watch
 POST /napi/ha/call → POST /napi/ha/call
 GET /napi/portal/state → GET /napi/portal/state
-GET /napi/portal/entity-history → GET /napi/portal/entity-history
+GET /napi/portal/entity-history → /napi/
 GET /napi/portal/active → GET /napi/portal/active
-GET /napi/portal/camera/camera.tuer/snapshot → GET /napi/portal/camera/{entity_id}/snapshot
+GET /napi/portal/camera/camera.tuer/snapshot → /napi/
 GET /napi/portal/start/addable → GET /napi/portal/start/addable
 GET /napi/portal/favorites → GET /napi/portal/favorites
 GET /napi/portal/energy → GET /napi/portal/energy
@@ -477,15 +477,15 @@ GET /napi/upload → /napi/
 GET /napi/ha/call → /napi/
 == ohne konto
 GET /napi/assistent → GET /napi/assistent
-GET /napi/app → GET /napi/app
-GET /napi/persona → GET /napi/persona
+GET /napi/app → /napi/
+GET /napi/persona → /napi/
 GET /napi/box/home → GET /napi/box/home
-GET /napi/box/services → GET /napi/box/services
-GET /napi/box/approvals → GET /napi/box/approvals
-GET /napi/box/upgrades → GET /napi/box/upgrades
-POST /napi/box/services/homes/operate → POST /napi/box/services/{name}/operate
-POST /napi/box/approvals/1/approve → POST /napi/box/approvals/{id}/approve
-POST /napi/box/approvals/1/deny → POST /napi/box/approvals/{id}/deny
+GET /napi/box/services → /napi/
+GET /napi/box/approvals → /napi/
+GET /napi/box/upgrades → /napi/
+POST /napi/box/services/homes/operate → /napi/
+POST /napi/box/approvals/1/approve → /napi/
+POST /napi/box/approvals/1/deny → /napi/
 GET /napi/kann → GET /napi/kann
 POST /napi/kann/anfordern → POST /napi/kann/anfordern
 GET /napi/whoami → GET /napi/whoami
@@ -493,9 +493,9 @@ GET /napi/portal/events → GET /napi/portal/events
 POST /napi/portal/watch → POST /napi/portal/watch
 POST /napi/ha/call → POST /napi/ha/call
 GET /napi/portal/state → GET /napi/portal/state
-GET /napi/portal/entity-history → GET /napi/portal/entity-history
+GET /napi/portal/entity-history → /napi/
 GET /napi/portal/active → GET /napi/portal/active
-GET /napi/portal/camera/camera.tuer/snapshot → GET /napi/portal/camera/{entity_id}/snapshot
+GET /napi/portal/camera/camera.tuer/snapshot → /napi/
 GET /napi/portal/start/addable → GET /napi/portal/start/addable
 GET /napi/portal/favorites → GET /napi/portal/favorites
 GET /napi/portal/energy → GET /napi/portal/energy
@@ -530,15 +530,15 @@ GET /napi/upload → /napi/
 GET /napi/ha/call → /napi/
 == ohne einkauf
 GET /napi/assistent → GET /napi/assistent
-GET /napi/app → GET /napi/app
-GET /napi/persona → GET /napi/persona
+GET /napi/app → /napi/
+GET /napi/persona → /napi/
 GET /napi/box/home → GET /napi/box/home
-GET /napi/box/services → GET /napi/box/services
-GET /napi/box/approvals → GET /napi/box/approvals
-GET /napi/box/upgrades → GET /napi/box/upgrades
-POST /napi/box/services/homes/operate → POST /napi/box/services/{name}/operate
-POST /napi/box/approvals/1/approve → POST /napi/box/approvals/{id}/approve
-POST /napi/box/approvals/1/deny → POST /napi/box/approvals/{id}/deny
+GET /napi/box/services → /napi/
+GET /napi/box/approvals → /napi/
+GET /napi/box/upgrades → /napi/
+POST /napi/box/services/homes/operate → /napi/
+POST /napi/box/approvals/1/approve → /napi/
+POST /napi/box/approvals/1/deny → /napi/
 GET /napi/kann → GET /napi/kann
 POST /napi/kann/anfordern → POST /napi/kann/anfordern
 GET /napi/whoami → GET /napi/whoami
@@ -546,9 +546,9 @@ GET /napi/portal/events → GET /napi/portal/events
 POST /napi/portal/watch → POST /napi/portal/watch
 POST /napi/ha/call → POST /napi/ha/call
 GET /napi/portal/state → GET /napi/portal/state
-GET /napi/portal/entity-history → GET /napi/portal/entity-history
+GET /napi/portal/entity-history → /napi/
 GET /napi/portal/active → GET /napi/portal/active
-GET /napi/portal/camera/camera.tuer/snapshot → GET /napi/portal/camera/{entity_id}/snapshot
+GET /napi/portal/camera/camera.tuer/snapshot → /napi/
 GET /napi/portal/start/addable → GET /napi/portal/start/addable
 GET /napi/portal/favorites → GET /napi/portal/favorites
 GET /napi/portal/energy → GET /napi/portal/energy
@@ -583,15 +583,15 @@ GET /napi/upload → /napi/
 GET /napi/ha/call → /napi/
 == ohne notizen
 GET /napi/assistent → GET /napi/assistent
-GET /napi/app → GET /napi/app
-GET /napi/persona → GET /napi/persona
+GET /napi/app → /napi/
+GET /napi/persona → /napi/
 GET /napi/box/home → GET /napi/box/home
-GET /napi/box/services → GET /napi/box/services
-GET /napi/box/approvals → GET /napi/box/approvals
-GET /napi/box/upgrades → GET /napi/box/upgrades
-POST /napi/box/services/homes/operate → POST /napi/box/services/{name}/operate
-POST /napi/box/approvals/1/approve → POST /napi/box/approvals/{id}/approve
-POST /napi/box/approvals/1/deny → POST /napi/box/approvals/{id}/deny
+GET /napi/box/services → /napi/
+GET /napi/box/approvals → /napi/
+GET /napi/box/upgrades → /napi/
+POST /napi/box/services/homes/operate → /napi/
+POST /napi/box/approvals/1/approve → /napi/
+POST /napi/box/approvals/1/deny → /napi/
 GET /napi/kann → GET /napi/kann
 POST /napi/kann/anfordern → POST /napi/kann/anfordern
 GET /napi/whoami → GET /napi/whoami
@@ -599,9 +599,9 @@ GET /napi/portal/events → GET /napi/portal/events
 POST /napi/portal/watch → POST /napi/portal/watch
 POST /napi/ha/call → POST /napi/ha/call
 GET /napi/portal/state → GET /napi/portal/state
-GET /napi/portal/entity-history → GET /napi/portal/entity-history
+GET /napi/portal/entity-history → /napi/
 GET /napi/portal/active → GET /napi/portal/active
-GET /napi/portal/camera/camera.tuer/snapshot → GET /napi/portal/camera/{entity_id}/snapshot
+GET /napi/portal/camera/camera.tuer/snapshot → /napi/
 GET /napi/portal/start/addable → GET /napi/portal/start/addable
 GET /napi/portal/favorites → GET /napi/portal/favorites
 GET /napi/portal/energy → GET /napi/portal/energy
@@ -636,15 +636,15 @@ GET /napi/upload → /napi/
 GET /napi/ha/call → /napi/
 == ohne dokumente
 GET /napi/assistent → GET /napi/assistent
-GET /napi/app → GET /napi/app
-GET /napi/persona → GET /napi/persona
+GET /napi/app → /napi/
+GET /napi/persona → /napi/
 GET /napi/box/home → GET /napi/box/home
-GET /napi/box/services → GET /napi/box/services
-GET /napi/box/approvals → GET /napi/box/approvals
-GET /napi/box/upgrades → GET /napi/box/upgrades
-POST /napi/box/services/homes/operate → POST /napi/box/services/{name}/operate
-POST /napi/box/approvals/1/approve → POST /napi/box/approvals/{id}/approve
-POST /napi/box/approvals/1/deny → POST /napi/box/approvals/{id}/deny
+GET /napi/box/services → /napi/
+GET /napi/box/approvals → /napi/
+GET /napi/box/upgrades → /napi/
+POST /napi/box/services/homes/operate → /napi/
+POST /napi/box/approvals/1/approve → /napi/
+POST /napi/box/approvals/1/deny → /napi/
 GET /napi/kann → GET /napi/kann
 POST /napi/kann/anfordern → POST /napi/kann/anfordern
 GET /napi/whoami → GET /napi/whoami
@@ -652,9 +652,9 @@ GET /napi/portal/events → GET /napi/portal/events
 POST /napi/portal/watch → POST /napi/portal/watch
 POST /napi/ha/call → POST /napi/ha/call
 GET /napi/portal/state → GET /napi/portal/state
-GET /napi/portal/entity-history → GET /napi/portal/entity-history
+GET /napi/portal/entity-history → /napi/
 GET /napi/portal/active → GET /napi/portal/active
-GET /napi/portal/camera/camera.tuer/snapshot → GET /napi/portal/camera/{entity_id}/snapshot
+GET /napi/portal/camera/camera.tuer/snapshot → /napi/
 GET /napi/portal/start/addable → GET /napi/portal/start/addable
 GET /napi/portal/favorites → GET /napi/portal/favorites
 GET /napi/portal/energy → GET /napi/portal/energy
@@ -689,15 +689,15 @@ GET /napi/upload → /napi/
 GET /napi/ha/call → /napi/
 == ohne musik
 GET /napi/assistent → GET /napi/assistent
-GET /napi/app → GET /napi/app
-GET /napi/persona → GET /napi/persona
+GET /napi/app → /napi/
+GET /napi/persona → /napi/
 GET /napi/box/home → GET /napi/box/home
-GET /napi/box/services → GET /napi/box/services
-GET /napi/box/approvals → GET /napi/box/approvals
-GET /napi/box/upgrades → GET /napi/box/upgrades
-POST /napi/box/services/homes/operate → POST /napi/box/services/{name}/operate
-POST /napi/box/approvals/1/approve → POST /napi/box/approvals/{id}/approve
-POST /napi/box/approvals/1/deny → POST /napi/box/approvals/{id}/deny
+GET /napi/box/services → /napi/
+GET /napi/box/approvals → /napi/
+GET /napi/box/upgrades → /napi/
+POST /napi/box/services/homes/operate → /napi/
+POST /napi/box/approvals/1/approve → /napi/
+POST /napi/box/approvals/1/deny → /napi/
 GET /napi/kann → GET /napi/kann
 POST /napi/kann/anfordern → POST /napi/kann/anfordern
 GET /napi/whoami → GET /napi/whoami
@@ -705,9 +705,9 @@ GET /napi/portal/events → GET /napi/portal/events
 POST /napi/portal/watch → POST /napi/portal/watch
 POST /napi/ha/call → POST /napi/ha/call
 GET /napi/portal/state → GET /napi/portal/state
-GET /napi/portal/entity-history → GET /napi/portal/entity-history
+GET /napi/portal/entity-history → /napi/
 GET /napi/portal/active → GET /napi/portal/active
-GET /napi/portal/camera/camera.tuer/snapshot → GET /napi/portal/camera/{entity_id}/snapshot
+GET /napi/portal/camera/camera.tuer/snapshot → /napi/
 GET /napi/portal/start/addable → GET /napi/portal/start/addable
 GET /napi/portal/favorites → GET /napi/portal/favorites
 GET /napi/portal/energy → GET /napi/portal/energy
@@ -742,15 +742,15 @@ GET /napi/upload → /napi/
 GET /napi/ha/call → /napi/
 == ohne podcasts
 GET /napi/assistent → GET /napi/assistent
-GET /napi/app → GET /napi/app
-GET /napi/persona → GET /napi/persona
+GET /napi/app → /napi/
+GET /napi/persona → /napi/
 GET /napi/box/home → GET /napi/box/home
-GET /napi/box/services → GET /napi/box/services
-GET /napi/box/approvals → GET /napi/box/approvals
-GET /napi/box/upgrades → GET /napi/box/upgrades
-POST /napi/box/services/homes/operate → POST /napi/box/services/{name}/operate
-POST /napi/box/approvals/1/approve → POST /napi/box/approvals/{id}/approve
-POST /napi/box/approvals/1/deny → POST /napi/box/approvals/{id}/deny
+GET /napi/box/services → /napi/
+GET /napi/box/approvals → /napi/
+GET /napi/box/upgrades → /napi/
+POST /napi/box/services/homes/operate → /napi/
+POST /napi/box/approvals/1/approve → /napi/
+POST /napi/box/approvals/1/deny → /napi/
 GET /napi/kann → GET /napi/kann
 POST /napi/kann/anfordern → POST /napi/kann/anfordern
 GET /napi/whoami → GET /napi/whoami
@@ -758,9 +758,9 @@ GET /napi/portal/events → GET /napi/portal/events
 POST /napi/portal/watch → POST /napi/portal/watch
 POST /napi/ha/call → POST /napi/ha/call
 GET /napi/portal/state → GET /napi/portal/state
-GET /napi/portal/entity-history → GET /napi/portal/entity-history
+GET /napi/portal/entity-history → /napi/
 GET /napi/portal/active → GET /napi/portal/active
-GET /napi/portal/camera/camera.tuer/snapshot → GET /napi/portal/camera/{entity_id}/snapshot
+GET /napi/portal/camera/camera.tuer/snapshot → /napi/
 GET /napi/portal/start/addable → GET /napi/portal/start/addable
 GET /napi/portal/favorites → GET /napi/portal/favorites
 GET /napi/portal/energy → GET /napi/portal/energy
@@ -795,15 +795,15 @@ GET /napi/upload → /napi/
 GET /napi/ha/call → /napi/
 == ohne gesehen
 GET /napi/assistent → GET /napi/assistent
-GET /napi/app → GET /napi/app
-GET /napi/persona → GET /napi/persona
+GET /napi/app → /napi/
+GET /napi/persona → /napi/
 GET /napi/box/home → GET /napi/box/home
-GET /napi/box/services → GET /napi/box/services
-GET /napi/box/approvals → GET /napi/box/approvals
-GET /napi/box/upgrades → GET /napi/box/upgrades
-POST /napi/box/services/homes/operate → POST /napi/box/services/{name}/operate
-POST /napi/box/approvals/1/approve → POST /napi/box/approvals/{id}/approve
-POST /napi/box/approvals/1/deny → POST /napi/box/approvals/{id}/deny
+GET /napi/box/services → /napi/
+GET /napi/box/approvals → /napi/
+GET /napi/box/upgrades → /napi/
+POST /napi/box/services/homes/operate → /napi/
+POST /napi/box/approvals/1/approve → /napi/
+POST /napi/box/approvals/1/deny → /napi/
 GET /napi/kann → GET /napi/kann
 POST /napi/kann/anfordern → POST /napi/kann/anfordern
 GET /napi/whoami → GET /napi/whoami
@@ -811,9 +811,9 @@ GET /napi/portal/events → GET /napi/portal/events
 POST /napi/portal/watch → POST /napi/portal/watch
 POST /napi/ha/call → POST /napi/ha/call
 GET /napi/portal/state → GET /napi/portal/state
-GET /napi/portal/entity-history → GET /napi/portal/entity-history
+GET /napi/portal/entity-history → /napi/
 GET /napi/portal/active → GET /napi/portal/active
-GET /napi/portal/camera/camera.tuer/snapshot → GET /napi/portal/camera/{entity_id}/snapshot
+GET /napi/portal/camera/camera.tuer/snapshot → /napi/
 GET /napi/portal/start/addable → GET /napi/portal/start/addable
 GET /napi/portal/favorites → GET /napi/portal/favorites
 GET /napi/portal/energy → GET /napi/portal/energy
@@ -848,15 +848,15 @@ GET /napi/upload → /napi/
 GET /napi/ha/call → /napi/
 == ohne sicherung
 GET /napi/assistent → GET /napi/assistent
-GET /napi/app → GET /napi/app
-GET /napi/persona → GET /napi/persona
+GET /napi/app → /napi/
+GET /napi/persona → /napi/
 GET /napi/box/home → GET /napi/box/home
-GET /napi/box/services → GET /napi/box/services
-GET /napi/box/approvals → GET /napi/box/approvals
-GET /napi/box/upgrades → GET /napi/box/upgrades
-POST /napi/box/services/homes/operate → POST /napi/box/services/{name}/operate
-POST /napi/box/approvals/1/approve → POST /napi/box/approvals/{id}/approve
-POST /napi/box/approvals/1/deny → POST /napi/box/approvals/{id}/deny
+GET /napi/box/services → /napi/
+GET /napi/box/approvals → /napi/
+GET /napi/box/upgrades → /napi/
+POST /napi/box/services/homes/operate → /napi/
+POST /napi/box/approvals/1/approve → /napi/
+POST /napi/box/approvals/1/deny → /napi/
 GET /napi/kann → GET /napi/kann
 POST /napi/kann/anfordern → POST /napi/kann/anfordern
 GET /napi/whoami → GET /napi/whoami
@@ -864,9 +864,9 @@ GET /napi/portal/events → GET /napi/portal/events
 POST /napi/portal/watch → POST /napi/portal/watch
 POST /napi/ha/call → POST /napi/ha/call
 GET /napi/portal/state → GET /napi/portal/state
-GET /napi/portal/entity-history → GET /napi/portal/entity-history
+GET /napi/portal/entity-history → /napi/
 GET /napi/portal/active → GET /napi/portal/active
-GET /napi/portal/camera/camera.tuer/snapshot → GET /napi/portal/camera/{entity_id}/snapshot
+GET /napi/portal/camera/camera.tuer/snapshot → /napi/
 GET /napi/portal/start/addable → GET /napi/portal/start/addable
 GET /napi/portal/favorites → GET /napi/portal/favorites
 GET /napi/portal/energy → GET /napi/portal/energy
@@ -901,15 +901,15 @@ GET /napi/upload → /napi/
 GET /napi/ha/call → /napi/
 == ohne standort
 GET /napi/assistent → GET /napi/assistent
-GET /napi/app → GET /napi/app
-GET /napi/persona → GET /napi/persona
+GET /napi/app → /napi/
+GET /napi/persona → /napi/
 GET /napi/box/home → GET /napi/box/home
-GET /napi/box/services → GET /napi/box/services
-GET /napi/box/approvals → GET /napi/box/approvals
-GET /napi/box/upgrades → GET /napi/box/upgrades
-POST /napi/box/services/homes/operate → POST /napi/box/services/{name}/operate
-POST /napi/box/approvals/1/approve → POST /napi/box/approvals/{id}/approve
-POST /napi/box/approvals/1/deny → POST /napi/box/approvals/{id}/deny
+GET /napi/box/services → /napi/
+GET /napi/box/approvals → /napi/
+GET /napi/box/upgrades → /napi/
+POST /napi/box/services/homes/operate → /napi/
+POST /napi/box/approvals/1/approve → /napi/
+POST /napi/box/approvals/1/deny → /napi/
 GET /napi/kann → GET /napi/kann
 POST /napi/kann/anfordern → POST /napi/kann/anfordern
 GET /napi/whoami → GET /napi/whoami
@@ -917,9 +917,9 @@ GET /napi/portal/events → GET /napi/portal/events
 POST /napi/portal/watch → POST /napi/portal/watch
 POST /napi/ha/call → POST /napi/ha/call
 GET /napi/portal/state → GET /napi/portal/state
-GET /napi/portal/entity-history → GET /napi/portal/entity-history
+GET /napi/portal/entity-history → /napi/
 GET /napi/portal/active → GET /napi/portal/active
-GET /napi/portal/camera/camera.tuer/snapshot → GET /napi/portal/camera/{entity_id}/snapshot
+GET /napi/portal/camera/camera.tuer/snapshot → /napi/
 GET /napi/portal/start/addable → GET /napi/portal/start/addable
 GET /napi/portal/favorites → GET /napi/portal/favorites
 GET /napi/portal/energy → GET /napi/portal/energy
@@ -954,15 +954,15 @@ GET /napi/upload → /napi/
 GET /napi/ha/call → /napi/
 == ohne netzlaufwerk
 GET /napi/assistent → GET /napi/assistent
-GET /napi/app → GET /napi/app
-GET /napi/persona → GET /napi/persona
+GET /napi/app → /napi/
+GET /napi/persona → /napi/
 GET /napi/box/home → GET /napi/box/home
-GET /napi/box/services → GET /napi/box/services
-GET /napi/box/approvals → GET /napi/box/approvals
-GET /napi/box/upgrades → GET /napi/box/upgrades
-POST /napi/box/services/homes/operate → POST /napi/box/services/{name}/operate
-POST /napi/box/approvals/1/approve → POST /napi/box/approvals/{id}/approve
-POST /napi/box/approvals/1/deny → POST /napi/box/approvals/{id}/deny
+GET /napi/box/services → /napi/
+GET /napi/box/approvals → /napi/
+GET /napi/box/upgrades → /napi/
+POST /napi/box/services/homes/operate → /napi/
+POST /napi/box/approvals/1/approve → /napi/
+POST /napi/box/approvals/1/deny → /napi/
 GET /napi/kann → GET /napi/kann
 POST /napi/kann/anfordern → POST /napi/kann/anfordern
 GET /napi/whoami → GET /napi/whoami
@@ -970,9 +970,9 @@ GET /napi/portal/events → GET /napi/portal/events
 POST /napi/portal/watch → POST /napi/portal/watch
 POST /napi/ha/call → POST /napi/ha/call
 GET /napi/portal/state → GET /napi/portal/state
-GET /napi/portal/entity-history → GET /napi/portal/entity-history
+GET /napi/portal/entity-history → /napi/
 GET /napi/portal/active → GET /napi/portal/active
-GET /napi/portal/camera/camera.tuer/snapshot → GET /napi/portal/camera/{entity_id}/snapshot
+GET /napi/portal/camera/camera.tuer/snapshot → /napi/
 GET /napi/portal/start/addable → GET /napi/portal/start/addable
 GET /napi/portal/favorites → GET /napi/portal/favorites
 GET /napi/portal/energy → GET /napi/portal/energy
@@ -1007,15 +1007,15 @@ GET /napi/upload → /napi/
 GET /napi/ha/call → /napi/
 == ohne werkstatt
 GET /napi/assistent → GET /napi/assistent
-GET /napi/app → GET /napi/app
-GET /napi/persona → GET /napi/persona
+GET /napi/app → /napi/
+GET /napi/persona → /napi/
 GET /napi/box/home → GET /napi/box/home
-GET /napi/box/services → GET /napi/box/services
-GET /napi/box/approvals → GET /napi/box/approvals
-GET /napi/box/upgrades → GET /napi/box/upgrades
-POST /napi/box/services/homes/operate → POST /napi/box/services/{name}/operate
-POST /napi/box/approvals/1/approve → POST /napi/box/approvals/{id}/approve
-POST /napi/box/approvals/1/deny → POST /napi/box/approvals/{id}/deny
+GET /napi/box/services → /napi/
+GET /napi/box/approvals → /napi/
+GET /napi/box/upgrades → /napi/
+POST /napi/box/services/homes/operate → /napi/
+POST /napi/box/approvals/1/approve → /napi/
+POST /napi/box/approvals/1/deny → /napi/
 GET /napi/kann → GET /napi/kann
 POST /napi/kann/anfordern → POST /napi/kann/anfordern
 GET /napi/whoami → GET /napi/whoami
@@ -1023,9 +1023,9 @@ GET /napi/portal/events → GET /napi/portal/events
 POST /napi/portal/watch → POST /napi/portal/watch
 POST /napi/ha/call → POST /napi/ha/call
 GET /napi/portal/state → GET /napi/portal/state
-GET /napi/portal/entity-history → GET /napi/portal/entity-history
+GET /napi/portal/entity-history → /napi/
 GET /napi/portal/active → GET /napi/portal/active
-GET /napi/portal/camera/camera.tuer/snapshot → GET /napi/portal/camera/{entity_id}/snapshot
+GET /napi/portal/camera/camera.tuer/snapshot → /napi/
 GET /napi/portal/start/addable → GET /napi/portal/start/addable
 GET /napi/portal/favorites → GET /napi/portal/favorites
 GET /napi/portal/energy → GET /napi/portal/energy
@@ -1060,15 +1060,15 @@ GET /napi/upload → /napi/
 GET /napi/ha/call → /napi/
 == ohne nutzung
 GET /napi/assistent → GET /napi/assistent
-GET /napi/app → GET /napi/app
-GET /napi/persona → GET /napi/persona
+GET /napi/app → /napi/
+GET /napi/persona → /napi/
 GET /napi/box/home → GET /napi/box/home
-GET /napi/box/services → GET /napi/box/services
-GET /napi/box/approvals → GET /napi/box/approvals
-GET /napi/box/upgrades → GET /napi/box/upgrades
-POST /napi/box/services/homes/operate → POST /napi/box/services/{name}/operate
-POST /napi/box/approvals/1/approve → POST /napi/box/approvals/{id}/approve
-POST /napi/box/approvals/1/deny → POST /napi/box/approvals/{id}/deny
+GET /napi/box/services → /napi/
+GET /napi/box/approvals → /napi/
+GET /napi/box/upgrades → /napi/
+POST /napi/box/services/homes/operate → /napi/
+POST /napi/box/approvals/1/approve → /napi/
+POST /napi/box/approvals/1/deny → /napi/
 GET /napi/kann → GET /napi/kann
 POST /napi/kann/anfordern → POST /napi/kann/anfordern
 GET /napi/whoami → GET /napi/whoami
@@ -1076,9 +1076,9 @@ GET /napi/portal/events → GET /napi/portal/events
 POST /napi/portal/watch → POST /napi/portal/watch
 POST /napi/ha/call → POST /napi/ha/call
 GET /napi/portal/state → GET /napi/portal/state
-GET /napi/portal/entity-history → GET /napi/portal/entity-history
+GET /napi/portal/entity-history → /napi/
 GET /napi/portal/active → GET /napi/portal/active
-GET /napi/portal/camera/camera.tuer/snapshot → GET /napi/portal/camera/{entity_id}/snapshot
+GET /napi/portal/camera/camera.tuer/snapshot → /napi/
 GET /napi/portal/start/addable → GET /napi/portal/start/addable
 GET /napi/portal/favorites → GET /napi/portal/favorites
 GET /napi/portal/energy → GET /napi/portal/energy
@@ -1113,15 +1113,15 @@ GET /napi/upload → /napi/
 GET /napi/ha/call → /napi/
 == ohne fotos
 GET /napi/assistent → GET /napi/assistent
-GET /napi/app → GET /napi/app
-GET /napi/persona → GET /napi/persona
+GET /napi/app → /napi/
+GET /napi/persona → /napi/
 GET /napi/box/home → GET /napi/box/home
-GET /napi/box/services → GET /napi/box/services
-GET /napi/box/approvals → GET /napi/box/approvals
-GET /napi/box/upgrades → GET /napi/box/upgrades
-POST /napi/box/services/homes/operate → POST /napi/box/services/{name}/operate
-POST /napi/box/approvals/1/approve → POST /napi/box/approvals/{id}/approve
-POST /napi/box/approvals/1/deny → POST /napi/box/approvals/{id}/deny
+GET /napi/box/services → /napi/
+GET /napi/box/approvals → /napi/
+GET /napi/box/upgrades → /napi/
+POST /napi/box/services/homes/operate → /napi/
+POST /napi/box/approvals/1/approve → /napi/
+POST /napi/box/approvals/1/deny → /napi/
 GET /napi/kann → GET /napi/kann
 POST /napi/kann/anfordern → POST /napi/kann/anfordern
 GET /napi/whoami → GET /napi/whoami
@@ -1129,9 +1129,9 @@ GET /napi/portal/events → GET /napi/portal/events
 POST /napi/portal/watch → POST /napi/portal/watch
 POST /napi/ha/call → POST /napi/ha/call
 GET /napi/portal/state → GET /napi/portal/state
-GET /napi/portal/entity-history → GET /napi/portal/entity-history
+GET /napi/portal/entity-history → /napi/
 GET /napi/portal/active → GET /napi/portal/active
-GET /napi/portal/camera/camera.tuer/snapshot → GET /napi/portal/camera/{entity_id}/snapshot
+GET /napi/portal/camera/camera.tuer/snapshot → /napi/
 GET /napi/portal/start/addable → GET /napi/portal/start/addable
 GET /napi/portal/favorites → GET /napi/portal/favorites
 GET /napi/portal/energy → GET /napi/portal/energy
@@ -1166,15 +1166,15 @@ GET /napi/upload → /napi/
 GET /napi/ha/call → /napi/
 == ohne passwoerter
 GET /napi/assistent → GET /napi/assistent
-GET /napi/app → GET /napi/app
-GET /napi/persona → GET /napi/persona
+GET /napi/app → /napi/
+GET /napi/persona → /napi/
 GET /napi/box/home → GET /napi/box/home
-GET /napi/box/services → GET /napi/box/services
-GET /napi/box/approvals → GET /napi/box/approvals
-GET /napi/box/upgrades → GET /napi/box/upgrades
-POST /napi/box/services/homes/operate → POST /napi/box/services/{name}/operate
-POST /napi/box/approvals/1/approve → POST /napi/box/approvals/{id}/approve
-POST /napi/box/approvals/1/deny → POST /napi/box/approvals/{id}/deny
+GET /napi/box/services → /napi/
+GET /napi/box/approvals → /napi/
+GET /napi/box/upgrades → /napi/
+POST /napi/box/services/homes/operate → /napi/
+POST /napi/box/approvals/1/approve → /napi/
+POST /napi/box/approvals/1/deny → /napi/
 GET /napi/kann → GET /napi/kann
 POST /napi/kann/anfordern → POST /napi/kann/anfordern
 GET /napi/whoami → GET /napi/whoami
@@ -1182,9 +1182,9 @@ GET /napi/portal/events → GET /napi/portal/events
 POST /napi/portal/watch → POST /napi/portal/watch
 POST /napi/ha/call → POST /napi/ha/call
 GET /napi/portal/state → GET /napi/portal/state
-GET /napi/portal/entity-history → GET /napi/portal/entity-history
+GET /napi/portal/entity-history → /napi/
 GET /napi/portal/active → GET /napi/portal/active
-GET /napi/portal/camera/camera.tuer/snapshot → GET /napi/portal/camera/{entity_id}/snapshot
+GET /napi/portal/camera/camera.tuer/snapshot → /napi/
 GET /napi/portal/start/addable → GET /napi/portal/start/addable
 GET /napi/portal/favorites → GET /napi/portal/favorites
 GET /napi/portal/energy → GET /napi/portal/energy
@@ -1219,15 +1219,15 @@ GET /napi/upload → /napi/
 GET /napi/ha/call → /napi/
 == ohne filme
 GET /napi/assistent → GET /napi/assistent
-GET /napi/app → GET /napi/app
-GET /napi/persona → GET /napi/persona
+GET /napi/app → /napi/
+GET /napi/persona → /napi/
 GET /napi/box/home → GET /napi/box/home
-GET /napi/box/services → GET /napi/box/services
-GET /napi/box/approvals → GET /napi/box/approvals
-GET /napi/box/upgrades → GET /napi/box/upgrades
-POST /napi/box/services/homes/operate → POST /napi/box/services/{name}/operate
-POST /napi/box/approvals/1/approve → POST /napi/box/approvals/{id}/approve
-POST /napi/box/approvals/1/deny → POST /napi/box/approvals/{id}/deny
+GET /napi/box/services → /napi/
+GET /napi/box/approvals → /napi/
+GET /napi/box/upgrades → /napi/
+POST /napi/box/services/homes/operate → /napi/
+POST /napi/box/approvals/1/approve → /napi/
+POST /napi/box/approvals/1/deny → /napi/
 GET /napi/kann → GET /napi/kann
 POST /napi/kann/anfordern → POST /napi/kann/anfordern
 GET /napi/whoami → GET /napi/whoami
@@ -1235,9 +1235,9 @@ GET /napi/portal/events → GET /napi/portal/events
 POST /napi/portal/watch → POST /napi/portal/watch
 POST /napi/ha/call → POST /napi/ha/call
 GET /napi/portal/state → GET /napi/portal/state
-GET /napi/portal/entity-history → GET /napi/portal/entity-history
+GET /napi/portal/entity-history → /napi/
 GET /napi/portal/active → GET /napi/portal/active
-GET /napi/portal/camera/camera.tuer/snapshot → GET /napi/portal/camera/{entity_id}/snapshot
+GET /napi/portal/camera/camera.tuer/snapshot → /napi/
 GET /napi/portal/start/addable → GET /napi/portal/start/addable
 GET /napi/portal/favorites → GET /napi/portal/favorites
 GET /napi/portal/energy → GET /napi/portal/energy
@@ -1272,15 +1272,15 @@ GET /napi/upload → /napi/
 GET /napi/ha/call → /napi/
 == ohne hoerbuecher
 GET /napi/assistent → GET /napi/assistent
-GET /napi/app → GET /napi/app
-GET /napi/persona → GET /napi/persona
+GET /napi/app → /napi/
+GET /napi/persona → /napi/
 GET /napi/box/home → GET /napi/box/home
-GET /napi/box/services → GET /napi/box/services
-GET /napi/box/approvals → GET /napi/box/approvals
-GET /napi/box/upgrades → GET /napi/box/upgrades
-POST /napi/box/services/homes/operate → POST /napi/box/services/{name}/operate
-POST /napi/box/approvals/1/approve → POST /napi/box/approvals/{id}/approve
-POST /napi/box/approvals/1/deny → POST /napi/box/approvals/{id}/deny
+GET /napi/box/services → /napi/
+GET /napi/box/approvals → /napi/
+GET /napi/box/upgrades → /napi/
+POST /napi/box/services/homes/operate → /napi/
+POST /napi/box/approvals/1/approve → /napi/
+POST /napi/box/approvals/1/deny → /napi/
 GET /napi/kann → GET /napi/kann
 POST /napi/kann/anfordern → POST /napi/kann/anfordern
 GET /napi/whoami → GET /napi/whoami
@@ -1288,9 +1288,9 @@ GET /napi/portal/events → GET /napi/portal/events
 POST /napi/portal/watch → POST /napi/portal/watch
 POST /napi/ha/call → POST /napi/ha/call
 GET /napi/portal/state → GET /napi/portal/state
-GET /napi/portal/entity-history → GET /napi/portal/entity-history
+GET /napi/portal/entity-history → /napi/
 GET /napi/portal/active → GET /napi/portal/active
-GET /napi/portal/camera/camera.tuer/snapshot → GET /napi/portal/camera/{entity_id}/snapshot
+GET /napi/portal/camera/camera.tuer/snapshot → /napi/
 GET /napi/portal/start/addable → GET /napi/portal/start/addable
 GET /napi/portal/favorites → GET /napi/portal/favorites
 GET /napi/portal/energy → GET /napi/portal/energy

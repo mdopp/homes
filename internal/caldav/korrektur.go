@@ -25,7 +25,7 @@ import (
 // kind (mobil, privat, geschaeftlich, andere; "" keeps the line's) and
 // Haupt whether it is the main one (nil keeps it; the main one is the
 // only one, PREF=1 or in vCard 3.0 TYPE=PREF). Land is the household's
-// calling code a TEL is compared in (TelSchluessel; "" is 49).
+// calling code a TEL is compared in (Telefon; "" is 49).
 type Korrektur struct {
 	Prop           string
 	Alt, Neu, Art  string
@@ -380,12 +380,12 @@ func wertZeile(line string, p Prop, art string, pref, v4 bool) string {
 	return b.String() + ":"
 }
 
-// gleichWert is a value as two are compared: a number as TelSchluessel
+// gleichWert is a value as two are compared: a number as Telefon
 // in the calling code cc, an address by its letters in one case.
 func gleichWert(prop, v, cc string) string {
 	v = strings.TrimSpace(v)
 	if prop == "TEL" {
-		return TelSchluessel(v, cc)
+		return Telefon(v, cc)
 	}
 	return strings.ToLower(strings.TrimPrefix(v, "mailto:"))
 }

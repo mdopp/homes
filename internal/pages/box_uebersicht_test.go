@@ -145,16 +145,13 @@ func TestBoxHasNoJournalCopy(t *testing.T) {
 	}
 }
 
-// Dienste and Operator are on the Übersicht now; their old pages lead there.
-func TestBoxOldPagesLeadToTheOverview(t *testing.T) {
+// Dienste and Operator are on the Übersicht; their old pages are gone (owner 2026-11-28).
+func TestBoxOldPagesAreGone(t *testing.T) {
 	var asked []string
 	h := BoxPage(overviewLaib(t, nil, 0, "[]", nil, &asked))
-	for from, to := range map[string]string{"/box/dienste": "/box", "/box/operator": "/box#operator"} {
-		if rec := boxAt(h, from, "admins"); rec.Code != http.StatusFound || rec.Header().Get("Location") != to {
-			t.Errorf("%s → %d %q", from, rec.Code, rec.Header().Get("Location"))
-		}
-		if rec := boxAt(h, from, "family"); rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/start" {
-			t.Errorf("family %s → %d", from, rec.Code)
+	for _, from := range []string{"/box/dienste", "/box/operator"} {
+		if rec := boxAt(h, from, "admins"); rec.Code != http.StatusNotFound {
+			t.Errorf("%s → %d", from, rec.Code)
 		}
 	}
 }

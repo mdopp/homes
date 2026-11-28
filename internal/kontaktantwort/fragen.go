@@ -68,11 +68,11 @@ func Mobil(ct caldav.Contact, land string) string {
 	ts := FelderVon(ct).Telefone
 	for _, t := range ts {
 		if t.Art == "mobil" && len(ziffern(t.Nummer)) >= 6 {
-			return "+" + haushalt.International(t.Nummer, land)
+			return "+" + caldav.Telefon(t.Nummer, land)
 		}
 	}
 	for _, t := range ts {
-		if n := haushalt.International(t.Nummer, land); mobilNummer(n) {
+		if n := caldav.Telefon(t.Nummer, land); mobilNummer(n) {
 			return "+" + n
 		}
 	}
@@ -80,18 +80,18 @@ func Mobil(ct caldav.Contact, land string) string {
 }
 
 // Finden are the household's contacts that are the phone's one: those with one of its numbers
-// (caldav.TelSchluessel) first, else one of its e-mail addresses (any case), else its exact name
+// (caldav.Telefon) first, else one of its e-mail addresses (any case), else its exact name
 // (namen.Plain); several are narrowed by the later of these while some stay. None: nil.
 func Finden(all []caldav.Contact, name string, tels, mails []string, land string) []caldav.Contact {
 	var keys []string
 	for _, t := range tels {
-		if k := caldav.TelSchluessel(t, land); len(k) >= 6 {
+		if k := caldav.Telefon(t, land); len(k) >= 6 {
 			keys = append(keys, k)
 		}
 	}
 	nach := []func(caldav.Contact) bool{
 		func(ct caldav.Contact) bool {
-			return slices.ContainsFunc(ct.Phones, func(p string) bool { return slices.Contains(keys, caldav.TelSchluessel(p, land)) })
+			return slices.ContainsFunc(ct.Phones, func(p string) bool { return slices.Contains(keys, caldav.Telefon(p, land)) })
 		},
 		func(ct caldav.Contact) bool {
 			return slices.ContainsFunc(ct.Emails, func(m string) bool {

@@ -23,6 +23,9 @@ type Miss struct{ Source, Text, Day string }
 type Fake struct {
 	*httptest.Server
 	Token string
+	// Fenster: with no summary set, what GET /summary?days=n answers, from
+	// the counts so far
+	Fenster func(days string, counts map[Count]int64) any
 
 	mu      sync.Mutex
 	counts  map[Count]int64
@@ -138,6 +141,9 @@ func (f *Fake) serve(w http.ResponseWriter, r *http.Request) {
 	case "GET /summary":
 		f.asks = append(f.asks, r.URL.RequestURI())
 		v := f.summary
+		if v == nil && f.Fenster != nil {
+			v = f.Fenster(r.URL.Query().Get("days"), f.counts)
+		}
 		if v == nil {
 			v = map[string]any{"days": 30, "from": "", "total": 0, "apps": []any{}, "knownApps": []any{}}
 		}

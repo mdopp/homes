@@ -28,11 +28,11 @@ import (
 	"unicode/utf8"
 )
 
-// App is Homes' own name in usage-metrics. It stays "haus" (stored data,
-// laib#1021): usage-metrics keys every count by it, and the Box page's
-// "Was wird genutzt" reads the last 30 days of this one name, so a new name
-// would hide the counted history and show every page as never used.
-const App = "haus"
+// App is Homes' own name in usage-metrics: every count is keyed by it, and
+// the Box page's "Was wird genutzt" reads the last 30 days of this one name.
+// The counts made under the old name, haus, are copied to it once
+// (Umziehen, owner 2026-11-28).
+const App = "homes"
 
 const (
 	maxMisses = 100 // sentences waiting for one flush; more are dropped

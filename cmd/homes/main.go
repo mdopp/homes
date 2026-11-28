@@ -557,7 +557,7 @@ func main() {
 		usage: counter, voice: voice, welcome: true,
 		stt:      pages.STT{Provider: os.Getenv("HOMES_STT_PROVIDER"), Language: env("HOMES_STT_LANGUAGE", "de")},
 		haPublic: haPublic, inverted: pages.InvertedFromList(os.Getenv("HOMES_COVER_INVERTED")),
-		radicale: radicalePublic, views: ansicht.Open(dataDir, os.Getenv("HOMES_RADICALE_USER")), dataDir: dataDir,
+		radicale: radicalePublic, views: ansicht.Open(dataDir), dataDir: dataDir,
 		docsMail: docsMail, paperlessPublic: paperlessPublic, paperlessLAN: paperlessLAN, musik: musicInbox(), boteSignal: strings.TrimSpace(os.Getenv("HOMES_BOTE_SIGNAL")),
 		domain: einrichten.Domain(os.Getenv("HOMES_PUBLIC_URL")), archive: archive, gesichter: gesichter.FromEnv(dataDir),
 		antworten: &kontaktantwort.Store{Path: filepath.Join(dataDir, kontaktantwort.Datei)}, kontaktURL: os.Getenv("HOMES_KONTAKT_URL"),
@@ -573,6 +573,8 @@ func main() {
 	st.napi.Module = logModule(&st)                                     // HOMES_MODULE_AUS takes what it switches off out of st
 	st.napi.Eigen = eigenOf(st)                                         // the app's „Dein Archiv“ and Dokumente-Adresse, once the modules are off as asked
 	st.napi.Einrichtung = einrichtung(st, devices.Gekoppelt(store), jellyfin.KeyFromEnv())
+	umbenennenStart(ctx, umbenennen{dir: dataDir, konto: os.Getenv("HOMES_RADICALE_USER"), views: st.views, korb: &papierkorb.Korb{Dir: dataDir},
+		karten: st.hh.Contacts, zaehler: counter}) // what is stored under Haus' names, once (laib#1021)
 	tagsAnschliessen(ctx, st)
 	telefoneAnschliessen(ctx, &st)
 	// the counter stops only once the server has: a page is counted after

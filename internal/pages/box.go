@@ -111,11 +111,6 @@ func BoxPage(cfg BoxConfig) http.HandlerFunc {
 		if !adminOnly(w, r) {
 			return
 		}
-		// Dienste and Operator are on the Übersicht since 2026-11-06; a bookmark finds them
-		if to, ok := map[string]string{"/box/dienste": "/box", "/box/operator": "/box#operator"}[r.URL.Path]; ok {
-			http.Redirect(w, r, to, http.StatusFound)
-			return
-		}
 		if r.URL.Path == BoxPartPath {
 			boxPartAnswer(w, r, cfg)
 			return

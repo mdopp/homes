@@ -39,7 +39,7 @@ func events(t *testing.T, fake *usagefake.Fake, c *usage.Counter) map[string]int
 	c.Flush(context.Background())
 	out := map[string]int64{}
 	for k, n := range fake.Counts() {
-		if k.App == "haus" {
+		if k.App == "homes" {
 			out[k.Event] += n
 		}
 	}
@@ -129,19 +129,19 @@ func TestDegradedLinesShownAreCounted(t *testing.T) {
 }
 
 // A tap from a widget arrives with ?von=widget.<kind>: counted by kind,
-// only for the app's nine widgets (homes-android#181); anything else is no
+// only for the app's two widgets (homes-android#181), device and tool; anything else is no
 // source tag, never stored raw.
 func TestWidgetTapsBySource(t *testing.T) {
 	fake, c := metrics(t)
 	h := Counted(c, pagesLike(map[string]int{"/gibtsnicht": 404}, nil))
-	for _, q := range []string{"widget.device", "widget.device", "widget.energy-stats", "widget.geraet", "widget.Device", "widget.", "../etc", "src",
+	for _, q := range []string{"widget.device", "widget.device", "widget.tool", "widget.energy-stats", "widget.geraet", "widget.Device", "widget.", "../etc", "src",
 		"widget." + strings.Repeat("a", 33), "widget.a b", "anna", "device", "widget.device.x"} {
 		serve(h, "GET", "/start?von="+url.QueryEscape(q), "anna")
 	}
 	serve(h, "GET", "/gibtsnicht?von=widget.device", "anna")
 	got := events(t, fake, c)
 	delete(got, "seite.start")
-	if want := map[string]int64{"von.widget.device": 2, "von.widget.energy-stats": 1}; !reflect.DeepEqual(got, want) {
+	if want := map[string]int64{"von.widget.device": 2, "von.widget.tool": 1}; !reflect.DeepEqual(got, want) {
 		t.Errorf("taps %v, want %v", got, want)
 	}
 }
@@ -225,13 +225,13 @@ func TestPagesDoNotWaitForUsageMetrics(t *testing.T) {
 
 // what a month of use looks like to usage-metrics
 func aMonth(fake *usagefake.Fake) {
-	fake.SetSummary(map[string]any{"days": 30, "from": "2026-09-17", "total": 300, "knownApps": []string{"bote", "haus", "stimme"},
+	fake.SetSummary(map[string]any{"days": 30, "from": "2026-09-17", "total": 300, "knownApps": []string{"bote", "homes", "stimme"},
 		"apps": []any{
 			map[string]any{"app": "bote", "total": 61, "events": []any{
 				map[string]any{"event": "unbeantwortet", "count": 3}, map[string]any{"event": "werkzeug.haushalt.termine", "count": 12},
 				map[string]any{"event": "werkzeug.ha.hassturnoff", "count": 6}, map[string]any{"event": "werkzeug.memory", "count": 5},
 				map[string]any{"event": "werkzeug.laib.status", "count": 1}, map[string]any{"event": "zug", "count": 40}}},
-			map[string]any{"app": "haus", "total": 200, "events": []any{
+			map[string]any{"app": "homes", "total": 200, "events": []any{
 				map[string]any{"event": "gestoert.start.licht", "count": 4}, map[string]any{"event": "napi.portal.state", "count": 31},
 				map[string]any{"event": "schalten.light.turn_off", "count": 17}, map[string]any{"event": "seite.raeume", "count": 22},
 				map[string]any{"event": "seite.start", "count": 120}, map[string]any{"event": "von.widget.device", "count": 6}}},

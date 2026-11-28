@@ -95,8 +95,7 @@ func lineSays(key string) string {
 // widgetKinds are the Homes app's widgets whose tap opens a page with
 // ?von=widget.<kind> (homes-android#181), in the admin's words; any other
 // value is no source tag and counts nothing.
-var widgetKinds = map[string]string{"device": "Gerät", "devices": "Geräte", "active": "Was ist an", "energy": "Energie jetzt",
-	"energy-stats": "Energie-Verlauf", "energy-totals": "Energie-Summen", "box-overview": "Box", "box-services": "Dienste", "tool": "Werkzeug"}
+var widgetKinds = map[string]string{"device": "Gerät", "tool": "Werkzeug"}
 
 // Counted counts the pages next serves: a view per page shown (GET, 200),
 // the plain lines it showed, the Notizen search (never its words), and a
@@ -221,13 +220,10 @@ var says = map[string]string{
 	"schalten.cover.stop_cover": "Rollladen angehalten", "schalten.cover.set_cover_position": "Rollladen auf eine Position gestellt",
 	"stern.aus":         "Ein Gerät von Start genommen (☆)",
 	"napi.portal.state": "Geräte-Widget aktualisiert", "napi.portal.active": "Widget „Was ist an“ aktualisiert",
-	"napi.portal.energy": "Energie-Widget aktualisiert", "napi.portal.entity-history": "Verlauf im Widget angesehen",
-	"napi.portal.camera.snapshot": "Kamera-Widget aktualisiert", "napi.portal.events": "Widgets live verbunden",
+	"napi.portal.energy": "Energie-Kachel der App aktualisiert", "napi.portal.events": "Widgets live verbunden",
 	"napi.portal.tasks": "Aufgaben-Widget aktualisiert", "napi.portal.contacts": "Kontakte-Widget aktualisiert",
-	"napi.portal.documents": "Dokumente-Widget aktualisiert", "napi.portal.notes": "Notizen-Widget aktualisiert",
-	"napi.box.home": "Box-Widget aktualisiert", "napi.box.services": "Dienste-Widget aktualisiert",
-	"napi.box.approvals": "Freigaben-Widget aktualisiert", "napi.box.upgrades": "Updates-Widget aktualisiert",
-	"napi.ha.call": "Aus einem Widget geschaltet", "napi.action-callback": "In einem Widget etwas erledigt",
+	"napi.box.home": "In der App nachgesehen, ob es dem Zuhause gut geht",
+	"napi.ha.call":  "Aus einem Widget geschaltet", "napi.action-callback": "In einem Widget etwas erledigt",
 	"napi.upload": "Ein Foto ins Archiv geschickt",
 }
 

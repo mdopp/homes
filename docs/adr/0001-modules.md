@@ -201,8 +201,9 @@ folder), run every builder in catalog order, call `modul.Bauen`, log
 `l.Starten`, `l.Seiten`, `l.Napi`. The **core** is always on and is no
 module: Start's frame and box line, Mehr, Aufgaben, Box (Einladen,
 Geräte, pairing), Willkommen, Adresse, Abmelden, the Papierkorb, font and
-icon, `/napi/{assistent,app,persona,whoami,kann}`, the Box keys under
-`/napi/box`, and `/mcp/haushalt` (its tools come from the modules that
+icon, `/napi/{assistent,whoami,kann}`, the Box key under
+`/napi/box` (`home`; `app`, `persona` and the old Box screen's keys are
+gone, 2026-11-28), and `/mcp/haushalt` (its tools come from the modules that
 are on).
 
 **The rule that makes „off“ true:** a page learns of a module only through
@@ -383,7 +384,7 @@ module: `LAIB_URL`, `LAIB_TOKEN`, `LAIB_PUBLIC_URL`, `LAIB_DOMAIN`,
 
 | module | Titel | backend (Laib template) | env | pages · nav | Start | /napi | app |
 |---|---|---|---|---|---|---|---|
-| `geraete` | Geräte | home-assistant | `HOMES_HA_URL`, `HOMES_HA_TOKEN`; opt. `HOMES_HA_PUBLIC_URL`, `HOMES_COVER_INVERTED` | `/raeume`, `/raeume/…`, `/medien`, `/schalten`, `/aktivierungswort`, `/live`, `/tag/<id>`, `/tag/freigabe/<id>` · Leiste | im-haus, meine-geraete | `ha/call`, `portal/{state,active,entity-history,camera/…,start/addable,favorites,watch,events}`, `ausloeser`, `ausloeser/{tag,tags,tag/…/{verbinden,loesen,neu},freigabe/…}`, `automationen` | widgets `geraet`; favourites |
+| `geraete` | Geräte | home-assistant | `HOMES_HA_URL`, `HOMES_HA_TOKEN`; opt. `HOMES_HA_PUBLIC_URL`, `HOMES_COVER_INVERTED` | `/raeume`, `/raeume/…`, `/medien`, `/schalten`, `/aktivierungswort`, `/live`, `/tag/<id>`, `/tag/freigabe/<id>` · Leiste | im-haus, meine-geraete | `ha/call`, `portal/{state,active,start/addable,favorites,watch,events}`, `ausloeser`, `ausloeser/{tag,tags,tag/…/{verbinden,loesen,neu},freigabe/…}`, `automationen` | widgets `geraet`; favourites |
 | `energie` | Energie | home-assistant (needs `geraete`) | opt. `HOMES_ENERGY_FLOW`, `_TOTALS`, `_STATS` | `/energie` · Leiste | – | `portal/energy` | the app's tile: `/energie` (its `web` in `/napi/einrichtung`) and `portal/energy`'s line; no widget since 2026-11-28 |
 | `sprechen` | Sprechen | bote | `HOMES_BOTE_URL`, `HOMES_BOTE_KEY`; opt. `HOMES_STT_PROVIDER`, `HOMES_STT_LANGUAGE` (HA), `HOMES_BOTE_SIGNAL` | `/sprechen`, `/sprechen/hoeren` · none | the field | – | – |
 | `kalender` | Kalender | radicale (CalDAV) | Radicale, `_CALENDAR`, `_PUBLIC_URL` | `/kalender`, `/kalender/{verwalten,hinzufuegen,aendern,erinnerung/…}` · Haushalt | heute | `portal/tasks`, def `task` | widgets `tool:task`; Bote `termine`, `erinnerungen`, … |
@@ -395,7 +396,7 @@ module: `LAIB_URL`, `LAIB_TOKEN`, `LAIB_PUBLIC_URL`, `LAIB_DOMAIN`,
 | `musik` | Musik | music inbox (beets), radicale (wishes), MusicBrainz; opt. media (Jellyfin, for the wish list), Discogs, the house model | `HOMES_MUSIC_INBOX` (or the `/musik-eingang` mount); opt. `HOMES_JELLYFIN_URL`, `_TOKEN`, `HOMES_DISCOGS_KEY`, `_SECRET`, `HOMES_LLM_VISION_MODEL` | `/musik`, `/discogs`, `/discogs/zurueck`, `/platte`, `/platte/bild` · Mehr | – | `POST musik` | teilen `musik` (with the inbox); Bote wish tools |
 | `podcasts` | Podcasts | audiobookshelf | `HOMES_ABS_URL`, `HOMES_ABS_TOKEN` | `/podcasts` · Mehr | – | – | Bote podcast tool; new episodes told |
 | `gesehen` | Gesehen & Gehört | media (Jellyfin) and/or audiobookshelf; radicale (wishes) | `HOMES_JELLYFIN_URL`, `HOMES_JELLYFIN_KEY`; `HOMES_ABS_*` | `/gesehen` · Mehr | – | – | – |
-| `sicherung` | Daten sichern | archiv (each person's inbox) | `HOMES_ARCHIV_DIR`; opt. `HOMES_ARCHIV_INTERN`, `HOMES_ARCHIV_SECRET_<PERSON>` | `/daten-sichern`, `/nachrichten-sichern` · Mehr | – | `sicherung/*` (503 while off) | sicherung `whatsapp`, `signal`, `sms`; teilen `archiv`; mehr `daten-sichern` |
+| `sicherung` | Daten sichern | archiv (each person's inbox) | `HOMES_ARCHIV_DIR`; opt. `HOMES_ARCHIV_INTERN`, `HOMES_ARCHIV_SECRET_<PERSON>` | `/daten-sichern` · Mehr | – | `sicherung/*` (503 while off) | sicherung `whatsapp`, `signal`, `sms`; teilen `archiv`; mehr `daten-sichern` |
 | `standort` | Standortverlauf | reitti | `HOMES_REITTI_URL`; opt. `HOMES_REITTI_PUBLIC_URL` | `/standort` · Mehr | – | `standort`, `standort/import/*` (503 while off) | teilen `standort-import`; mehr `standortverlauf` |
 | `netzlaufwerk` | Netzlaufwerk | file-share (Samba) | `HOMES_SAMBA_DIR`, `HOMES_SAMBA_HOST` | `/netzlaufwerk` · Mehr | – | – | – |
 | `werkstatt` | Werkstatt | GitHub (admins) | `HOMES_WERKSTATT_REPOS`; opt. `HOMES_GITHUB_API` | the card on Box | – | – | – |

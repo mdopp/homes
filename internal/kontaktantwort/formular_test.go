@@ -2,7 +2,6 @@ package kontaktantwort
 
 import (
 	"bytes"
-	"encoding/json"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -147,10 +146,6 @@ func TestKindsMainRemovalsAndMessage(t *testing.T) {
 	ks, _ := Korrekturen(f)
 	if ks[0].Haupt == nil || *ks[0].Haupt || ks[0].Art != "" || ks[1].Haupt == nil || !*ks[1].Haupt || ks[3].Art != "geschaeftlich" || ks[4].Prop != "PHOTO" || ks[5].Prop != "NOTE" {
 		t.Errorf("Korrekturen %+v", ks)
-	}
-	var old Felder
-	if err := json.Unmarshal([]byte(`{"mails":["a@x.de"]}`), &old); err != nil || old.Mails[0].Adresse != "a@x.de" {
-		t.Errorf("an answer kept before: %+v %v", old, err)
 	}
 }
 

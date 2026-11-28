@@ -73,7 +73,6 @@ func TestEveryHousePathWantsAPairedDevice(t *testing.T) {
 		{"POST", "/napi/ha/call", `{"entity_id":"light.kueche","service":"light.toggle"}`},
 		{"GET", "/napi/portal/state?entity_id=light.kueche", ""},
 		{"GET", "/napi/portal/energy", ""},
-		{"GET", "/napi/portal/entity-history?entity_id=sensor.temp&range=24h", ""},
 		{"GET", "/napi/portal/active", ""},
 		{"GET", "/napi/portal/favorites", ""},
 		{"POST", "/napi/portal/watch", `{"entity_ids":["light.kueche"]}`},
@@ -329,54 +328,6 @@ func TestPortalEnergyCharge(t *testing.T) {
 	fake.Set("sensor.senec_battery_charge_percent", "unavailable", soc)
 	if c, ok := read()["charge"]; ok {
 		t.Fatalf("no number, no charge: %v", c)
-	}
-}
-
-func TestEntityHistory(t *testing.T) {
-	fake, h := house(t)
-	fake.SetHistory("sensor.temp", []map[string]any{
-		{"entity_id": "sensor.temp", "state": "20.5", "last_changed": "2026-10-13T10:00:00+00:00", "attributes": map[string]any{}},
-		{"state": "21.0", "last_changed": "2026-10-13T12:00:00+00:00"},
-		{"state": "unavailable", "last_updated": "2026-10-13T13:00:00+00:00"},
-	})
-	code, body := raw(t, h, "GET", "/napi/portal/entity-history?entity_id=sensor.temp&range=7d", "dev1", "")
-	var out struct {
-		OK      bool             `json:"ok"`
-		History []map[string]any `json:"history"`
-	}
-	json.Unmarshal([]byte(body), &out)
-	if code != 200 || !out.OK || len(out.History) != 3 || out.History[0]["state"] != "20.5" || out.History[0]["t"] != "2026-10-13T10:00:00+00:00" ||
-		out.History[2]["t"] != "2026-10-13T13:00:00+00:00" {
-		t.Fatalf("history: %d %s", code, body)
-	}
-	starts, queries := fake.HistoryQueries()
-	q := queries[0]
-	if q.Get("filter_entity_id") != "sensor.temp" || q.Get("minimal_response") == "" || q.Get("no_attributes") == "" {
-		t.Fatalf("query: %v", q)
-	}
-	start, err1 := time.Parse(time.RFC3339, starts[0])
-	end, err2 := time.Parse(time.RFC3339, q.Get("end_time"))
-	if err1 != nil || err2 != nil || end.Sub(start) != 168*time.Hour {
-		t.Fatalf("7d window: %s → %s (%v %v)", starts[0], q.Get("end_time"), err1, err2)
-	}
-	for r, hours := range map[string]time.Duration{"24h": 24, "48h": 48} {
-		raw(t, h, "GET", "/napi/portal/entity-history?entity_id=sensor.temp&range="+r, "dev1", "")
-		starts, queries = fake.HistoryQueries()
-		s, _ := time.Parse(time.RFC3339, starts[len(starts)-1])
-		e, _ := time.Parse(time.RFC3339, queries[len(queries)-1].Get("end_time"))
-		if e.Sub(s) != hours*time.Hour {
-			t.Fatalf("%s window: %v", r, e.Sub(s))
-		}
-	}
-	_, body = raw(t, h, "GET", "/napi/portal/entity-history?entity_id=light.flur&range=24h", "dev1", "")
-	if body = strings.TrimSpace(body); body != `{"history":[],"ok":true}` && body != `{"ok":true,"history":[]}` {
-		t.Fatalf("no history is an empty list: %s", body)
-	}
-	if code, _ := raw(t, h, "GET", "/napi/portal/entity-history?entity_id=sensor.temp&range=1y", "dev1", ""); code != 400 {
-		t.Fatalf("bad range → %d", code)
-	}
-	if code, _ := raw(t, h, "GET", "/napi/portal/entity-history?entity_id=..%2F&range=24h", "dev1", ""); code != 400 {
-		t.Fatalf("bad id → %d", code)
 	}
 }
 

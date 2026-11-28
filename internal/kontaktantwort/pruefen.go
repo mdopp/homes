@@ -98,7 +98,7 @@ func Nummer(s, land string) string {
 	case !intl && !strings.HasPrefix(d, "0"):
 		return "Die Nummer hat keine Vorwahl: so ist sie nur im eigenen Ortsnetz erreichbar."
 	}
-	e164 := haushalt.International(s, land)
+	e164 := caldav.Telefon(s, land)
 	cc := laenderVorwahl(e164)
 	if cc == "" {
 		return "Diese Ländervorwahl gibt es nicht."

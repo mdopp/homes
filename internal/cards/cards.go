@@ -1,11 +1,9 @@
 // Package cards is Homes' one card: a title, rows and an optional link
 // (laib DEKONSTRUKTION, "Homes: the pages and the cards"). Pages render it
-// as HTML; the widgets' /napi JSON and the Bote's replies get the same
-// value later. A card shows what there is and says nothing otherwise.
+// as HTML. A card shows what there is and says nothing otherwise.
 package cards
 
 import (
-	"encoding/json"
 	"html"
 	"regexp"
 	"strconv"
@@ -141,15 +139,6 @@ func (c *Card) Add(text, detail string) { c.Rows = append(c.Rows, Row{Text: text
 // AddLink appends a row that leads to href.
 func (c *Card) AddLink(text, detail, href string) {
 	c.Rows = append(c.Rows, Row{Text: text, Detail: detail, Href: href})
-}
-
-// MarshalJSON keeps null out: no rows is [] (Android reads null as "null").
-func (c Card) MarshalJSON() ([]byte, error) {
-	type plain Card
-	if c.Rows == nil {
-		c.Rows = []Row{}
-	}
-	return json.Marshal(plain(c))
 }
 
 // ID is the card's element id, from its title: karte-<slug>.
